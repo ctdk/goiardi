@@ -1,0 +1,12 @@
+* Search totally unsupported
+
+* No test structure yet except for chef-pendant, which goiardi can run against,
+  although it fails most of the tests right now.
+
+* More error handling/validation
+
+* Authentication and proper private/public key handling is totally absent.
+
+* Many chef-pedant tests fail miserably.
+
+* Proper logging needed.

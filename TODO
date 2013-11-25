@@ -1,0 +1,13 @@
+* Get go testing working
+* Fix errors the go tests and chef-pedant reveal
+* Use a config file
+* More and better documentation
+* More configuration options
+* Go code should be idiomatic where it isn't
+* More Go language features should be used where appropriate
+
+# Down the road
+* Allow using a database in addition to running in-memory
+* Get search working
+* Authenticate users
+* Serve data over SSL
