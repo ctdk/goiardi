@@ -22,14 +22,20 @@ package main
 import (
 	"net/http"
 	"path"
-	//"log"
+	"log"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/actor"
 )
 
 type InterceptHandler struct {} // Doesn't need to do anything, just sit there.
 
 func main(){
 	config.ParseConfigOptions()
+
+	/* Create default clients and users. Currently chef-validator,
+	 * chef-webui, and admin. */
+	createDefaultActors()
+
 	/* Register the various handlers, found in their own source files. */
 	http.HandleFunc("/authenticate_user", authenticate_user_handler)
 	http.HandleFunc("/clients", list_handler)
@@ -104,4 +110,41 @@ func cleanPath(p string) string {
 		np += "/"
 	}
 	return np
+}
+
+func createDefaultActors() {
+	if webui, err := actor.New("chef-webui", "client"); err != nil {
+		log.Fatalln(err)
+	} else {
+		webui.Admin = true
+		_, err = webui.GenerateKeys()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		webui.Save()
+	}
+
+	if validator, err := actor.New("chef-validator", "client"); err != nil {
+		log.Fatalln(err)
+	} else {
+		validator.Validator = true
+		_, err = validator.GenerateKeys()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		validator.Save()
+	}
+
+	if admin, err := actor.New("admin", "user"); err != nil {
+		log.Fatalln(err)
+	} else {
+		admin.Admin = true
+		_, err = admin.GenerateKeys()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		admin.Save()
+	}
+
+	return
 }

@@ -96,25 +96,26 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
+
+			if _, nok := client_data["name"].(string); !nok {
+				JsonErrorReport(w, r, "Client name does not appear to be a string", http.StatusBadRequest)
+				return
+			}
+
 			/* If client_name and client_data["name"] aren't the
 			 * same, we're renaming. Check the new name doesn't
 			 * already exist. */
 			json_client := make(map[string]interface{})
 			if client_name != client_data["name"].(string) {
-				chef_client, err = actor.Get(client_data["name"].(string))
-				if chef_client != nil {
+				rename_client, _ := actor.Get(client_data["name"].(string))
+				if rename_client != nil {
 					conflict_err := fmt.Errorf("Client (or user) %s already exists, can't rename.", client_data["name"].(string))
 					JsonErrorReport(w, r, conflict_err.Error(), http.StatusConflict)
 					return
 				} else {
 					if err = chef_client.Rename(client_data["name"].(string)); err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusConflict)
+						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 						return
-					}
-					if t, ok := client_data["admin"].(bool); ok {
-						if t {
-							chef_client.Admin = t
-						}
 					}
 					if json_client["private_key"], err = chef_client.GenerateKeys(); err != nil {
 						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -123,17 +124,19 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 					w.WriteHeader(http.StatusCreated)
 				}
 			} else {
-				if t, ok := client_data["admin"].(bool); ok {
-					if t {
-						chef_client.Admin = t
-					}
-				}
 				if client_data["private_key"] != nil {
 					if json_client["private_key"], err = chef_client.GenerateKeys(); err != nil {
 						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 						return
 					}
 				}
+			}
+
+			if t, ok := client_data["admin"].(bool); ok {
+				chef_client.Admin = t
+			}
+			if v, vok := client_data["validator"].(bool); vok {
+				chef_client.Validator = v
 			}
 			chef_client.Save()
 			json_client["name"] = chef_client.Name

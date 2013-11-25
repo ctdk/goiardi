@@ -85,6 +85,7 @@ func (c *Actor) Delete() error {
 }
 
 // Renames the client or user. Save() must be called after this method is used.
+//func Rename(c *Actor, new_name string, cheftype string) (*Actor, error) {
 func (c *Actor) Rename(new_name string) error {
 	ds := data_store.New()
 	ds.Delete("client", c.Name)
