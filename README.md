@@ -48,6 +48,10 @@ INSTALLATION
 
 For more documentation on Chef, see (http://docs.opscode.com).
 
+Goiardi does not actually care about .pem files at all at the moment, but you
+still need to have one to keep knife and chef-client happy. It's like chef-zero
+in that regard.
+
 TODO
 ----
 
