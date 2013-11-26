@@ -25,6 +25,7 @@ package util
 import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
+	"regexp"
 )
 
 // Anything that implements these functions is a goiardi/chef object, like a
@@ -57,4 +58,9 @@ func chkPath(p *string){
 	if (*p)[0] != '/' {
 		*p = fmt.Sprintf("/%s", *p)
 	}
+}
+
+func ValidateName(name string) bool {
+	m, _ := regexp.MatchString("[^A-Za-z0-9_.-]", name)
+	return !m
 }

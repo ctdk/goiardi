@@ -76,8 +76,7 @@ func SplitPath(path string) (split_path []string){
 
 func JsonErrorReport(w http.ResponseWriter, r *http.Request, error_str string, status int){
 	log.Println(error_str)
-	json_error := make(map[string][]string)
-	json_error["error"] = []string{ error_str }
+	json_error := map[string][]string{ "error": []string{ error_str } }
 	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
 	if err:= enc.Encode(&json_error); err != nil {

@@ -90,6 +90,7 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			client_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return
 			}
 			chef_client, err := actor.Get(client_name)
 			if err != nil {
@@ -114,21 +115,25 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 					return
 				} else {
 					if err = chef_client.Rename(client_data["name"].(string)); err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-						return
-					}
-					if json_client["private_key"], err = chef_client.GenerateKeys(); err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+						JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 						return
 					}
 					w.WriteHeader(http.StatusCreated)
 				}
-			} else {
-				if client_data["private_key"] != nil {
-					if json_client["private_key"], err = chef_client.GenerateKeys(); err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			} 
+
+			if p, pfound := client_data["private_key"]; pfound {
+				switch p := p.(type) {
+					case bool:
+						if p {
+							if json_client["private_key"], err = chef_client.GenerateKeys(); err != nil {
+								JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+								return
+							}
+						}
+					default:
+						JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 						return
-					}
 				}
 			}
 
@@ -138,10 +143,12 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			if v, vok := client_data["validator"].(bool); vok {
 				chef_client.Validator = v
 			}
+
 			chef_client.Save()
 			json_client["name"] = chef_client.Name
 			json_client["admin"] = chef_client.Admin
 			json_client["validator"] = chef_client.Validator
+			json_client["public_key"] = chef_client.PublicKey
 			enc := json.NewEncoder(w)
 			if err = enc.Encode(&json_client); err != nil{
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)

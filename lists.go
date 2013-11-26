@@ -27,6 +27,7 @@ import (
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"strings"
+	"regexp"
 )
 
 func list_handler(w http.ResponseWriter, r *http.Request){
@@ -46,9 +47,11 @@ func list_handler(w http.ResponseWriter, r *http.Request){
 			list_data = make(map[string]string)
 			list_data["huh"] = "not valid"
 	}
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&list_data); err != nil {
-		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	if list_data != nil {
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(&list_data); err != nil {
+			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -66,6 +69,7 @@ func node_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			node_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return nil
 			}
 			chef_node, err := node.Get(node_data["name"].(string))
 			if chef_node != nil {
@@ -82,7 +86,7 @@ func node_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			node_response["uri"] = util.ObjURL(chef_node)
 			w.WriteHeader(http.StatusCreated)
 		default:
-			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+			JsonErrorReport(w, r, "Method not allowed for nodes", http.StatusMethodNotAllowed)
 			return nil
 	}
 	return node_response
@@ -106,21 +110,27 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 			client_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return nil
 			}
 			if name_val, ok := client_data["name"].(string); ok {
 				client_chk, _ := actor.Get(name_val)
 				if client_chk != nil {
-					httperr := fmt.Errorf("Client (or user) %s already exists.", client_data["name"].(string))
-					JsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
+					JsonErrorReport(w, r, "Client already exists", http.StatusConflict)
 					return nil
 				}
 			} else {
-					JsonErrorReport(w, r, "The supplied name was invalid.", http.StatusBadRequest)
+					JsonErrorReport(w, r, "Field 'name' missing", http.StatusBadRequest)
 					return nil
 			}
 			chef_client, err := actor.New(client_data["name"].(string), chef_type)
 			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				var status int
+				if m, _ := regexp.MatchString("Invalid client name.*", err.Error()); m {
+					status = http.StatusBadRequest
+				} else {
+					status = http.StatusInternalServerError
+				}
+				JsonErrorReport(w, r, err.Error(), status)
 				return nil
 			}
 			if admin_val, ok := client_data["admin"].(bool); ok {
@@ -139,7 +149,7 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 			client_response["public_key"] = chef_client.PublicKey
 			w.WriteHeader(http.StatusCreated)
 		default:
-			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+			JsonErrorReport(w, r, "Method not allowed for clients or users", http.StatusMethodNotAllowed)
 			return nil
 	}
 	return client_response
@@ -174,7 +184,7 @@ func role_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			role_response["uri"] = util.ObjURL(chef_role)
 			w.WriteHeader(http.StatusCreated)
 		default:
-			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+			JsonErrorReport(w, r, "Method not allowed for roles", http.StatusMethodNotAllowed)
 			return nil
 	}
 	return role_response

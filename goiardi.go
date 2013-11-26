@@ -31,6 +31,7 @@ type InterceptHandler struct {} // Doesn't need to do anything, just sit there.
 
 func main(){
 	config.ParseConfigOptions()
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	/* Create default clients and users. Currently chef-validator,
 	 * chef-webui, and admin. */

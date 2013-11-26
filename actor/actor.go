@@ -27,6 +27,7 @@ import (
 	"github.com/ctdk/goiardi/data_store"
 	"fmt"
 	"github.com/ctdk/goiardi/chef_crypto"
+	"github.com/ctdk/goiardi/util"
 )
 
 type Actor struct {
@@ -45,6 +46,9 @@ func New(clientname string, cheftype string) (*Actor, error){
 	ds := data_store.New()
 	if _, found := ds.Get("client", clientname); found {
 		err := fmt.Errorf("Client (or user) %s already exists", clientname)
+		return nil, err
+	}
+	if err := validateClientName(clientname); err != nil {
 		return nil, err
 	}
 	actor := &Actor{
@@ -88,6 +92,9 @@ func (c *Actor) Delete() error {
 //func Rename(c *Actor, new_name string, cheftype string) (*Actor, error) {
 func (c *Actor) Rename(new_name string) error {
 	ds := data_store.New()
+	if err := validateClientName(new_name); err != nil {
+		return err
+	}
 	ds.Delete("client", c.Name)
 	c.Name = new_name
 	return nil
@@ -120,4 +127,12 @@ func (a *Actor) GetName() string {
 func (a *Actor) URLType() string {
 	url_type := fmt.Sprintf("%ss", a.ChefType)
 	return url_type
+}
+
+func validateClientName(name string) error {
+	if !util.ValidateName(name) {
+		err := fmt.Errorf("Invalid client name '%s' using regex: 'Malformed client name.  Must be A-Z, a-z, 0-9, _, -, or .'.", name)
+		return err
+	}
+	return nil
 }
