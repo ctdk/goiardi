@@ -36,7 +36,8 @@ type Conf struct {
 
 /* Struct for command line options. */
 type Options struct {
-	Verbose []bool `short:"v" long:"verbose" description:"Show verbose debug information. (not implemented)"`
+	Version bool `short:"v" long:"version" description: "Print version info."`
+	Verbose []bool `short:"V" long:"verbose" description:"Show verbose debug information. (not implemented)"`
 	ConfFile string `short:"c" long:"config" description:"Specify a config file to use. (not implemented)"`
 	IPaddress string `short:"I" long:"ipaddress" description:"Listen on a specific IP address."`
 	Hostname string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel."`
@@ -71,6 +72,11 @@ func ParseConfigOptions() error {
 			panic(err)
 			os.Exit(1)
 		}
+	}
+
+	if opts.Version {
+		fmt.Printf("goiardi version %s (aiming for compatibility with Chef Server version %s).\n", Version, ChefVersion)
+		os.Exit(0)
 	}
 
 	/* TODO: load config file. Also specify a default in the options. */
