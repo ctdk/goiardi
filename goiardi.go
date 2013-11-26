@@ -25,6 +25,7 @@ import (
 	"log"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/actor"
+	"fmt"
 )
 
 type InterceptHandler struct {} // Doesn't need to do anything, just sit there.
@@ -96,6 +97,8 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("X-Goiardi", "yes")
 	w.Header().Set("X-Goiardi-Version", config.Version)
 	w.Header().Set("X-Chef-Version", config.ChefVersion)
+	api_info := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
+	w.Header().Set("X-Ops-API-Info", api_info)
 
 	http.DefaultServeMux.ServeHTTP(w, r)
 }
