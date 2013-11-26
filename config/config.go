@@ -44,6 +44,11 @@ type Options struct {
 
 }
 
+// The goiardi version
+const Version = "0.1.3"
+// The chef version we're at least aiming for, even if it's not complete yet
+const ChefVersion = "11.0.8"
+
 /* The general plan is to read the command-line options, then parse the config
  * file, fill in the config struct with those values, then apply the 
  * command-line options to the config struct. We read the cli options first so

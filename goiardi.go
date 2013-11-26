@@ -93,6 +93,10 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
+	w.Header().Set("X-Goiardi", "yes")
+	w.Header().Set("X-Goiardi-Version", config.Version)
+	w.Header().Set("X-Chef-Version", config.ChefVersion)
+
 	http.DefaultServeMux.ServeHTTP(w, r)
 }
 
