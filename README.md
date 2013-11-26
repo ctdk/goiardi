@@ -111,3 +111,5 @@ Chef is copyright (c) 2008-2013 Opscode, Inc. and its various contributors.
 
 Thanks go out to the fine folks of Opscode and the Chef community for all their
 hard work.
+
+Also, if you were wondering, Ettore Boiardi was the man behind Chef Boyardee. Wakka wakka.
