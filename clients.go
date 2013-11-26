@@ -122,6 +122,22 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 				}
 			} 
 
+			show_public_key := true
+
+			if pk, pkfound := client_data["public_key"]; pkfound {
+				switch pk := pk.(type){
+					case string:
+						// TODO: this needs validation
+						chef_client.PublicKey = pk
+					case nil:
+						//show_public_key = false
+						;
+					default:
+						JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+						return
+				}
+			}
+
 			if p, pfound := client_data["private_key"]; pfound {
 				switch p := p.(type) {
 					case bool:
@@ -130,6 +146,11 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 								JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 								return
 							}
+							/* Even if public key is
+							 * nil, if we generate a
+							 * private key send it.
+							 */
+							show_public_key = true
 						}
 					default:
 						JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
@@ -148,7 +169,9 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			json_client["name"] = chef_client.Name
 			json_client["admin"] = chef_client.Admin
 			json_client["validator"] = chef_client.Validator
-			json_client["public_key"] = chef_client.PublicKey
+			if show_public_key && op != "users" {
+				json_client["public_key"] = chef_client.PublicKey
+			}
 			enc := json.NewEncoder(w)
 			if err = enc.Encode(&json_client); err != nil{
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)

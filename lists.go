@@ -133,20 +133,46 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 				JsonErrorReport(w, r, err.Error(), status)
 				return nil
 			}
-			if admin_val, ok := client_data["admin"].(bool); ok {
-				chef_client.Admin = admin_val
+			if admin_val, ok := client_data["admin"]; ok {
+				switch admin_val := admin_val.(type){
+					case bool:
+						chef_client.Admin = admin_val
+					default:
+						JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+						return nil
+				}
 			} 
 
-			if client_response["private_key"], err = chef_client.GenerateKeys(); err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				return nil
+			if public_key, pkok := client_data["public_key"]; !pkok {
+				if client_response["private_key"], err = chef_client.GenerateKeys(); err != nil {
+					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+					return nil
+				}
+			} else {
+				switch public_key := public_key.(type) {
+					case string:
+						// TODO: validate public keys
+						// when the time comes
+						chef_client.PublicKey = public_key
+					case nil:
+						if client_response["private_key"], err = chef_client.GenerateKeys(); err != nil {
+							JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+							return nil
+						}
+					default:
+						JsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
+						return nil
+				}
 			}
+			/* If we make it here, we want the public key in the
+			 * response. I think. */
+			client_response["public_key"] = chef_client.PublicKey
+			
 			if validator_val, vok := client_data["validator"].(bool); vok && chef_type != "user"{
 				chef_client.Validator = validator_val
 			}
 			chef_client.Save()
 			client_response["uri"] = util.ObjURL(chef_client)
-			client_response["public_key"] = chef_client.PublicKey
 			w.WriteHeader(http.StatusCreated)
 		default:
 			JsonErrorReport(w, r, "Method not allowed for clients or users", http.StatusMethodNotAllowed)

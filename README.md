@@ -15,8 +15,10 @@ DEPENDENCIES
 Goiardi currently only has two dependencies: go-flags, and go-cache. To install
 them, run:
 
+```
    go get github.com/jessevdk/go-flags
    go get github.com/pmylund/go-cache
+```
 
 from your $GOROOT.
 
@@ -30,17 +32,23 @@ INSTALLATION
 
 3. Download goairdi
 
+```
    go get github.com/ctdk/goiardi
+```
 
 4. Run tests, as soon as there are tests to run.
 
 5. Install the goiardi binaries.
 
+```
    go install github.com/ctdk/goiardi
+```
 
 6. Run goiardi.
 
+```
    goiardi <options>
+```
 
    You can get a list of current options with the '-h' flag. Some of them may
    even work. As of this writing you can specify the hostname, IP address, and
