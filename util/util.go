@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"regexp"
+	"net/http"
 )
 
 // Anything that implements these functions is a goiardi/chef object, like a
@@ -33,6 +34,39 @@ import (
 type GoiardiObj interface {
 	GetName() string
 	URLType() string
+}
+
+type gerror struct {
+	msg string
+	status int
+}
+
+type Gerror interface {
+	Error() string
+	Status() int
+	SetStatus(int)
+}
+
+func New(text string) Gerror {
+	return &gerror{msg: text, 
+		status: http.StatusBadRequest, 
+		}
+}
+
+func Errorf(format string, a ...interface{}) Gerror {
+	return New(fmt.Sprintf(format, a...))
+}
+
+func (e *gerror) Error() string {
+	return e.msg
+}
+
+func (e *gerror) SetStatus(s int) {
+	e.status = s
+}
+
+func (e *gerror) Status() int {
+	return e.status
 }
 
 // Craft a URL
@@ -62,5 +96,10 @@ func chkPath(p *string){
 
 func ValidateName(name string) bool {
 	m, _ := regexp.MatchString("[^A-Za-z0-9_.-]", name)
+	return !m
+}
+
+func ValidateDBagName(name string) bool {
+	m, _ := regexp.MatchString("[^A-Za-z0-9_.:-]", name)
 	return !m
 }

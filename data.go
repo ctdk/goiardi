@@ -46,47 +46,61 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 				db_data, jerr := ParseObjJson(r.Body)
 				if jerr != nil {
 					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+					return
 				}
-				chef_dbag, err := data_bag.Get(db_data["name"].(string))
+				/* check that the name exists */
+				switch t := db_data["name"].(type) {
+					case string:
+						if t == "" {
+							JsonErrorReport(w, r, "Field 'name' missing", http.StatusBadRequest)
+							return
+						}
+					default:
+						JsonErrorReport(w, r, "Field 'name' missing", http.StatusBadRequest)
+						return
+				}
+				chef_dbag, _ := data_bag.Get(db_data["name"].(string))
 				if chef_dbag != nil {
 					httperr := fmt.Errorf("Data bag %s already exists.", db_data["name"].(string))
 					JsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
 					return
 				}
-				chef_dbag, err = data_bag.New(db_data["name"].(string))
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				chef_dbag, nerr := data_bag.New(db_data["name"].(string))
+				if nerr != nil {
+					JsonErrorReport(w, r, nerr.Error(), nerr.Status())
 					return
 				}
 				chef_dbag.Save()
 				db_response["uri"] = util.ObjURL(chef_dbag)
 				w.WriteHeader(http.StatusCreated)
 			default:
-				JsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
+				/* The chef-pedant spec wants this response for
+				 * some reason. Mix it up, I guess. */
+				JsonErrorReport(w, r, "GET, PUT", http.StatusMethodNotAllowed)
 				return
 		}
 	} else { 
 		db_name := path_array[1]
+
+		/* chef-pedant is unhappy about not reporting the HTTP status
+		 * as 404 by fetching the data bag before we see if the method
+		 * is allowed, so do a quick check for that here. */
+		if (len(path_array) == 2  && r.Method == "PUT") || (len(path_array) == 3 && r.Method == "POST"){
+			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 		chef_dbag, err := data_bag.Get(db_name)
 		if err != nil {
-			if r.Method == "POST" && len(path_array) == 2 { 
-				/* If we create a data bag item by POSTing to 
-				 * /data/NAME and the data bag doesn't exist,
-				 * we have to create the data bag to hold the
-				 * item despite the API docs implying otherwise.
-				 * This fits with previously observed behavior
-				 * with knife data bag from file BAG FILE
-				 */
-				chef_dbag, err = data_bag.New(db_name)
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				chef_dbag.Save()
+			var err_msg string
+			status := http.StatusNotFound
+			if r.Method == "POST" {
+				/* Posts get a special snowflake message */
+				err_msg = fmt.Sprintf("No data bag '%s' could be found. Please create this data bag before adding items to it.", db_name)
 			} else {
-				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
-				return
+				err_msg = err.Error()
 			}
+			JsonErrorReport(w, r, err_msg, status)
+			return
 		}
 		if len(path_array) == 2 {
 			/* getting list of data bag items and creating data bag
@@ -111,23 +125,23 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 					}
 				case "POST":
 					raw_data := data_bag.RawDataBagJson(r.Body)
-					dbitem, err := chef_dbag.NewDBItem(raw_data)
-					if err != nil {
-						httperr := fmt.Errorf("Item %s in data bag %s already exists.", raw_data["id"].(string), chef_dbag.Name)
-						JsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
+					dbitem, nerr := chef_dbag.NewDBItem(raw_data)
+					if nerr != nil {
+						JsonErrorReport(w, r, nerr.Error(), nerr.Status())
 						return
 					}
+					
 					/* The data bag return values are all
 					 * kinds of weird. Sometimes it sends
 					 * just the raw data, sometimes it sends
 					 * the whole object, sometimes a special
 					 * snowflake version. Ugh. */
 					db_response = dbitem.RawData
-					db_response["data_bag"] = dbitem.DataBagName
-					db_response["chef_type"] = dbitem.ChefType
+					//db_response["data_bag"] = dbitem.DataBagName
+					//db_response["chef_type"] = dbitem.ChefType
 					w.WriteHeader(http.StatusCreated)
 				default:
-					JsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
+					JsonErrorReport(w, r, "GET, DELETE, POST", http.StatusMethodNotAllowed)
 					return
 			}
 		} else {
@@ -136,17 +150,25 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 			if _, ok := chef_dbag.DataBagItems[db_item_name]; !ok {
 				httperr := fmt.Errorf("Item %s in data bag %s does not exist.", db_item_name, chef_dbag.Name)
 				JsonErrorReport(w, r, httperr.Error(), http.StatusNotFound)
+				return
 			}
 			switch r.Method {
-				case "GET", "DELETE":
+				case "GET":
 					db_response = chef_dbag.DataBagItems[db_item_name].RawData
-					if r.Method == "DELETE" {
-						err := chef_dbag.DeleteDBItem(db_item_name)
-						if err != nil {
-							JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-							return
-						}
+				case "DELETE":
+					dbi := chef_dbag.DataBagItems[db_item_name]
+					/* Gotta short circuit this */
+					enc := json.NewEncoder(w)
+					if err := enc.Encode(&dbi); err != nil {
+						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+						return
 					}
+					err := chef_dbag.DeleteDBItem(db_item_name)
+					if err != nil {
+						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+						return
+					}
+					return
 				case "PUT":
 					raw_data := data_bag.RawDataBagJson(r.Body)
 					dbitem, err := chef_dbag.UpdateDBItem(db_item_name, raw_data)
@@ -159,8 +181,9 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 					db_response = dbitem.RawData
 					db_response["data_bag"] = dbitem.DataBagName
 					db_response["chef_type"] = dbitem.ChefType
+					db_response["id"] = db_item_name
 				default:
-					JsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
+					JsonErrorReport(w, r, "GET, DELETE, PUT", http.StatusMethodNotAllowed)
 					return
 			}
 		}

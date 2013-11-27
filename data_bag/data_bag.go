@@ -21,9 +21,11 @@ package data_bag
 
 import (
 	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/util"
 	"fmt"
 	"encoding/json"
 	"io"
+	"net/http"
 )
 
 type DataBag struct {
@@ -41,10 +43,14 @@ type DataBagItem struct {
 
 /* Data bag functions and methods */
 
-func New(name string) (*DataBag, error){
+func New(name string) (*DataBag, util.Gerror){
 	ds := data_store.New()
 	if _, found := ds.Get("data_bag", name); found {
-		err := fmt.Errorf("Data bag %s already exists", name)
+		err := util.Errorf("Data bag %s already exists", name)
+		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
+	if err := validateDataBagName(name, false); err != nil {
 		return nil, err
 	}
 	dbi_map := make(map[string]DataBagItem)
@@ -59,7 +65,7 @@ func Get(db_name string) (*DataBag, error){
 	ds := data_store.New()
 	data_bag, found := ds.Get("data_bag", db_name)
 	if !found {
-		err := fmt.Errorf("Data bag %s not found", db_name)
+		err := fmt.Errorf("Cannot load data bag %s", db_name)
 		return nil, err
 	}
 	return data_bag.(*DataBag), nil
@@ -96,12 +102,30 @@ func (db *DataBag) URLType() string {
 /* To do: Idle test; see if changes to the returned data bag item are reflected
  * in the one stored in the hash there */
 
-func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagItem, error){
-	dbi_id := raw_dbag_item["id"].(string)
+func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagItem, util.Gerror){
+	//dbi_id := raw_dbag_item["id"].(string)
+	var dbi_id string
+	switch t := raw_dbag_item["id"].(type) {
+		case string:
+			if t == "" {
+				err := util.Errorf("Field 'id' missing")
+				return nil, err
+			} else {
+				dbi_id = t
+			}
+		default:
+			err := util.Errorf("Field 'id' missing")
+			return nil, err
+	}
 
 	/* Look for an existing dbag item with this name */
 	if _, found := db.DataBagItems[dbi_id]; found {
-		err := fmt.Errorf("Item %s in data bag %s already exists.", dbi_id, db.Name)
+		err := util.Errorf("Item %s in data bag %s already exists.", dbi_id, db.Name)
+		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
+
+	if err := validateDataBagName(dbi_id, true); err != nil {
 		return nil, err
 	}
 	dbi_full_name := fmt.Sprintf("data_bag_item_%s_%s", db.Name, dbi_id)
@@ -155,4 +179,18 @@ func RawDataBagJson (data io.ReadCloser) map[string]interface{} {
 		raw_data = raw_dbag_item
 	}
 	return raw_data
+}
+
+func validateDataBagName(name string, dbi bool) util.Gerror {
+	item := "name"
+	if dbi {
+		item = "id"
+	}
+	_ = item // may want this later
+	if !util.ValidateDBagName(name) {
+		err := util.Errorf("Field '%s' invalid", item)
+		err.SetStatus(http.StatusBadRequest)
+		return err
+	}
+	return nil
 }
