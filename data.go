@@ -144,10 +144,16 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 					 * kinds of weird. Sometimes it sends
 					 * just the raw data, sometimes it sends
 					 * the whole object, sometimes a special
-					 * snowflake version. Ugh. */
-					db_response = dbitem.RawData
-					//db_response["data_bag"] = dbitem.DataBagName
-					//db_response["chef_type"] = dbitem.ChefType
+					 * snowflake version. Ugh. Have to loop
+					 * through to avoid updating the pointer
+					 * in the cache by just assigning
+					 * dbitem.RawData to db_response. Urk.
+					 */
+					for k, v := range dbitem.RawData {
+						db_response[k] = v
+					}
+					db_response["data_bag"] = dbitem.DataBagName
+					db_response["chef_type"] = dbitem.ChefType
 					w.WriteHeader(http.StatusCreated)
 				default:
 					JsonErrorReport(w, r, "GET, DELETE, POST", http.StatusMethodNotAllowed)
@@ -185,6 +191,18 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 					return
 				case "PUT":
 					raw_data := data_bag.RawDataBagJson(r.Body)
+					if raw_id, ok := raw_data["id"]; ok {
+						switch raw_id := raw_id.(type) {
+							case string:
+								if raw_id != db_item_name {
+									JsonErrorReport(w, r, "DataBagItem name mismatch.", http.StatusBadRequest)
+									return
+								}
+							default:
+								JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+								return
+						}
+					}
 					dbitem, err := chef_dbag.UpdateDBItem(db_item_name, raw_data)
 					if err != nil {
 						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -192,7 +210,9 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 					}
 					/* Another weird data bag item response
 					 * which isn't at all unusual. */
-					db_response = dbitem.RawData
+					for k, v := range dbitem.RawData {
+						db_response[k] = v
+					}
 					db_response["data_bag"] = dbitem.DataBagName
 					db_response["chef_type"] = dbitem.ChefType
 					db_response["id"] = db_item_name
