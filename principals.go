@@ -26,7 +26,7 @@ import (
 
 func principal_handler(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
-	principal_name := r.URL.Path[11:]
+	principal_name := r.URL.Path[12:]
 	switch r.Method {
 		case "GET":
 			chef_actor, err := actor.Get(principal_name)
