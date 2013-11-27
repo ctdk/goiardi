@@ -61,11 +61,12 @@ func New(name string) (*DataBag, util.Gerror){
 	return data_bag, nil
 }
 
-func Get(db_name string) (*DataBag, error){
+func Get(db_name string) (*DataBag, util.Gerror){
 	ds := data_store.New()
 	data_bag, found := ds.Get("data_bag", db_name)
 	if !found {
-		err := fmt.Errorf("Cannot load data bag %s", db_name)
+		err := util.Errorf("Cannot load data bag %s", db_name)
+		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
 	return data_bag.(*DataBag), nil
@@ -120,7 +121,7 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 
 	/* Look for an existing dbag item with this name */
 	if _, found := db.DataBagItems[dbi_id]; found {
-		err := util.Errorf("Item %s in data bag %s already exists.", dbi_id, db.Name)
+		err := util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
@@ -146,7 +147,7 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 func (db *DataBag) UpdateDBItem(dbi_id string, raw_dbag_item map[string]interface{}) (*DataBagItem, error){
 	db_item, found := db.DataBagItems[dbi_id]
 	if !found {
-		err := fmt.Errorf("Item %s in data bag %s does not exist.", dbi_id, db.Name)
+		err := fmt.Errorf("Cannot load data bag item %s for data bag %s", dbi_id, db.Name)
 		return nil, err
 	}
 	db_item.RawData = raw_dbag_item

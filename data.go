@@ -92,12 +92,21 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 		chef_dbag, err := data_bag.Get(db_name)
 		if err != nil {
 			var err_msg string
-			status := http.StatusNotFound
+			status := err.Status()
 			if r.Method == "POST" {
 				/* Posts get a special snowflake message */
 				err_msg = fmt.Sprintf("No data bag '%s' could be found. Please create this data bag before adding items to it.", db_name)
 			} else {
-				err_msg = err.Error()
+				if len(path_array) == 3 {
+					/* This is nuts. */
+					if r.Method == "DELETE" {
+						err_msg = fmt.Sprintf("Cannot load data bag %s item %s", db_name, path_array[2])
+					} else {
+						err_msg = fmt.Sprintf("Cannot load data bag item %s for data bag %s", path_array[2], db_name)
+					}
+				} else {
+					err_msg = err.Error()
+				}
 			}
 			JsonErrorReport(w, r, err_msg, status)
 			return
@@ -148,8 +157,13 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 			/* getting, editing, and deleting existing data bag items. */
 			db_item_name := path_array[2]
 			if _, ok := chef_dbag.DataBagItems[db_item_name]; !ok {
-				httperr := fmt.Errorf("Item %s in data bag %s does not exist.", db_item_name, chef_dbag.Name)
-				JsonErrorReport(w, r, httperr.Error(), http.StatusNotFound)
+				var httperr string
+				if r.Method != "DELETE" {
+					httperr = fmt.Sprintf("Cannot load data bag item %s for data bag %s", db_item_name, chef_dbag.Name)
+				} else {
+					httperr = fmt.Sprintf("Cannot load data bag %s item %s", chef_dbag.Name, db_item_name)
+				}
+				JsonErrorReport(w, r, httperr, http.StatusNotFound)
 				return
 			}
 			switch r.Method {
