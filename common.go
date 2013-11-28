@@ -37,23 +37,10 @@ func ParseObjJson(data io.ReadCloser) (map[string]interface{}, error){
 
 	/* If this kind of object comes with a run_list, process it */
 	if _, ok := obj_data["run_list"]; ok {
-		switch o := obj_data["run_list"].(type){
-			case []interface{}:
-				_ = o
-				new_run_list := make([]string, len(obj_data["run_list"].([]interface{})))
-				for i, v := range obj_data["run_list"].([]interface{}){
-					switch v := v.(type) {
-						case string:
-							new_run_list[i] = v
-						default:
-							err := fmt.Errorf("Field 'run_list' is not a valid run list")
-							return nil, err
-					}
-				}
-				obj_data["run_list"] = new_run_list
-			default:
-				err := fmt.Errorf("Field 'run_list' is not a valid run list")
-				return nil, err
+		if rl, err := chkRunList(obj_data["run_list"]); err != nil {
+			return nil, err
+		} else {
+			obj_data["run_list"] = rl
 		}
 	}
 
@@ -97,4 +84,25 @@ func JsonErrorReport(w http.ResponseWriter, r *http.Request, error_str string, s
 		log.Println(err)
 	}
 	return
+}
+
+func chkRunList(rl interface{}) ([]string, error) {
+	switch o := rl.(type){
+		case []interface{}:
+			_ = o
+			new_run_list := make([]string, len(o))
+			for i, v := range o {
+				switch v := v.(type) {
+					case string:
+						new_run_list[i] = v
+					default:
+						err := fmt.Errorf("Field 'run_list' is not a valid run list")
+						return nil, err
+				}
+			}
+			return new_run_list, nil
+		default:
+			err := fmt.Errorf("Field 'run_list' is not a valid run list")
+			return nil, err
+	}
 }

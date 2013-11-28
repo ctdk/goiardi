@@ -87,7 +87,7 @@ func Get(role_name string) (*Role, error){
 	ds := data_store.New()
 	role, found := ds.Get("role", role_name)
 	if !found {
-		err := fmt.Errorf("Role %s not found", role_name)
+		err := fmt.Errorf("Cannot load role %s", role_name)
 		return nil, err
 	}
 	return role.(*Role), nil
