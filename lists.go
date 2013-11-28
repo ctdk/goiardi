@@ -201,9 +201,13 @@ func role_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			}
+			if _, ok := role_data["name"].(string); !ok {
+				JsonErrorReport(w, r, "Role name missing", http.StatusBadRequest)
+				return nil
+			}
 			chef_role, err := role.Get(role_data["name"].(string))
 			if chef_role != nil {
-				httperr := fmt.Errorf("Role already exists", role_data["name"].(string))
+				httperr := fmt.Errorf("Role already exists")
 				JsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
 				return nil
 			}

@@ -20,7 +20,9 @@ package role
 
 import (
 	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/util"
 	"fmt"
+	"net/http"
 )
 
 /* Need env_run_lists?!!? */
@@ -35,10 +37,11 @@ type Role struct {
 	Override map[string]interface{} `json:"override_attributes"`
 }
 
-func New(name string) (*Role, error){
+func New(name string) (*Role, util.Gerror){
 	ds := data_store.New()
 	if _, found := ds.Get("role", name); found {
-		err := fmt.Errorf("Role %s already exists", name)
+		err := util.Errorf("Role %s already exists", name)
+		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
 	role := &Role{
@@ -54,7 +57,7 @@ func New(name string) (*Role, error){
 	return role, nil
 }
 
-func NewFromJson(json_role map[string]interface{}) (*Role, error){
+func NewFromJson(json_role map[string]interface{}) (*Role, util.Gerror){
 	role, err := New(json_role["name"].(string))
 	if err != nil {
 		return nil, err
@@ -66,13 +69,26 @@ func NewFromJson(json_role map[string]interface{}) (*Role, error){
 	return role, nil
 }
 
-func (r *Role) UpdateFromJson(json_role map[string]interface{}) error {
+func (r *Role) UpdateFromJson(json_role map[string]interface{}) util.Gerror {
 	/* TODO - this and node.UpdateFromJson may be generalizeable with
 	 * reflect - look into it. */
 	if r.Name != json_role["name"] {
-		err := fmt.Errorf("Role name %s and %s from JSON do not match.", r.Name, json_role["name"])
+		err := util.Errorf("Role name %s and %s from JSON do not match.", r.Name, json_role["name"])
 		return err
 	}
+
+	/* Validations */
+	var verr util.Gerror
+	if json_role["run_list"], verr = util.ValidateRunList(json_role["run_list"]); verr != nil {
+		return verr
+	}
+
+	for k, v := range json_role["env_run_lists"].(map[string][]string) {
+		if json_role["env_run_lists"].(map[string][]string)[k], verr = util.ValidateRunList(v); verr != nil {
+			return verr
+		}
+	}
+
 	r.ChefType = json_role["chef_type"].(string)
 	r.JsonClass = json_role["json_class"].(string)
 	r.Description = json_role["description"].(string)

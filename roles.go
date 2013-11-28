@@ -112,7 +112,9 @@ func role_handler(w http.ResponseWriter, r *http.Request){
 							return
 						}
 					}
-					if err = enc.Encode(&run_list); err != nil {
+					resp := make(map[string][]string, 1)
+					resp["run_list"] = run_list
+					if err = enc.Encode(&resp); err != nil {
 						JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 					}
 				} else {

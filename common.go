@@ -46,14 +46,20 @@ func ParseObjJson(data io.ReadCloser) (map[string]interface{}, error){
 
 	/* And if we have env_run_lists */
 	if _, ok := obj_data["env_run_lists"]; ok {
-		new_env_run_list := make(map[string][]string, len(obj_data["env_run_lists"].(map[string]interface{})))
-		for i, v := range obj_data["env_run_lists"].(map[string]interface{}) {
-			new_env_run_list[i] = make([]string, len(v.([]interface{})))
-			for q, k := range v.([]interface{}) {
-				new_env_run_list[i][q] = k.(string)
-			}
+		switch erl := obj_data["env_run_lists"].(type) {
+			case map[string]interface{}:
+				new_env_run_list := make(map[string][]string, len(erl))
+				var erlerr error
+				for i, v := range erl {
+					if new_env_run_list[i], erlerr = chkRunList(v); erlerr != nil {
+						return nil, erlerr
+					}
+				}
+				obj_data["env_run_lists"] = new_env_run_list
+			default:
+				err := fmt.Errorf("Bad env_run_list %T", erl)
+				return nil, err
 		}
-		obj_data["env_run_lists"] = new_env_run_list
 	}
 
 	/* If this kind of object has any attributes, process them too */
