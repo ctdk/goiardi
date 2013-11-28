@@ -22,15 +22,13 @@ import (
 	"net/http"
 	"encoding/json"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/util"
 )
 
 func node_handler(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
 	
-	var node_name string
-	if r.Method == "GET" || r.Method == "PUT" || r.Method == "DELETE" {
-		node_name = r.URL.Path[7:]
-	}
+	node_name := r.URL.Path[7:]
 
 	/* So, what are we doing? Depends on the HTTP method, of course */
 	switch r.Method {
@@ -56,6 +54,7 @@ func node_handler(w http.ResponseWriter, r *http.Request){
 			node_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return
 			}
 			chef_node, err := node.Get(node_name)
 			if err != nil {
@@ -65,20 +64,26 @@ func node_handler(w http.ResponseWriter, r *http.Request){
 			/* If node_name and node_data["name"] don't match, we
 			 * need to make a new node. Make sure that node doesn't
 			 * exist. */
-			if node_name != node_data["name"].(string) {
-				chef_node, err = node.Get(node_data["name"].(string))
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusConflict)
-					return
-				} else {
-					chef_node, err = node.NewFromJson(node_data)
-					if err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-						return
-					}
-				}
+			if _, found := node_data["name"]; !found {
+				node_data["name"] = node_name
+			}
+			json_name, sterr := util.ValidateAsString(node_data["name"])
+			if sterr != nil {
+				JsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
+				return
+			}
+			if node_name != json_name && json_name != "" {
+				JsonErrorReport(w, r, "Node name mismatch.", http.StatusBadRequest)
+				return
 			} else {
-				chef_node.UpdateFromJson(node_data)
+				if json_name == "" {
+					node_data["name"] = node_name
+				}
+				nerr := chef_node.UpdateFromJson(node_data)
+				if nerr != nil {
+					JsonErrorReport(w, r, nerr.Error(), nerr.Status())
+					return
+				}
 			}
 			chef_node.Save()
 			enc := json.NewEncoder(w)

@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"log"
 	"strings"
+	"fmt"
 )
 
 func ParseObjJson(data io.ReadCloser) (map[string]interface{}, error){
@@ -36,11 +37,24 @@ func ParseObjJson(data io.ReadCloser) (map[string]interface{}, error){
 
 	/* If this kind of object comes with a run_list, process it */
 	if _, ok := obj_data["run_list"]; ok {
-		new_run_list := make([]string, len(obj_data["run_list"].([]interface{})))
-		for i, v := range obj_data["run_list"].([]interface{}){
-			new_run_list[i] = v.(string)
+		switch o := obj_data["run_list"].(type){
+			case []interface{}:
+				_ = o
+				new_run_list := make([]string, len(obj_data["run_list"].([]interface{})))
+				for i, v := range obj_data["run_list"].([]interface{}){
+					switch v := v.(type) {
+						case string:
+							new_run_list[i] = v
+						default:
+							err := fmt.Errorf("Field 'run_list' is not a valid run list")
+							return nil, err
+					}
+				}
+				obj_data["run_list"] = new_run_list
+			default:
+				err := fmt.Errorf("Field 'run_list' is not a valid run list")
+				return nil, err
 		}
-		obj_data["run_list"] = new_run_list
 	}
 
 	/* And if we have env_run_lists */

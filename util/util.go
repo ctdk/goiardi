@@ -27,6 +27,8 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"regexp"
 	"net/http"
+	"sort"
+	"strings"
 )
 
 // Anything that implements these functions is a goiardi/chef object, like a
@@ -102,4 +104,158 @@ func ValidateName(name string) bool {
 func ValidateDBagName(name string) bool {
 	m, _ := regexp.MatchString("[^A-Za-z0-9_.:-]", name)
 	return !m
+}
+
+func ValidateEnvName(name string) bool {
+	m, _ := regexp.MatchString("[^A-Za-z0-9_-]", name)
+	return !m
+}
+
+func ValidateAsString(str interface{}) (string, Gerror) {
+	switch str := str.(type) {
+		case string:
+			return str, nil
+		default:
+			err := Errorf("Field 'name' missing")
+			return "", err
+	}
+}
+
+func ValidateAsFieldString(str interface{}) (string, Gerror){
+	switch str := str.(type) {
+		case string:
+			return str, nil
+		case nil:
+			err := Errorf("Field 'name' nil")
+			return "", err
+		default:
+			err := Errorf("Field 'name' missing")
+			return "", err
+	}
+}
+
+func ValidateAttributes(key string, attrs interface{}) (map[string]interface{}, Gerror){
+	switch attrs := attrs.(type) {
+		case map[string]interface{}:
+			return attrs, nil
+		case nil:
+			/* Separate to do more validations above */
+			return nil, nil
+		default:
+			err := Errorf("Field '%s' is not a hash", key)
+			return nil, err
+	}
+}
+
+func ValidateRunList(rl interface{}) ([]string, Gerror) {
+	switch rl := rl.(type) {
+		case []string:
+			for i, r := range rl {
+				if j, err := validateRLItem(r); err != nil {
+					return nil, err
+				} else {
+					if j == "" {
+						err := Errorf("Field 'run_list' is not a valid run list")
+						return nil, err
+					} 
+					rl[i] = j
+				}
+			}
+
+			/* Remove dupes */
+			rl_hash := make(map[string]string, len(rl))
+			for _, u := range rl {
+				rl_hash[u] = u
+			}
+			rl = make([]string, len(rl_hash))
+			z := 0
+			for k, _ := range rl_hash {
+				rl[z] = k
+				z++
+			}
+
+			// TODO: needs a more accurate sort
+			sort.Strings(rl)
+			return rl, nil
+		case nil:
+			/* separate to do more validations above */
+			return nil, nil
+		default:
+			err := Errorf("Not a proper runlist []string")
+			return nil, err
+	}
+}
+
+func validateRLItem(item string) (string, Gerror){
+	/* There's a few places this might be used. */
+	err := Errorf("Field 'run_list' is not a valid run list")
+
+	if item == "" {
+		return "", err
+	}
+
+	/* first checks */
+	valid_rl := regexp.MustCompile("[^A-Za-z0-9_\\[\\]@\\.:]")
+	m := valid_rl.MatchString(item)
+
+	if m {
+		return "", err
+	}
+
+	inspectRegexp := regexp.MustCompile(`^(\w+)\[(.*?)\]$`)
+	inspect_item := inspectRegexp.FindStringSubmatch(item)
+
+	if inspect_item != nil {
+		rl_type := inspect_item[1]
+		rl_item := inspect_item[2]
+		if rl_type == "role" {
+			if !validateRoleName(rl_item){
+				return "", err
+			}
+		} else if rl_type == "recipe" {
+			if !validateRecipeName(rl_item){
+				return "", err
+			}
+		} else {
+			return "", err
+		}
+	} else {
+		if validateRecipeName(item) {
+			item = fmt.Sprintf("recipe[%s]", item)
+		} else {
+			return "", err
+		}
+	}
+	
+	return item, nil
+}
+
+func validateRoleName(name string) bool {
+	valid_role := regexp.MustCompile("[^A-Za-z0-9_-]")
+	m := valid_role.MatchString(name)
+	return !m
+}
+
+func validateRecipeName(name string) bool {
+	first_valid := regexp.MustCompile("[^A-Za-z0-9_@\\.:]")
+	m := first_valid.MatchString(name)
+	if m {
+		return false
+	}
+
+	/* If we have a version */
+	if strings.Index(name, "@") != -1 {
+		h := strings.Split(name, "@")
+		name = h[0]
+		version := h[1]
+		valid_ver := regexp.MustCompile(`^\d\.\d(\.\d)?$`)
+		if !valid_ver.MatchString(version){
+			return false
+		}
+	}
+	/* If we get this far, just do a final check on the name */
+	final_chk := regexp.MustCompile(`^\w+(::\w+)?$`)
+	n := final_chk.MatchString(name)
+
+	return n
 }
