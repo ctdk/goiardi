@@ -200,6 +200,7 @@ func role_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			role_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return nil
 			}
 			if _, ok := role_data["name"].(string); !ok {
 				JsonErrorReport(w, r, "Role name missing", http.StatusBadRequest)

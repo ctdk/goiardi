@@ -21,6 +21,7 @@ package main
 import (
 	"net/http"
 	"github.com/ctdk/goiardi/role"
+	"github.com/ctdk/goiardi/util"
 	"encoding/json"
 	"fmt"
 )
@@ -61,22 +62,30 @@ func role_handler(w http.ResponseWriter, r *http.Request){
 				role_data, jerr := ParseObjJson(r.Body)
 				if jerr != nil {
 					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+					return
+				}
+				if _, ok := role_data["name"]; !ok {
+					role_data["name"] = role_name
+				}
+				json_name, sterr := util.ValidateAsString(role_data["name"])
+				if sterr != nil {
+					JsonErrorReport(w, r, sterr.Error(), sterr.Status())
+					return
 				}
 				if role_name != role_data["name"].(string) {
-					chef_role, err = role.Get(role_data["name"].(string))
-					if err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusConflict)
-						return
-					} else {
-						chef_role, err = role.NewFromJson(role_data)
-						if err != nil {
-							JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-							return
-						}
-					}
+					JsonErrorReport(w, r, "Role name mismatch", http.StatusBadRequest)
+					return
 				} else {
-					chef_role.UpdateFromJson(role_data)
+					if json_name == "" {
+						role_data["name"] = role_name
+					}
+					nerr := chef_role.UpdateFromJson(role_data)
+					if nerr != nil {
+						JsonErrorReport(w, r, nerr.Error(), nerr.Status())
+						return
+					}
 				}
+	
 				chef_role.Save()
 				enc := json.NewEncoder(w)
 				if err = enc.Encode(&chef_role); err != nil {
