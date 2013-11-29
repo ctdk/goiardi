@@ -27,7 +27,6 @@ import (
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"strings"
-	"regexp"
 )
 
 func list_handler(w http.ResponseWriter, r *http.Request){
@@ -118,40 +117,23 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 				return nil
 			}
-			if name_val, ok := client_data["name"].(string); ok {
-				client_chk, _ := actor.Get(name_val)
-				if client_chk != nil {
-					JsonErrorReport(w, r, "Client already exists", http.StatusConflict)
-					return nil
-				}
-			} else {
-					JsonErrorReport(w, r, "Field 'name' missing", http.StatusBadRequest)
-					return nil
-			}
-			chef_client, err := actor.New(client_data["name"].(string), chef_type)
-			if err != nil {
-				var status int
-				if m, _ := regexp.MatchString("Invalid client name.*", err.Error()); m {
-					status = http.StatusBadRequest
-				} else {
-					status = http.StatusInternalServerError
-				}
-				JsonErrorReport(w, r, err.Error(), status)
+			client_name, sterr := util.ValidateAsString(client_data["name"])
+			if sterr != nil || client_name == "" {
+				err := fmt.Errorf("Field 'name' missing")
+				JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 				return nil
 			}
-			if admin_val, ok := client_data["admin"]; ok {
-				switch admin_val := admin_val.(type){
-					case bool:
-						chef_client.Admin = admin_val
-					default:
-						JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
-						return nil
-				}
-			} 
+
+			chef_client, err := actor.NewFromJson(client_data, chef_type)
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), err.Status())
+				return nil
+			}
 
 			if public_key, pkok := client_data["public_key"]; !pkok {
-				if client_response["private_key"], err = chef_client.GenerateKeys(); err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				var perr error
+				if client_response["private_key"], perr = chef_client.GenerateKeys(); perr != nil {
+					JsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 					return nil
 				}
 			} else {
@@ -161,8 +143,10 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 						// when the time comes
 						chef_client.PublicKey = public_key
 					case nil:
-						if client_response["private_key"], err = chef_client.GenerateKeys(); err != nil {
-							JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			
+						var perr error
+						if client_response["private_key"], perr = chef_client.GenerateKeys(); perr != nil {
+							JsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 							return nil
 						}
 					default:
@@ -174,9 +158,6 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 			 * response. I think. */
 			client_response["public_key"] = chef_client.PublicKey
 			
-			if validator_val, vok := client_data["validator"].(bool); vok && chef_type != "user"{
-				chef_client.Validator = validator_val
-			}
 			chef_client.Save()
 			client_response["uri"] = util.ObjURL(chef_client)
 			w.WriteHeader(http.StatusCreated)

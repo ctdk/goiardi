@@ -121,6 +121,16 @@ func ValidateAsString(str interface{}) (string, Gerror) {
 	}
 }
 
+func ValidateAsBool(b interface{}) (bool, Gerror){
+	switch b := b.(type) {
+		case bool:
+			return b, nil
+		default:
+			err := Errorf("Invalid bool")
+			return false, err
+	}
+}
+
 func ValidateAsFieldString(str interface{}) (string, Gerror){
 	switch str := str.(type) {
 		case string:

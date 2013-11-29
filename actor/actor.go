@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/chef_crypto"
 	"github.com/ctdk/goiardi/util"
+	"net/http"
 )
 
 type Actor struct {
@@ -42,10 +43,11 @@ type Actor struct {
 	Certificate string
 }
 
-func New(clientname string, cheftype string) (*Actor, error){
+func New(clientname string, cheftype string) (*Actor, util.Gerror){
 	ds := data_store.New()
 	if _, found := ds.Get("client", clientname); found {
-		err := fmt.Errorf("Client (or user) %s already exists", clientname)
+		err := util.Errorf("Client already exists")
+		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
 	if err := validateClientName(clientname); err != nil {
@@ -89,14 +91,119 @@ func (c *Actor) Delete() error {
 }
 
 // Renames the client or user. Save() must be called after this method is used.
-//func Rename(c *Actor, new_name string, cheftype string) (*Actor, error) {
-func (c *Actor) Rename(new_name string) error {
+func (c *Actor) Rename(new_name string) util.Gerror {
 	ds := data_store.New()
 	if err := validateClientName(new_name); err != nil {
 		return err
 	}
+	if _, found := ds.Get("client", new_name); found {
+		err := util.Errorf("Client (or user) %s already exists", new_name)
+		err.SetStatus(http.StatusConflict)
+		return err
+	}
 	ds.Delete("client", c.Name)
 	c.Name = new_name
+	return nil
+}
+
+// Build a new client/user from a json object
+func NewFromJson(json_actor map[string]interface{}, cheftype string) (*Actor, util.Gerror) {
+	actor_name, nerr := util.ValidateAsString(json_actor["name"])
+	if nerr != nil {
+		return nil, nerr
+	}
+	actor, err := New(actor_name, cheftype)
+	if err != nil {
+		return nil, err
+	}
+	err = actor.UpdateFromJson(json_actor, cheftype)
+	if err != nil {
+		return nil, err
+	}
+	return actor, nil
+}
+
+// Update a client/user from a json object. Does a bunch of validations inside
+// rather than in the handler.
+func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string) util.Gerror {
+	actor_name, nerr := util.ValidateAsString(json_actor["name"])
+	if nerr != nil {
+		return nerr
+	}
+	if c.Name != actor_name {
+		err := util.Errorf("Client (or user) name %s and %s from JSON do not match", c.Name, actor_name)
+		return err
+	}
+
+	/* Validations. */
+	/* Invalid top level elements */
+	valid_elements := []string{ "name", "json_class", "chef_type", "validator", "org_name", "public_key", "private_key", "admin", "certificate", "password" }
+	ValidElem:
+	for k, _ := range json_actor {
+		for _, i := range valid_elements {
+			if k == i {
+				continue ValidElem
+			}
+		}
+		err := util.Errorf("Invalid key %s in request body", k)
+		return err
+	}
+	var verr util.Gerror
+	json_actor["json_class"], verr = util.ValidateAsFieldString(json_actor["json_class"])
+	if verr != nil {
+		if verr.Error() == "Field 'name' nil" {
+			json_actor["json_class"] = c.JsonClass
+		} else {
+			return verr
+		}
+	} else {
+		if json_actor["json_class"].(string) != "Chef::Node" {
+			verr = util.Errorf("Field 'json_class' invalid")
+			return verr
+		}
+	}
+
+
+	json_actor["chef_type"], verr = util.ValidateAsFieldString(json_actor["chef_type"])
+	if verr != nil {
+		if verr.Error() == "Field 'name' nil" {
+			json_actor["chef_type"] = c.ChefType
+		} else {
+			return verr
+		}
+	} else {
+		if json_actor["chef_type"].(string) != "node" {
+			verr = util.Errorf("Field 'chef_type' invalid")
+			return verr
+		}
+	}
+
+	if admin_val, ok := json_actor["admin"]; ok {
+		var ab bool
+		if ab, verr = util.ValidateAsBool(admin_val); verr != nil {
+			return verr
+		} else {
+			/* Just set admin flag here */
+			c.Admin = ab
+		}
+	}
+	if validator_val, ok := json_actor["validator"]; ok {
+		var vb bool
+		if vb, verr = util.ValidateAsBool(validator_val); verr != nil {
+			return verr
+		} else {
+			/* Just set admin flag here */
+			if cheftype != "user" {
+				c.Validator = vb
+			} else {
+				verr = util.Errorf("Cannot make a user a validator")
+				return verr
+			}
+		}
+	}
+	c.ChefType = json_actor["chef_type"].(string)
+	c.JsonClass = json_actor["json_class"].(string)
+
 	return nil
 }
 
@@ -129,9 +236,9 @@ func (a *Actor) URLType() string {
 	return url_type
 }
 
-func validateClientName(name string) error {
+func validateClientName(name string) util.Gerror {
 	if !util.ValidateName(name) {
-		err := fmt.Errorf("Invalid client name '%s' using regex: 'Malformed client name.  Must be A-Z, a-z, 0-9, _, -, or .'.", name)
+		err := util.Errorf("Invalid client name '%s' using regex: 'Malformed client name.  Must be A-Z, a-z, 0-9, _, -, or .'.", name)
 		return err
 	}
 	return nil

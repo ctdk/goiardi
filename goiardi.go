@@ -121,33 +121,33 @@ func cleanPath(p string) string {
 }
 
 func createDefaultActors() {
-	if webui, err := actor.New("chef-webui", "client"); err != nil {
-		log.Fatalln(err)
+	if webui, nerr := actor.New("chef-webui", "client"); nerr != nil {
+		log.Fatalln(nerr)
 	} else {
 		webui.Admin = true
-		_, err = webui.GenerateKeys()
+		_, err := webui.GenerateKeys()
 		if err != nil {
 			log.Fatalln(err)
 		}
 		webui.Save()
 	}
 
-	if validator, err := actor.New("chef-validator", "client"); err != nil {
-		log.Fatalln(err)
+	if validator, verr := actor.New("chef-validator", "client"); verr != nil {
+		log.Fatalln(verr)
 	} else {
 		validator.Validator = true
-		_, err = validator.GenerateKeys()
+		_, err := validator.GenerateKeys()
 		if err != nil {
 			log.Fatalln(err)
 		}
 		validator.Save()
 	}
 
-	if admin, err := actor.New("admin", "user"); err != nil {
-		log.Fatalln(err)
+	if admin, aerr := actor.New("admin", "user"); aerr != nil {
+		log.Fatalln(aerr)
 	} else {
 		admin.Admin = true
-		_, err = admin.GenerateKeys()
+		_, err := admin.GenerateKeys()
 		if err != nil {
 			log.Fatalln(err)
 		}

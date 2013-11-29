@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/util"
 	"fmt"
 	"strings"
 )
@@ -98,8 +99,9 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 				return
 			}
 
-			if _, nok := client_data["name"].(string); !nok {
-				JsonErrorReport(w, r, "Client name does not appear to be a string", http.StatusBadRequest)
+			json_name, sterr := util.ValidateAsString(client_data["name"])
+			if sterr != nil {
+				JsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
 				return
 			}
 
@@ -107,22 +109,19 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			 * same, we're renaming. Check the new name doesn't
 			 * already exist. */
 			json_client := make(map[string]interface{})
-			if client_name != client_data["name"].(string) {
-				rename_client, _ := actor.Get(client_data["name"].(string))
-				if rename_client != nil {
-					conflict_err := fmt.Errorf("Client (or user) %s already exists, can't rename.", client_data["name"].(string))
-					JsonErrorReport(w, r, conflict_err.Error(), http.StatusConflict)
+			if client_name != json_name {
+				err := chef_client.Rename(json_name)
+				if err != nil {
+					JsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				} else {
-					if err = chef_client.Rename(client_data["name"].(string)); err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-						return
-					}
 					w.WriteHeader(http.StatusCreated)
 				}
 			} 
-
-			show_public_key := true
+			if uerr := chef_client.UpdateFromJson(client_data, chef_type); uerr != nil {
+				JsonErrorReport(w, r, uerr.Error(), uerr.Status())
+				return
+			}
 
 			if pk, pkfound := client_data["public_key"]; pkfound {
 				switch pk := pk.(type){
@@ -146,11 +145,6 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 								JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 								return
 							}
-							/* Even if public key is
-							 * nil, if we generate a
-							 * private key send it.
-							 */
-							show_public_key = true
 						}
 					default:
 						JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
@@ -158,18 +152,11 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 				}
 			}
 
-			if t, ok := client_data["admin"].(bool); ok {
-				chef_client.Admin = t
-			}
-			if v, vok := client_data["validator"].(bool); vok {
-				chef_client.Validator = v
-			}
-
 			chef_client.Save()
 			json_client["name"] = chef_client.Name
 			json_client["admin"] = chef_client.Admin
 			json_client["validator"] = chef_client.Validator
-			if show_public_key && op != "users" {
+			if op != "users" {
 				json_client["public_key"] = chef_client.PublicKey
 			}
 			enc := json.NewEncoder(w)
