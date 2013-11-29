@@ -52,12 +52,13 @@ func ParseObjJson(data io.ReadCloser) (map[string]interface{}, error){
 				var erlerr error
 				for i, v := range erl {
 					if new_env_run_list[i], erlerr = chkRunList(v); erlerr != nil {
+						erlerr := fmt.Errorf("Field 'env_run_lists' contains invalid run lists")
 						return nil, erlerr
 					}
 				}
 				obj_data["env_run_lists"] = new_env_run_list
 			default:
-				err := fmt.Errorf("Bad env_run_list %T", erl)
+				err := fmt.Errorf("Field 'env_run_lists' contains invalid run lists")
 				return nil, err
 		}
 	}

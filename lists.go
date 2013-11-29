@@ -206,15 +206,16 @@ func role_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 				JsonErrorReport(w, r, "Role name missing", http.StatusBadRequest)
 				return nil
 			}
-			chef_role, err := role.Get(role_data["name"].(string))
+			chef_role, _ := role.Get(role_data["name"].(string))
 			if chef_role != nil {
 				httperr := fmt.Errorf("Role already exists")
 				JsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
 				return nil
 			}
-			chef_role, err = role.NewFromJson(role_data)
-			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			var nerr util.Gerror
+			chef_role, nerr = role.NewFromJson(role_data)
+			if nerr != nil {
+				JsonErrorReport(w, r, nerr.Error(), nerr.Status())
 				return nil
 			}
 			chef_role.Save()

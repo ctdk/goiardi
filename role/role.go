@@ -44,6 +44,11 @@ func New(name string) (*Role, util.Gerror){
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
+	if !util.ValidateDBagName(name){
+		err := util.Errorf("Field 'name' invalid")
+		err.SetStatus(http.StatusBadRequest)
+		return nil, err
+	}
 	role := &Role{
 		Name: name,
 		ChefType: "role",
@@ -78,13 +83,69 @@ func (r *Role) UpdateFromJson(json_role map[string]interface{}) util.Gerror {
 	}
 
 	/* Validations */
+
+	/* Look for invalid top level elements. See node/node.go for more
+	 * information. */
+	valid_elements := []string{ "name", "json_class", "chef_type", "run_list", "env_run_lists", "default_attributes", "override_attributes", "description" }
+	ValidElem:
+	for k := range json_role {
+		for _, i := range valid_elements {
+			if k == i {
+				continue ValidElem
+			}
+		}
+		err := util.Errorf("Invalid key %s in request body", k)
+		return err
+	}
+
 	var verr util.Gerror
 	if json_role["run_list"], verr = util.ValidateRunList(json_role["run_list"]); verr != nil {
 		return verr
 	}
 
-	for k, v := range json_role["env_run_lists"].(map[string][]string) {
-		if json_role["env_run_lists"].(map[string][]string)[k], verr = util.ValidateRunList(v); verr != nil {
+	if _, erl_exists := json_role["env_run_lists"]; erl_exists { 
+		for k, v := range json_role["env_run_lists"].(map[string][]string) {
+			if json_role["env_run_lists"].(map[string][]string)[k], verr = util.ValidateRunList(v); verr != nil {
+				return verr
+			}
+		}
+	} else {
+		json_role["env_run_lists"] = make(map[string][]string)
+	}
+
+	attrs := []string{ "default_attributes", "override_attributes" }
+	for _, a := range attrs {
+		json_role[a], verr = util.ValidateAttributes(a, json_role[a])
+		if verr != nil {
+			return verr
+		}
+	}
+
+	json_role["json_class"], verr = util.ValidateAsFieldString(json_role["json_class"])
+	if verr != nil {
+		if verr.Error() == "Field 'name' nil" {
+			json_role["json_class"] = r.JsonClass
+		} else {
+			return verr
+		}
+	} else {
+		if json_role["json_class"].(string) != "Chef::Role" {
+			verr = util.Errorf("Field 'json_class' invalid")
+			return verr
+		}
+	}
+
+
+	json_role["chef_type"], verr = util.ValidateAsFieldString(json_role["chef_type"])
+	if verr != nil {
+		if verr.Error() == "Field 'name' nil" {
+			json_role["chef_type"] = r.ChefType
+		} else {
+			return verr
+		}
+	} else {
+		if json_role["chef_type"].(string) != "role" {
+			verr = util.Errorf("Field 'chef_type' invalid")
 			return verr
 		}
 	}

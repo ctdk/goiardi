@@ -140,7 +140,8 @@ func ValidateAttributes(key string, attrs interface{}) (map[string]interface{}, 
 			return attrs, nil
 		case nil:
 			/* Separate to do more validations above */
-			return nil, nil
+			nil_attrs := make(map[string]interface{})
+			return nil_attrs, nil
 		default:
 			err := Errorf("Field '%s' is not a hash", key)
 			return nil, err
@@ -179,7 +180,8 @@ func ValidateRunList(rl interface{}) ([]string, Gerror) {
 			return rl, nil
 		case nil:
 			/* separate to do more validations above */
-			return nil, nil
+			nil_rl := make([]string, 0)
+			return nil_rl, nil
 		default:
 			err := Errorf("Not a proper runlist []string")
 			return nil, err
