@@ -66,7 +66,7 @@ func New(name string) (*Node, util.Gerror) {
 }
 
 func NewFromJson(json_node map[string]interface{}) (*Node, util.Gerror){
-	node_name, nerr := util.ValidateAsString(json_node["name"].(string))
+	node_name, nerr := util.ValidateAsString(json_node["name"])
 	if nerr != nil {
 		return nil, nerr
 	}
@@ -95,7 +95,7 @@ func (n *Node) UpdateFromJson(json_node map[string]interface{}) util.Gerror {
 	/* It's actually totally legitimate to save a node with a different
 	 * name than you started with, but we need to get/create a new node for
 	 * it is all. */
-	node_name, nerr := util.ValidateAsString(json_node["name"].(string))
+	node_name, nerr := util.ValidateAsString(json_node["name"])
 	if nerr != nil {
 		return nerr
 	}
