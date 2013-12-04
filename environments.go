@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"fmt"
 	"encoding/json"
+	"strings"
 )
 
 func environment_handler(w http.ResponseWriter, r *http.Request){
@@ -164,7 +165,14 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 				 * constrained version. Weird. */
 				cb_ver, jerr := ParseObjJson(r.Body)
 				if jerr != nil {
-					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+					errmsg := jerr.Error()
+					if !strings.Contains(errmsg, "Field") {
+						errmsg = "invalid JSON"
+					} else {
+						errmsg = jerr.Error()
+					}
+					JsonErrorReport(w, r, errmsg, http.StatusBadRequest)
+					return
 				}
 
 				if _, ok := cb_ver["run_list"]; !ok {
@@ -173,7 +181,8 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 				}
 				deps, err := cookbook.DependsCookbooks(cb_ver["run_list"].([]string))
 				if err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusMethodNotAllowed)
+					JsonErrorReport(w, r, err.Error(), http.StatusPreconditionFailed)
+					return
 				}
 				/* Need our own encoding here too. */
 				enc := json.NewEncoder(w)

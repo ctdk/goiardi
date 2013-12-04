@@ -169,7 +169,7 @@ func (c *Cookbook)ConstrainedInfoHash(num_results interface{}, constraint string
 	return c.infoHashBase(num_results, constraint)
 }
 
-func DependsCookbooks(run_list []string) (map[string]*CookbookVersion, error) {
+func DependsCookbooks(run_list []string) (map[string]interface{}, error) {
 	cd_list := make(map[string][]string, len(run_list))
 	run_list_ref := make([]string, len(run_list))
 
@@ -206,7 +206,7 @@ func DependsCookbooks(run_list []string) (map[string]*CookbookVersion, error) {
 		}
 	}
 
-	cookbook_deps := make(map[string]*CookbookVersion, len(cd_list))
+	cookbook_deps := make(map[string]interface{}, len(cd_list))
 	for cname, traints := range cd_list {
 		cb, err := Get(cname)
 		/* Although we would have already seen this, but being careful
@@ -239,7 +239,7 @@ func DependsCookbooks(run_list []string) (map[string]*CookbookVersion, error) {
 			err := fmt.Errorf("Unfortunately no version of %s could satisfy the requested constraints: %s", cname, strings.Join(traints, ", "))
 			return nil, err
 		} else {
-			cookbook_deps[gcbv.CookbookName] = gcbv
+			cookbook_deps[gcbv.CookbookName] = gcbv.ToJson("POST")
 		}
 	}
 

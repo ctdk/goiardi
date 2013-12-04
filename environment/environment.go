@@ -92,7 +92,7 @@ func Get(env_name string) (*ChefEnvironment, error){
 	ds := data_store.New()
 	env, found := ds.Get("env", env_name)
 	if !found {
-		err := fmt.Errorf("Cannot load environment %s", env_name)
+		err := fmt.Errorf("environment '%s' not found", env_name)
 		return nil, err
 	}
 	return env.(*ChefEnvironment), nil
