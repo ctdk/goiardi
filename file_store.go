@@ -47,7 +47,10 @@ func file_store_handler(w http.ResponseWriter, r *http.Request){
 			 * sort of error with uploading the file. */
 			if file_store, _ := filestore.Get(chksum); file_store != nil {
 				file_err := fmt.Errorf("File with checksum %s already exists.", chksum)
-				JsonErrorReport(w, r, file_err.Error(), http.StatusConflict)
+				/* Send status OK. It seems chef-pedant at least
+				 * tries to upload files twice for some reason.
+				 */
+				JsonErrorReport(w, r, file_err.Error(), http.StatusOK)
 				return
 			}
 			file_store, err := filestore.New(chksum, r.Body, r.ContentLength)

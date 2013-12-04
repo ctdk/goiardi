@@ -29,6 +29,8 @@ import (
 	"strconv"
 	"sort"
 	"log"
+	"net/http"
+	"regexp"
 )
 
 // Make version strings with the format "x.y.z" sortable.
@@ -70,10 +72,16 @@ func (c *Cookbook) URLType() string {
 	return "cookbooks"
 }
 
-func New(name string) (*Cookbook, error){
+func New(name string) (*Cookbook, util.Gerror){
 	ds := data_store.New()
+
+	if !util.ValidateEnvName(name) {
+		err := util.Errorf("Invalid cookbook name '%s' using regex: 'Malformed cookbook name. Must only contain A-Z, a-z, 0-9, _ or -'.", name)
+		return nil, err
+	}
 	if _, found := ds.Get("cookbook", name); found {
-		err := fmt.Errorf("Cookbook %s already exists", name)
+		err := util.Errorf("Cookbook %s already exists", name)
+		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
 	cookbook := &Cookbook{
@@ -83,11 +91,12 @@ func New(name string) (*Cookbook, error){
 	return cookbook, nil
 }
 
-func Get(name string) (*Cookbook, error){
+func Get(name string) (*Cookbook, util.Gerror){
 	ds := data_store.New()
 	cookbook, found := ds.Get("cookbook", name)
 	if !found {
-		err := fmt.Errorf("cookbook %s not found", name)
+		err := util.Errorf("Cannot find a cookbook named %s", name)
+		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
 	return cookbook.(*Cookbook), nil
@@ -102,6 +111,7 @@ func (c *Cookbook) Save() error {
 func (c *Cookbook) Delete() error {
 	ds := data_store.New()
 	ds.Delete("cookbook", c.Name)
+	log.Printf("deleted %s\n", c.Name)
 	return nil
 }
 
@@ -131,6 +141,11 @@ func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
 		sorted[i] = c.Versions[s]
 	}
 	return sorted
+}
+
+func (c *Cookbook) UpdateLatestVersion() {
+	c.latest = nil
+	c.LatestVersion()
 }
 
 func (c *Cookbook) LatestVersion() *CookbookVersion {
@@ -185,9 +200,9 @@ func DependsCookbooks(run_list []string) (map[string]*CookbookVersion, error) {
 			return nil, fmt.Errorf("No cookbook found for %s that satisfies constraint '%s'", c.Name, cd_list[cbName][0])
 		}
 		
-		err = cbv.resolveDependencies(cd_list)
-		if err != nil {
-			return nil, err
+		nerr := cbv.resolveDependencies(cd_list)
+		if nerr != nil {
+			return nil, nerr
 		}
 	}
 
@@ -266,9 +281,9 @@ func (cbv *CookbookVersion)resolveDependencies(cd_list map[string][]string) erro
 			cd_list[r] = []string{c}
 		}
 		
-		err = deb_cbv.resolveDependencies(cd_list)
-		if err != nil {
-			return err
+		nerr := deb_cbv.resolveDependencies(cd_list)
+		if nerr != nil {
+			return nerr
 		}
 	}
 	return nil
@@ -299,20 +314,17 @@ func (c *Cookbook)infoHashBase(num_results interface{}, constraint string) map[s
 	 * breaking. */
 	var num_versions int
 	all_versions := false
-	var cb_hash_len int
+	//var cb_hash_len int
 
 	if num_results != "" && num_results != "all" {
 		num_versions, _ = strconv.Atoi(num_results.(string))
-		cb_hash_len = num_versions
 	} else if num_results == "" {
 		num_versions = 1
-		cb_hash_len = num_versions
 	} else {
 		all_versions = true
-		cb_hash_len = len(c.Versions)
 	}
 
-	cb_hash["versions"] = make([]interface{}, cb_hash_len)
+	cb_hash["versions"] = make([]interface{}, 0)
 
 	var constraint_version string
 	var constraint_op string
@@ -352,7 +364,7 @@ func (c *Cookbook)infoHashBase(num_results interface{}, constraint string) map[s
 		cv_info := make(map[string]string)
 		cv_info["url"] = util.CustomObjURL(c, cv.Version)
 		cv_info["version"] = cv.Version
-		cb_hash["versions"].([]interface{})[nr] = cv_info
+		cb_hash["versions"] = append(cb_hash["versions"].([]interface{}), cv_info)
 		nr++ 
 	}
 	return cb_hash
@@ -389,9 +401,10 @@ func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion{
 
 /* CookbookVersion methods and functions */
 
-func (c *Cookbook)NewVersion(cb_version string, cbv_data map[string]interface{}) (*CookbookVersion, error){
+func (c *Cookbook)NewVersion(cb_version string, cbv_data map[string]interface{}) (*CookbookVersion, util.Gerror){
 	if _, err := c.GetVersion(cb_version); err == nil {
-		err = fmt.Errorf("Version %s of cookbook %s already exists, and shouldn't be created like this. Use UpdateVersion instead.", cb_version, c.Name)
+		err := util.Errorf("Version %s of cookbook %s already exists, and shouldn't be created like this. Use UpdateVersion instead.", cb_version, c.Name)
+		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
 	cbv := &CookbookVersion{
@@ -402,43 +415,33 @@ func (c *Cookbook)NewVersion(cb_version string, cbv_data map[string]interface{})
 		JsonClass: "Chef::CookbookVersion",
 		IsFrozen: false,
 	}
-	err := cbv.UpdateVersion(cbv_data)
+	err := cbv.UpdateVersion(cbv_data, "")
 	if err != nil {
 		return nil, err
 	}
 	/* And, dur, add it to the versions */
 	c.Versions[cb_version] = cbv
 	
-	_ = c.LatestVersion() /* We don't care what it is, just want it set. */
+	c.UpdateLatestVersion()
 	c.Save()
 	return cbv, nil
 }
 
-func (c *Cookbook)GetVersion(cb_version string) (*CookbookVersion, error) {
+func (c *Cookbook)GetVersion(cb_version string) (*CookbookVersion, util.Gerror) {
+	if cb_version == "_latest" {
+		return c.LatestVersion(), nil
+	}
 	cbv, found := c.Versions[cb_version]
 	if !found {
-		err := fmt.Errorf("Version %s of %s does not exist.", cb_version, c.Name)
+		err := util.Errorf("Cannot find a cookbook named %s with version %s",c.Name, cb_version)
+		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
 	return cbv, nil
 }
 
-func (c *Cookbook)DeleteVersion(cb_version string) error {
-	/* Check for frozenness and existence */
-	cbv, _ := c.GetVersion(cb_version)
-	if cbv == nil {
-		err := fmt.Errorf("Version %s of cookbook %s does not exist to be deleted.", cb_version, c.Name)
-		return err
-	} else {
-		if cbv.IsFrozen {
-			err := fmt.Errorf("Version %s of cookbook %s is frozen, cannot be deleted.", cb_version, c.Name)
-			return err
-		}
-	}
-	file_hashes := cbv.fileHashes()
-	delete(c.Versions, cb_version)
-	
-	/* And remove the unused hashes. Currently, sigh, this involes checking
+func (c *Cookbook)deleteHashes(file_hashes []string) {
+/* And remove the unused hashes. Currently, sigh, this involes checking
 	 * every cookbook. Probably will be easier with an actual database, I
 	 * imagine. */
 	all_cookbooks := GetList()
@@ -460,13 +463,11 @@ func (c *Cookbook)DeleteVersion(cb_version string) error {
 					 * one in file_hashes, also break out.
 					 */
 					if fh == vh {
-						log.Printf("Deleting element %d\n", i)
 						file_hashes = delSliceElement(i, file_hashes)
 						break
 					} else if fh > vh {
 						break
 					}
-					
 				}
 			}
 		}
@@ -475,28 +476,141 @@ func (c *Cookbook)DeleteVersion(cb_version string) error {
 	for _, ff := range file_hashes {
 		del_file, err := filestore.Get(ff)
 		if err != nil {
-			log.Printf("Strange, we got an error trying to get %s to delete it.", ff)
+			log.Printf("Strange, we got an error trying to get %s to delete it.\n", ff)
 			log.Println(err)
 		} else {
 			_ = del_file.Delete()
 		}
+		// May be able to remove this. Check that it actually deleted
+		d, _ := filestore.Get(ff)
+		if d != nil {
+			log.Printf("Stranger and stranger, %s is still in the file store.\n", ff)
+		}
 	}
+}
 
+func (c *Cookbook)DeleteVersion(cb_version string) util.Gerror {
+	/* Check for existence */
+	cbv, _ := c.GetVersion(cb_version)
+	if cbv == nil {
+		err := util.Errorf("Version %s of cookbook %s does not exist to be deleted.", cb_version, c.Name)
+		err.SetStatus(http.StatusNotFound)
+		return err
+	} 
+
+	file_hashes := cbv.fileHashes()
+	delete(c.Versions, cb_version)
+	c.deleteHashes(file_hashes)
+	
 	c.Save()
 	return nil
 }
 
-func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}) error {
-	if cbv.IsFrozen {
-		err := fmt.Errorf("Version %s of cookbook %s is frozen, cannot be deleted.", cbv.Version, cbv.CookbookName)
+func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force string) util.Gerror {
+	/* Allow force to update a frozen cookbook */
+	if cbv.IsFrozen == true && force != "true" {
+		err := util.Errorf("The cookbook %s at version %s is frozen. Use the 'force' option to override.", cbv.CookbookName, cbv.Version)
+		err.SetStatus(http.StatusConflict)
 		return err
 	}
 
+	file_hashes := cbv.fileHashes()
+	
+	_, nerr := util.ValidateAsString(cbv_data["cookbook_name"])
+	if nerr != nil {
+		if nerr.Error() == "Field 'name' missing" {
+			nerr = util.Errorf("Field 'cookbook_name' missing")
+		} else {
+			nerr = util.Errorf("Field 'cookbook_name' invalid")
+		}
+		return nerr
+	}
+
+	/* Validation, validation, all is validation. */
+	valid_elements := []string{ "cookbook_name", "name", "version", "json_class", "chef_type", "definitions", "libraries", "attributes", "recipes", "providers", "resources", "templates", "root_files", "files", "frozen?", "metadata", "force" }
+	ValidElem:
+	for k, _ := range cbv_data {
+		for _, i := range valid_elements {
+			if k == i {
+				continue ValidElem
+			}
+		}
+		err := util.Errorf("Invalid key %s in request body", k)
+		return err
+	}
+
+	var verr util.Gerror
+	cbv_data["chef_type"], verr = util.ValidateAsFieldString(cbv_data["chef_type"])
+	if verr != nil {
+		if verr.Error() == "Field 'name' nil" {
+			cbv_data["chef_type"] = cbv.ChefType
+		} else {
+			verr = util.Errorf("Field 'chef_type' invalid")
+			return verr
+		}
+	} else {
+		// Wait, what was I doing here?
+		// if !util.ValidateEnvName(cbv_data["chef_type"].(string)) {
+		if cbv_data["chef_type"].(string) != "cookbook_version" {
+			verr = util.Errorf("Field 'chef_type' invalid")
+			return verr
+		}
+	}
+
+	cbv_data["json_class"], verr = util.ValidateAsFieldString(cbv_data["json_class"])
+	if verr != nil {
+		if verr.Error() == "Field 'name' nil" {
+			cbv_data["json_class"] = cbv.JsonClass
+		} else {
+			verr = util.Errorf("Field 'json_class' invalid")
+			return verr
+		}
+	} else {
+		if cbv_data["json_class"].(string) != "Chef::CookbookVersion" {
+			verr = util.Errorf("Field 'json_class' invalid")
+			return verr
+		}
+	}
+
+	cbv_data["version"], verr = util.ValidateAsVersion(cbv_data["version"])
+	if verr != nil {
+		verr = util.Errorf("Field 'version' invalid")
+		return verr
+	} else {
+		if cbv_data["version"].(string) == "0.0.0" && cbv.Version != "" {
+			cbv_data["version"] = cbv.Version
+		}
+	}
+
+	divs := []string{ "definitions", "libraries", "attributes", "recipes", "providers", "resources", "templates", "root_files", "files" }
+	for _, d := range divs {
+		cbv_data[d], verr = util.ValidateCookbookDivision(d, cbv_data[d])
+		if verr != nil {
+			return verr
+		}
+	}
+	cbv_data["metadata"], verr = util.ValidateCookbookMetadata(cbv_data["metadata"])
+	if verr != nil {
+		return verr
+	}
+	
+
+	cbv_data["frozen?"], verr = util.ValidateAsBool(cbv_data["frozen?"])
+	if verr != nil {
+		return verr
+	}
+
 	/* Basic sanity checking */
-	if cbv_data["cookbook_name"].(string) != cbv.CookbookName ||
-		cbv_data["name"].(string) != cbv.Name ||
-		cbv_data["version"].(string) != cbv.Version {
-		err := fmt.Errorf("Yikes! Somehow the cookbook version you're trying to upload is not what we expect it to be. You're uploading %s %s %s, but we expect %s %s %s", cbv_data["name"].(string), cbv_data["version"].(string), cbv_data["cookbook_name"].(string), cbv.Name, cbv.Version, cbv.CookbookName)
+	if cbv_data["cookbook_name"].(string) != cbv.CookbookName {
+		err := util.Errorf("Field 'cookbook_name' invalid")
+		return err
+	}
+	if cbv_data["name"].(string) != cbv.Name {
+		err := util.Errorf("Field 'name' invalid")
+		return err
+	}
+	if cbv_data["version"].(string) != cbv.Version && cbv_data["version"] != "0.0.0" {
+		err := util.Errorf("Field 'version' invalid")
 		return err
 	}
 	
@@ -504,30 +618,37 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}) error 
 	/* With these next two, should we test for existence before setting? */
 	cbv.ChefType = cbv_data["chef_type"].(string)
 	cbv.JsonClass = cbv_data["json_class"].(string)
-	cbv.Definitions = convertToCookbookItem(cbv_data["definitions"])
-	cbv.Libraries = convertToCookbookItem(cbv_data["libraries"])
-	cbv.Attributes = convertToCookbookItem(cbv_data["attributes"])
-	cbv.Recipes = convertToCookbookItem(cbv_data["recipes"])
-	cbv.Providers = convertToCookbookItem(cbv_data["providers"])
-	cbv.Resources = convertToCookbookItem(cbv_data["resources"])
-	cbv.Templates = convertToCookbookItem(cbv_data["templates"])
-	cbv.RootFiles = convertToCookbookItem(cbv_data["root_files"])
-	cbv.Files = convertToCookbookItem(cbv_data["files"])
-	cbv.IsFrozen = cbv_data["frozen?"].(bool)
+	cbv.Definitions = convertToCookbookDiv(cbv_data["definitions"])
+	cbv.Libraries = convertToCookbookDiv(cbv_data["libraries"])
+	cbv.Attributes = convertToCookbookDiv(cbv_data["attributes"])
+	cbv.Recipes = cbv_data["recipes"].([]map[string]interface{})
+	cbv.Providers = convertToCookbookDiv(cbv_data["providers"])
+	cbv.Resources = convertToCookbookDiv(cbv_data["resources"])
+	cbv.Templates = convertToCookbookDiv(cbv_data["templates"])
+	cbv.RootFiles = convertToCookbookDiv(cbv_data["root_files"])
+	cbv.Files = convertToCookbookDiv(cbv_data["files"])
+	if cbv.IsFrozen != true {
+		cbv.IsFrozen = cbv_data["frozen?"].(bool)
+	}
 	cbv.Metadata = cbv_data["metadata"].(map[string]interface{})
+
+	/* Clean cookbook hashes */
+	if len(file_hashes) > 0 {
+		// Get our parent. Bravely assuming that if it exists we exist.
+		cbook, _ := Get(cbv.CookbookName)
+		cbook.deleteHashes(file_hashes)
+	}
 	
 	return nil
 }
 
-func convertToCookbookItem(cbk_item interface{}) []map[string]interface{} {
-	conv_items := make([]map[string]interface{}, len(cbk_item.([]interface{})))
-	/* Need to craft the URL for these too */
-	for i, k := range cbk_item.([]interface{}) {
-		conv_items[i] = k.(map[string]interface{})
-		item_url := fmt.Sprintf("/file_store/%s", k.(map[string]interface{})["checksum"])
-		conv_items[i]["url"] = util.CustomURL(item_url)
+func convertToCookbookDiv(div interface{}) []map[string]interface{} {
+	switch div := div.(type) {
+		case []map[string]interface{}:
+			return div
+		default:
+			return nil
 	}
-	return conv_items
 }
 
 // Get the hashes of all files associated with a cookbook. Useful for comparing
@@ -554,10 +675,77 @@ func (cbv *CookbookVersion)fileHashes() []string{
 	return fhashes
 }
 
+func (cbv *CookbookVersion)ToJson(method string) map[string]interface{} {
+	toJson := make(map[string]interface{})
+	toJson["name"] = cbv.Name
+	toJson["cookbook_name"] = cbv.CookbookName
+	if cbv.Version != "0.0.0" {
+		toJson["version"] = cbv.Version
+	}
+	toJson["chef_type"] = cbv.ChefType
+	toJson["json_class"] = cbv.JsonClass
+	toJson["frozen?"] = cbv.IsFrozen
+	toJson["recipes"] = cbv.Recipes
+	toJson["metadata"] = cbv.Metadata
+
+	/* Only send the other fields if something exists in them */
+	/* Seriously, though, why *not* send the URL for the resources back 
+	 * with PUT, but *DO* send it with everything else? */
+	if cbv.Providers != nil {
+		toJson["providers"] = methodize(method, cbv.Providers)
+	}
+	if cbv.Definitions != nil {
+		toJson["definitions"] = methodize(method, cbv.Definitions)
+	}
+	if cbv.Libraries != nil {
+		toJson["libraries"] = methodize(method, cbv.Libraries)
+	}
+	if cbv.Attributes != nil {
+		toJson["attributes"] = methodize(method, cbv.Attributes)
+	}
+	if cbv.Resources != nil {
+		toJson["resources"] = methodize(method, cbv.Resources)
+	}
+	if cbv.Templates != nil {
+		toJson["templates"] = methodize(method, cbv.Templates)
+	}
+	if cbv.RootFiles != nil {
+		toJson["root_files"] = methodize(method, cbv.RootFiles)
+	}
+	if cbv.Files != nil {
+		toJson["files"] = methodize(method, cbv.Files)
+	}
+
+	return toJson
+}
+
+func methodize(method string, cb_thing []map[string]interface{}) []map[string]interface{} {
+	ret_hash := make([]map[string]interface{}, len(cb_thing))
+	for i, v := range cb_thing {
+		ret_hash[i] = make(map[string]interface{})
+		for k, j := range v {
+			if method == "PUT" && k == "url" {
+				continue
+			}
+			ret_hash[i][k] = j
+		}
+	}
+	return ret_hash
+}
+
 func getAttrHashes(attr []map[string]interface{}) []string {
 	hashes := make([]string, len(attr))
 	for i, v := range attr {
-		hashes[i] = v["checksum"].(string)
+		/* Woo, type assertion again */
+		switch h := v["checksum"].(type) {
+			case string:
+				hashes[i] = h
+			case nil:
+				/* anything special here? */
+				;
+			default:
+				; // do we expect an err?
+		}
 	}
 	return hashes
 }
@@ -565,7 +753,7 @@ func getAttrHashes(attr []map[string]interface{}) []string {
 func removeDupHashes(file_hashes []string) []string{
 	for i, v := range file_hashes {
 		/* break if we're the last element */
-		if i + 1 == len(file_hashes){
+		if i + 1 >= len(file_hashes){
 			break
 		}
 		/* If the current element is equal to the next one, remove 
@@ -583,15 +771,30 @@ func delSliceElement(pos int, strs []string) []string {
 }
 
 // Provide a list of recipes in this cookbook version. 
-func (cbv *CookbookVersion) RecipeList() []string{
-	recipe_meta := cbv.Metadata["recipes"].(map[string]string)
+func (cbv *CookbookVersion) RecipeList() ([]string, util.Gerror) {
+	recipe_meta := cbv.Recipes
 	recipes := make([]string, len(recipe_meta))
 	ci := 0
-	for r := range recipe_meta {
-		recipes[ci] = r
+	/* Cobble the recipes together from the Recipes field */
+	for _, r := range recipe_meta {
+		rm := regexp.MustCompile(`(.*?)\.rb`)
+		rfind := rm.FindStringSubmatch(r["name"].(string))
+		if rfind == nil {
+			/* unlikely */
+			err := util.Errorf("No recipe name found")
+			return nil, err
+		}
+		rbase := rfind[1]
+		var rname string
+		if rbase == "default" {
+			rname = cbv.CookbookName
+		} else {
+			rname = fmt.Sprintf("%s::%s", cbv.CookbookName, rbase)
+		}
+		recipes[ci] = rname
 		ci++
 	}
-	return recipes
+	return recipes, nil
 }
 
 /* Version string functions to implement sorting */
@@ -627,7 +830,7 @@ func versionLess(ver_a, ver_b string) bool {
 		 * happen with the 3rd element. */
 		if len(i_ver) < q + 1 {
 			return true
-		} else if len(i_ver) < q + 1 {
+		} else if len(j_ver) < q + 1 {
 			return false
 		}
 

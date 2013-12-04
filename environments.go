@@ -32,7 +32,21 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
 	path_array := SplitPath(r.URL.Path)
 	env_response := make(map[string]interface{})
-	num_results := r.FormValue("num_versions")
+	// num_results := r.FormValue("num_versions")
+	var num_results string
+	r.ParseForm()
+	if nrs, found := r.Form["num_versions"]; found {
+		if len(nrs) < 0 {
+			JsonErrorReport(w, r, "invalid num_versions", http.StatusBadRequest)
+			return
+		}
+		num_results = nrs[0]
+		err := util.ValidateNumVersions(num_results)
+		if err != nil {
+			JsonErrorReport(w, r, "You have requested an invalid number of versions (x >= 0 || 'all')", err.Status())
+			return
+		}
+	}
 
 	path_array_len := len(path_array)
 
@@ -226,6 +240,12 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
+			}
+			/* Here and, I think, here only, if num_versions isn't
+			 * set it's supposed to return ALL matching versions.
+			 * API docs are wrong here. */
+			if num_results == "" {
+				num_results = "all"
 			}
 			env_response[op_name] = cb.ConstrainedInfoHash(num_results, env.CookbookVersions[op_name])
 		} else {

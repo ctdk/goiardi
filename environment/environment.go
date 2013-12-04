@@ -92,7 +92,7 @@ func Get(env_name string) (*ChefEnvironment, error){
 	ds := data_store.New()
 	env, found := ds.Get("env", env_name)
 	if !found {
-		err := fmt.Errorf("Environment %s not found", env_name)
+		err := fmt.Errorf("Cannot load environment %s", env_name)
 		return nil, err
 	}
 	return env.(*ChefEnvironment), nil
@@ -177,7 +177,9 @@ func (e *ChefEnvironment) RecipeList() []string {
 		if cbv == nil {
 			continue
 		}
-		for _, recipe := range cbv.RecipeList() {
+		rlist, _ := cbv.RecipeList()
+		
+		for _, recipe := range rlist {
 			recipe_list[recipe] = recipe
 		}
 	}
