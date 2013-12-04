@@ -77,10 +77,12 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 							  // for now
 				"chef_type": chef_client.ChefType,
 				"json_class": chef_client.JsonClass,
-				"validator": chef_client.Validator,
 				"admin": chef_client.Admin,
 				//"orgname": chef_client.Orgname,
 				"public_key": chef_client.PublicKey,
+			}
+			if op != "users" {
+				json_client["validator"] = chef_client.Validator
 			}
 			enc := json.NewEncoder(w)
 			if err = enc.Encode(&json_client); err != nil{
@@ -155,8 +157,8 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			chef_client.Save()
 			json_client["name"] = chef_client.Name
 			json_client["admin"] = chef_client.Admin
-			json_client["validator"] = chef_client.Validator
 			if op != "users" {
+				json_client["validator"] = chef_client.Validator
 				json_client["public_key"] = chef_client.PublicKey
 			}
 			enc := json.NewEncoder(w)

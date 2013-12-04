@@ -97,7 +97,7 @@ func (c *Actor) Rename(new_name string) util.Gerror {
 		return err
 	}
 	if _, found := ds.Get("client", new_name); found {
-		err := util.Errorf("Client (or user) %s already exists", new_name)
+		err := util.Errorf("Client (or user) %s already exists, cannot rename %s", new_name, c.Name)
 		err.SetStatus(http.StatusConflict)
 		return err
 	}
