@@ -193,8 +193,48 @@ func DependsCookbooks(run_list []string, env_constraints map[string]string) (map
  		if _, found := cd_list[k]; !found {
  			continue
  		} else {
- 			/* This overrides previous settings */
- 			cd_list[k] = []string{ ec }
+			/* Check if there's a constraint in the uploaded run
+			 * list. If not take the env one and move on. */
+			if cd_list[k][0] == "" {
+				cd_list[k] = []string{ ec }
+				continue
+			}
+ 			/* Override if the environment is more restrictive */
+			_, orgver, _ := splitConstraint(cd_list[k][0])
+			newop, newver, nerr := splitConstraint(ec)
+			if nerr != nil {
+				return nil, nerr
+			}
+			/* if the versions are equal, take the env one */
+			if orgver == newver {
+				cd_list[k] = []string{ ec }
+				continue /* and break out of this step */
+			}
+			switch newop {
+				case ">", ">=":
+					if versionLess(orgver, newver) {
+						cd_list[k] = []string{ ec }
+					} 
+				case "<", "<=":
+					if !versionLess(orgver, newver) {
+						cd_list[k] = []string{ ec }
+					}
+				case "=":
+					if orgver != newver {
+						err := fmt.Errorf("This run list has a constraint '%s' for %s that conflicts with '%s' in the environment's cookbook versions.", cd_list[k][0], k, ec)
+						return nil, err
+					}
+				case "~>":
+					if action := verConstraintCheck(orgver, newver, newop); action == "ok" {
+						cd_list[k] = []string{ ec }
+					} else {
+						err := fmt.Errorf("This run list has a constraint '%s' for %s that conflicts with '%s' in the environment's cookbook versions.", cd_list[k][0], k, ec)
+						return nil, err
+					}
+				default:
+					err := fmt.Errorf("An unlikely occurance, but the constraint '%s' for cookbook %s in this environment is impossible.", ec, k)
+					return nil, err
+			}
  		}
  	}
 
