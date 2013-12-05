@@ -169,7 +169,7 @@ func (c *Cookbook)ConstrainedInfoHash(num_results interface{}, constraint string
 	return c.infoHashBase(num_results, constraint)
 }
 
-func DependsCookbooks(run_list []string) (map[string]interface{}, error) {
+func DependsCookbooks(run_list []string, env_constraints map[string]string) (map[string]interface{}, error) {
 	cd_list := make(map[string][]string, len(run_list))
 	run_list_ref := make([]string, len(run_list))
 
@@ -188,6 +188,15 @@ func DependsCookbooks(run_list []string) (map[string]interface{}, error) {
 		 * range through. */
 		run_list_ref[i] = cbName
 	}
+
+ 	for k, ec := range env_constraints {
+ 		if _, found := cd_list[k]; !found {
+ 			continue
+ 		} else {
+ 			/* This overrides previous settings */
+ 			cd_list[k] = []string{ ec }
+ 		}
+ 	}
 
 	/* Build a slice holding all the needed cookbooks. */
 	for _, cbName := range run_list_ref {

@@ -179,7 +179,7 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 					JsonErrorReport(w, r, "POSTed JSON badly formed.", http.StatusMethodNotAllowed)
 					return
 				}
-				deps, err := cookbook.DependsCookbooks(cb_ver["run_list"].([]string))
+				deps, err := cookbook.DependsCookbooks(cb_ver["run_list"].([]string), env.CookbookVersions)
 				if err != nil {
 					JsonErrorReport(w, r, err.Error(), http.StatusPreconditionFailed)
 					return
