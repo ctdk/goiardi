@@ -65,7 +65,10 @@ func main(){
 	http.HandleFunc("/", root_handler)
 
 	listen_addr := config.ListenAddr()
-	http.ListenAndServe(listen_addr, &InterceptHandler{})
+	err := http.ListenAndServe(listen_addr, &InterceptHandler{})
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }
 
 func root_handler(w http.ResponseWriter, r *http.Request){
