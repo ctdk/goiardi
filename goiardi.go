@@ -25,6 +25,7 @@ import (
 	"log"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/environment"
 	"fmt"
 )
 
@@ -156,6 +157,8 @@ func createDefaultActors() {
 		}
 		admin.Save()
 	}
+
+	environment.MakeDefaultEnvironment()
 
 	return
 }

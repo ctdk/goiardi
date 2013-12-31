@@ -1,0 +1,49 @@
+package search
+
+type Tokenizer Peg {
+	Token
+}
+
+q <- body !.
+body <- ( expression / space )* 
+expression <- operation / group / field / field_range / term / string
+term <- < ( keyword valid_letter+ / !keyword !'?' valid_letter ) > { p.AddTerm(buffer[begin:end]) }
+field <- field_norm / field_group 
+field_norm <- { p.StartBasic() } field_name ':' ( term / string )
+field_group <- { p.StartGrouped() } field_name ':' group { p.SetCompleted() }
+field_range <- field_inc_range / field_exc_range
+field_inc_range <- { p.StartRange(true) } field_name ':' open_incl range_value ' TO ' range_value close_incl 
+field_exc_range <- { p.StartRange(false) } field_name ':' open_excl range_value ' TO ' range_value close_excl
+field_name <- < !keyword valid_letter+ > { p.AddField(buffer[begin:end]) }
+range_value <- < (valid_letter+ / '*' ) > { p.AddRange(buffer[begin:end]) }
+group <- space? { p.StartSubQuery() } open_paren body close_paren { p.EndSubQuery() } space?
+operation <- binary_op / unary_op / fuzzy_op / boost_op
+unary_op <- { p.StartBasic() } not_op / required_op / prohibited_op
+binary_op <- ( group / field / field_range / term ) space? boolean_operator space+ body 
+boolean_operator <- or_operator { p.AddOp(OpBinOr) } / and_operator { p.AddOp(OpBinAnd) }
+or_operator <- 'OR' / '||'
+and_operator <- 'AND' / '&&'
+not_op <- not_operator space ( group / field / field_range / term / string ) / bang_operator space? ( group / field / field_range / term / string )
+not_operator <- 'NOT' { p.AddTermOp(OpUnaryNot) }
+bang_operator <- '!' { p.AddTermOp(OpUnaryNot) }
+required_op <-  !valid_letter required_operator ( term / string ) / required_operator ( term / string )
+required_operator <- '+' { p.AddTermOp(OpUnaryReq) }
+prohibited_op <- !valid_letter prohibited_operator ( field / field_range / term / string ) 
+prohibited_operator <- '-' { p.AddTermOp(OpUnaryPro) }
+boost_op <- ( term / string ) '^' { p.AddOp(OpBoost) } fuzzy_param 
+fuzzy_op <- ( term / string ) '~' { p.AddOp(OpFuzzy) } fuzzy_param? ( space / !valid_letter ) 
+fuzzy_param <- < [0-9] '.?' [0-9] / [0-9]+ > { p.AddTerm(buffer[begin:end]) }
+string <- '"' < term (space term)* > '"' { p.AddTerm(buffer[begin:end]) }
+keyword <- 'AND' / 'OR' / 'NOT' 
+valid_letter <- start_letter+ ( [A-Za-z0-9*?_.@\-] / '\\' special_char )*
+start_letter <- [A-Za-z0-9._*] / '\\' special_char
+end_letter <- [A-Za-z0-9*?_.] / '\\' special_char
+special_char <- ([-+&|!(){}\[\]^"~*?\\:])
+open_paren <- '(' 
+close_paren <- ')'
+open_incl <- '[' 
+close_incl <- ']'
+open_excl <- '{'
+close_excl <- '}'
+
+space <- [ \t\n\r]+

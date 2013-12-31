@@ -28,19 +28,20 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/chef_crypto"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/indexer"
 	"net/http"
 )
 
 type Actor struct {
-	Name string
-	NodeName string
-	JsonClass string
-	ChefType string
-	Validator bool
-	Orgname string
-	PublicKey string
-	Admin bool
-	Certificate string
+	Name string `json:"name"`
+	NodeName string `json:"node_name"`
+	JsonClass string `json:"json_class"`
+	ChefType string `json:"chef_type"`
+	Validator bool `json:"validator"`
+	Orgname string `json:"orgname"`
+	PublicKey string `json:"public_key"`
+	Admin bool `json:"admin"`
+	Certificate string `json:"certificate"`
 }
 
 func New(clientname string, cheftype string) (*Actor, util.Gerror){
@@ -81,12 +82,14 @@ func Get(clientname string) (*Actor, error){
 func (c *Actor) Save() error {
 	ds := data_store.New()
 	ds.Set("client", c.Name, c)
+	indexer.IndexObj(c)
 	return nil
 }
 
 func (c *Actor) Delete() error {
 	ds := data_store.New()
 	ds.Delete("client", c.Name)
+	indexer.DeleteItemFromCollection("client", c.Name)
 	return nil
 }
 
@@ -157,7 +160,7 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 			return verr
 		}
 	} else {
-		if json_actor["json_class"].(string) != "Chef::Node" {
+		if json_actor["json_class"].(string) != "Chef::ApiClient" {
 			verr = util.Errorf("Field 'json_class' invalid")
 			return verr
 		}
@@ -172,7 +175,7 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 			return verr
 		}
 	} else {
-		if json_actor["chef_type"].(string) != "node" {
+		if json_actor["chef_type"].(string) != "client" && json_actor["chef_type"].(string) != "user" {
 			verr = util.Errorf("Field 'chef_type' invalid")
 			return verr
 		}
@@ -242,4 +245,19 @@ func validateClientName(name string) util.Gerror {
 		return err
 	}
 	return nil
+}
+
+/* Search indexing functions */
+func (c *Actor) DocId() string {
+	return c.Name
+}
+
+func (c *Actor) Index() string {
+	return "client"
+}
+
+func (c *Actor) Flatten() []string {
+	flatten := util.FlattenObj(c)
+	indexified := util.Indexify(flatten)
+	return indexified
 }

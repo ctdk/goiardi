@@ -12,15 +12,27 @@ along to run chef-pendant tests, even though it fails most of them.
 DEPENDENCIES
 ------------
 
-Goiardi currently only has two dependencies: go-flags, and go-cache. To install
-them, run:
+Goiardi currently only has three dependencies: go-flags, go-cache, and go-trie.
+To install them, run:
 
 ```
    go get github.com/jessevdk/go-flags
    go get github.com/pmylund/go-cache
+   go get github.com/ctdk/go-trie
 ```
 
 from your $GOROOT.
+
+If you would like to modify the search grammar, you'll need the `peg` package.
+To install that, run
+
+```
+   go get github.com/pointlander/peg
+```
+
+In the `search/` directory, run `peg -switch -inline search-parse.peg` to
+generate the new grammar. If you don't plan on editing the search grammar,
+though, you won't need that.
 
 INSTALLATION
 ------------

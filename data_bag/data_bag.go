@@ -22,10 +22,12 @@ package data_bag
 import (
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/indexer"
 	"fmt"
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 )
 
 type DataBag struct {
@@ -58,6 +60,7 @@ func New(name string) (*DataBag, util.Gerror){
 		Name: name,
 		DataBagItems: dbi_map,
 	}
+	indexer.CreateNewCollection(name)
 	return data_bag, nil
 }
 
@@ -80,7 +83,12 @@ func (db *DataBag) Save() error {
 
 func (db *DataBag) Delete() error {
 	ds := data_store.New()
+	/* be thorough, and remove DBItems too */
+	for dbiName := range db.DataBagItems {
+		db.DeleteDBItem(dbiName)
+	}
 	ds.Delete("data_bag", db.Name)
+	indexer.DeleteCollection(db.Name)
 	return nil
 }
 
@@ -141,6 +149,7 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 	db.DataBagItems[dbi_id] = dbag_item
 	/* ? */
 	db.Save()
+	indexer.IndexObj(&dbag_item)
 	return &dbag_item, nil
 }
 
@@ -153,12 +162,14 @@ func (db *DataBag) UpdateDBItem(dbi_id string, raw_dbag_item map[string]interfac
 	db_item.RawData = raw_dbag_item
 	db.DataBagItems[dbi_id] = db_item
 	db.Save()
+	indexer.IndexObj(&db_item)
 	return &db_item, nil
 }
 
 func (db *DataBag) DeleteDBItem(db_item_name string) error {
 	delete(db.DataBagItems, db_item_name)
 	db.Save()
+	indexer.DeleteItemFromCollection(db.Name, db_item_name)
 	return nil
 }
 
@@ -194,4 +205,31 @@ func validateDataBagName(name string, dbi bool) util.Gerror {
 		return err
 	}
 	return nil
+}
+
+/* Indexing functions for data bag items */
+func (dbi *DataBagItem) DocId() string {
+	switch did := dbi.RawData["id"].(type) {
+		case string:
+			return did
+		default:
+			d := strings.Replace(dbi.Name, dbi.DataBagName, "", 1)
+			return d
+	}
+}
+
+func (dbi *DataBagItem) Index() string {
+	return dbi.DataBagName
+}
+
+func (dbi *DataBagItem) Flatten() []string {
+	flatten := make(map[string]interface{})
+	for key, v := range dbi.RawData {
+		subExpand := util.DeepMerge(key, v)
+		for k, u := range subExpand {
+			flatten[k] = u
+		}
+	}
+	indexified := util.Indexify(flatten)
+	return indexified
 }

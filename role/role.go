@@ -21,6 +21,7 @@ package role
 import (
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/indexer"
 	"fmt"
 	"net/http"
 )
@@ -173,12 +174,14 @@ func Get(role_name string) (*Role, error){
 func (r *Role) Save() error {
 	ds := data_store.New()
 	ds.Set("role", r.Name, r)
+	indexer.IndexObj(r)
 	return nil
 }
 
 func (r *Role) Delete() error {
 	ds := data_store.New()
 	ds.Delete("role", r.Name)
+	indexer.DeleteItemFromCollection("role", r.Name)
 	return nil
 }
 
@@ -194,4 +197,18 @@ func (r *Role) GetName() string {
 
 func (r *Role) URLType() string {
 	return "roles"
+}
+
+func (r *Role) DocId() string {
+	return r.Name
+}
+
+func (r *Role) Index() string {
+	return "role"
+}
+
+func (r *Role) Flatten() []string {
+	flatten := util.FlattenObj(r)
+	indexified := util.Indexify(flatten)
+	return indexified
 }

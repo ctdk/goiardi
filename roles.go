@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/environment"
 	"encoding/json"
-	"fmt"
 )
 
 func role_handler(w http.ResponseWriter, r *http.Request){
@@ -98,6 +98,10 @@ func role_handler(w http.ResponseWriter, r *http.Request){
 		var environment_name string
 		if len(path_array) == 4{
 			environment_name = path_array[3]
+			if _, err := environment.Get(environment_name); err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+				return
+			}
 		}
 		/* only method for the /roles/NAME/environment stuff is GET */
 		switch r.Method {
@@ -111,15 +115,10 @@ func role_handler(w http.ResponseWriter, r *http.Request){
 				enc := json.NewEncoder(w)
 				if environment_name != "" {
 					var run_list []string
-					var ok bool
 					if environment_name == "_default" {
 						run_list = chef_role.RunList
 					} else {
-						if run_list, ok = chef_role.EnvRunLists[environment_name]; !ok {
-							role_err := fmt.Errorf("Environment %s not found for role %s", environment_name, role_name)
-							JsonErrorReport(w, r, role_err.Error(), http.StatusNotFound)
-							return
-						}
+						run_list = chef_role.EnvRunLists[environment_name]
 					}
 					resp := make(map[string][]string, 1)
 					resp["run_list"] = run_list

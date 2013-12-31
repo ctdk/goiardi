@@ -31,6 +31,11 @@ import (
 
 func environment_handler(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
+	accErr := CheckAccept(w, r, "application/json")
+	if accErr != nil {
+		JsonErrorReport(w, r, accErr.Error(), http.StatusNotAcceptable)
+		return
+	}
 	path_array := SplitPath(r.URL.Path)
 	env_response := make(map[string]interface{})
 	// num_results := r.FormValue("num_versions")
@@ -63,20 +68,27 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 				env_data, jerr := ParseObjJson(r.Body)
 				if jerr != nil {
 					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+					return
 				}
-				chef_env, err := environment.Get(env_data["name"].(string))
+				if _, ok := env_data["name"].(string); !ok || env_data["name"].(string) == "" {
+					JsonErrorReport(w, r, "Environment name missing", http.StatusBadRequest)
+					return
+				}
+				chef_env, _ := environment.Get(env_data["name"].(string))
 				if chef_env != nil {
-					httperr := fmt.Errorf("Environment %s already exists.", env_data["name"].(string))
+					httperr := fmt.Errorf("Environment already exists")
 					JsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
 					return
 				}
-				chef_env, err = environment.NewFromJson(env_data)
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				var eerr util.Gerror
+				chef_env, eerr = environment.NewFromJson(env_data)
+				if eerr != nil {
+					JsonErrorReport(w, r, eerr.Error(), eerr.Status())
 					return
 				}
 				if err := chef_env.Save(); err != nil {
 					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+					return
 				}
 				env_response["uri"] = util.ObjURL(chef_env)
 				w.WriteHeader(http.StatusCreated)
@@ -100,32 +112,66 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 			case "GET", "DELETE":
 				/* We don't actually have to do much here. */
 				if r.Method == "DELETE" {
-					del_env = true
+					if env_name == "_default" {
+						JsonErrorReport(w, r, "The '_default' environment cannot be modified.", http.StatusMethodNotAllowed)
+						return	
+					} else {
+						del_env = true
+					}
 				}
 			case "PUT":
 				env_data, jerr := ParseObjJson(r.Body)
 				if jerr != nil {
 					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+					return
+				}
+				if env_data == nil {
+					JsonErrorReport(w, r, "No environment data in body at all!", http.StatusBadRequest)
+					return
+				}
+				if _, ok := env_data["name"]; !ok {
+					//env_data["name"] = env_name
+					JsonErrorReport(w, r, "Environment name missing", http.StatusBadRequest)
+					return
+				}
+				json_name, sterr := util.ValidateAsString(env_data["name"])
+				if sterr != nil {
+					JsonErrorReport(w, r, sterr.Error(), sterr.Status())
+					return
+				} else if json_name == "" {
+					JsonErrorReport(w, r, "Environment name missing", http.StatusBadRequest)
+					return
 				}
 				if env_name != env_data["name"].(string) {
 					env, err = environment.Get(env_data["name"].(string))
-					if err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusConflict)
+					if err == nil {
+						JsonErrorReport(w, r, "Environment already exists", http.StatusConflict)
 						return
 					} else {
-						env, err = environment.NewFromJson(env_data)
-						if err != nil {
-							JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+						var eerr util.Gerror
+						env, eerr = environment.NewFromJson(env_data)
+						if eerr != nil {
+							JsonErrorReport(w, r, eerr.Error(), eerr.Status())
 							return
+						}
+						w.WriteHeader(http.StatusCreated)
+						oldenv, olderr := environment.Get(env_name)
+						if olderr == nil {
+							oldenv.Delete()
 						}
 					}
 				} else {
+					if json_name == "" {
+						env_data["name"] = env_name
+					}
 					if err := env.UpdateFromJson(env_data); err != nil {
 						JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+						return
 					}
 				}
 				if err := env.Save(); err != nil {
 					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+					return
 				}
 			default:
 				JsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
@@ -134,11 +180,13 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(&env); err != nil {
 			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		if del_env {
 			err = env.Delete()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
 			}
 		}
 		return

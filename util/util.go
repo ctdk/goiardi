@@ -25,12 +25,12 @@ package util
 import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	"regexp"
 	"net/http"
+	"reflect"
+	"strconv"
+	"regexp"
 	"sort"
 	"strings"
-	"strconv"
-	"github.com/ctdk/goiardi/filestore"
 )
 
 // Anything that implements these functions is a goiardi/chef object, like a
@@ -98,415 +98,187 @@ func chkPath(p *string){
 	}
 }
 
-func ValidateName(name string) bool {
-	m, _ := regexp.MatchString("[^A-Za-z0-9_.-]", name)
-	return !m
-}
-
-func ValidateDBagName(name string) bool {
-	m, _ := regexp.MatchString("[^A-Za-z0-9_.:-]", name)
-	return !m
-}
-
-func ValidateEnvName(name string) bool {
-	m, _ := regexp.MatchString("[^A-Za-z0-9_-]", name)
-	return !m
-}
-
-func ValidateAsString(str interface{}) (string, Gerror) {
-	switch str := str.(type) {
-		case string:
-			return str, nil
-		case nil:
-			err := Errorf("Field 'name' missing")
-			return "", err
-		default:
-			err := Errorf("Field 'name' invalid")
-			return "", err
+// Flatten an object and expand its keys into a map[string]string so it's 
+// suitable for indexing, either with solr (eventually) or with the whipped up
+// replacement for local mode. Objects fed into this function *must* have the
+// "json" tag set for their struct members.
+func FlattenObj(obj interface{}) map[string]interface{} {
+	expanded := make(map[string]interface{})
+	s := reflect.ValueOf(obj).Elem()
+	for i := 0; i < s.NumField(); i++ {
+		v := s.Field(i).Interface()
+		key := s.Type().Field(i).Tag.Get("json")
+		var mergeKey string
+		if key == "automatic" || key == "normal" || key == "default" || key == "override" || key == "raw_data" {
+			mergeKey = ""
+		} else {
+			mergeKey = key
+		}
+		subExpand := DeepMerge(mergeKey, v)
+		/* Now merge the returned map */
+		for k, u := range subExpand {
+			expanded[k] = u
+		}
 	}
+	return expanded
 }
 
-func ValidateAsBool(b interface{}) (bool, Gerror){
-	switch b := b.(type) {
-		case bool:
-			return b, nil
-		default:
-			err := Errorf("Invalid bool")
-			return false, err
+// Turn an object into a map[string]interface{}. Useful for when you have a
+// slice of objects that you need to trim, mutilate, fold, etc. before returning
+// them as JSON.
+func MapifyObject(obj interface{}) map[string]interface{} {
+	mapified := make(map[string]interface{})
+	s := reflect.ValueOf(obj).Elem()
+	for i := 0; i < s.NumField(); i++ {
+		v := s.Field(i).Interface()
+		key := s.Type().Field(i).Tag.Get("json")
+		mapified[key] = v
 	}
+	return mapified
 }
 
-func ValidateAsFieldString(str interface{}) (string, Gerror){
-	switch str := str.(type) {
-		case string:
-			return str, nil
-		case nil:
-			err := Errorf("Field 'name' nil")
-			return "", err
-		default:
-			err := Errorf("Field 'name' missing")
-			return "", err
-	}
-}
-
-func ValidateAsVersion(ver interface{}) (string, Gerror){
-	switch ver := ver.(type) {
-		case string:
-			valid_ver := regexp.MustCompile(`^(\d+)\.(\d+)(\.?)(\d+)?$`)
-			inspect_ver := valid_ver.FindStringSubmatch(ver)
-
-			if inspect_ver != nil {
-				nums := []int{ 1, 2, 4 }
-				for _, n := range nums {
-					/* #4 might not exist, but 1 and 2 must.
-					 * The regexp doesn't match if they
-					 * don't. */
-					if n > len(inspect_ver){
-						break
-					}
-					if v, err := strconv.ParseInt(inspect_ver[n], 10, 64); err != nil {
-						verr := Errorf(err.Error())
-						return "", verr
-					} else {
-						if v < 0 {
-							verr := Errorf("Invalid version number")
-							return "", verr
-						}
-					}
+func Indexify(flattened map[string]interface{}) []string {
+	readyToIndex := make([]string, 0)
+	for k, v := range flattened {
+		switch v := v.(type) {
+			case string:
+				v = escapeStr(v)
+				line := fmt.Sprintf("%s:%s", k, v)
+				readyToIndex = append(readyToIndex, line)
+			case []string:
+				for _, w := range v {
+					w = escapeStr(w)
+					line := fmt.Sprintf("%s:%s", k, w)
+					readyToIndex = append(readyToIndex, line)
 				}
-			} else {
-				verr := Errorf("Invalid version number")
-				return "", verr
-			}
-
-			return ver, nil
-		case nil:
-			return "0.0.0", nil
-		default:
-			err := Errorf("Invalid version number")
-			return "", err
+			default:
+				err := fmt.Errorf("We should never have been able to reach this state. Key %s had a value %v of type %T", k, v, v)
+				panic(err)
+		}
 	}
+	sort.Strings(readyToIndex)
+	return readyToIndex
 }
 
-func ValidateAttributes(key string, attrs interface{}) (map[string]interface{}, Gerror){
-	switch attrs := attrs.(type) {
+func escapeStr(s string) string {
+	s = strings.Replace(s, "[", "\\[", -1)
+	s = strings.Replace(s, "]", "\\]", -1)
+	s = strings.Replace(s, "::", "\\:\\:", -1)
+	return s
+}
+
+func DeepMerge(key string, source interface{}) map[string]interface{} {
+	merger := make(map[string]interface{})
+	switch v := source.(type) {
 		case map[string]interface{}:
-			return attrs, nil
-		case nil:
-			/* Separate to do more validations above */
-			nil_attrs := make(map[string]interface{})
-			return nil_attrs, nil
-		default:
-			err := Errorf("Field '%s' is not a hash", key)
-			return nil, err
-	}
-}
-
-func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]interface{}, Gerror) {
-	switch div := div.(type) {
-		case []interface{}:
-			d := make([]map[string]interface{}, 0)
-			err := Errorf("Invalid element in array value of '%s'.", dname)
-			
-			for _, v := range div {
-				switch v := v.(type){
-					case map[string]interface{}:
-						if len(v) < 4 {
-							return nil, err
-						}
-						/* validate existence of file
-						 * in sandbox */
-						chksum, cherr := ValidateAsString(v["checksum"])
-						if cherr == nil {
-							if _, ferr := filestore.Get(chksum); ferr != nil {
-								var merr Gerror
-								/* This is nuts. */
-								if dname == "recipes" {
-									merr = Errorf("Manifest has a checksum that hasn't been uploaded.")
-								} else {
-									merr = Errorf("Manifest has checksum %s but it hasn't yet been uploaded", chksum)
-								}
-								return nil, merr
-							}
-							item_url := fmt.Sprintf("/file_store/%s", chksum)
-							v["url"] = CustomURL(item_url)
-							d = append(d, v)
-						}
-					default:
-						return nil, err
+			/* We also need to get things like 
+			 * "default_attributes:key" indexed. */
+			topLev := make([]string, len(v))
+			n := 0
+			for k, u := range v {
+				if key != "" {
+					topLev[n] = k
 				}
-			}
-
-			return d, nil
-		case nil:
-			/* This the way? */
-			// d := make([]map[string]interface{}, 0)
-			return nil, nil
-		default:
-			err := Errorf("Field '%s' invalid", dname)
-			return nil, err
-	}
-}
-
-func ValidateNumVersions(nr string) Gerror {
-	/* Just see if it fits the bill for what we want. */
-	if nr != "all" && nr != "" {
-		valid_nr := regexp.MustCompile(`^\d+`)
-		m := valid_nr.MatchString(nr)
-		if !m {
-			err := Errorf("Invalid num_versions")
-			return err
-		}
-		n, nerr := strconv.Atoi(nr)
-		if nerr != nil {
-			err := Errorf(nerr.Error())
-			return err
-		}
-		if n < 0 {
-			err := Errorf("Invalid num_versions")
-			return err
-		}
-	} else if nr == "" {
-		err := Errorf("Invalid num_versions")
-		return err
-	}
-	return nil
-}
-
-func ValidateCookbookMetadata(mdata interface{}) (map[string]interface{}, Gerror){
-	switch mdata := mdata.(type) {
-		case map[string]interface{}:
-			if len(mdata) == 0 {
-				/* This error message would make more sense as
-				 * "Metadata empty" if the metadata is, you
-				 * know, totally empty, but the spec wants
-				 * "Field 'metadata.version' missing." Since
-				 * it's easier to just check the length before
-				 * doing a for loop, check the length first
-				 * before inspecting each map key. We have to
-				 * give it the error message it wants first
-				 * however. */
-				
-				err := Errorf("Field 'metadata.version' missing")
-
-				return nil, err
-			}
-			/* If metadata does have a length, loop through and
-			 * check the various elements. Some metadata fields are
-			 * supposed to be strings, some are supposed to be 
-			 * hashes. Versions is it's own special thing, of
-			 * course, and needs checked seperately. Do that first.
-			 */
-			if mv, mvok := mdata["version"]; mvok {
-				switch mv := mv.(type) {
-					case string:
-						if _, merr := ValidateAsVersion(mv); merr != nil {
-						merr := Errorf("Field 'metadata.version' invalid")
-						return nil, merr
-						}
-					case nil:
-						;
-					default:
-						err := Errorf("Field 'metadata.version' invalid")
-						return nil, err
-				}
-			} else {
-				err := Errorf("Field 'metadata.version' missing")
-				return nil, err
-			}
-
-			/* String checks. Check equality of name and version
-			 * elsewhere. */
-			strchk := []string{ "maintainer", "name", "description", "maintainer_email", "long_description", "license" }
-			for _, v := range strchk {
-				err := Errorf("Field 'metadata.%s' invalid", v)
-				switch sv := mdata[v].(type) {
-					case string:
-						if v == "name" && !ValidateEnvName(sv) {
-							return nil, err
-						}
-						_ = sv // no-op
-					case nil:
-						if v == "long_description" {
-							mdata[v] = ""
-						} 
-					default:
-						return nil, err
-				}
-			}
-			/* hash checks */
-			hashchk := []string{ "platforms", "dependencies", "recommendations", "suggestions", "conflicting", "replacing", "groupings" }
-			for _, v := range hashchk {
-				err := Errorf("Field 'metadata.%s' invalid", v)
-				switch hv := mdata[v].(type) {
-					case map[string]interface{}:
-						for _, j := range hv {
-							switch s := j.(type) {
-								case string:
-									if _, serr := ValidateAsConstraint(s); serr != nil {
-										cerr := Errorf("Invalid value '%s' for metadata.%s", s, v)
-										return nil, cerr
-									}
-								case map[string]interface{}:
-									if v != "groupings" {
-										err := Errorf("Invalid value '{[]}' for metadata.%s", v)
-										return nil, err
-									}
-								default:
-									fakeout := fmt.Sprintf("%v", s)
-									if fakeout == "map[]" {
-										fakeout = "{[]}"
-									}
-									err := Errorf("Invalid value '%s' for metadata.%s", fakeout, v)
-									return nil, err
-							}
-						}
-					case nil:
-						if v == "dependencies" {
-							mdata[v] = make(map[string]interface{})
-						}
-					default:
-						return nil, err
-				}
-			}
-
-			return mdata, nil
-		default:
-			err := Errorf("bad metadata: chng msg")
-			return nil, err
-	}
-}
-
-func ValidateAsConstraint(t interface{}) (bool, Gerror) {
-	err := Errorf("Invalid constraint")
-	switch t := t.(type) {
-		case string:
-			cr := regexp.MustCompile(`^([<>=~]{1,2}) (.*)`)
-			c_item := cr.FindStringSubmatch(t)
-			if c_item != nil {
-				ver := c_item[2]
-				if _, verr := ValidateAsVersion(ver); verr != nil {
-					return false, verr
-				}
-				return true, nil
-			} else {
-				return false, err
-			}
-		default:
-			return false, err
-	}
-}
-
-func ValidateRunList(rl interface{}) ([]string, Gerror) {
-	switch rl := rl.(type) {
-		case []string:
-			for i, r := range rl {
-				if j, err := validateRLItem(r); err != nil {
-					return nil, err
+				var nkey string
+				if key == "" {
+					nkey = k
 				} else {
-					if j == "" {
-						err := Errorf("Field 'run_list' is not a valid run list")
-						return nil, err
-					} 
-					rl[i] = j
+					nkey = fmt.Sprintf("%s_%s", key, k)
+				}
+				nm := DeepMerge(nkey, u)
+				for j, q := range nm {
+					merger[j] = q
 				}
 			}
-
-			/* Remove dupes */
-			rl_hash := make(map[string]string, len(rl))
-			for _, u := range rl {
-				rl_hash[u] = u
+			if key != "" {
+				merger[key] = topLev
 			}
-			rl = make([]string, len(rl_hash))
-			z := 0
-			for k, _ := range rl_hash {
-				rl[z] = k
-				z++
+		case map[string]string:
+			/* We also need to get things like 
+			 * "default_attributes:key" indexed. */
+			topLev := make([]string, len(v))
+			n := 0
+			for k, u := range v {
+				if key != "" {
+					topLev[n] = k
+				}
+				var nkey string
+				if key == "" {
+					nkey = k
+				} else {
+					nkey = fmt.Sprintf("%s_%s", key, k)
+				}
+				merger[nkey] = u
+			}
+			if key != "" {
+				merger[key] = topLev
 			}
 
-			// TODO: needs a more accurate sort
-			sort.Strings(rl)
-			return rl, nil
-		case nil:
-			/* separate to do more validations above */
-			nil_rl := make([]string, 0)
-			return nil_rl, nil
+		case []interface{}:
+			km := make([]string, len(v))
+			for i, w := range v {
+				km[i] = stringify(w)
+			}
+			merger[key] = km
+		case []string:
+			km := make([]string, len(v))
+			for i, w := range v {
+				km[i] = stringify(w)
+			}
+			merger[key] = km
+			/* If this is the run list, break recipes and roles out
+			 * into their own separate indexes as well. */
+			if key == "run_list" {
+				roleMatch := regexp.MustCompile(`^(recipe|role)\[(.*)\]`)
+				roles := make([]string, 0)
+				recipes := make([]string, 0)
+				for _, w := range v {
+					rItem := roleMatch.FindStringSubmatch(stringify(w))
+					if rItem != nil {
+						rType := rItem[1]
+						rThing := rItem[2]
+						if rType == "role" {
+							roles = append(roles, rThing)
+						} else if rType == "recipe" {
+							recipes = append(recipes, rThing)
+						}
+					} 
+				}
+				if len(roles) > 0 {
+					merger["role"] = roles
+				}
+				if len(recipes) > 0 {
+					merger["recipe"] = recipes
+				}
+			} 
 		default:
-			err := Errorf("Not a proper runlist []string")
-			return nil, err
+			merger[key] = stringify(v)
 	}
+	return merger
 }
 
-func validateRLItem(item string) (string, Gerror){
-	/* There's a few places this might be used. */
-	err := Errorf("Field 'run_list' is not a valid run list")
-
-	if item == "" {
-		return "", err
+func stringify(source interface{}) string{
+	switch s := source.(type) {
+		case string:
+			return s
+		case uint8, uint16, uint32, uint64:
+			n := reflect.ValueOf(s).Uint()
+			str := strconv.FormatUint(n, 10)
+			return str
+		case int8, int16, int32, int64:
+			n := reflect.ValueOf(s).Int()
+			str := strconv.FormatInt(n, 10)
+			return str
+		case float32, float64:
+			n := reflect.ValueOf(s).Float()
+			str := strconv.FormatFloat(n, 'f', -1, 64)
+			return str
+		case bool:
+			str := strconv.FormatBool(s)
+			return str
+		default:
+			/* Just send back whatever %v gives */
+			str := fmt.Sprintf("%v", s)
+			return str
 	}
-
-	/* first checks */
-	valid_rl := regexp.MustCompile("[^A-Za-z0-9_\\[\\]@\\.:]")
-	m := valid_rl.MatchString(item)
-
-	if m {
-		return "", err
-	}
-
-	inspectRegexp := regexp.MustCompile(`^(\w+)\[(.*?)\]$`)
-	inspect_item := inspectRegexp.FindStringSubmatch(item)
-
-	if inspect_item != nil {
-		rl_type := inspect_item[1]
-		rl_item := inspect_item[2]
-		if rl_type == "role" {
-			if !validateRoleName(rl_item){
-				return "", err
-			}
-		} else if rl_type == "recipe" {
-			if !validateRecipeName(rl_item){
-				return "", err
-			}
-		} else {
-			return "", err
-		}
-	} else {
-		if validateRecipeName(item) {
-			item = fmt.Sprintf("recipe[%s]", item)
-		} else {
-			return "", err
-		}
-	}
-	
-	return item, nil
-}
-
-func validateRoleName(name string) bool {
-	valid_role := regexp.MustCompile("[^A-Za-z0-9_-]")
-	m := valid_role.MatchString(name)
-	return !m
-}
-
-func validateRecipeName(name string) bool {
-	first_valid := regexp.MustCompile("[^A-Za-z0-9_@\\.:]")
-	m := first_valid.MatchString(name)
-	if m {
-		return false
-	}
-
-	/* If we have a version */
-	if strings.Index(name, "@") != -1 {
-		h := strings.Split(name, "@")
-		name = h[0]
-		version := h[1]
-		valid_ver := regexp.MustCompile(`^\d+\.\d+(\.\d+)?$`)
-		if !valid_ver.MatchString(version){
-			return false
-		}
-	}
-	/* If we get this far, just do a final check on the name */
-	final_chk := regexp.MustCompile(`^\w+(::\w+)?$`)
-	n := final_chk.MatchString(name)
-
-	return n
 }

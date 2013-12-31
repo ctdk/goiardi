@@ -93,6 +93,18 @@ func JsonErrorReport(w http.ResponseWriter, r *http.Request, error_str string, s
 	return
 }
 
+func CheckAccept(w http.ResponseWriter, r *http.Request, acceptType string) error {
+	for _, at := range r.Header["Accept"] {
+		if at == "*/*" {
+			return nil // we accept all types in this case
+		} else if at == acceptType {
+			return nil
+		}
+	}
+	err := fmt.Errorf("Client cannot accept content type %s", acceptType)
+	return err
+}
+
 func chkRunList(rl interface{}) ([]string, error) {
 	switch o := rl.(type){
 		case []interface{}:

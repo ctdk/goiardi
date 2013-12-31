@@ -5,9 +5,10 @@
 * More configuration options
 * Go code should be idiomatic where it isn't
 * More Go language features should be used where appropriate
+* Allow freezing in-memory data to load later
+* Get sorting searches working properly
 
 # Down the road
 * Allow using a database in addition to running in-memory
-* Get search working
 * Authenticate users
 * Serve data over SSL

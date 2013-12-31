@@ -22,6 +22,7 @@ package node
 import (
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/indexer"
 	"fmt"
 	"net/http"
 )
@@ -192,12 +193,15 @@ func (n *Node) UpdateFromJson(json_node map[string]interface{}) util.Gerror {
 func (n *Node) Save() error {
 	ds := data_store.New()
 	ds.Set("node", n.Name, n)
+	/* TODO Later: excellent candidate for a goroutine */
+	indexer.IndexObj(n)
 	return nil
 }
 
 func (n *Node) Delete() error {
 	ds := data_store.New()
 	ds.Delete("node", n.Name)
+	indexer.DeleteItemFromCollection("node", n.Name)
 	return nil
 }
 
@@ -215,3 +219,17 @@ func (n *Node) URLType() string {
 	return "nodes"
 }
 
+/* Functions to support indexing */
+func (n *Node) DocId() string {
+	return n.Name
+}
+
+func (n *Node) Index() string {
+	return "node"
+}
+
+func (n *Node) Flatten() []string {
+	flatten := util.FlattenObj(n)
+	indexified := util.Indexify(flatten)
+	return indexified
+}

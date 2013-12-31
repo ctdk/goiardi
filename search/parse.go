@@ -1,0 +1,494 @@
+/*
+ * Copyright (c) 2013, Jeremy Bingham (<jbingham@gmail.com>)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+//Parse Solr queries with the PEG generated from 'search/search-parse.peg',
+//located in search-parse.peg.go. To have changes to seach-parse.peg reflected
+//in search-parse.peg.go, install peg from https://github.com/pointlander/peg
+//and run 'peg -switch -inline search-parse.peg'.
+package search
+
+import (
+	"github.com/ctdk/goiardi/indexer"
+	"fmt"
+)
+
+type Op uint8
+type Field string
+type Term string
+type RangeTerm string
+
+func (t Term) String() string {
+	return string(t)
+}
+
+func (f Field) String() string {
+	return string(f)
+}
+
+const (
+	OpNotAnOp Op = iota
+	OpUnaryNot
+	OpUnaryReq
+	OpUnaryPro
+	OpBinAnd
+	OpBinOr
+	OpBoost
+	OpFuzzy
+	OpStartGroup
+	OpEndGroup
+	OpStartIncl
+	OpEndIncl
+	OpStartExcl
+	OpEndExcl
+)
+
+// Hold parsed tokens from the solr query
+type Token struct {
+	QueryChain Queryable
+	Latest Queryable
+}
+
+type QueryTerm struct {
+	term Term
+	mod Op
+	fuzzboost Op
+	fuzzparam string
+}
+
+type BasicQuery struct {
+	field Field
+	term QueryTerm
+	op Op
+	next Queryable
+	complete bool
+}
+
+type GroupedQuery struct {
+	field Field
+	terms []QueryTerm
+	op Op
+	next Queryable
+	complete bool
+}
+
+type RangeQuery struct {
+	field Field
+	start RangeTerm
+	end RangeTerm
+	inclusive bool
+	op Op
+	next Queryable
+	complete bool
+}
+
+// Subquery's really just a marker in the chain of queries. Later it will be 
+// processed by itself though
+type SubQuery struct {
+	start bool
+	end bool
+	op Op
+	complete bool
+	next Queryable
+}
+
+type Queryable interface{
+	SearchIndex(string) (map[string]*indexer.IdxDoc, error)
+	AddOp(Op)
+	Op() Op
+	AddField(Field)
+	AddTerm(Term)
+	AddTermOp(Op)
+	SetNext(Queryable)
+	Next() Queryable
+	IsIncomplete() bool
+	SetCompleted()
+	AddFuzzBoost(Op)
+	AddFuzzParam(string)
+}
+
+type GroupQueryHolder struct {
+	op Op
+	res map[string]*indexer.IdxDoc
+}
+
+func (q *BasicQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
+	notop := false
+	if (q.term.mod == OpUnaryNot) || (q.term.mod == OpUnaryPro) {
+		notop = true
+	}
+	if q.field == "" {
+		res, err := indexer.SearchText(idxName, string(q.term.term), notop)
+		return res, err
+	} else {
+		searchTerm := fmt.Sprintf("%s:%s", q.field, q.term.term)
+		res, err := indexer.SearchIndex(idxName, searchTerm, notop)
+
+		return res, err
+	}
+}
+
+func (q *BasicQuery) AddOp(o Op) {
+	q.op = o
+}
+
+func (q *BasicQuery) Op() Op {
+	return q.op
+}
+
+func (q *BasicQuery) AddField(s Field) {
+	q.field = s
+}
+
+func (q *BasicQuery) AddTerm(s Term) {
+	q.term.term = s
+	q.SetCompleted()
+}
+
+func (q *BasicQuery) AddTermOp(o Op) {
+	q.term.mod = o
+}
+
+func (q *BasicQuery) SetNext(n Queryable) {
+	q.next = n
+}
+
+func (q *BasicQuery) Next() Queryable {
+	return q.next
+}
+
+func (q *BasicQuery) IsIncomplete() bool {
+	return !q.complete
+}
+
+func (q *BasicQuery) SetCompleted() {
+	q.complete = true
+}
+func (q *BasicQuery) AddFuzzBoost(o Op) {
+	q.term.fuzzboost = o
+}
+
+func (q *BasicQuery) AddFuzzParam(s string){
+	q.term.fuzzparam = s
+}
+
+func (q *GroupedQuery) AddOp(o Op) {
+	q.op = o
+}
+
+func (q *GroupedQuery) Op() Op {
+	return q.op
+}
+
+func (q *GroupedQuery) AddField(s Field) {
+	q.field = s
+}
+
+func (q *GroupedQuery) AddTerm(s Term) {
+	tlen := len(q.terms)
+	if (tlen == 0) || (q.terms[tlen - 1].term != "") {
+		t := QueryTerm{ mod: OpNotAnOp, term: s}
+		q.terms = append(q.terms, t)
+	} else {
+		q.terms[tlen - 1].term = s
+	}
+}
+
+func (q *GroupedQuery) AddTermOp(o Op) {
+	t := QueryTerm{ mod: o , term: ""}
+	q.terms = append(q.terms, t)
+}
+
+
+func (q *GroupedQuery) SetNext(n Queryable) {
+	q.next = n
+}
+
+func (q *GroupedQuery) Next() Queryable {
+	return q.next
+}
+
+func (q *GroupedQuery) IsIncomplete() bool {
+	return !q.complete
+}
+
+func (q *GroupedQuery) SetCompleted() {
+	q.complete = true
+}
+
+func (q *GroupedQuery) AddFuzzBoost(o Op) {
+	q.terms[len(q.terms) - 1].fuzzboost = o
+}
+
+func (q *GroupedQuery) AddFuzzParam(s string){
+	q.terms[len(q.terms) - 1].fuzzparam = s
+}
+
+func (q *RangeQuery) AddOp(o Op) {
+	q.op = o
+}
+
+func (q *RangeQuery) Op() Op {
+	return q.op
+}
+
+func (q *RangeQuery) AddField(s Field) {
+	q.field = s
+}
+
+func (q *RangeQuery) AddTerm(s Term) {
+	if q.start == "" {
+		q.start = RangeTerm(s)
+	} else {
+		q.end = RangeTerm(s)
+	}
+	q.SetCompleted()
+}
+
+func (q *RangeQuery) AddTermOp(o Op) {
+	; // nop
+}
+
+func (q *RangeQuery) SetNext(n Queryable) {
+	q.next = n
+}
+
+func (q *RangeQuery) Next() Queryable {
+	return q.next
+}
+
+func (q *RangeQuery) IsIncomplete() bool {
+	if q.start == "" || q.end == "" {
+		return true
+	}
+	return false
+}
+
+func (q *RangeQuery) SetCompleted() {
+	q.complete = true
+}
+
+func (q *RangeQuery) AddFuzzBoost(o Op) {
+	; // no-op
+}
+
+func (q *RangeQuery) AddFuzzParam(s string) {
+	;
+}
+
+func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
+	tmpRes := make([]GroupQueryHolder, len(q.terms))
+	for i, v := range q.terms {
+		tmpRes[i].op = v.mod
+		notop := false
+		if v.mod == OpUnaryNot || v.mod == OpUnaryPro {
+			notop = true
+		}
+		searchTerm := fmt.Sprintf("%s:%s", q.field, v.term)
+		r, err := indexer.SearchIndex(idxName, searchTerm, notop)
+		if err != nil {
+			return nil, err
+		}
+		tmpRes[i].res = r
+	}
+	reqOp := false
+	res := make(map[string]*indexer.IdxDoc)
+	var req map[string]*indexer.IdxDoc
+
+	// Merge the results, taking into account any + operators lurking about
+	for _, t := range tmpRes {
+		if t.op == OpUnaryReq {
+			reqOp = true
+			if req == nil {
+				req = t.res
+			} else {
+				for k := range req {
+					if _, found := t.res[k]; !found {
+						delete(req, k)
+					}
+				}
+			}
+		} else if !reqOp{
+			for k, v := range t.res {
+				res[k] = v
+			}
+		}
+	}
+	if reqOp {
+		req = res
+	}
+	return res, nil
+}
+
+func (q *RangeQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
+	res, err := indexer.SearchRange(idxName, string(q.field), string(q.start), string(q.end), q.inclusive)
+	return res, err
+}
+
+func (q *SubQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) { 
+	return nil, nil
+}
+
+func (q *SubQuery) AddOp(o Op) {
+	q.op = o
+}
+
+func (q *SubQuery) Op() Op {
+	return q.op
+}
+
+func (q *SubQuery) AddField(s Field) {
+	;
+}
+
+func (q *SubQuery) AddTerm(s Term) {
+	;
+}
+
+func (q *SubQuery) AddTermOp(o Op) {
+	;
+}
+
+func (q *SubQuery) SetNext(n Queryable) {
+	q.next = n
+}
+
+func (q *SubQuery) Next() Queryable {
+	return q.next
+}
+
+func (q *SubQuery) IsIncomplete() bool {
+	return !q.complete
+}
+
+func (q *SubQuery) SetCompleted() {
+	q.complete = true
+}
+func (q *SubQuery) AddFuzzBoost(o Op) {
+	;
+}
+
+func (q *SubQuery) AddFuzzParam(s string){
+	;
+}
+
+type Qt struct {
+	QueryChain Queryable
+	Latest Queryable
+}
+
+func (z *Token) AddOp(o Op) {
+	z.Latest.AddOp(o)
+}
+
+func (z *Token) AddField(s string) {
+	z.Latest.AddField(Field(s))
+}
+
+func (z *Token) AddTerm(s string) {
+	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
+		z.StartBasic()
+	}
+	z.Latest.AddTerm(Term(s))
+}
+
+func (z *Token) AddTermOp(o Op) {
+	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
+		z.StartBasic()
+	}
+	z.Latest.AddTermOp(o)
+}
+
+func (z *Token) AddRange(s string) {
+	z.Latest.AddTerm(Term(s))
+}
+
+func (z *Token) StartBasic() {
+	/* See if we need to make a new query; sometimes we don't */
+	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
+		un := new(BasicQuery)
+		un.op = OpBinOr
+		if z.Latest != nil {
+			z.Latest.SetNext(un)
+		}
+		if z.QueryChain == nil {
+			z.QueryChain = un
+		}
+		z.Latest = un
+	}
+}
+
+func (z *Token) StartRange(inclusive bool) {
+	rn := new(RangeQuery)
+	rn.op = OpBinOr
+	rn.inclusive = inclusive
+	if z.QueryChain == nil {
+		z.QueryChain = rn
+	}
+	if z.Latest != nil {
+		z.Latest.SetNext(rn)
+	}
+	z.Latest = rn
+}
+
+func (z *Token) StartGrouped() {
+	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
+		gn := new(GroupedQuery)
+		gn.op = OpBinOr
+		gn.terms = make([]QueryTerm, 0)
+		if z.QueryChain == nil {
+			z.QueryChain = gn
+		}
+		if z.Latest != nil {
+			z.Latest.SetNext(gn)
+		}
+		z.Latest = gn
+	}
+}
+
+func (z *Token) SetCompleted() {
+	z.Latest.SetCompleted()
+}
+
+
+func (z *Token) StartSubQuery(){
+	// we don't want to start a subquery if we're in a field group query
+	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()){
+		sq := new(SubQuery)
+		sq.start = true
+		sq.complete = true
+		if z.Latest != nil {
+			z.Latest.SetNext(sq)
+		}
+		z.Latest = sq
+	}
+}
+
+func (z *Token) EndSubQuery(){
+	// we don't want to end a subquery if we're in a field group query
+	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()){
+		sq := new(SubQuery)
+		sq.end = true
+		sq.complete = true
+		if z.Latest != nil {
+			z.Latest.SetNext(sq)
+		}
+		z.Latest = sq
+	}
+}
+
+func (z *Token) Evaluate() Queryable {
+	return z.QueryChain
+}
