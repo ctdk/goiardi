@@ -28,7 +28,7 @@ To install them, run:
 
    go get github.com/jessevdk/go-flags
    go get github.com/pmylund/go-cache
-   go get github.com/ctdk/go-trie
+   go get github.com/ctdk/go-trie/gtrie
 
 from your $GOROOT.
 
