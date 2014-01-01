@@ -77,6 +77,17 @@ Goiardi does not actually care about .pem files at all at the moment, but you
 still need to have one to keep knife and chef-client happy. It's like chef-zero
 in that regard.
 
+Tested Platforms:
+
+Goiardi has been built and run with the native 6g compiler on Mac OS X (10.7 and
+10.8), Debian wheezy, and a fairly recent Arch Linux.
+
+Goiardi has also been built and run with gccgo (using the "-compiler gccgo"
+option with the "go" command) on Arch Linux. Building it with gccgo without 
+the go command probably works, but it hasn't happened yet. This is a priority,
+though, so goiardi can be built on platforms the native compiler doesn't support
+yet.
+
 To do:
 
 See the TODO file for an up-to-date list of what needs to be done. There's a
