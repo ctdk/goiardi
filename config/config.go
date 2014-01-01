@@ -20,6 +20,7 @@ package config
 
 import (
 	"github.com/jessevdk/go-flags"
+	"github.com/BurntSushi/toml"
 	"os"
 	"log"
 	"fmt"
@@ -27,7 +28,7 @@ import (
 
 /* Master struct for configuration. */
 type Conf struct {
-	IPaddress string
+	Ipaddress string
 	Port int
 	Hostname string
 	ConfFile string
@@ -39,9 +40,9 @@ type Options struct {
 	Version bool `short:"v" long:"version" description:"Print version info."`
 	Verbose []bool `short:"V" long:"verbose" description:"Show verbose debug information. (not implemented)"`
 	ConfFile string `short:"c" long:"config" description:"Specify a config file to use. (not implemented)"`
-	IPaddress string `short:"I" long:"ipaddress" description:"Listen on a specific IP address."`
+	Ipaddress string `short:"I" long:"ipaddress" description:"Listen on a specific IP address."`
 	Hostname string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel."`
-	Port int `short:"P" long:"port" description:"Port to listen on." default:"4545"`
+	Port int `short:"P" long:"port" description:"Port to listen on. (default: 4545)"`
 
 }
 
@@ -69,7 +70,7 @@ func ParseConfigOptions() error {
 		if err.(*flags.Error).Type == flags.ErrHelp {
 			os.Exit(0)
 		} else {
-			panic(err)
+			log.Println(err)
 			os.Exit(1)
 		}
 	}
@@ -79,19 +80,30 @@ func ParseConfigOptions() error {
 		os.Exit(0)
 	}
 
-	/* TODO: load config file. Also specify a default in the options. */
+	/* Load the config file. Command-line options have precedence over
+	 * config file options. */
+	if opts.ConfFile != "" {
+		if _, err := toml.DecodeFile(opts.ConfFile, Config); err != nil {
+			panic(err)
+			os.Exit(1)
+		}
+	}
 	
 	if opts.Hostname != "" {
 		Config.Hostname = opts.Hostname
 	} else {
-		Config.Hostname, err = os.Hostname()
-		if err != nil {
-			log.Println(err)
-			Config.Hostname = "localhost"
+		if Config.Hostname == "" {
+			Config.Hostname, err = os.Hostname()
+			if err != nil {
+				log.Println(err)
+				Config.Hostname = "localhost"
+			}
 		}
 	}
-	Config.IPaddress = opts.IPaddress
-	Config.Port = opts.Port
+	Config.Ipaddress = opts.Ipaddress
+	if opts.Port != 0 {
+		Config.Port = opts.Port
+	}
 	if Config.Port == 0 {
 		Config.Port = 4545
 	}
@@ -102,7 +114,7 @@ func ParseConfigOptions() error {
 
 // The address and port goiardi is configured to listen on.
 func ListenAddr() string {
-	listen_addr := fmt.Sprintf("%s:%d", Config.IPaddress, Config.Port)
+	listen_addr := fmt.Sprintf("%s:%d", Config.Ipaddress, Config.Port)
 	return listen_addr
 }
 

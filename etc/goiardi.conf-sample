@@ -1,0 +1,4 @@
+# A sample goiardi config file, with nonsense entries to get the point across
+ipaddress = "127.0.0.2"
+port = 4646
+hostname = "moomernoo.local"
