@@ -39,7 +39,7 @@ type Conf struct {
 type Options struct {
 	Version bool `short:"v" long:"version" description:"Print version info."`
 	Verbose []bool `short:"V" long:"verbose" description:"Show verbose debug information. (not implemented)"`
-	ConfFile string `short:"c" long:"config" description:"Specify a config file to use. (not implemented)"`
+	ConfFile string `short:"c" long:"config" description:"Specify a config file to use."`
 	Ipaddress string `short:"I" long:"ipaddress" description:"Listen on a specific IP address."`
 	Hostname string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel."`
 	Port int `short:"P" long:"port" description:"Port to listen on. (default: 4545)"`

@@ -66,6 +66,11 @@ To install:
    even work. As of this writing you can specify the hostname, IP address, and
    port goiardi uses and have it actually do something useful.
 
+   Goiardi can also take a config file, run like goiardi -c /path/to/conf-file.    See etc/goiardi.conf-sample for an example configuration file. Currently
+   "hostname", "ipaddress", and "port" can be configured in the conf file (one
+   per line). Options specified on the command line override options in the 
+   config file.
+
 For more documentation on Chef, see http://docs.opscode.com.
 
 Goiardi does not actually care about .pem files at all at the moment, but you
