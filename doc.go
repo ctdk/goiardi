@@ -80,7 +80,7 @@ in that regard.
 Tested Platforms:
 
 Goiardi has been built and run with the native 6g compiler on Mac OS X (10.7 and
-10.8), Debian wheezy, and a fairly recent Arch Linux.
+10.8), Debian wheezy, a fairly recent Arch Linux, and FreeBSD 9.2.
 
 Goiardi has also been built and run with gccgo (using the "-compiler gccgo"
 option with the "go" command) on Arch Linux. Building it with gccgo without 
