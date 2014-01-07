@@ -1,7 +1,7 @@
 /* Environments. */
 
 /*
- * Copyright (c) 2013, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -197,8 +197,13 @@ func Get(env_name string) (*ChefEnvironment, error){
 
 // Creates the default environment on startup
 func MakeDefaultEnvironment() {
-	de := defaultEnvironment()
 	ds := data_store.New()
+	// only create the new default environment if we don't already have one
+	// saved
+	if _, found := ds.Get("env", "_default"); found {
+		return
+	}
+	de := defaultEnvironment()
 	ds.Set("env", de.Name, de)
 	indexer.IndexObj(de)
 }

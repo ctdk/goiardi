@@ -1,4 +1,23 @@
 # A sample goiardi config file, with nonsense entries to get the point across
+
+# IP address to listen on. Set to "0.0.0.0" to listen on all interfaces
 ipaddress = "127.0.0.2"
+
+# TCP port to listen on
 port = 4646
+
+# Hostname goiardi should use. Used for sending links to resources back to the
+# client
 hostname = "moomernoo.local"
+
+# Where to send log data instead of stdout
+log-file = "/tmp/goiardi.log"
+
+# If these two options are both set, goiardi will save the data store and index
+# data to disk. It will cause an error to only set one of the options
+index-file = "/tmp/goiardi-index.bin"
+data-file = "/tmp/goiardi-data.bin"
+
+# How often to save the index and data files from the background. Not
+# particularly useful without setting index-file and data-file
+freeze-interval = 120

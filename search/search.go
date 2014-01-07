@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,15 @@ import (
 	"fmt"
 )
 
+// Holds a parsed query and query chain to run against the index.
 type SolrQuery struct {
 	queryChain Queryable
 	idxName string
 	docs map[string]*indexer.IdxDoc
 }
 
+// Parse the given query string and search the given index for any matching
+// results.
 func Search(idx string, q string) ([]indexer.Indexable, error) {
 	/* Eventually we'll want more prep. To start, look right in the index */
 	query, qerr := url.QueryUnescape(q)
@@ -146,6 +149,7 @@ func (sq *SolrQuery) results() ([]string) {
 	return results
 }
 
+// Get a list from the indexer of all the endpoints available to search.
 func GetEndpoints() []string {
 	endpoints := indexer.Endpoints()
 	return endpoints

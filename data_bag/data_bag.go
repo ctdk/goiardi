@@ -1,7 +1,7 @@
 /* Data bags! */
 
 /*
- * Copyright (c) 2013, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,6 +71,10 @@ func Get(db_name string) (*DataBag, util.Gerror){
 		err := util.Errorf("Cannot load data bag %s", db_name)
 		err.SetStatus(http.StatusNotFound)
 		return nil, err
+	}
+	for _, v := range data_bag.(*DataBag).DataBagItems {
+		z := data_store.WalkMapForNil(v.RawData)
+		v.RawData = z.(map[string]interface{})
 	}
 	return data_bag.(*DataBag), nil
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -375,7 +375,7 @@ func validateRLItem(item string) (string, Gerror){
 	}
 
 	/* first checks */
-	valid_rl := regexp.MustCompile("[^A-Za-z0-9_\\[\\]@\\.:]")
+	valid_rl := regexp.MustCompile("[^A-Za-z0-9_\\[\\]@\\.:-]")
 	m := valid_rl.MatchString(item)
 
 	if m {
@@ -417,7 +417,7 @@ func validateRoleName(name string) bool {
 }
 
 func validateRecipeName(name string) bool {
-	first_valid := regexp.MustCompile("[^A-Za-z0-9_@\\.:]")
+	first_valid := regexp.MustCompile("[^A-Za-z0-9_@\\.:-]")
 	m := first_valid.MatchString(name)
 	if m {
 		return false
@@ -434,7 +434,7 @@ func validateRecipeName(name string) bool {
 		}
 	}
 	/* If we get this far, just do a final check on the name */
-	final_chk := regexp.MustCompile(`^\w+(::\w+)?$`)
+	final_chk := regexp.MustCompile(`^[\w-]+(::[\w-]+)?$`)
 	n := final_chk.MatchString(name)
 
 	return n

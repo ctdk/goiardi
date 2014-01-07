@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,30 +22,40 @@ package indexer
 
 import (
 	"github.com/ctdk/go-trie/gtrie"
+	"github.com/ctdk/goiardi/config"
 	"log"
 	"sync"
 	"strings"
 	"sort"
 	"fmt"
 	"regexp"
+	"encoding/gob"
+	"bytes"
+	"os"
+	"io/ioutil"
+	"compress/zlib"
 )
 
+// Interface that provides all the information necessary to index an object.
 type Indexable interface {
 	DocId() string
 	Index() string
 	Flatten() []string
 }
 
+// Holds a map of document collections.
 type Index struct {
 	m sync.RWMutex
 	idxmap map[string]*IdxCollection
 }
 
+// Holds a map of documents.
 type IdxCollection struct {
 	m sync.RWMutex
 	docs map[string]*IdxDoc
 }
 
+// The indexed documents that are actually searched.
 type IdxDoc struct {
 	m sync.RWMutex
 	trie *gtrie.Node
@@ -167,11 +177,10 @@ func (i *Index) endpoints() []string {
 /* IdxCollection methods */
 
 func (ic *IdxCollection) addDoc(object Indexable) {
-	ic.m.RLock()
-	defer ic.m.RUnlock()
-	
 	if _, found := ic.docs[object.DocId()]; !found {
+		ic.m.Lock()
 		ic.docs[object.DocId()] = new(IdxDoc)
+		ic.m.Unlock()
 	}
 	ic.docs[object.DocId()].update(object)
 }
@@ -399,11 +408,13 @@ func SearchIndex(idxName string, term string, notop bool) (map[string]*IdxDoc, e
 	return res, err
 }
 
+// Perform a full-ish text search of the index.
 func SearchText(idxName string, term string, notop bool) (map[string]*IdxDoc, error) {
 	res, err := indexMap.searchText(idxName, term, notop)
 	return res, err
 }
 
+// Perform a range search on the given index.
 func SearchRange(idxName string, field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error) {
 	res, err := indexMap.searchRange(idxName, field, start, end, inclusive)
 	return res, err
@@ -413,4 +424,138 @@ func SearchRange(idxName string, field string, start string, end string, inclusi
 func Endpoints() []string {
 	endpoints := indexMap.endpoints()
 	return endpoints
+}
+
+// Save the index files to disk.
+func SaveIndex() error {
+	return indexMap.save()
+}
+
+// Load index files from disk.
+func LoadIndex() error {
+	return indexMap.load()
+}
+
+/* gob encoding functions for the index */
+
+func (i *Index) GobEncode() ([]byte, error){
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	i.m.RLock()
+	defer i.m.RUnlock()
+	err := encoder.Encode(i.idxmap)
+	if err != nil {
+		return nil, err
+	}
+	return w.Bytes(), nil
+}
+
+func (i *Index) GobDecode(buf []byte) error {
+	r := bytes.NewBuffer(buf)
+	decoder := gob.NewDecoder(r)
+	return decoder.Decode(&i.idxmap)
+}
+
+func (i *IdxCollection) GobEncode() ([]byte, error){
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	i.m.RLock()
+	defer i.m.RUnlock()
+	err := encoder.Encode(i.docs)
+	if err != nil {
+		return nil, err
+	}
+	return w.Bytes(), nil
+}
+
+func (i *IdxCollection) GobDecode(buf []byte) error {
+	r := bytes.NewBuffer(buf)
+	decoder := gob.NewDecoder(r)
+	return decoder.Decode(&i.docs)
+}
+
+func (i *IdxDoc) GobEncode() ([]byte, error){
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	i.m.RLock()
+	defer i.m.RUnlock()
+	err := encoder.Encode(i.trie)
+	if err != nil {
+		return nil, err
+	}
+	err = encoder.Encode(i.docText)
+	if err != nil {
+		return nil, err
+	}
+	return w.Bytes(), nil
+}
+
+func (i *IdxDoc) GobDecode(buf []byte) error {
+	r := bytes.NewBuffer(buf)
+	decoder := gob.NewDecoder(r)
+	err := decoder.Decode(&i.trie)
+	if err != nil {
+		return err
+	}
+	return decoder.Decode(&i.docText)
+}
+
+func (i *Index) save() error {
+	if !config.Config.FreezeData {
+		return nil
+	}
+	if config.Config.IndexFile == "" {
+		err := fmt.Errorf("Yikes! Cannot save index to disk because no file was specified.")
+		return err
+	}
+	fp, err := ioutil.TempFile("", "ds-store")
+	if err != nil {
+		return err
+	}
+	zfp := zlib.NewWriter(fp)
+	i.m.RLock()
+	defer i.m.RUnlock()
+	enc := gob.NewEncoder(zfp)
+	err = enc.Encode(i)
+	zfp.Close()
+	if err != nil {
+		fp.Close()
+		return err
+	}
+	err = fp.Close()
+	if err != nil {
+		return nil
+	}
+	return os.Rename(fp.Name(), config.Config.IndexFile)
+}
+
+func (i *Index) load() error {
+	if !config.Config.FreezeData {
+		return nil
+	}
+	if config.Config.IndexFile == "" {
+		err := fmt.Errorf("Yikes! Cannot load index from disk because no file was specified.")
+		return err
+	}
+	fp, err := os.Open(config.Config.IndexFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		} else {
+			return nil
+		}
+	}
+	zfp, zerr := zlib.NewReader(fp)
+	if zerr != nil {
+		fp.Close()
+		return zerr
+	}
+	dec := gob.NewDecoder(zfp)
+	err = dec.Decode(&i)
+	zfp.Close()
+	if err != nil {
+		fp.Close()
+		return err
+	}
+	return fp.Close()
 }

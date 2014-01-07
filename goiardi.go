@@ -2,7 +2,7 @@
  * to learn more about programming in Go. */
 
 /*
- * Copyright (c) 2013, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,20 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/environment"
+	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/cookbook"
+	"github.com/ctdk/goiardi/data_bag"
+	"github.com/ctdk/goiardi/filestore"
+	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/role"
+	"github.com/ctdk/goiardi/sandbox"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"encoding/gob"
+	"time"
 )
 
 type InterceptHandler struct {} // Doesn't need to do anything, just sit there.
@@ -35,9 +48,24 @@ func main(){
 	config.ParseConfigOptions()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
+	gobRegister()
+	ds := data_store.New()
+	uerr := ds.Load()
+	if uerr != nil {
+		log.Println(uerr)
+		os.Exit(1)
+	}
+	uerr = indexer.LoadIndex()
+	if uerr != nil {
+		log.Println(uerr)
+		os.Exit(1)
+	}
+	setSaveTicker()
+
 	/* Create default clients and users. Currently chef-validator,
 	 * chef-webui, and admin. */
 	createDefaultActors()
+	handleSignals()
 
 	/* Register the various handlers, found in their own source files. */
 	http.HandleFunc("/authenticate_user", authenticate_user_handler)
@@ -125,40 +153,121 @@ func cleanPath(p string) string {
 }
 
 func createDefaultActors() {
-	if webui, nerr := actor.New("chef-webui", "client"); nerr != nil {
-		log.Fatalln(nerr)
-	} else {
-		webui.Admin = true
-		_, err := webui.GenerateKeys()
-		if err != nil {
-			log.Fatalln(err)
+	if cwebui, _ := actor.Get("chef-webui"); cwebui == nil {
+		if webui, nerr := actor.New("chef-webui", "client"); nerr != nil {
+			log.Fatalln(nerr)
+		} else {
+			webui.Admin = true
+			_, err := webui.GenerateKeys()
+			if err != nil {
+				log.Fatalln(err)
+			}
+			webui.Save()
 		}
-		webui.Save()
 	}
 
-	if validator, verr := actor.New("chef-validator", "client"); verr != nil {
-		log.Fatalln(verr)
-	} else {
-		validator.Validator = true
-		_, err := validator.GenerateKeys()
-		if err != nil {
-			log.Fatalln(err)
+	if cvalid, _ := actor.Get("chef-validator"); cvalid == nil {
+		if validator, verr := actor.New("chef-validator", "client"); verr != nil {
+			log.Fatalln(verr)
+		} else {
+			validator.Validator = true
+			_, err := validator.GenerateKeys()
+			if err != nil {
+				log.Fatalln(err)
+			}
+			validator.Save()
 		}
-		validator.Save()
 	}
 
-	if admin, aerr := actor.New("admin", "user"); aerr != nil {
-		log.Fatalln(aerr)
-	} else {
-		admin.Admin = true
-		_, err := admin.GenerateKeys()
-		if err != nil {
-			log.Fatalln(err)
+	if uadmin, _ := actor.Get("admin"); uadmin == nil {
+		if admin, aerr := actor.New("admin", "user"); aerr != nil {
+			log.Fatalln(aerr)
+		} else {
+			admin.Admin = true
+			_, err := admin.GenerateKeys()
+			if err != nil {
+				log.Fatalln(err)
+			}
+			admin.Save()
 		}
-		admin.Save()
 	}
 
 	environment.MakeDefaultEnvironment()
 
 	return
+}
+
+func handleSignals() {
+	c := make(chan os.Signal, 1)
+	// SIGTERM is not exactly portable, but Go has a fake signal for it
+	// with Windows so it being there should theoretically not break it
+	// running on windows
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+
+	// if we receive a SIGINT or SIGTERM, do cleanup here.
+	go func(){
+		for sig := range c {
+			if sig == os.Interrupt || sig == syscall.SIGTERM{
+				log.Printf("cleaning up...")
+				ds := data_store.New()
+				if err := ds.Save(); err != nil {
+					log.Println(err)
+				}
+				if err := indexer.SaveIndex(); err != nil {
+					log.Println(err)
+				}
+				os.Exit(0)
+			} else if sig == syscall.SIGHUP {
+				log.Println("Reloading configuration...")
+				config.ParseConfigOptions()
+			}
+		}
+	}()
+}
+
+func gobRegister() {
+	a := new(actor.Actor)
+	gob.Register(a)
+	e := new(environment.ChefEnvironment)
+	gob.Register(e)
+	c := new(cookbook.Cookbook)
+	gob.Register(c)
+	d := new(data_bag.DataBag)
+	gob.Register(d)
+	f := new(filestore.FileStore)
+	gob.Register(f)
+	n := new(node.Node)
+	gob.Register(n)
+	r := new(role.Role)
+	gob.Register(r)
+	s := new(sandbox.Sandbox)
+	gob.Register(s)
+	m := make(map[string]interface{})
+	gob.Register(m)
+	si := make([]interface{},0)
+	gob.Register(si)
+	i := new(indexer.Index)
+	ic := new(indexer.IdxCollection)
+	id := new(indexer.IdxDoc)
+	gob.Register(i)
+	gob.Register(ic)
+	gob.Register(id)
+}
+
+func setSaveTicker() {
+	ds := data_store.New()
+	ticker := time.NewTicker(time.Second * time.Duration(config.Config.FreezeInterval))
+	go func(){
+		for _ = range ticker.C {
+			//log.Println("Automatically saving data store...")
+			uerr := ds.Save()
+			if uerr != nil {
+				log.Println(uerr)
+			}
+			uerr = indexer.SaveIndex()
+			if uerr != nil {
+				log.Println(uerr)
+			}
+		}
+	}()
 }

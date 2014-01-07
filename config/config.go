@@ -1,7 +1,7 @@
 /* Goiardi configuration. */
 
 /*
- * Copyright (c) 2013, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,12 @@ type Conf struct {
 	Port int
 	Hostname string
 	ConfFile string
+	IndexFile string
+	DataStoreFile string
 	DebugLevel int
+	FreezeInterval int
+	FreezeData bool
+	LogFile string
 }
 
 /* Struct for command line options. */
@@ -43,7 +48,10 @@ type Options struct {
 	Ipaddress string `short:"I" long:"ipaddress" description:"Listen on a specific IP address."`
 	Hostname string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel."`
 	Port int `short:"P" long:"port" description:"Port to listen on. (default: 4545)"`
-
+	IndexFile string `short:"i" long:"index-file" description:"File to save search index data to."`
+	DataStoreFile string `short:"D" long:"data-file" description:"File to save data store data to."`
+	FreezeInterval int `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk (requires -i/--index-file and -D/--data-file options to be set). (Default 300 seconds/5 minutes.)"`
+	LogFile string `short:"L" long:"log-file" description:"Log to file X"`
 }
 
 // The goiardi version
@@ -87,6 +95,7 @@ func ParseConfigOptions() error {
 			panic(err)
 			os.Exit(1)
 		}
+		Config.FreezeData = false
 	}
 	
 	if opts.Hostname != "" {
@@ -100,6 +109,44 @@ func ParseConfigOptions() error {
 			}
 		}
 	}
+
+	if !((opts.DataStoreFile == "" && opts.IndexFile == "") || (opts.DataStoreFile != "" && opts.IndexFile != "")) {
+		err := fmt.Errorf("-i and -D must either both be specified, or not specified.")
+		panic(err)
+		os.Exit(1)
+	}
+	if opts.DataStoreFile != "" {
+		Config.DataStoreFile = opts.DataStoreFile
+		Config.FreezeData = true
+	}
+
+	if opts.IndexFile != "" {
+		Config.IndexFile = opts.IndexFile
+		Config.FreezeData = true
+	}
+
+	if opts.LogFile != "" {
+		Config.LogFile = opts.LogFile
+	}
+	if Config.LogFile != "" {
+		lfp, lerr := os.Create(Config.LogFile)
+		if lerr != nil {
+			log.Println(err)
+			os.Exit(1)
+		}
+		log.SetOutput(lfp)
+	}
+
+	if !Config.FreezeData && (opts.FreezeInterval != 0 || Config.FreezeInterval != 0) {
+		log.Printf("FYI, setting the freeze data interval's not especially useful without setting the index and data files.")
+	}
+	if opts.FreezeInterval != 0 {
+		Config.FreezeInterval = opts.FreezeInterval
+	}
+	if Config.FreezeInterval == 0 {
+		Config.FreezeInterval = 300
+	}
+
 	Config.Ipaddress = opts.Ipaddress
 	if opts.Port != 0 {
 		Config.Port = opts.Port
