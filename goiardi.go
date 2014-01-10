@@ -86,6 +86,7 @@ func main(){
 	http.HandleFunc("/sandboxes/", sandbox_handler)
 	http.HandleFunc("/search", search_handler)
 	http.HandleFunc("/search/", search_handler)
+	http.HandleFunc("/search/reindex", reindexHandler)
 	http.HandleFunc("/users", list_handler)
 	http.HandleFunc("/users/", actor_handler)
 	http.HandleFunc("/file_store/", file_store_handler)

@@ -23,6 +23,8 @@ import (
 	"github.com/ctdk/goiardi/search"
 	"github.com/ctdk/goiardi/data_bag"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/data_store"
 	"net/http"
 	"encoding/json"
 	"fmt"
@@ -182,6 +184,57 @@ func search_handler(w http.ResponseWriter, r *http.Request){
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&search_response); err != nil {
+		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func reindexHandler(w http.ResponseWriter, r *http.Request){
+	w.Header().Set("Content-Type", "application/json")
+	reindex_response := make(map[string]interface{})
+	switch r.Method {
+		case "POST":
+			reindexObjs := make([]indexer.Indexable, 0)
+			// We clear the index, *then* do the fetch because if
+			// something comes in between the time we fetch the
+			// objects to reindex and when it gets done, they'll
+			// just be added naturally
+			indexer.ClearIndex()
+			// default indices
+			defaults := [...]string{ "node", "client", "role", "env" }
+			ds := data_store.New()
+			for _, d := range defaults {
+				objList := ds.GetList(d)
+				for _, oname := range objList {
+					u, _ := ds.Get(d, oname)
+					if u != nil {
+						reindexObjs = append(reindexObjs, u.(indexer.Indexable))	
+					}
+				}
+			}
+			// data bags have to be done separately
+			dbags := data_bag.GetList()
+			for _, db := range dbags {
+				dbag, err := data_bag.Get(db)
+				if err != nil {
+					continue
+				}
+				dbis := make([]indexer.Indexable, len(dbag.DataBagItems))
+				i := 0
+				for _, k := range dbag.DataBagItems {
+					n := k
+					dbis[i] = &n
+					i++
+				}
+				reindexObjs = append(reindexObjs, dbis...)
+			}
+			indexer.ReIndex(reindexObjs)
+			reindex_response["reindex"] = "OK"
+		default:
+			JsonErrorReport(w, r, "Method not allowed. If you're trying to do something with a data bag named 'reindex', it's not going to work I'm afraid.", http.StatusMethodNotAllowed)
+			return
+	}
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&reindex_response); err != nil {
 		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }

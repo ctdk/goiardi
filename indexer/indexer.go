@@ -388,12 +388,19 @@ var indexMap = initializeIndex()
 func initializeIndex() *Index {
 	/* We always want these indices at least. */
 	im := new(Index)
-	im.idxmap = make(map[string]*IdxCollection)
-	defaults := [...]string{ "client", "environment", "node", "role" }
-	for _, d := range defaults {
-		im.createCollection(d)
-	}
+	im.makeDefaultCollections()
+	
 	return im
+}
+
+func (i *Index) makeDefaultCollections() {
+	defaults := [...]string{ "client", "environment", "node", "role" }
+	i.m.Lock()
+	i.idxmap = make(map[string]*IdxCollection)
+	i.m.Unlock()
+	for _, d := range defaults {
+		i.createCollection(d)
+	}
 }
 
 //Process and add an object to the index.
@@ -559,3 +566,19 @@ func (i *Index) load() error {
 	}
 	return fp.Close()
 }
+
+// Clear index of all collections and documents
+func ClearIndex() {
+	indexMap.makeDefaultCollections()
+	return
+}
+// Rebuild the search index from scratch
+func ReIndex(objects []Indexable) error {
+	for _, o := range objects {
+		indexMap.saveIndex(o)
+	}
+	// We really ought to be able to return from an error, but at the moment
+	// there aren't any ways it does so in the index save bits.
+	return nil 
+}
+
