@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: New Feature | Goiardi]]></title>
+  <link href="http://ctdk.github.io/goiardi/blog/categories/new-feature/atom.xml" rel="self"/>
+  <link href="http://ctdk.github.io/goiardi/"/>
+  <updated>2014-01-10T17:47:08-08:00</updated>
+  <id>http://ctdk.github.io/goiardi/</id>
+  <author>
+    <name><![CDATA[Jeremy Bingham]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Reindexing Search Capability Added]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/01/09/reindexing-search-capability-added/"/>
+    <updated>2014-01-09T23:32:11-08:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/01/09/reindexing-search-capability-added</id>
+    <content type="html"><![CDATA[<p><a href="https://github.com/ctdk/goiardi/commit/7777fd82cb767007a22253c98c02e97f2f0a5bbf">As of the most recent commit</a>, goiardi can now rebuild its search index in case it accidentally got deleted or corrupted somehow.</p>
+
+<p>To rebuild, just run <code>knife index rebuild</code> (or <code>knife index rebuild -y</code> if you don&rsquo;t want to be bothered to press &ldquo;y&rdquo; to confirm that you really want to do it). You&rsquo;ll get a message from knife that &lsquo;knife index rebuild&rsquo; has been removed for Chef 11+ servers. This can be ignored; while goiardi identifies itself as a Chef 11+ server, this command will work because they&rsquo;ve kept it in for older versions of Chef.</p>
+]]></content>
+  </entry>
+  
+</feed>

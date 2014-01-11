@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Goiardi</title>
+  <title>Version 0.3.0 of Goiardi Released - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="As of the most recent commit, goiardi can now rebuild its search index in case it accidentally got deleted or corrupted somehow. To rebuild, just run &hellip;">
+  <meta name="description" content="Originally posted on time.to.pullthepl.ug. I am pleased to announce another goiardi (a Chef server written in go) release. Version 0.3.0 of goiardi &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardi">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/01/06/version-0-dot-3-0-of-goiardi-released">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -68,53 +68,12 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/goiardi/blog/2014/01/09/reindexing-search-capability-added/">Reindexing Search Capability Added</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-01-09T23:32:11-08:00" pubdate data-updated="true">Jan 9<span>th</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://github.com/ctdk/goiardi/commit/7777fd82cb767007a22253c98c02e97f2f0a5bbf">As of the most recent commit</a>, goiardi can now rebuild its search index in case it accidentally got deleted or corrupted somehow.</p>
-
-<p>To rebuild, just run <code>knife index rebuild</code> (or <code>knife index rebuild -y</code> if you don&rsquo;t want to be bothered to press &ldquo;y&rdquo; to confirm that you really want to do it). You&rsquo;ll get a message from knife that &lsquo;knife index rebuild&rsquo; has been removed for Chef 11+ servers. This can be ignored; while goiardi identifies itself as a Chef 11+ server, this command will work because they&rsquo;ve kept it in for older versions of Chef.</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/goiardi/blog/2014/01/06/version-0-dot-3-0-of-goiardi-released/">Version 0.3.0 of Goiardi Released</a></h1>
+      <h1 class="entry-title">Version 0.3.0 of Goiardi Released</h1>
     
     
       <p class="meta">
@@ -137,7 +96,7 @@
   </header>
 
 
-  <div class="entry-content"><p><em>Originally posted on <a href="http://time.to.pullthepl.ug/blog/2014/1/6/version-0-dot-3-0-of-goiardi-released/">time.to.pullthepl.ug</a>.</em></p>
+<div class="entry-content"><p><em>Originally posted on <a href="http://time.to.pullthepl.ug/blog/2014/1/6/version-0-dot-3-0-of-goiardi-released/">time.to.pullthepl.ug</a>.</em></p>
 
 <p>I am pleased to announce another <a href="https://github.com/ctdk/goiardi">goiardi</a> (a <a href="http://getchef.com/chef/">Chef</a> server written in go) release.</p>
 
@@ -153,22 +112,16 @@
 
 <p>Anyway, that&rsquo;s what this release has. Have fun with it if you&rsquo;re so inclined, and thank you if you do.</p>
 </div>
-  
-  
 
 
-    </article>
-  
-  
-    <article>
+  <footer>
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/goiardi/blog/2013/12/31/introducing-goiardi/">Introducing Goiardi</a></h1>
-    
-    
-      <p class="meta">
-        
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Jeremy Bingham</span></span>
+
+      
 
 
 
@@ -180,53 +133,40 @@
   
 
 
-<time datetime="2013-12-31T12:32:00-08:00" pubdate data-updated="true">Dec 31<span>st</span>, 2013</time>
-        
-      </p>
+<time datetime="2014-01-06T21:09:00-08:00" pubdate data-updated="true">Jan 6<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/goiardi/blog/categories/chef/'>chef</a>, <a class='category' href='/goiardi/blog/categories/go/'>go</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/golang/'>golang</a>
+  
+</span>
+
+
+    </p>
     
-  </header>
-
-
-  <div class="entry-content"><p><em>Originally posted on <a href="http://time.to.pullthepl.ug/blog/2013/12/31/introducing-goiardi/">time.to.pullthepl.ug</a>.</em></p>
-
-<p>A while back, I decided that I would like to learn <a href="http://golang.org/">Go</a>, which is a pretty neat language all around (in my humble opinion). I had to come up with some sort of project that would be ambitious enough to teach myself a lot of the language features, but not so huge that I&rsquo;d give up in frustration. Then I thought of a name, and realized what I had to do.</p>
-
-<p>After many evenings spent coding, I&rsquo;m proud to announce the first offical release of <a href="https://github.com/ctdk/goiardi">Goiardi</a>, an in-memory Chef server written in Go (the <a href="https://github.com/ctdk/goiardi/blob/master/README.md">README</a> has more information). (I started on it before I found out about Chef-Zero, but I decided to keep at it anyway. Chef-Zero was also a huge help in figuring out what the Chef server behavior ought to be.) At this time it has pretty much all the features Chef-Zero does, but sorting searches isn&rsquo;t working yet. If anyone has real examples of how those sorts are specified, I&rsquo;d love to hear them.</p>
-
-<p>Goiardi does not support authenication or validation at all, so it isn&rsquo;t very secure. Of course, it also doesn&rsquo;t persist its contents, so you probably shouldn&rsquo;t rely on it for your infrastructure provisioning needs.</p>
-
-<p>Aside from the authentication and permission tests, goiardi performs pretty well against chef-pedant. There are a few minor tests that fail because of slight JSON formatting differences or error messages that don&rsquo;t agree with chef-pedant, but otherwise it does quite well. Improving its performance against chef-pedant is, of course, an ongoing concern. It should do fine as a stand-in for chef-zero though, or some other situation where you need a chef server running but don&rsquo;t care if it loses all its information when it quits.</p>
-
-<p>Goiardi is, like many Chef things, open source and licensed under version 2.0 of the Apache License.</p>
-
-<h3>The Future</h3>
-
-<p>Where to go from here? Goiardi certainly has a lot of room for improvement. The first things I intend to do with it are allowing you to use a config file to store options, and allowing freezing the in-memory data structures to disk so they persist when goiardi is shut down. Those aren&rsquo;t in this release because if I kept adding &ldquo;just one more thing&rdquo; before making a formal release, I&rsquo;d never actually get it out.</p>
-
-<p>Further in the future, handling real authenication and permissions is pretty important. A real Chef Server mode, where goiardi uses Solr and a real database, is on the roadmap down the road as well. SSL, better documentation, and making the Go code more idiomatic where needed are also on the TODO list.</p>
-
-<p>Anyway, there is is. Feel free to check it out, bang on it, see where it breaks (and where it works). Suggestions, code, and comments are always welcome. Hopefully the comments are nice, but this <em>is</em> the Internet.</p>
-
-<p><strong>Update:</strong> At least part of the future is now. Goiardi has config file support now with 0.2.1, huzzah! This release also fixes a problem building goiardi with more recent versions of go-flags.</p>
-
-<p>Goiardi has been tested to compile with the native go compiler and run on Mac OS X (10.7 and 10.8), Debian &lsquo;wheezy&rsquo;, and Arch Linux. It also builds and runs with gccgo (using the <code>-compiler gccgo</code> option to <code>go</code>), tested on Arch Linux. Efforts are ongoing to get it to build with gccgo without the <code>go</code> command on OmniOS, but so far they&rsquo;ve been unsuccessful.</p>
-
-<h3>The Name</h3>
-
-<p>If you&rsquo;re wondering about the name, <a href="http://en.wikipedia.org/wiki/Ettore_Boiardi">Ettore Boiardi</a> was the real Chef Boyardee. Wakka wakka.</p>
+      <div class="sharing">
+  
+  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/01/06/version-0-dot-3-0-of-goiardi-released/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/01/06/version-0-dot-3-0-of-goiardi-released/" >Tweet</a>
+  
+  
+  
 </div>
-  
-  
 
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/goiardi/blog/2013/12/31/introducing-goiardi/" title="Previous Post: Introducing Goiardi">&laquo; Introducing Goiardi</a>
+      
+      
+        <a class="basic-alignment right" href="/goiardi/blog/2014/01/09/reindexing-search-capability-added/" title="Next Post: Reindexing search capability added">Reindexing search capability added &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
 
-    </article>
-  
-  <div class="pagination">
-    
-    <a href="/goiardi/blog/archives">Blog Archives</a>
-    
-  </div>
 </div>
+
 <aside class="sidebar">
   
     <section>
@@ -269,6 +209,7 @@
 
   
 </aside>
+
 
     </div>
   </div>
