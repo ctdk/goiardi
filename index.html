@@ -9,7 +9,7 @@
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="As of the most recent commit, goiardi can now rebuild its search index in case it accidentally got deleted or corrupted somehow. To rebuild, just run &hellip;">
+  <meta name="description" content="Pushed up a change in the latest goiardi master last night that fixes an issue with saving the persistent index and data store files where, if the &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,42 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/goiardi/blog/2014/01/18/save-persistent-store-fix/">Save Persistent Store Fix</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-01-18T15:10:27-08:00" pubdate data-updated="true">Jan 18<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Pushed up a change in the latest goiardi master last night that fixes an issue with saving the persistent index and data store files where, if the temp directory was not on the same partition, renaming the file after saving would cause an error. I was clued into this by a tweet in Japanese that seemed to say something about that. Ooops.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -258,6 +294,10 @@
 <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/goiardi/blog/2014/01/18/save-persistent-store-fix/">Save Persistent Store Fix</a>
+      </li>
     
       <li class="post">
         <a href="/goiardi/blog/2014/01/09/reindexing-search-capability-added/">Reindexing Search Capability Added</a>

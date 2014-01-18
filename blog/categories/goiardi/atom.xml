@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Goiardi | Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/blog/categories/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-01-10T18:33:01-08:00</updated>
+  <updated>2014-01-18T15:13:05-08:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,15 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Save Persistent Store Fix]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/01/18/save-persistent-store-fix/"/>
+    <updated>2014-01-18T15:10:27-08:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/01/18/save-persistent-store-fix</id>
+    <content type="html"><![CDATA[<p>Pushed up a change in the latest goiardi master last night that fixes an issue with saving the persistent index and data store files where, if the temp directory was not on the same partition, renaming the file after saving would cause an error. I was clued into this by a tweet in Japanese that seemed to say something about that. Ooops.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Reindexing Search Capability Added]]></title>
