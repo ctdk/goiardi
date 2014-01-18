@@ -36,6 +36,7 @@ import (
 	"io/ioutil"
 	"reflect"
 	"compress/zlib"
+	"path"
 )
 
 // Main data store
@@ -139,7 +140,7 @@ func (ds *DataStore) Save() error {
 		err := fmt.Errorf("Yikes! Cannot save data store to disk because no file was specified.")
 		return err
 	}
-	fp, err := ioutil.TempFile("", "ds-store")
+	fp, err := ioutil.TempFile(path.Dir(config.Config.DataStoreFile), "ds-store")
 	if err != nil {
 		return err
 	}

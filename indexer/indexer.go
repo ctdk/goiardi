@@ -34,6 +34,7 @@ import (
 	"os"
 	"io/ioutil"
 	"compress/zlib"
+	"path"
 )
 
 // Interface that provides all the information necessary to index an object.
@@ -515,7 +516,7 @@ func (i *Index) save() error {
 		err := fmt.Errorf("Yikes! Cannot save index to disk because no file was specified.")
 		return err
 	}
-	fp, err := ioutil.TempFile("", "ds-store")
+	fp, err := ioutil.TempFile(path.Dir(config.Config.IndexFile), "ds-store")
 	if err != nil {
 		return err
 	}
