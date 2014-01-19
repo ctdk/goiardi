@@ -113,9 +113,51 @@ func TestFlatten(t *testing.T){
 }
 
 func TestMapify(t *testing.T){
-
+	rl := []string{ "recipe[foo]", "role[bar]" }
+	normmap := make(map[string]interface{})
+	normmap["foo"] = "bar"
+	normmap["baz"] = "buz"
+	normmap["slice"] = []string{ "fee", "fie", "fo" }
+	normmap["map"] = make(map[string]interface{})
+	normmap["map"].(map[string]interface{})["first"] = "mook"
+	normmap["map"].(map[string]interface{})["second"] = "nork"
+	obj := &testObj{ Name: "foo", UrlType: "bar", RunList: rl, Normal: normmap }
+	mapify := MapifyObject(obj)
+	if mapify["name"].(string) != obj.Name {
+		t.Errorf("Mapify names didn't match, expecte %s, got %v", obj.Name, mapify["name"])
+	}
+	if _, ok := mapify["normal"]; !ok {
+		t.Errorf("There should have been a normal key for the map")
+	}
+	if _, ok := mapify["foo"]; ok {
+		t.Errorf("There was a foo key in mapify, and there should not have been.")
+	}
 }
 
 func TestIndexify(t *testing.T){
+	rl := []string{ "recipe[foo]", "role[bar]" }
+	normmap := make(map[string]interface{})
+	normmap["foo"] = "bar"
+	normmap["baz"] = "buz"
+	normmap["slice"] = []string{ "fee", "fie", "fo" }
+	normmap["map"] = make(map[string]interface{})
+	normmap["map"].(map[string]interface{})["first"] = "mook"
+	normmap["map"].(map[string]interface{})["second"] = "nork"
+	obj := &testObj{ Name: "foo", UrlType: "bar", RunList: rl, Normal: normmap }
+	flatten := FlattenObj(obj)
+	indexificate := Indexify(flatten)
+	if indexificate[0] != "baz:buz" {
+		t.Errorf("The first element of the indexified object should have been 'baz:buz', but instead it was %s", indexificate[0])
+	}
+}
 
+func TestValidateName(t *testing.T){
+	goodName := "foo-bar"
+	badName := "FAh!!"
+	if !ValidateName(goodName){
+		t.Errorf("%s should have passed name validation, but didn't", goodName)
+	}
+	if ValidateName(badName){
+		t.Errorf("%s should not have passed name validation, but somehow did", badName)
+	}
 }
