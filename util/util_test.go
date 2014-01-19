@@ -2,6 +2,7 @@ package util
 
 import (
 	"testing"
+	"net/http"
 )
 
 type testObj struct {
@@ -49,5 +50,20 @@ func TestCustomURL(t *testing.T){
 	url = CustomURL(initUrl)
 	if url != expectedUrl {
 		t.Errorf("expected %s, got %s", expectedUrl, url)
+	}
+}
+
+func TestGerror(t *testing.T){
+	errmsg := "foo bar"
+	err := Errorf(errmsg)
+	if err.Error() != errmsg {
+		t.Errorf("expected %s to match %s", err.Error(), errmsg)
+	}
+	if err.Status() != http.StatusBadRequest {
+		t.Errorf("err.Status() did not return expected default")
+	}
+	err.SetStatus(http.StatusNotFound)
+	if err.Status() != http.StatusNotFound {
+		t.Errorf("SetStatus did not set Status correctly")
 	}
 }
