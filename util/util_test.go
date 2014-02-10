@@ -152,12 +152,62 @@ func TestIndexify(t *testing.T){
 }
 
 func TestValidateName(t *testing.T){
-	goodName := "foo-bar"
+	goodName := "foo-bar.baz"
 	badName := "FAh!!"
 	if !ValidateName(goodName){
 		t.Errorf("%s should have passed name validation, but didn't", goodName)
 	}
 	if ValidateName(badName){
 		t.Errorf("%s should not have passed name validation, but somehow did", badName)
+	}
+}
+
+func TestValidateDBagName(t *testing.T){
+	goodName := "foo-bar"
+	badName := "FaH!!"
+	if !ValidateName(goodName){
+		t.Errorf("%s should have passed data bag name validation, but didn't", goodName)
+	}
+	if ValidateName(badName){
+		t.Errorf("%s should not have passed data bag name validation, but somehow did", badName)
+	}
+}
+
+func TestValidateEnvName(t *testing.T){
+	goodName := "foo-bar"
+	badName := "FAh!!"
+	if !ValidateName(goodName){
+		t.Errorf("%s should have passed env name validation, but didn't", goodName)
+	}
+	if ValidateName(badName){
+		t.Errorf("%s should not have passed env name validation, but somehow did", badName)
+	}
+}
+
+// A lot of the validations get taken care of with chef pedant, honestly
+func TestValidateAsVersion(t *testing.T){
+	goodVersion := "1.0.0"
+	goodVersion2 := "1.0"
+	badVer1 := "1"
+	badVer2 := "foo"
+	var badVer3 interface{}
+	badVer3 = nil
+	
+	if _, err := ValidateAsVersion(goodVersion); err != nil {
+		t.Errorf("%s should have passed version validation, but didn't", goodVersion)
+	}
+	if _, err := ValidateAsVersion(goodVersion2); err != nil {
+		t.Errorf("%s should have passed version validation, but didn't", goodVersion2)
+	}
+	if _, err := ValidateAsVersion(badVer1); err == nil {
+		t.Errorf("%s should not have passed version validation, but did", badVer1)
+	}
+	if _, err := ValidateAsVersion(badVer2); err == nil {
+		t.Errorf("%s should not have passed version validation, but did", badVer2)
+	}
+	if v, err := ValidateAsVersion(badVer3); err != nil {
+		t.Errorf("nil should have passed version validation, but did")
+	} else if v != "0.0.0"{
+		t.Errorf("Should have come back as 0.0.0, but it came back as %v", v)
 	}
 }
