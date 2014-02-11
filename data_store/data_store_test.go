@@ -70,3 +70,17 @@ func TestDelete(t *testing.T){
 		t.Errorf("Delete() did not delete bar3, returned %v!", val)
 	}
 }
+
+func TestGetList(t *testing.T){
+	ds := New()
+	complist := []string{ "baz", "moo" }
+	baz := makeDsObj()
+	moo := makeDsObj()
+	moo.Name = "moo"
+	ds.Set("foolist", "baz", baz)
+	ds.Set("foolist", "moo", moo)
+	dsl := ds.GetList("foolist")
+	if dsl == nil || dsl[0] != complist[0] || dsl[1] != complist[1] {
+		t.Errorf("GetList failed to return the expected list: returned %v, expected %v", dsl, complist)
+	}
+}
