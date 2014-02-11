@@ -81,7 +81,7 @@ func (ds *DataStore) Set(key_type string, key string, val interface{}){
 func (ds *DataStore) Get(key_type string, key string) (interface {}, bool){
 	ds_key := ds.make_key(key_type, key)
 	ds.m.RLock()
-	ds.m.RUnlock()
+	defer ds.m.RUnlock()
 	val, found := ds.dsc.Get(ds_key)
 	if val != nil {
 		chkNilArray(val)
