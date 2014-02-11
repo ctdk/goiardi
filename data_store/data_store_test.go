@@ -84,3 +84,19 @@ func TestGetList(t *testing.T){
 		t.Errorf("GetList failed to return the expected list: returned %v, expected %v", dsl, complist)
 	}
 }
+
+func TestSave(t *testing.T) {
+	ds := New()
+	err := ds.Save()
+	if err != nil {
+		t.Errorf("Save() gave an error: %s", err)
+	}
+}
+
+func TestLoad(t *testing.T) {
+	ds := New()
+	err := ds.Load()
+	if err != nil {
+		t.Errorf("Load() save an error: %s", err)
+	}
+}
