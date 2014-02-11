@@ -45,13 +45,28 @@ func TestSet(t *testing.T){
 func TestGet(t *testing.T){
 	ds := New()
 	val, found := ds.Get("foo", "bar2")
-	if found != false {
+	if found {
 		t.Errorf("Get() returned a result improperly")
 	}
 	baz := makeDsObj()
 	ds.Set("foo", "bar2", baz)
 	val, found = ds.Get("foo", "bar2")
-	if found == false {
+	if !found {
 		t.Errorf("Get() did not return a result properly, got '%v' :: %v", val, found)
+	}
+}
+
+func TestDelete(t *testing.T){
+	ds := New()
+	baz := makeDsObj()
+	ds.Set("foo", "bar3", baz)
+	val, found := ds.Get("foo", "bar3")
+	if found == false {
+		t.Errorf("Couldn't set bar3 baz")
+	}
+	ds.Delete("foo", "bar3")
+	val, found = ds.Get("foo", "bar3")
+	if found {
+		t.Errorf("Delete() did not delete bar3, returned %v!", val)
 	}
 }
