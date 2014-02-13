@@ -24,7 +24,6 @@ package data_store
 
 import (
 	"github.com/pmylund/go-cache"
-	"github.com/ctdk/goiardi/config"
 	"strings"
 	"sort"
 	"encoding/gob"
@@ -130,12 +129,8 @@ func (ds *DataStore) GetList(key_type string) []string{
 }
 
 // Freeze and save the data store to disk.
-func (ds *DataStore) Save() error {
-	// If freeze data isn't set, don't try save the data
-	if !config.Config.FreezeData {
-		return nil
-	}
-	if config.Config.DataStoreFile == "" {
+func (ds *DataStore) Save(dsFile string) error {
+	if dsFile == "" {
 		err := fmt.Errorf("Yikes! Cannot save data store to disk because no file was specified.")
 		return err
 	}
@@ -180,21 +175,17 @@ func (ds *DataStore) Save() error {
 	if err != nil {
 		return err
 	}
-	return os.Rename(fp.Name(), config.Config.DataStoreFile)
+	return os.Rename(fp.Name(), dsFile)
 }
 
 // Load the frozen data store from disk.
-func (ds *DataStore) Load() error {
-	// If freeze data isn't set, don't try loading the data
-	if !config.Config.FreezeData {
-		return nil
-	}
-	if config.Config.DataStoreFile == "" {
+func (ds *DataStore) Load(dsFile string) error {
+	if dsFile == "" {
 		err := fmt.Errorf("Yikes! Cannot load data store from disk because no file was specified.")
 		return err
 	}
 
-	fp, err := os.Open(config.Config.DataStoreFile)
+	fp, err := os.Open(dsFile)
 	if err != nil {
 		// It's fine for the file not to exist on startup
 		if os.IsNotExist(err) {
