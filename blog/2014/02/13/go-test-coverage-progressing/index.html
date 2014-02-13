@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: Go - Goiardi</title>
+  <title>Go Test Coverage Progressing - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="Category: go">
+  <meta name="description" content="It&rsquo;s in progress, but goiardi&rsquo;s getting actual golang test coverage. It&rsquo;s being built out in the test_writing branch, and so far &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardiblog/categories/go">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/02/13/go-test-coverage-progressing">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -82,53 +82,99 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: Go</h1>
+    
+      <h1 class="entry-title">Go Test Coverage Progressing</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-13T09:28:49-08:00" pubdate data-updated="true">Feb 13<span>th</span>, 2014</time>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p>It&rsquo;s in progress, but goiardi&rsquo;s getting actual golang test coverage. It&rsquo;s being built out in the <a href="https://github.com/ctdk/goiardi/tree/test_writing">test_writing</a> branch, and so far has coverage with the crypto, data store, indexer, and utility libraries inside goiardi. Already the data store and indexer save and load functions have been reworked to make testing easier, and more tests will be coming soon.</p>
 
-  
-  <h2>2014</h2>
-
-<article>
-  
-<h1><a href="/goiardi/blog/2014/01/06/version-0-dot-3-0-of-goiardi-released/">Version 0.3.0 of Goiardi Released</a></h1>
-<time datetime="2014-01-06T21:09:00-08:00" pubdate><span class='month'>Jan</span> <span class='day'>06</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/chef/'>chef</a>, <a class='category' href='/goiardi/blog/categories/go/'>go</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/golang/'>golang</a></span>
-</footer>
-
-
-</article>
-
-
-
-  
-  <h2>2013</h2>
-
-<article>
-  
-<h1><a href="/goiardi/blog/2013/12/31/introducing-goiardi/">Introducing Goiardi</a></h1>
-<time datetime="2013-12-31T12:32:00-08:00" pubdate><span class='month'>Dec</span> <span class='day'>31</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/chef/'>chef</a>, <a class='category' href='/goiardi/blog/categories/go/'>go</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/golang/'>golang</a></span>
-</footer>
-
-
-</article>
-
+<p>Previously goiardi testing was done with chef-pedant, and that will continue to be the primary means of testing goiardi. However, there are areas where actual go tests will be useful, particularly with things like the data store and indexer that don&rsquo;t get quite as exercised by chef-pedant. My current thinking is that the go tests should focus more on internals, while chef-pedant coverage is important for testing its public behavior.</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Jeremy Bingham</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-13T09:28:49-08:00" pubdate data-updated="true">Feb 13<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/goiardi/blog/categories/testing/'>testing</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/02/13/go-test-coverage-progressing/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/02/13/go-test-coverage-progressing/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+  
+<a href='https://alpha.app.net/intent/post/?text=App.net%20social%20buttons%20are%20here' class='adn-button' target='_blank' data-type='share' data-width='121' data-height='20' data-text='' >Share on App.net</a>
+<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='//d2zh9g63fcvyrq.cloudfront.net/adn.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'adn-button-js'));</script>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/goiardi/blog/2014/01/18/save-persistent-store-fix/" title="Previous Post: Save Persistent Store Fix">&laquo; Save Persistent Store Fix</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -200,7 +246,10 @@
       var disqus_shortname = 'goiardi';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/02/13/go-test-coverage-progressing/';
+        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/02/13/go-test-coverage-progressing/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
