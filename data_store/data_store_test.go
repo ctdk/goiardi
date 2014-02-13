@@ -18,6 +18,9 @@ package data_store
 
 import (
 	"testing"
+	"io/ioutil"
+	"fmt"
+	"os"
 )
 
 type dsObj struct {
@@ -85,9 +88,20 @@ func TestGetList(t *testing.T){
 	}
 }
 
+var dsTmpDir = dsTmpGen()
+
+func dsTmpGen() string {
+	tm, err := ioutil.TempDir("", "ds-test")
+	if err != nil {
+		panic("Couldn't create temporary directory!")
+	}
+	return tm
+}
+
 func TestSave(t *testing.T) {
 	ds := New()
-	err := ds.Save()
+	tmpfile := fmt.Sprintf("%s/ds.bin", dsTmpDir)
+	err := ds.Save(tmpfile)
 	if err != nil {
 		t.Errorf("Save() gave an error: %s", err)
 	}
@@ -95,8 +109,17 @@ func TestSave(t *testing.T) {
 
 func TestLoad(t *testing.T) {
 	ds := New()
-	err := ds.Load()
+	tmpfile := fmt.Sprintf("%s/ds.bin", dsTmpDir)
+	err := ds.Load(tmpfile)
 	if err != nil {
 		t.Errorf("Load() save an error: %s", err)
 	}
+}
+
+
+
+// clean up
+
+func TestCleanup(t *testing.T) {
+	os.RemoveAll(dsTmpDir)
 }
