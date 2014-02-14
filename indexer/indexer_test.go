@@ -20,6 +20,9 @@ package indexer
 import (
 	"testing"
 	"github.com/ctdk/goiardi/util"
+	"fmt"
+	"os"
+	"io/ioutil"
 )
 
 type testObj struct {
@@ -46,4 +49,38 @@ func (to *testObj) Flatten() []string {
 func TestIndexObj(t *testing.T){
 	obj := &testObj{ Name: "foo", UrlType: "bar" }
 	IndexObj(obj)
+}
+
+var idxTmpDir = idxTmpGen()
+
+func idxTmpGen() string {
+	tm, err := ioutil.TempDir("", "idx-test")
+	if err != nil {
+		panic("Couldn't create temporary directory!")
+	}
+	return tm
+}
+
+func TestSave(t *testing.T) {
+	tmpfile := fmt.Sprintf("%s/idx.bin", idxTmpDir)
+	err := SaveIndex(tmpfile)
+	if err != nil {
+		t.Errorf("Save() gave an error: %s", err)
+	}
+}
+
+func TestLoad(t *testing.T) {
+	tmpfile := fmt.Sprintf("%s/idx.bin", idxTmpDir)
+	err := LoadIndex(tmpfile)
+	if err != nil {
+		t.Errorf("Load() save an error: %s", err)
+	}
+}
+
+
+
+// clean up
+
+func TestCleanup(t *testing.T) {
+	os.RemoveAll(idxTmpDir)
 }
