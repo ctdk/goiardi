@@ -116,7 +116,31 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-
+func TestSaveAndLoadData(t *testing.T) {
+	ds := New()
+	tmpfile := fmt.Sprintf("%s/ds2.bin", dsTmpDir)
+	baz := makeDsObj()
+	boo := makeDsObj()
+	boo.Name = "boo"
+	ds.Set("foo", "bar", baz)
+	ds.Set("foo", "boo", boo)
+	ds.Save(tmpfile)
+	dsLoad := New()
+	dsLoad.Load(tmpfile)
+	bS, found := dsLoad.Get("foo", "bar")
+	if !found {
+		t.Errorf("Did not find bar!! dsLoad is: %v", dsLoad)
+	}
+	var bazSave *dsObj
+	if bS != nil {
+		bazSave = bS.(*dsObj)
+	}
+	if bazSave == nil {
+		t.Errorf("Did not successfully retrieve baz from saved data store")
+	} else if bazSave.Name != baz.Name {
+		t.Errorf("Retrieved the wrong object! Expected %s, got %s", baz.Name, bazSave.Name)
+	}
+}
 
 // clean up
 

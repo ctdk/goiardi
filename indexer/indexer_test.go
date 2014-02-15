@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-// Package chef_crypto bundles up crytographic routines for goairdi.
 package indexer
 
 import (
@@ -77,7 +76,29 @@ func TestLoad(t *testing.T) {
 	}
 }
 
+// more extensive testing of actual search needs to be done in the search
+// lib. However, *that* may not be practical outside of chef-pedant.
 
+func TestSearchObj(t *testing.T) {
+	obj := &testObj{ Name: "foo", UrlType: "client" }
+	IndexObj(obj)
+	_, err := SearchIndex("client", "name:foo", false)
+	if err != nil {
+		t.Errorf("Failed to search index for test: %s", err)
+	}
+}
+
+func TestSearchObjLoad(t *testing.T) {
+	obj := &testObj{ Name: "foo", UrlType: "client" }
+	IndexObj(obj)
+	tmpfile := fmt.Sprintf("%s/idx2.bin", idxTmpDir)
+	SaveIndex(tmpfile)
+	LoadIndex(tmpfile)
+	_, err := SearchIndex("client", "name:foo", false)
+	if err != nil {
+		t.Errorf("Failed to search index for test: %s", err)
+	}
+}
 
 // clean up
 
