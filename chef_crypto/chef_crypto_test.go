@@ -37,3 +37,54 @@ func TestGenerateRSAKeys(t *testing.T){
 		t.Errorf("Improper public key: %s", pub)
 	}
 }
+
+var goodPubKey = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApXXeTEd6gq6sziqYt76U\n3W0zT9oBQTdiImrLypUuMTZ6+DBwT4iVLvL/JRydI3tyNRV/S/JZxjPDhaKgnOjZ\ndSVpE9U41DewgB2zzH5mox1LRWTeu8KU3qkuyOTk3qaF3NUejCkkHxKlolLyabRt\npLwaSfQUE+Mr4GoY+gTyo9GSzOKdVoc/PlR+99BDD8AKMm4L705DE1SBHxCRqxfy\n3VLgXfX4GjQKZjH1bDoWSbfaAVOllfB5EDib2IQE58PJwW2milG+XUBbxO0Ee95A\niLx+abdhmVyx6Mysc1Fk9u6VT18pysIi0VwV7SEYu691HfuRT0yEpMZMPb1hFH97\nyQIDAQAB\n-----END PUBLIC KEY-----"
+
+var badPubKey = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApXXeTEd6gq6sziqYt76U\n3W0zT9oBQTdiImrLypUuMTZ6+DBwT4iVLvL/JRydI3tyNRV/S/JZxjPDhaKgnOjZ\ndSVpE9U4ewrWsgB2zzH5mox1LRWTeu8KU3qkuyOTk3qaF3NUejCkkHxKlolLyabRt\npwoahbroE+Mr4GoY+gTyo9GSzOKdVoc/PlR+99BDD8AKMm4L705DE1SBHxCRqxfy\n3VLgXfX4GjQKZjH1bDoWSbfaAVOllfB5EDib2IQE58PJwW2milG+XUBbxO0Ee95A\niLx+abdhmVyx6Mysc1Fk9u6VT18pysIi0VwV7SEYu666HfuRT0yEpMZMPb1hFH97\nyQIDAQAB\n-----END PUBLIC KEY-----"
+
+var onePubKey = "1"
+var realBadPubKey = "-----BEGIN PUBLIC KEY-----\nI'm bad to the bone\n-----END PUBLIC KEY-----"
+var arrPubKey = []string{}
+var mapPubKey = make(map[string]interface{})
+
+func TestGoodPubKey(t *testing.T){
+	ok, err := ValidatePublicKey(goodPubKey)
+	if !ok {
+		t.Errorf("Valid public key was invalid: %s", err.Error())
+	}
+}
+
+func TestWellFormedBogusPubKey(t *testing.T){
+	ok, _ := ValidatePublicKey(badPubKey)
+	if ok {
+		t.Errorf("Well-formed but bogus public key validated when it should not have.")
+	}
+}
+
+func TestNumberPubKey(t *testing.T){
+	ok, _ := ValidatePublicKey(onePubKey)
+	if ok {
+		t.Errorf("Well-formed but bogus public key validated when it should not have.")
+	}
+}
+
+func TestRealBadPubKey(t *testing.T){
+	ok, _ := ValidatePublicKey(realBadPubKey)
+	if ok {
+		t.Errorf("Well-formed but bogus public key validated when it should not have.")
+	}
+}
+
+func TestArrayPubKey(t *testing.T){
+	ok, _ := ValidatePublicKey(arrPubKey)
+	if ok {
+		t.Errorf("Well-formed but bogus public key validated when it should not have.")
+	}
+}
+
+func TestMapPubKey(t *testing.T){
+	ok, _ := ValidatePublicKey(mapPubKey)
+	if ok {
+		t.Errorf("Well-formed but bogus public key validated when it should not have.")
+	}
+}

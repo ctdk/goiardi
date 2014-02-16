@@ -210,6 +210,15 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 	return nil
 }
 
+func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
+	ok, pkerr := chef_crypto.ValidatePublicKey(publicKey)
+	var err util.Gerror
+	if !ok {
+		err = util.Errorf(pkerr.Error())
+	}
+	return ok, err
+}
+
 // Returns a list of actors. Clients and users are stored together, so no user
 // can have the same name as an existing client (and vice versa).
 func GetList() []string {

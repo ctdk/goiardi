@@ -139,8 +139,10 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 			} else {
 				switch public_key := public_key.(type) {
 					case string:
-						// TODO: validate public keys
-						// when the time comes
+						if pkok, pkerr := actor.ValidatePublicKey(public_key); !pkok {
+							JsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
+							return nil
+						}
 						chef_client.PublicKey = public_key
 					case nil:
 			

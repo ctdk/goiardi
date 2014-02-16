@@ -60,3 +60,23 @@ func GenerateRSAKeys() (string, string, error){
 	pub_pem := string(pem.EncodeToMemory(&pub_blk))
 	return priv_pem, pub_pem, nil
 }
+
+func ValidatePublicKey(publicKey interface{}) (bool, error) {
+	switch publicKey := publicKey.(type) {
+		case string:
+			// at the moment we don't care about the pub interface
+			decPubKey, _ := pem.Decode([]byte(publicKey))
+			if decPubKey == nil {
+				err := fmt.Errorf("Public key does not validate")
+				return false, err
+			}
+			if _, err := x509.ParsePKIXPublicKey(decPubKey.Bytes); err != nil {
+				nerr := fmt.Errorf("Public key did not validate: %s", err.Error())
+				return false, nerr
+			}
+			return true, nil
+		default:
+			err := fmt.Errorf("Public key does not validate")
+			return false, err
+	}
+}
