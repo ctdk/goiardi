@@ -50,15 +50,17 @@ func main(){
 
 	gobRegister()
 	ds := data_store.New()
-	uerr := ds.Load()
-	if uerr != nil {
-		log.Println(uerr)
-		os.Exit(1)
-	}
-	uerr = indexer.LoadIndex()
-	if uerr != nil {
-		log.Println(uerr)
-		os.Exit(1)
+	if config.Config.FreezeData {
+		uerr := ds.Load(config.Config.DataStoreFile)
+		if uerr != nil {
+			log.Println(uerr)
+			os.Exit(1)
+		}
+		uerr = indexer.LoadIndex(config.Config.IndexFile)
+		if uerr != nil {
+			log.Println(uerr)
+			os.Exit(1)
+		}
 	}
 	setSaveTicker()
 
@@ -210,12 +212,14 @@ func handleSignals() {
 		for sig := range c {
 			if sig == os.Interrupt || sig == syscall.SIGTERM{
 				log.Printf("cleaning up...")
-				ds := data_store.New()
-				if err := ds.Save(); err != nil {
-					log.Println(err)
-				}
-				if err := indexer.SaveIndex(); err != nil {
-					log.Println(err)
+				if config.Config.FreezeData {
+					ds := data_store.New()
+					if err := ds.Save(config.Config.DataStoreFile); err != nil {
+						log.Println(err)
+					}
+					if err := indexer.SaveIndex(config.Config.IndexFile); err != nil {
+						log.Println(err)
+					}
 				}
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
@@ -261,13 +265,15 @@ func setSaveTicker() {
 	go func(){
 		for _ = range ticker.C {
 			//log.Println("Automatically saving data store...")
-			uerr := ds.Save()
-			if uerr != nil {
-				log.Println(uerr)
-			}
-			uerr = indexer.SaveIndex()
-			if uerr != nil {
-				log.Println(uerr)
+			if config.Config.FreezeData {
+				uerr := ds.Save(config.Config.DataStoreFile)
+				if uerr != nil {
+					log.Println(uerr)
+				}
+				uerr = indexer.SaveIndex(config.Config.IndexFile)
+				if uerr != nil {
+					log.Println(uerr)
+				}
 			}
 		}
 	}()

@@ -22,7 +22,6 @@ package indexer
 
 import (
 	"github.com/ctdk/go-trie/gtrie"
-	"github.com/ctdk/goiardi/config"
 	"log"
 	"sync"
 	"strings"
@@ -435,13 +434,13 @@ func Endpoints() []string {
 }
 
 // Save the index files to disk.
-func SaveIndex() error {
-	return indexMap.save()
+func SaveIndex(idxFile string) error {
+	return indexMap.save(idxFile)
 }
 
 // Load index files from disk.
-func LoadIndex() error {
-	return indexMap.load()
+func LoadIndex(idxFile string) error {
+	return indexMap.load(idxFile)
 }
 
 /* gob encoding functions for the index */
@@ -508,11 +507,8 @@ func (i *IdxDoc) GobDecode(buf []byte) error {
 	return decoder.Decode(&i.docText)
 }
 
-func (i *Index) save() error {
-	if !config.Config.FreezeData {
-		return nil
-	}
-	if config.Config.IndexFile == "" {
+func (i *Index) save(idxFile string) error {
+	if idxFile == "" {
 		err := fmt.Errorf("Yikes! Cannot save index to disk because no file was specified.")
 		return err
 	}
@@ -534,18 +530,15 @@ func (i *Index) save() error {
 	if err != nil {
 		return nil
 	}
-	return os.Rename(fp.Name(), config.Config.IndexFile)
+	return os.Rename(fp.Name(), idxFile)
 }
 
-func (i *Index) load() error {
-	if !config.Config.FreezeData {
-		return nil
-	}
-	if config.Config.IndexFile == "" {
+func (i *Index) load(idxFile string) error {
+	if idxFile == "" {
 		err := fmt.Errorf("Yikes! Cannot load index from disk because no file was specified.")
 		return err
 	}
-	fp, err := os.Open(config.Config.IndexFile)
+	fp, err := os.Open(idxFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
