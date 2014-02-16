@@ -135,7 +135,7 @@ func (ds *DataStore) Save(dsFile string) error {
 		err := fmt.Errorf("Yikes! Cannot save data store to disk because no file was specified.")
 		return err
 	}
-	fp, err := ioutil.TempFile(path.Dir(config.Config.DataStoreFile), "ds-store")
+	fp, err := ioutil.TempFile(path.Dir(dsFile), "ds-store")
 	if err != nil {
 		return err
 	}
