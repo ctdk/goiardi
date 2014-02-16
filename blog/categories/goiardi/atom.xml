@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Goiardi | Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/blog/categories/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-02-16T11:53:09-08:00</updated>
+  <updated>2014-02-16T13:08:24-08:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -14,15 +14,17 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Version 0.3.1 of Goiardi Released]]></title>
+    <title type="html"><![CDATA[Version 0.3.3 of Goiardi Released]]></title>
     <link href="http://ctdk.github.io/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released/"/>
     <updated>2014-02-16T11:46:49-08:00</updated>
     <id>http://ctdk.github.io/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released</id>
     <content type="html"><![CDATA[<p>I am pleased to announce another goiardi release.</p>
 
-<p>This release, <a href="https://github.com/ctdk/goiardi/releases/tag/v0.3.1">version 0.3.1 of goiardi</a>, doesn&rsquo;t add much in the way of new functionality. The data store and indexer have been tweaked slightly, and go tests have been added for some of the goiardi components. The go test coverage isn&rsquo;t complete, and most goiardi testing is handled with chef-pedant, but these golang tests will be handy for testing internal functionality that could break, yet not show up in the chef-pedant testing.</p>
+<p>This release, <a href="https://github.com/ctdk/goiardi/releases/tag/v0.3.3">version 0.3.3 of goiardi</a>, doesn&rsquo;t add much in the way of new functionality. The data store and indexer have been tweaked slightly, and go tests have been added for some of the goiardi components. The go test coverage isn&rsquo;t complete, and most goiardi testing is handled with chef-pedant, but these golang tests will be handy for testing internal functionality that could break, yet not show up in the chef-pedant testing.</p>
 
 <p>While there isn&rsquo;t much in this release, I decided to make one here because it&rsquo;s a good place to make one before starting to tackle authentication. Enjoy.</p>
+
+<p><strong>Update:</strong> It&rsquo;s a little embarrassing, but there was a problem merging branches, and a necessary change got backed out or overlooked, so version 0.3.1 has been superseded by version 0.3.3. On the off chance anyone got the previous version, I apologize.</p>
 ]]></content>
   </entry>
   
