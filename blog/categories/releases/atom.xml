@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Releases | Goiardi]]></title>
+  <link href="http://ctdk.github.io/goiardi/blog/categories/releases/atom.xml" rel="self"/>
+  <link href="http://ctdk.github.io/goiardi/"/>
+  <updated>2014-02-16T11:53:09-08:00</updated>
+  <id>http://ctdk.github.io/goiardi/</id>
+  <author>
+    <name><![CDATA[Jeremy Bingham]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Version 0.3.1 of Goiardi Released]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released/"/>
+    <updated>2014-02-16T11:46:49-08:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released</id>
+    <content type="html"><![CDATA[<p>I am pleased to announce another goiardi release.</p>
+
+<p>This release, <a href="https://github.com/ctdk/goiardi/releases/tag/v0.3.1">version 0.3.1 of goiardi</a>, doesn&rsquo;t add much in the way of new functionality. The data store and indexer have been tweaked slightly, and go tests have been added for some of the goiardi components. The go test coverage isn&rsquo;t complete, and most goiardi testing is handled with chef-pedant, but these golang tests will be handy for testing internal functionality that could break, yet not show up in the chef-pedant testing.</p>
+
+<p>While there isn&rsquo;t much in this release, I decided to make one here because it&rsquo;s a good place to make one before starting to tackle authentication. Enjoy.</p>
+]]></content>
+  </entry>
+  
+</feed>

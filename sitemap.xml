@@ -25,8 +25,14 @@
         <lastmod>2014-02-13T09:34:42-08:00</lastmod>
     </url>
     <url>
+        <loc>
+            http://ctdk.github.io/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released/
+        </loc>
+        <lastmod>2014-02-16T11:52:47-08:00</lastmod>
+    </url>
+    <url>
         <loc>http://ctdk.github.io/goiardi/blog/archives/</loc>
-        <lastmod>2014-02-13T09:34:42-08:00</lastmod>
+        <lastmod>2014-02-16T11:52:47-08:00</lastmod>
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/docs/</loc>
@@ -34,7 +40,7 @@
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/</loc>
-        <lastmod>2014-02-13T09:34:42-08:00</lastmod>
+        <lastmod>2014-02-16T11:52:47-08:00</lastmod>
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/robots.txt</loc>
