@@ -135,6 +135,9 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 	api_info := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
 	w.Header().Set("X-Ops-API-Info", api_info)
 
+	user_id := r.Header.Get("X-OPS-USERID")
+	log.Printf("user id is: %s\n", user_id)
+
 	http.DefaultServeMux.ServeHTTP(w, r)
 }
 
