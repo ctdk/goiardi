@@ -19,4 +19,10 @@ package authentication
 import (
 	"github.com/ctdk/goiardi/chef_crypto"
 	"github.com/ctdk/goiardi/actor"
+	"net/http"
 )
+
+func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
+	user, err := actor.Get(user_id)
+
+}
