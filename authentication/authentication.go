@@ -17,12 +17,40 @@
 package authentication
 
 import (
-	"github.com/ctdk/goiardi/chef_crypto"
+	//"github.com/ctdk/goiardi/chef_crypto"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"io"
+	//"io/ioutil"
+	"bytes"
 )
 
 func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 	user, err := actor.Get(user_id)
+	_ = user
+/*	if err != nil {
+		gerr := util.Errorf(err.Error())
+		gerr.SetStatus(http.StatusUnauthorized)
+		return false, gerr
+	} */
+	contentHash := r.Header.Get("X-OPS-CONTENT-HASH")
+	if contentHash == "" {
+		gerr := util.Errorf("no content hash provided")
+		gerr.SetStatus(http.StatusUnauthorized)
+		return false, gerr
+	}
+	var bodyBuf bytes.Buffer 
+	_, err = io.Copy(&bodyBuf, r.Body)
+	if err != nil {
+		gerr := util.Errorf("could not copy body")
+		gerr.SetStatus(http.StatusInternalServerError)
+		return false, gerr
+	}
+	
 
+
+
+
+	return true, nil
 }

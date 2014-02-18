@@ -40,6 +40,7 @@ import (
 	"syscall"
 	"encoding/gob"
 	"time"
+	"github.com/ctdk/goiardi/authentication"
 )
 
 type InterceptHandler struct {} // Doesn't need to do anything, just sit there.
@@ -137,6 +138,10 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 
 	user_id := r.Header.Get("X-OPS-USERID")
 	log.Printf("user id is: %s\n", user_id)
+	_, herr := authentication.CheckHeader(user_id, r)
+	if herr != nil {
+		log.Printf("something went wrong in the header: %s\n", herr.Error())
+	}
 
 	http.DefaultServeMux.ServeHTTP(w, r)
 }
