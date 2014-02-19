@@ -27,6 +27,9 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"log"
+	"strings"
+	"regexp"
+	"strconv"
 )
 
 func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
@@ -42,6 +45,12 @@ func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 		gerr := util.Errorf("no content hash provided")
 		gerr.SetStatus(http.StatusUnauthorized)
 		return false, gerr
+	}
+	authTimestamp := r.Header.Get("x-ops-timestamp")
+	if authTimestamp == "" {
+		log.Printf("no timestamp, uh\n")
+	} else {
+		log.Printf("timestamp was: %s\n", authTimestamp)
 	}
 	var bodyStr string
 	if r.Body == nil {
@@ -69,6 +78,11 @@ func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 		return false, gerr
 	}
 
+	signedHeaders, sherr  := assembleSignedHeader(r)
+	if sherr != nil {
+		return false, sherr
+	}
+	log.Printf("The full signed encoded header is: %s\n", signedHeaders)
 
 	return true, nil
 }
@@ -86,4 +100,33 @@ func drainBody(b io.ReadCloser) (r1, r2 io.ReadCloser, err error) {
 		return nil, nil, err
 	}
 	return ioutil.NopCloser(&buf), ioutil.NopCloser(bytes.NewBuffer(buf.Bytes())), nil
+}
+
+func assembleSignedHeader(r *http.Request) (string, util.Gerror) {
+	sHeadStore := make(map[int]string)
+	authHeader := regexp.MustCompile(`(?i)^X-Ops-Authorization-(\d+)`)
+	for k := range r.Header {
+		if c := authHeader.FindStringSubmatch(k); c != nil {
+			/* Have to put it into a map first, then sort, in case
+			 * the headers don't come out in the right order */
+			// skipping this error because we shouldn't even be
+			// able to get here with something that won't be an
+			// integer. Famous last words, I'm sure.
+			i, _ := strconv.Atoi(c[1])
+			sHeadStore[i] = r.Header.Get(k)
+		}
+	}
+	if len(sHeadStore) == 0 {
+		gerr := util.Errorf("No authentication headers found!")
+		gerr.SetStatus(http.StatusUnauthorized)
+		return "", gerr
+	}
+
+	sH := make([]string, len(sHeadStore))
+	for k, v := range sHeadStore {
+		sH[k - 1] = v
+	}
+	signedHeaders := strings.Join(sH, "")
+
+	return signedHeaders, nil
 }
