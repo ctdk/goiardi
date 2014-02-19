@@ -48,7 +48,9 @@ func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 	}
 	authTimestamp := r.Header.Get("x-ops-timestamp")
 	if authTimestamp == "" {
-		log.Printf("no timestamp, uh\n")
+		gerr := util.Errorf("no timestamp header provided")
+		gerr.SetStatus(http.StatusUnauthorized)
+		return false, gerr
 	} else {
 		log.Printf("timestamp was: %s\n", authTimestamp)
 	}
