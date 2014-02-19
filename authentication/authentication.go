@@ -22,8 +22,11 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"io"
-	//"io/ioutil"
+	"io/ioutil"
 	"bytes"
+	"crypto/sha1"
+	"encoding/base64"
+	"log"
 )
 
 func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
@@ -40,17 +43,47 @@ func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 		gerr.SetStatus(http.StatusUnauthorized)
 		return false, gerr
 	}
-	var bodyBuf bytes.Buffer 
-	_, err = io.Copy(&bodyBuf, r.Body)
-	if err != nil {
-		gerr := util.Errorf("could not copy body")
-		gerr.SetStatus(http.StatusInternalServerError)
+	var bodyStr string
+	if r.Body == nil {
+		bodyStr = ""
+	} else {
+		save := r.Body
+		save, r.Body, err = drainBody(r.Body)
+		if err != nil {
+			gerr := util.Errorf("could not copy body")
+			gerr.SetStatus(http.StatusInternalServerError)
+			return false, gerr
+		}
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
+		bodyStr = buf.String()
+		r.Body = save
+	}
+	h := sha1.New()
+	io.WriteString(h, bodyStr)
+	chkHash := base64.StdEncoding.EncodeToString(h.Sum(nil))
+	log.Printf("content hash is: %s\ncalcnew hash is: %s\n", contentHash, chkHash)
+	if chkHash != contentHash {
+		gerr := util.Errorf("Content hash did not match hash of request body")
+		gerr.SetStatus(http.StatusUnauthorized)
 		return false, gerr
 	}
-	
-
-
 
 
 	return true, nil
+}
+
+// liberated from net/httputil
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+func drainBody(b io.ReadCloser) (r1, r2 io.ReadCloser, err error) {
+	var buf bytes.Buffer
+	if _, err = buf.ReadFrom(b); err != nil {
+		return nil, nil, err
+	}
+	if err = b.Close(); err != nil {
+		return nil, nil, err
+	}
+	return ioutil.NopCloser(&buf), ioutil.NopCloser(bytes.NewBuffer(buf.Bytes())), nil
 }
