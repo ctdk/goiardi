@@ -16,6 +16,8 @@
 
 package authentication
 
+/* Geez, import all the things why don't you. */
+
 import (
 	//"github.com/ctdk/goiardi/chef_crypto"
 	"github.com/ctdk/goiardi/actor"
@@ -32,11 +34,14 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+	"path"
+	"fmt"
 )
 
 func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 	user, err := actor.Get(user_id)
 	_ = user
+	_ = err
 /*	if err != nil {
 		gerr := util.Errorf(err.Error())
 		gerr.SetStatus(http.StatusUnauthorized)
@@ -60,25 +65,10 @@ func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 			return false, terr
 		}
 	}
-	var bodyStr string
-	if r.Body == nil {
-		bodyStr = ""
-	} else {
-		save := r.Body
-		save, r.Body, err = drainBody(r.Body)
-		if err != nil {
-			gerr := util.Errorf("could not copy body")
-			gerr.SetStatus(http.StatusInternalServerError)
-			return false, gerr
-		}
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(r.Body)
-		bodyStr = buf.String()
-		r.Body = save
+	chkHash, chkerr := calcBodyHash(r)
+	if chkerr != nil {
+		return false, chkerr
 	}
-	h := sha1.New()
-	io.WriteString(h, bodyStr)
-	chkHash := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	log.Printf("content hash is: %s\ncalcnew hash is: %s\n", contentHash, chkHash)
 	if chkHash != contentHash {
 		gerr := util.Errorf("Content hash did not match hash of request body")
@@ -91,11 +81,13 @@ func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 		return false, sherr
 	}
 	log.Printf("The full signed encoded header is: %s\n", signedHeaders)
+	headToCheck := assembleHeaderToCheck(r, chkHash)
+	log.Printf("The candidate header:\n%s\n", headToCheck)
 
 	return true, nil
 }
 
-// liberated from net/httputil
+// liberated from net/http/httputil
 // Copyright 2009 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -158,4 +150,43 @@ func checkTimeStamp(timestamp string, slew time.Duration) (bool, util.Gerror) {
 		return false, err
 	}
 	return true, nil
+}
+
+func assembleHeaderToCheck(r *http.Request, cHash string) string {
+	method := r.Method
+	hashPath := hashStr(path.Clean(r.URL.Path))
+	timestamp := r.Header.Get("x-ops-timestamp")
+	user_id := r.Header.Get("x-ops-userid")
+
+	headStr := fmt.Sprintf("Method:%s\nHashed Path:%s\nX-Ops-Content-Hash:%s\nX-Ops-Timestamp:%s\nX-Ops-UserId:%s", method, hashPath, cHash, timestamp, user_id)
+	return headStr
+}
+
+func hashStr(toHash string) string {
+	h := sha1.New()
+	io.WriteString(h, toHash)
+	hashed := base64.StdEncoding.EncodeToString(h.Sum(nil))
+	return hashed
+}
+
+func calcBodyHash(r *http.Request) (string, util.Gerror) {
+	var bodyStr string
+	if r.Body == nil {
+		bodyStr = ""
+	} else {
+		var err error
+		save := r.Body
+		save, r.Body, err = drainBody(r.Body)
+		if err != nil {
+			gerr := util.Errorf("could not copy body")
+			gerr.SetStatus(http.StatusInternalServerError)
+			return "", gerr
+		}
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
+		bodyStr = buf.String()
+		r.Body = save
+	}
+	chkHash := hashStr(bodyStr)
+	return chkHash, nil
 }
