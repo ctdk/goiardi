@@ -24,6 +24,7 @@ import (
 	"os"
 	"log"
 	"fmt"
+	"time"
 )
 
 /* Master struct for configuration. */
@@ -38,6 +39,8 @@ type Conf struct {
 	FreezeInterval int
 	FreezeData bool
 	LogFile string
+	UseAuth bool
+	TimeSlew time.Duration
 }
 
 /* Struct for command line options. */
@@ -52,6 +55,7 @@ type Options struct {
 	DataStoreFile string `short:"D" long:"data-file" description:"File to save data store data to."`
 	FreezeInterval int `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk (requires -i/--index-file and -D/--data-file options to be set). (Default 300 seconds/5 minutes.)"`
 	LogFile string `short:"L" long:"log-file" description:"Log to file X"`
+	TimeSlew string `long:"time-slew" description:"Time difference allowed between the server's clock at the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m."`
 }
 
 // The goiardi version
@@ -155,6 +159,17 @@ func ParseConfigOptions() error {
 		Config.Port = 4545
 	}
 	Config.DebugLevel = len(opts.Verbose)
+
+	if opts.TimeSlew != "" {
+		d, derr := time.ParseDuration(opts.TimeSlew)
+		if derr != nil {
+			log.Println("Error parsing time-slew:", derr)
+			os.Exit(1)
+		}
+		Config.TimeSlew = d
+	} else {
+		Config.TimeSlew, _ = time.ParseDuration("15m")
+	}
 
 	return nil
 }

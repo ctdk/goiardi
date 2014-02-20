@@ -20,6 +20,7 @@ import (
 	//"github.com/ctdk/goiardi/chef_crypto"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/config"
 	"net/http"
 	"io"
 	"io/ioutil"
@@ -30,6 +31,7 @@ import (
 	"strings"
 	"regexp"
 	"strconv"
+	"time"
 )
 
 func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
@@ -52,7 +54,11 @@ func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 		gerr.SetStatus(http.StatusUnauthorized)
 		return false, gerr
 	} else {
-		log.Printf("timestamp was: %s\n", authTimestamp)
+		// check the time stamp w/ allowed slew
+		tok, terr := checkTimeStamp(authTimestamp, config.Config.TimeSlew)
+		if !tok {
+			return false, terr
+		}
 	}
 	var bodyStr string
 	if r.Body == nil {
@@ -131,4 +137,25 @@ func assembleSignedHeader(r *http.Request) (string, util.Gerror) {
 	signedHeaders := strings.Join(sH, "")
 
 	return signedHeaders, nil
+}
+
+func checkTimeStamp(timestamp string, slew time.Duration) (bool, util.Gerror) {
+	timeNow := time.Now().UTC()
+	timeHeader, terr := time.Parse(time.RFC3339, timestamp)
+	if terr != nil {
+		err := util.Errorf(terr.Error())
+		err.SetStatus(http.StatusUnauthorized)
+		return false, err
+	}
+	tdiff := timeNow.Sub(timeHeader)
+	// no easy integer based abs function
+	if tdiff < 0 {
+		tdiff = -tdiff
+	}
+	if tdiff > slew {
+		err := util.Errorf("Authentication failed. Please check your system's clock.")
+		err.SetStatus(http.StatusUnauthorized)
+		return false, err
+	}
+	return true, nil
 }
