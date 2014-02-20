@@ -169,10 +169,20 @@ func createDefaultActors() {
 			log.Fatalln(nerr)
 		} else {
 			webui.Admin = true
-			_, err := webui.GenerateKeys()
+			pem, err := webui.GenerateKeys()
 			if err != nil {
 				log.Fatalln(err)
 			}
+			if config.Config.UseAuth {
+				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, webui.Name)); ferr == nil {
+					fp.Chmod(0600)
+					fp.WriteString(pem)
+					fp.Close()
+				} else {
+					log.Fatalln(ferr)
+				}
+			}
+			
 			webui.Save()
 		}
 	}
@@ -182,9 +192,18 @@ func createDefaultActors() {
 			log.Fatalln(verr)
 		} else {
 			validator.Validator = true
-			_, err := validator.GenerateKeys()
+			pem, err := validator.GenerateKeys()
 			if err != nil {
 				log.Fatalln(err)
+			}
+			if config.Config.UseAuth {
+				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, validator.Name)); ferr == nil {
+					fp.Chmod(0600)
+					fp.WriteString(pem)
+					fp.Close()
+				} else {
+					log.Fatalln(ferr)
+				}
 			}
 			validator.Save()
 		}
@@ -195,9 +214,18 @@ func createDefaultActors() {
 			log.Fatalln(aerr)
 		} else {
 			admin.Admin = true
-			_, err := admin.GenerateKeys()
+			pem, err := admin.GenerateKeys()
 			if err != nil {
 				log.Fatalln(err)
+			}
+			if config.Config.UseAuth {
+				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, admin.Name)); ferr == nil {
+					fp.Chmod(0600)
+					fp.WriteString(pem)
+					fp.Close()
+				} else {
+					log.Fatalln(ferr)
+				}
 			}
 			admin.Save()
 		}

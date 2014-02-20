@@ -60,7 +60,7 @@ func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 		return false, gerr
 	} else {
 		// check the time stamp w/ allowed slew
-		tok, terr := checkTimeStamp(authTimestamp, config.Config.TimeSlew)
+		tok, terr := checkTimeStamp(authTimestamp, config.Config.TimeSlewDur)
 		if !tok {
 			return false, terr
 		}
@@ -83,6 +83,13 @@ func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 	log.Printf("The full signed encoded header is: %s\n", signedHeaders)
 	headToCheck := assembleHeaderToCheck(r, chkHash)
 	log.Printf("The candidate header:\n%s\n", headToCheck)
+	_, berr := base64.StdEncoding.DecodeString(signedHeaders)
+	if berr != nil {
+		gerr := util.Errorf(berr.Error())
+		gerr.SetStatus(http.StatusUnauthorized)
+		return false, gerr
+	}
+	
 
 	return true, nil
 }

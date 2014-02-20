@@ -25,6 +25,7 @@ import (
 	"log"
 	"fmt"
 	"time"
+	"path"
 )
 
 /* Master struct for configuration. */
@@ -40,7 +41,9 @@ type Conf struct {
 	FreezeData bool
 	LogFile string
 	UseAuth bool
-	TimeSlew time.Duration
+	TimeSlew string
+	TimeSlewDur time.Duration
+	ConfRoot string
 }
 
 /* Struct for command line options. */
@@ -56,6 +59,8 @@ type Options struct {
 	FreezeInterval int `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk (requires -i/--index-file and -D/--data-file options to be set). (Default 300 seconds/5 minutes.)"`
 	LogFile string `short:"L" long:"log-file" description:"Log to file X"`
 	TimeSlew string `long:"time-slew" description:"Time difference allowed between the server's clock at the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m."`
+	ConfRoot string `long:"conf-root" description:"Root directory for configs and certificates. Default: /etc/goiardi, or the directory the config file is in."`
+	UseAuth bool `short:"A" long:"use-auth" description:"Use authentication. Default: false."`
 }
 
 // The goiardi version
@@ -161,15 +166,34 @@ func ParseConfigOptions() error {
 	Config.DebugLevel = len(opts.Verbose)
 
 	if opts.TimeSlew != "" {
-		d, derr := time.ParseDuration(opts.TimeSlew)
+		Config.TimeSlew = opts.TimeSlew
+	}
+	if Config.TimeSlew != "" {
+		d, derr := time.ParseDuration(Config.TimeSlew)
 		if derr != nil {
 			log.Println("Error parsing time-slew:", derr)
 			os.Exit(1)
 		}
-		Config.TimeSlew = d
+		Config.TimeSlewDur = d
 	} else {
-		Config.TimeSlew, _ = time.ParseDuration("15m")
+		Config.TimeSlewDur, _ = time.ParseDuration("15m")
 	}
+
+	/* config root - make this a real option */
+	if opts.ConfRoot != "" {
+		Config.ConfRoot = opts.ConfRoot
+	} 
+	if Config.ConfRoot == "" {
+		if Config.ConfFile != "" {
+			Config.ConfRoot = path.Dir(Config.ConfFile)
+		} else {
+			Config.ConfRoot = "."
+		}
+	}
+
+	if opts.UseAuth {
+		Config.UseAuth = opts.UseAuth
+	} 
 
 	return nil
 }
