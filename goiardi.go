@@ -137,7 +137,8 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("X-Ops-API-Info", api_info)
 
 	user_id := r.Header.Get("X-OPS-USERID")
-	log.Printf("user id is: %s\n", user_id)
+	/* Only perform the authorization check if that's configured. Bomb with
+	 * an error if the check of the headers, timestamps, etc. fails. */
 	if config.Config.UseAuth {
 		herr := authentication.CheckHeader(user_id, r)
 		if herr != nil {

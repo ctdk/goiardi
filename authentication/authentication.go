@@ -29,7 +29,6 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
-	"log"
 	"strings"
 	"regexp"
 	"strconv"
@@ -38,6 +37,8 @@ import (
 	"fmt"
 )
 
+// Check the signed headers sent by the client against the expected result to
+// verify their authorization.
 func CheckHeader(user_id string, r *http.Request) util.Gerror {
 	user, err := actor.Get(user_id)
 	if err != nil {
@@ -67,7 +68,6 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 	if chkerr != nil {
 		return chkerr
 	}
-	log.Printf("content hash is: %s\ncalcnew hash is: %s\n", contentHash, chkHash)
 	if chkHash != contentHash {
 		gerr := util.Errorf("Content hash did not match hash of request body")
 		gerr.SetStatus(http.StatusUnauthorized)
@@ -78,9 +78,7 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 	if sherr != nil {
 		return sherr
 	}
-	log.Printf("The full signed encoded header is: %s\n", signedHeaders)
 	headToCheck := assembleHeaderToCheck(r, chkHash)
-	log.Printf("The candidate header:\n'%s'\n", headToCheck)
 
 	decHead, berr := chef_crypto.HeaderDecrypt(user.PublicKey, signedHeaders)
 
@@ -89,12 +87,7 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
 	}
-	log.Printf("Decrypted headers:\n'%s'", string(decHead))
-	if string(decHead) == headToCheck {
-		log.Printf("headers match!")
-	} else {
-		log.Printf("WTF, decHead len: %d headToCheck len: %d", len(string(decHead)), len(headToCheck))
-		log.Printf("In byte form:\ndecHead\n%v\nheadToCheck:\n%v", decHead, []byte(headToCheck))
+	if string(decHead) != headToCheck {
 		gerr := util.Errorf("failed to verify authorization")
 		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
