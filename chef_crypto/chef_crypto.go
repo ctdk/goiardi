@@ -106,7 +106,15 @@ func HeaderDecrypt(pkPem string, data string) ([]byte, error){
 	if derr != nil {
 		return nil, derr
 	}
-	return dec, nil
+	/* skip past the 0xff padding added to the header before encrypting. */
+	skip := 0
+	for i := 2; i < len(dec); i++{
+		if dec[i] == 0xff && dec[i + 1] == 0 {
+			skip = i + 2
+			break;
+		}
+	}
+	return dec[skip:], nil
 }
 
 func decrypt(pubKey *rsa.PublicKey, data []byte) ([]byte, error) {
@@ -116,5 +124,6 @@ func decrypt(pubKey *rsa.PublicKey, data []byte) ([]byte, error) {
 	e := big.NewInt(int64(pubKey.E))
 	c.Exp(m, e, pubKey.N)
 	out := c.Bytes()
+
 	return out, nil
 }
