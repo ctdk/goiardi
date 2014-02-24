@@ -38,45 +38,45 @@ import (
 	"fmt"
 )
 
-func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
+func CheckHeader(user_id string, r *http.Request) util.Gerror {
 	user, err := actor.Get(user_id)
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		gerr.SetStatus(http.StatusUnauthorized)
-		return false, gerr
+		return gerr
 	} 
 	contentHash := r.Header.Get("X-OPS-CONTENT-HASH")
 	if contentHash == "" {
 		gerr := util.Errorf("no content hash provided")
 		gerr.SetStatus(http.StatusUnauthorized)
-		return false, gerr
+		return gerr
 	}
 	authTimestamp := r.Header.Get("x-ops-timestamp")
 	if authTimestamp == "" {
 		gerr := util.Errorf("no timestamp header provided")
 		gerr.SetStatus(http.StatusUnauthorized)
-		return false, gerr
+		return gerr
 	} else {
 		// check the time stamp w/ allowed slew
 		tok, terr := checkTimeStamp(authTimestamp, config.Config.TimeSlewDur)
 		if !tok {
-			return false, terr
+			return terr
 		}
 	}
 	chkHash, chkerr := calcBodyHash(r)
 	if chkerr != nil {
-		return false, chkerr
+		return chkerr
 	}
 	log.Printf("content hash is: %s\ncalcnew hash is: %s\n", contentHash, chkHash)
 	if chkHash != contentHash {
 		gerr := util.Errorf("Content hash did not match hash of request body")
 		gerr.SetStatus(http.StatusUnauthorized)
-		return false, gerr
+		return gerr
 	}
 
 	signedHeaders, sherr  := assembleSignedHeader(r)
 	if sherr != nil {
-		return false, sherr
+		return sherr
 	}
 	log.Printf("The full signed encoded header is: %s\n", signedHeaders)
 	headToCheck := assembleHeaderToCheck(r, chkHash)
@@ -87,7 +87,7 @@ func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 	if berr != nil {
 		gerr := util.Errorf(berr.Error())
 		gerr.SetStatus(http.StatusUnauthorized)
-		return false, gerr
+		return gerr
 	}
 	log.Printf("Decrypted headers:\n'%s'", string(decHead))
 	if string(decHead) == headToCheck {
@@ -95,9 +95,12 @@ func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 	} else {
 		log.Printf("WTF, decHead len: %d headToCheck len: %d", len(string(decHead)), len(headToCheck))
 		log.Printf("In byte form:\ndecHead\n%v\nheadToCheck:\n%v", decHead, []byte(headToCheck))
+		gerr := util.Errorf("failed to verify authorization")
+		gerr.SetStatus(http.StatusUnauthorized)
+		return gerr
 	}
 
-	return true, nil
+	return nil
 }
 
 // liberated from net/http/httputil

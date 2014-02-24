@@ -138,9 +138,13 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 
 	user_id := r.Header.Get("X-OPS-USERID")
 	log.Printf("user id is: %s\n", user_id)
-	_, herr := authentication.CheckHeader(user_id, r)
-	if herr != nil {
-		log.Printf("something went wrong in the header: %s\n", herr.Error())
+	if config.Config.UseAuth {
+		herr := authentication.CheckHeader(user_id, r)
+		if herr != nil {
+			log.Printf("Authorization failure: %s\n", herr.Error())
+			http.Error(w, herr.Error(), herr.Status())
+			return
+		}
 	}
 
 	http.DefaultServeMux.ServeHTTP(w, r)
