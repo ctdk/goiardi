@@ -19,7 +19,7 @@ package authentication
 /* Geez, import all the things why don't you. */
 
 import (
-	//"github.com/ctdk/goiardi/chef_crypto"
+	"github.com/ctdk/goiardi/chef_crypto"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/config"
@@ -40,13 +40,11 @@ import (
 
 func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 	user, err := actor.Get(user_id)
-	_ = user
-	_ = err
-/*	if err != nil {
+	if err != nil {
 		gerr := util.Errorf(err.Error())
 		gerr.SetStatus(http.StatusUnauthorized)
 		return false, gerr
-	} */
+	} 
 	contentHash := r.Header.Get("X-OPS-CONTENT-HASH")
 	if contentHash == "" {
 		gerr := util.Errorf("no content hash provided")
@@ -83,13 +81,15 @@ func CheckHeader(user_id string, r *http.Request) (bool, util.Gerror) {
 	log.Printf("The full signed encoded header is: %s\n", signedHeaders)
 	headToCheck := assembleHeaderToCheck(r, chkHash)
 	log.Printf("The candidate header:\n%s\n", headToCheck)
-	_, berr := base64.StdEncoding.DecodeString(signedHeaders)
+
+	decHead, berr := chef_crypto.HeaderDecrypt(user.PublicKey, signedHeaders)
+
 	if berr != nil {
 		gerr := util.Errorf(berr.Error())
 		gerr.SetStatus(http.StatusUnauthorized)
 		return false, gerr
 	}
-	
+	log.Printf("Decrypted headers: %v", string(decHead))
 
 	return true, nil
 }

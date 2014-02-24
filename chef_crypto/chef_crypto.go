@@ -25,6 +25,8 @@ import (
 	"crypto/rand"
 	"encoding/pem"
 	"crypto/x509"
+	"encoding/base64"
+	"math/big"
 )
 
 // Creates a pair of private and public keys for a client.
@@ -79,4 +81,40 @@ func ValidatePublicKey(publicKey interface{}) (bool, error) {
 			err := fmt.Errorf("Public key does not validate")
 			return false, err
 	}
+}
+
+// Decrypt the encrypted header for validating requests. This function is
+// informed by chef-golang's privateDecrypt function.
+func HeaderDecrypt(pkPem string, data string) ([]byte, error){
+	block, _ := pem.Decode([]byte(pkPem))
+	if block == nil {
+		return nil, fmt.Errorf("Invalid block size for '%s'", pkPem)
+	}
+	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	decData, perr := base64.StdEncoding.DecodeString(data)
+	if perr != nil {
+		return nil, perr
+	}
+	/* decData, dderr := pem.Decode(pemData)
+	if decData == nil {
+		return nil, fmt.Errorf("pem decoding didn't go so well, %s", string(dderr))
+	} */
+	dec, derr := decrypt(pubKey.(*rsa.PublicKey), decData)
+	if derr != nil {
+		return nil, derr
+	}
+	return dec, nil
+}
+
+func decrypt(pubKey *rsa.PublicKey, data []byte) ([]byte, error) {
+	c := new(big.Int)
+	m := new(big.Int)
+	m.SetBytes(data)
+	e := big.NewInt(int64(pubKey.E))
+	c.Exp(m, e, pubKey.N)
+	out := c.Bytes()
+	return out, nil
 }
