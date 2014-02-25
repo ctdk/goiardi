@@ -224,7 +224,7 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 	}
 	if c.Admin && c.Validator {
 		verr = util.Errorf("Cannot make a client both an administrator and a validator")
-		verr.SetStatus(http.SetStatus(http.StatusBadRequest)
+		verr.SetStatus(http.StatusBadRequest)
 		return verr
 	}
 	c.ChefType = json_actor["chef_type"].(string)
