@@ -32,6 +32,12 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 	path := SplitPath(r.URL.Path)
 	op := path[0]
 	client_name := path[1]
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
 	chef_type := strings.TrimSuffix(op, "s")
 	/* Make sure we aren't trying anything with a user */
 	c_chk, _ := actor.Get(client_name)
@@ -52,6 +58,10 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			chef_client, err := actor.Get(client_name)
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+				return
+			}
+			if !opUser.IsAdmin() && opUser.Name != chef_client.Name {
+				JsonErrorReport(w, r, "Deleting that client is forbidden", http.StatusForbidden)
 				return
 			}
 			err = chef_client.Delete()

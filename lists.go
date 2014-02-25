@@ -100,6 +100,7 @@ func node_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[string]string {
 	client_response := make(map[string]string)
 	chef_type := strings.TrimSuffix(op, "s")
+	//opUser := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	switch r.Method {
 		case "GET":
 			client_list := actor.GetList()

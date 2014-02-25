@@ -29,6 +29,7 @@ import (
 	"github.com/ctdk/goiardi/chef_crypto"
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/config"
 	"net/http"
 )
 
@@ -77,6 +78,23 @@ func Get(clientname string) (*Actor, error){
 		return nil, err
 	}
 	return client.(*Actor), nil
+}
+
+func GetReqUser(clientname string) (*Actor, util.Gerror) {
+	/* If UseAuth is turned off, use the automatically created admin user */
+	if !config.Config.UseAuth {
+		clientname = "admin"
+	}
+	c, err := Get(clientname)
+	if err != nil {
+		/* Theoretically it should be hard to reach this point, since
+		 * if the signed request was accepted the user ought to exist.
+		 * Still, best to be cautious. */
+		gerr := util.Errorf(err.Error())
+		gerr.SetStatus(http.StatusUnauthorized)
+		return nil, gerr
+	}
+	return c, nil
 }
 
 func (c *Actor) Save() error {
@@ -204,6 +222,11 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 			}
 		}
 	}
+	if c.Admin && c.Validator {
+		verr = util.Errorf("Cannot make a client both an administrator and a validator")
+		verr.SetStatus(http.SetStatus(http.StatusBadRequest)
+		return verr
+	}
 	c.ChefType = json_actor["chef_type"].(string)
 	c.JsonClass = json_actor["json_class"].(string)
 
@@ -269,4 +292,18 @@ func (c *Actor) Flatten() []string {
 	flatten := util.FlattenObj(c)
 	indexified := util.Indexify(flatten)
 	return indexified
+}
+
+/* Permission functions. Later role-based perms may be implemented, but for now
+ * it's just the basic admin/validator/user perms */
+
+func (c *Actor) IsAdmin() bool {
+	return c.Admin
+}
+
+func (c *Actor) IsValidator() bool {
+	if c.ChefType == "client" && c.Validator {
+		return c.Validator
+	}
+	return false
 }
