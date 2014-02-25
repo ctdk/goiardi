@@ -199,33 +199,30 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 		}
 	}
 
+	var ab, vb bool
 	if admin_val, ok := json_actor["admin"]; ok {
-		var ab bool
 		if ab, verr = util.ValidateAsBool(admin_val); verr != nil {
 			return verr
-		} else {
-			/* Just set admin flag here */
-			c.Admin = ab
 		}
 	}
 	if validator_val, ok := json_actor["validator"]; ok {
-		var vb bool
 		if vb, verr = util.ValidateAsBool(validator_val); verr != nil {
 			return verr
 		} else {
 			/* Just set admin flag here */
-			if cheftype != "user" {
-				c.Validator = vb
-			} else {
+			if cheftype == "user" {
 				verr = util.Errorf("Cannot make a user a validator")
 				return verr
 			}
 		}
 	}
-	if c.Admin && c.Validator {
-		verr = util.Errorf("Cannot make a client both an administrator and a validator")
+	if ab && vb {
+		verr = util.Errorf("Client can be either an admin or a validator, but not both.")
 		verr.SetStatus(http.StatusBadRequest)
 		return verr
+	} else {
+		c.Admin = ab
+		c.Validator = vb
 	}
 	c.ChefType = json_actor["chef_type"].(string)
 	c.JsonClass = json_actor["json_class"].(string)
@@ -304,6 +301,13 @@ func (c *Actor) IsAdmin() bool {
 func (c *Actor) IsValidator() bool {
 	if c.ChefType == "client" && c.Validator {
 		return c.Validator
+	}
+	return false
+}
+
+func (c *Actor) IsSelf(other *Actor) bool {
+	if c.Name == other.Name {
+		return true
 	}
 	return false
 }

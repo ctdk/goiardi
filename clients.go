@@ -33,10 +33,6 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 	op := path[0]
 	client_name := path[1]
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return
-	}
 
 	chef_type := strings.TrimSuffix(op, "s")
 	/* Make sure we aren't trying anything with a user */
@@ -54,13 +50,17 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 	}
 	switch r.Method {
 		case "DELETE":
+			if oerr != nil {
+				JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+				return
+			}
 			/* no response body here */
 			chef_client, err := actor.Get(client_name)
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
-			if !opUser.IsAdmin() && opUser.Name != chef_client.Name {
+			if !opUser.IsAdmin() && !opUser.IsSelf(chef_client) {
 				JsonErrorReport(w, r, "Deleting that client is forbidden", http.StatusForbidden)
 				return
 			}
@@ -71,6 +71,10 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			}
 			/* Otherwise, we don't actually do anything. */
 		case "GET":
+			if oerr != nil {
+				JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+				return
+			}
 			chef_client, err := actor.Get(client_name)
 
 			if err != nil {
@@ -86,13 +90,13 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 				"name": chef_client.Name, // set same as above
 							  // for now
 				"chef_type": chef_client.ChefType,
-				"json_class": chef_client.JsonClass,
 				"admin": chef_client.Admin,
 				//"orgname": chef_client.Orgname,
 				"public_key": chef_client.PublicKey,
 			}
 			if op != "users" {
 				json_client["validator"] = chef_client.Validator
+				json_client["json_class"] = chef_client.JsonClass
 			}
 			enc := json.NewEncoder(w)
 			if err = enc.Encode(&json_client); err != nil{
@@ -100,6 +104,10 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 				return
 			}
 		case "PUT":
+			if oerr != nil {
+				JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+				return
+			}
 			client_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)

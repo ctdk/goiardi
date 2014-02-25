@@ -100,9 +100,14 @@ func node_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[string]string {
 	client_response := make(map[string]string)
 	chef_type := strings.TrimSuffix(op, "s")
-	//opUser := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+
 	switch r.Method {
 		case "GET":
+			if oerr != nil {
+				JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+				return nil
+			}
 			client_list := actor.GetList()
 			for _, k := range client_list {
 				/* Make sure it's a client and not a user. */
@@ -113,10 +118,31 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 				}
 			}
 		case "POST":
+			if oerr != nil {
+				JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+				return nil
+			}
 			client_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 				return nil
+			}
+			if !opUser.IsAdmin() && !opUser.IsValidator() {
+				JsonErrorReport(w, r, "Normal users can't do that", http.StatusForbidden)
+				return nil
+			} else if !opUser.IsAdmin() && opUser.IsValidator() {
+				if av, ok := client_data["admin"]; ok {
+					if a, _ := util.ValidateAsBool(av); a {
+						JsonErrorReport(w, r, "Validators may not create admin clients", http.StatusForbidden)
+						return nil
+					}
+				}
+				if vv, ok := client_data["validator"]; ok {
+					if v, _ := util.ValidateAsBool(vv); v {
+						JsonErrorReport(w, r, "Validators may not create validator clients", http.StatusForbidden)
+						return nil
+					}
+				}
 			}
 			client_name, sterr := util.ValidateAsString(client_data["name"])
 			if sterr != nil || client_name == "" {
