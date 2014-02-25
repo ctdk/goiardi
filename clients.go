@@ -64,12 +64,19 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 				JsonErrorReport(w, r, "Deleting that client is forbidden", http.StatusForbidden)
 				return
 			}
+			/* Docs were incorrect. It does want the body of the
+			 * deleted object. */
+			enc := json.NewEncoder(w)
+			if err = enc.Encode(&chef_client); err != nil{
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			err = chef_client.Delete()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			/* Otherwise, we don't actually do anything. */
+			
 		case "GET":
 			if oerr != nil {
 				JsonErrorReport(w, r, oerr.Error(), oerr.Status())
