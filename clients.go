@@ -81,6 +81,11 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
+			if !opUser.IsAdmin() && !opUser.IsSelf(chef_client) {
+				JsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+				return
+			}
+			
 			/* API docs are wrong here re: public_key vs. 
 			 * certificate. Also orgname (at least w/ open source)
 			 * and clientname, and it wants chef_type and 

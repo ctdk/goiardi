@@ -128,18 +128,18 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 				return nil
 			}
 			if !opUser.IsAdmin() && !opUser.IsValidator() {
-				JsonErrorReport(w, r, "Normal users can't do that", http.StatusForbidden)
+				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 				return nil
 			} else if !opUser.IsAdmin() && opUser.IsValidator() {
 				if av, ok := client_data["admin"]; ok {
 					if a, _ := util.ValidateAsBool(av); a {
-						JsonErrorReport(w, r, "Validators may not create admin clients", http.StatusForbidden)
+						JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 						return nil
 					}
 				}
 				if vv, ok := client_data["validator"]; ok {
 					if v, _ := util.ValidateAsBool(vv); v {
-						JsonErrorReport(w, r, "Validators may not create validator clients", http.StatusForbidden)
+						JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 						return nil
 					}
 				}
