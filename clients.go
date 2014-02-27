@@ -33,6 +33,10 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 	op := path[0]
 	client_name := path[1]
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
 
 	chef_type := strings.TrimSuffix(op, "s")
 	/* Make sure we aren't trying anything with a user */
@@ -50,11 +54,6 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 	}
 	switch r.Method {
 		case "DELETE":
-			if oerr != nil {
-				JsonErrorReport(w, r, oerr.Error(), oerr.Status())
-				return
-			}
-			/* no response body here */
 			chef_client, err := actor.Get(client_name)
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
@@ -78,10 +77,6 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			}
 			
 		case "GET":
-			if oerr != nil {
-				JsonErrorReport(w, r, oerr.Error(), oerr.Status())
-				return
-			}
 			chef_client, err := actor.Get(client_name)
 
 			if err != nil {
@@ -116,10 +111,6 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 				return
 			}
 		case "PUT":
-			if oerr != nil {
-				JsonErrorReport(w, r, oerr.Error(), oerr.Status())
-				return
-			}
 			client_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -129,6 +120,17 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
+			}
+
+			if !opUser.IsAdmin() && !opUser.IsSelf(chef_client) {
+				JsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+				return
+			}
+			if !opUser.IsAdmin() {
+				if aerr := opUser.CheckPermEdits(client_data); aerr != nil {
+					JsonErrorReport(w, r, aerr.Error(), aerr.Status())
+					return
+				}
 			}
 
 			json_name, sterr := util.ValidateAsString(client_data["name"])

@@ -101,13 +101,13 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 	client_response := make(map[string]string)
 	chef_type := strings.TrimSuffix(op, "s")
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return nil
+	}
 
 	switch r.Method {
 		case "GET":
-			if oerr != nil {
-				JsonErrorReport(w, r, oerr.Error(), oerr.Status())
-				return nil
-			}
 			client_list := actor.GetList()
 			for _, k := range client_list {
 				/* Make sure it's a client and not a user. */
@@ -118,10 +118,6 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 				}
 			}
 		case "POST":
-			if oerr != nil {
-				JsonErrorReport(w, r, oerr.Error(), oerr.Status())
-				return nil
-			}
 			client_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -131,17 +127,9 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 				return nil
 			} else if !opUser.IsAdmin() && opUser.IsValidator() {
-				if av, ok := client_data["admin"]; ok {
-					if a, _ := util.ValidateAsBool(av); a {
-						JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-						return nil
-					}
-				}
-				if vv, ok := client_data["validator"]; ok {
-					if v, _ := util.ValidateAsBool(vv); v {
-						JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-						return nil
-					}
+				if aerr := opUser.CheckPermEdits(client_data); aerr != nil {
+					JsonErrorReport(w, r, aerr.Error(), aerr.Status())
+					return nil
 				}
 			}
 			client_name, sterr := util.ValidateAsString(client_data["name"])
