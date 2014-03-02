@@ -127,7 +127,18 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 				return
 			}
 			if !opUser.IsAdmin() {
-				if aerr := opUser.CheckPermEdits(client_data); aerr != nil {
+				var verr util.Gerror
+				aerr := opUser.CheckPermEdit(client_data, "admin")
+				if !opUser.IsValidator() {
+					verr = opUser.CheckPermEdit(client_data, "validator")
+				}
+				if aerr != nil && verr != nil {
+					JsonErrorReport(w, r, "Client can be either an admin or a validator, but not both.", http.StatusBadRequest)
+					return
+				} else if aerr != nil || verr != nil {
+					if aerr == nil {
+						aerr = verr
+					}
 					JsonErrorReport(w, r, aerr.Error(), aerr.Status())
 					return
 				}

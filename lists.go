@@ -127,10 +127,15 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 				return nil
 			} else if !opUser.IsAdmin() && opUser.IsValidator() {
-				if aerr := opUser.CheckPermEdits(client_data); aerr != nil {
+				if aerr := opUser.CheckPermEdit(client_data, "admin"); aerr != nil {
 					JsonErrorReport(w, r, aerr.Error(), aerr.Status())
 					return nil
 				}
+				if verr := opUser.CheckPermEdit(client_data, "validator"); verr != nil {
+					JsonErrorReport(w, r, verr.Error(), verr.Status())
+					return nil
+				}
+
 			}
 			client_name, sterr := util.ValidateAsString(client_data["name"])
 			if sterr != nil || client_name == "" {

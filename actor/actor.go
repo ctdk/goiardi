@@ -312,20 +312,14 @@ func (c *Actor) IsSelf(other *Actor) bool {
 	return false
 }
 
-func (c *Actor) CheckPermEdits(client_data map[string]interface{}) util.Gerror {
+func (c *Actor) CheckPermEdit(client_data map[string]interface{}, perm string) util.Gerror {
 	gerr := util.Errorf("You are not allowed to take this action.")
 	gerr.SetStatus(http.StatusForbidden)
 
-	if av, ok := client_data["admin"]; ok {
+	if av, ok := client_data[perm]; ok {
 		if a, _ := util.ValidateAsBool(av); a {
 			return gerr
 		}
 	}
-	if vv, ok := client_data["validator"]; ok {
-		if v, _ := util.ValidateAsBool(vv); v {
-			return gerr
-		}
-	}
-
 	return nil
 }
