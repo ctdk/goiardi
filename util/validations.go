@@ -84,7 +84,7 @@ func ValidateAsVersion(ver interface{}) (string, Gerror){
 			valid_ver := regexp.MustCompile(`^(\d+)\.(\d+)(\.?)(\d+)?$`)
 			inspect_ver := valid_ver.FindStringSubmatch(ver)
 
-			if inspect_ver != nil {
+			if inspect_ver != nil && ver != "0.0"{
 				nums := []int{ 1, 2, 4 }
 				for _, n := range nums {
 					/* #4 might not exist, but 1 and 2 must.

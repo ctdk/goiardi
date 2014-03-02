@@ -41,6 +41,7 @@ import (
 	"encoding/gob"
 	"time"
 	"github.com/ctdk/goiardi/authentication"
+	"strings"
 )
 
 type InterceptHandler struct {} // Doesn't need to do anything, just sit there.
@@ -139,11 +140,13 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 	user_id := r.Header.Get("X-OPS-USERID")
 	/* Only perform the authorization check if that's configured. Bomb with
 	 * an error if the check of the headers, timestamps, etc. fails. */
-	if config.Config.UseAuth {
+	if config.Config.UseAuth && !strings.HasPrefix(r.URL.Path, "/file_store") {
 		herr := authentication.CheckHeader(user_id, r)
 		if herr != nil {
+			w.Header().Set("Content-Type", "application/json")
 			log.Printf("Authorization failure: %s\n", herr.Error())
-			http.Error(w, herr.Error(), herr.Status())
+			//http.Error(w, herr.Error(), herr.Status())
+			JsonErrorReport(w, r, herr.Error(), herr.Status())
 			return
 		}
 	}

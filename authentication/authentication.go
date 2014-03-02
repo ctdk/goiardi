@@ -42,7 +42,7 @@ import (
 func CheckHeader(user_id string, r *http.Request) util.Gerror {
 	user, err := actor.Get(user_id)
 	if err != nil {
-		gerr := util.Errorf(err.Error())
+		gerr := util.Errorf("Failed to authenticate as '%s'. Ensure that your node_name and client key are correct.", user_id)
 		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
 	} 

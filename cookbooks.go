@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"fmt"
 	"sort"
+	"github.com/ctdk/goiardi/actor"
 )
 
 func cookbook_handler(w http.ResponseWriter, r *http.Request){
@@ -131,6 +132,11 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 		cookbook_name := path_array[1]
 		var cookbook_version string
 		var vererr util.Gerror
+		opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+		if oerr != nil {
+			JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+			return
+		}
 		if r.Method == "GET" && path_array[2] == "_latest" {  // might be other special vers
 			cookbook_version = path_array[2]
 		} else {
@@ -159,6 +165,10 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 					return
 				}
 				if r.Method == "DELETE" {
+					if !opUser.IsAdmin(){
+						JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+						return
+					}
 					err := cb.DeleteVersion(cookbook_version)
 					if err != nil {
 						JsonErrorReport(w, r, err.Error(), err.Status())

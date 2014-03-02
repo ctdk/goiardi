@@ -295,10 +295,16 @@ func (c *Actor) Flatten() []string {
  * it's just the basic admin/validator/user perms */
 
 func (c *Actor) IsAdmin() bool {
+	if !useAuth(){
+		return true
+	}
 	return c.Admin
 }
 
 func (c *Actor) IsValidator() bool {
+	if !useAuth(){
+		return true
+	}
 	if c.ChefType == "client" && c.Validator {
 		return c.Validator
 	}
@@ -306,6 +312,9 @@ func (c *Actor) IsValidator() bool {
 }
 
 func (c *Actor) IsSelf(other *Actor) bool {
+	if !useAuth(){
+		return true
+	}
 	if c.Name == other.Name {
 		return true
 	}
@@ -322,4 +331,8 @@ func (c *Actor) CheckPermEdit(client_data map[string]interface{}, perm string) u
 		}
 	}
 	return nil
+}
+
+func useAuth() bool {
+	return config.Config.UseAuth
 }
