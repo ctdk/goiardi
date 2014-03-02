@@ -23,15 +23,25 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/actor"
 )
 
 func sandbox_handler(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
 	path_array := SplitPath(r.URL.Path)
 	sbox_response := make(map[string]interface{})
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
 
 	switch r.Method {
 		case "POST":
+			if !opUser.IsAdmin(){
+				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+				return
+			}
 			if len(path_array) != 1 {
 				JsonErrorReport(w, r, "Bad request.", http.StatusBadRequest)
 				return
@@ -68,6 +78,10 @@ func sandbox_handler(w http.ResponseWriter, r *http.Request){
 			sbox_response["checksums"] = sbox.UploadChkList()
 			w.WriteHeader(http.StatusCreated)
 		case "PUT":
+			if !opUser.IsAdmin(){
+				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+				return
+			}
 			if len(path_array) != 2 {
 				JsonErrorReport(w, r, "Bad request.", http.StatusBadRequest)
 				return
