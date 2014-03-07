@@ -944,7 +944,7 @@ func verConstraintCheck(ver_a, ver_b, op string) string {
 		case "~>":
 			/* only check pessimistic constraints if they can
 			 * possibly be valid. */
-			if ver_a == ver_b || versionLess(ver_a, ver_b) {
+			if versionLess(ver_a, ver_b) {
 				return "break"
 			}
 			var upper_bound string
