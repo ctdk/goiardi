@@ -105,16 +105,43 @@ func (c *Actor) Save() error {
 }
 
 func (c *Actor) Delete() error {
+	// Make sure this isn't the last admin or something
+	// This will be a *lot* easier with an actual database.
+	if c.IsLastAdmin() {
+		err := fmt.Errorf("Cannot delete the last admin")
+		return err
+	}
 	ds := data_store.New()
 	ds.Delete("client", c.Name)
 	indexer.DeleteItemFromCollection("client", c.Name)
 	return nil
 }
 
+func (c *Actor) IsLastAdmin() bool {
+	if c.Admin {
+		clist := GetList()
+		numAdmins := 0
+		for _, cc := range clist {
+			c1, _ := Get(cc)
+			if c1 != nil && c1.Admin && (c1.ChefType == c.ChefType){
+				numAdmins++
+			}
+		}
+		if numAdmins == 1 {
+			return true
+		}
+	}
+	return false
+}
+
 // Renames the client or user. Save() must be called after this method is used.
 func (c *Actor) Rename(new_name string) util.Gerror {
 	ds := data_store.New()
 	if err := validateClientName(new_name); err != nil {
+		return err
+	}
+	if c.IsLastAdmin() {
+		err := util.Errorf("Cannot rename the last admin")
 		return err
 	}
 	if _, found := ds.Get("client", new_name); found {
@@ -203,6 +230,11 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 	if admin_val, ok := json_actor["admin"]; ok {
 		if ab, verr = util.ValidateAsBool(admin_val); verr != nil {
 			return verr
+		} else if c.Admin && !ab {
+			if c.IsLastAdmin() {
+				verr = util.Errorf("Cannot remove admin status from the last admin")
+				return verr
+			}
 		}
 	}
 	if validator_val, ok := json_actor["validator"]; ok {
