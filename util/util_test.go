@@ -178,6 +178,17 @@ func TestValidateName(t *testing.T){
 	}
 }
 
+func TestValidateUserName(t *testing.T) {
+	goodName := "foo"
+	badName := "USERNAME"
+	if !ValidateUserName(goodName){
+		t.Errorf("%s should have passed user name validation, but didn't", goodName)
+	}
+	if ValidateUserName(badName){
+		t.Errorf("%s should not have passed user name validation, but somehow did", badName)
+	}
+}
+
 func TestValidateDBagName(t *testing.T){
 	goodName := "foo-bar"
 	badName := "FaH!!"

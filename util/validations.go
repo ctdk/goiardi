@@ -32,6 +32,11 @@ func ValidateName(name string) bool {
 	return !m
 }
 
+func ValidateUserName(name string) bool {
+	m, _ := regexp.MatchString("[^a-z0-9_.-]", name)
+	return !m
+}
+
 func ValidateDBagName(name string) bool {
 	m, _ := regexp.MatchString("[^A-Za-z0-9_.:-]", name)
 	return !m

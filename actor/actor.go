@@ -52,7 +52,7 @@ func New(clientname string, cheftype string) (*Actor, util.Gerror){
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
-	if err := validateClientName(clientname); err != nil {
+	if err := validateClientName(clientname, cheftype); err != nil {
 		return nil, err
 	}
 	actor := &Actor{
@@ -137,7 +137,7 @@ func (c *Actor) IsLastAdmin() bool {
 // Renames the client or user. Save() must be called after this method is used.
 func (c *Actor) Rename(new_name string) util.Gerror {
 	ds := data_store.New()
-	if err := validateClientName(new_name); err != nil {
+	if err := validateClientName(new_name, c.ChefType); err != nil {
 		return err
 	}
 	if c.IsLastAdmin() {
@@ -300,9 +300,21 @@ func (a *Actor) URLType() string {
 	return url_type
 }
 
-func validateClientName(name string) util.Gerror {
+func validateClientName(name string, cheftype string) util.Gerror {
+	if cheftype == "user" {
+		userErr := validateUserName(name)
+		return userErr
+	}
 	if !util.ValidateName(name) {
 		err := util.Errorf("Invalid client name '%s' using regex: 'Malformed client name.  Must be A-Z, a-z, 0-9, _, -, or .'.", name)
+		return err
+	}
+	return nil
+}
+
+func validateUserName(name string) util.Gerror {
+	if !util.ValidateUserName(name) {
+		err := util.Errorf("Invalid client name '%s' using regex: 'Malformed client name.  Must be a-z, 0-9, _, -, or .'.", name)
 		return err
 	}
 	return nil
