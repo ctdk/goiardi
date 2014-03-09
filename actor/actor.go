@@ -117,6 +117,23 @@ func (c *Actor) Delete() error {
 	return nil
 }
 
+// Convert the client or user object into a JSON object, massaging it as needed
+// to make chef-pedant happy.
+func (c *Actor) ToJson() map[string]interface{} {
+	toJson := make(map[string]interface{})
+	toJson["name"] = c.Name
+	toJson["admin"] = c.Admin
+	toJson["public_key"] = c.PublicKey
+
+	if c.ChefType != "user" {
+		toJson["validator"] = c.Validator
+		toJson["json_class"] = c.JsonClass
+		toJson["chef_type"] = c.ChefType
+	}
+
+	return toJson
+}
+
 func (c *Actor) IsLastAdmin() bool {
 	if c.Admin {
 		clist := GetList()

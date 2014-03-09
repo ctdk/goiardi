@@ -65,17 +65,17 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			}
 			/* Docs were incorrect. It does want the body of the
 			 * deleted object. */
-			enc := json.NewEncoder(w)
-			if err = enc.Encode(&chef_client); err != nil{
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				return
-			}
+			json_client := chef_client.ToJson()
 			err = chef_client.Delete()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			
+			enc := json.NewEncoder(w)
+			if err = enc.Encode(&json_client); err != nil{
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		case "GET":
 			chef_client, err := actor.Get(client_name)
 
@@ -93,18 +93,7 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			 * and clientname, and it wants chef_type and 
 			 * json_class
 			 */
-			json_client := map[string]interface{}{
-				"name": chef_client.Name, // set same as above
-							  // for now
-				"admin": chef_client.Admin,
-				//"orgname": chef_client.Orgname,
-				"public_key": chef_client.PublicKey,
-			}
-			if op != "users" {
-				json_client["validator"] = chef_client.Validator
-				json_client["json_class"] = chef_client.JsonClass
-				json_client["chef_type"] = chef_client.ChefType
-			}
+			json_client := chef_client.ToJson()
 			enc := json.NewEncoder(w)
 			if err = enc.Encode(&json_client); err != nil{
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -153,7 +142,7 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			/* If client_name and client_data["name"] aren't the
 			 * same, we're renaming. Check the new name doesn't
 			 * already exist. */
-			json_client := make(map[string]interface{})
+			json_client := chef_client.ToJson()
 			if client_name != json_name {
 				err := chef_client.Rename(json_name)
 				if err != nil {
@@ -201,11 +190,8 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			}
 
 			chef_client.Save()
-			json_client["name"] = chef_client.Name
-			json_client["admin"] = chef_client.Admin
 			if op != "users" {
-				json_client["validator"] = chef_client.Validator
-				json_client["public_key"] = chef_client.PublicKey
+				delete(json_client, "public_key")
 			}
 			enc := json.NewEncoder(w)
 			if err = enc.Encode(&json_client); err != nil{
