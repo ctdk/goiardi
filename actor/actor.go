@@ -229,6 +229,9 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 	var ab, vb bool
 	if admin_val, ok := json_actor["admin"]; ok {
 		if ab, verr = util.ValidateAsBool(admin_val); verr != nil {
+			// NOTE: may need to tweak this error message depending
+			// if this is a user or a client
+			verr = util.Errorf("Field 'admin' invalid")
 			return verr
 		} else if c.Admin && !ab {
 			if c.IsLastAdmin() {
@@ -314,7 +317,7 @@ func validateClientName(name string, cheftype string) util.Gerror {
 
 func validateUserName(name string) util.Gerror {
 	if !util.ValidateUserName(name) {
-		err := util.Errorf("Invalid client name '%s' using regex: 'Malformed client name.  Must be a-z, 0-9, _, -, or .'.", name)
+		err := util.Errorf("Field 'name' invalid")
 		return err
 	}
 	return nil
