@@ -21,12 +21,14 @@ package main
 import (
 	"net/http"
 	"encoding/json"
+	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/config"
 )
 
 type authenticator struct {
 	Name, Password string
 }
-type authRepsonse struct {
+type authResponse struct {
 	Name string `json:"name"`
 	Verified bool `json:"verified"`
 }
@@ -36,16 +38,32 @@ func authenticate_user_handler(w http.ResponseWriter, r *http.Request){
 
 	dec := json.NewDecoder(r.Body)
 	var auth authenticator
-	var resp authRepsonse
 	if err := dec.Decode(&auth); err != nil {
 		JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 	}
 
-	resp.Name = auth.Name
-	resp.Verified = true
+	resp := validateLogin(auth)
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(resp); err != nil {
 		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func validateLogin(auth authenticator) authResponse {
+	// Check passwords and such later.
+	// Automatically validate if UseAuth is not on
+	var resp authResponse
+	resp.Name = auth.Name
+	if !config.Config.UseAuth {
+		resp.Verified = true
+		return resp
+	}
+	_, err := actor.Get(auth.Name)
+	if err != nil {
+		resp.Verified = false
+	} else {
+		resp.Verified = true
+	}
+	return resp
 }

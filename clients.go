@@ -68,7 +68,7 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			json_client := chef_client.ToJson()
 			err = chef_client.Delete()
 			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				JsonErrorReport(w, r, err.Error(), http.StatusForbidden)
 				return
 			}
 			enc := json.NewEncoder(w)

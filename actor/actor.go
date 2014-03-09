@@ -48,7 +48,15 @@ type Actor struct {
 func New(clientname string, cheftype string) (*Actor, util.Gerror){
 	ds := data_store.New()
 	if _, found := ds.Get("client", clientname); found {
-		err := util.Errorf("Client already exists")
+		/* Hrmph, needs slightly different messages for clients and
+		 * users. */
+		var errstr string
+		if cheftype == "user" {
+			errstr = fmt.Sprintf("User '%s' already exists", clientname)
+		} else {
+			errstr = "Client already exists"
+		}
+		err := util.Errorf(errstr)
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
