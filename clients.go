@@ -165,6 +165,7 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 							return
 						}
 						chef_client.PublicKey = pk
+						json_client["public_key"] = pk
 					case nil:
 						//show_public_key = false
 						;
@@ -182,6 +183,10 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 								JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 								return
 							}
+							// make sure the json
+							// client gets the new
+							// public key
+							json_client["public_key"] = chef_client.PublicKey
 						}
 					default:
 						JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
@@ -190,7 +195,7 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			}
 
 			chef_client.Save()
-			if op != "users" {
+			if op == "users" {
 				delete(json_client, "public_key")
 			}
 			enc := json.NewEncoder(w)
