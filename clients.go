@@ -143,6 +143,9 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			 * same, we're renaming. Check the new name doesn't
 			 * already exist. */
 			json_client := chef_client.ToJson()
+			if op == "users" {
+				delete(json_client, "public_key")
+			}
 			if client_name != json_name {
 				err := chef_client.Rename(json_name)
 				if err != nil {
@@ -195,9 +198,7 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 			}
 
 			chef_client.Save()
-			if op == "users" {
-				delete(json_client, "public_key")
-			}
+			
 			enc := json.NewEncoder(w)
 			if err = enc.Encode(&json_client); err != nil{
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
