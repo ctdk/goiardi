@@ -31,6 +31,8 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/config"
 	"net/http"
+	"encoding/gob"
+	"bytes"
 )
 
 type Actor struct {
@@ -43,6 +45,21 @@ type Actor struct {
 	PublicKey string `json:"public_key"`
 	Admin bool `json:"admin"`
 	Certificate string `json:"certificate"`
+	passwd string
+}
+
+// for gob encoding
+type privActor struct {
+	Name string
+	NodeName string
+	JsonClass string
+	ChefType string
+	Validator bool
+	Orgname string
+	PublicKey string
+	Admin bool
+	Certificate string
+	Passwd string
 }
 
 func New(clientname string, cheftype string) (*Actor, util.Gerror){
@@ -407,4 +424,62 @@ func (c *Actor) CheckPermEdit(client_data map[string]interface{}, perm string) u
 
 func useAuth() bool {
 	return config.Config.UseAuth
+}
+
+func (c *Actor) SetPasswd(password string) util.Gerror {
+	if c.ChefType != "user" {
+		err := util.Errorf("Clients don't have passwords, dawg")
+		return err
+	}
+	if len(password) < 6 {
+		err := util.Errorf("password too short")
+		return err
+	}
+	/* If those validations pass, set the password */
+	var perr error
+	c.passwd, perr = chef_crypto.HashPasswd(password)
+	if perr != nil {
+		err := util.Errorf(perr.Error())
+		return err
+	}
+	return nil
+}
+
+func (c *Actor) CheckPasswd(password string) util.Gerror {
+	if c.ChefType != "user" {
+		err := util.Errorf("Clients still don't have passwords")
+		return err
+	}
+	h, perr := chef_crypto.HashPasswd(password) 
+	if perr != nil {
+		err := util.Errorf(perr.Error())
+		return err
+	}
+	if c.passwd != h {
+		err := util.Errorf("password did not match")
+		return err
+	}
+	
+	return nil
+}
+
+func (c *Actor) export() *privActor {
+	return &privActor{ Name: c.Name, NodeName: c.NodeName, JsonClass: c.JsonClass, ChefType: c.ChefType, Validator: c.Validator, Orgname: c.Orgname, PublicKey: c.PublicKey, Admin: c.Admin, Certificate: c.Certificate, Passwd: c.passwd }
+}
+
+func (c *Actor) GobEncode() ([]byte, error) {
+	prv := c.export()
+	buf := new(bytes.Buffer)
+	decoder := gob.NewEncoder(buf)
+	if err := decoder.Encode(prv); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (c *Actor) GobDecode(b []byte) error {
+	prv := c.export()
+	buf := bytes.NewReader(b)
+	encoder := gob.NewDecoder(buf)
+	return encoder.Decode(prv)
 }
