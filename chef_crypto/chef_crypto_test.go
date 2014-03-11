@@ -88,3 +88,18 @@ func TestMapPubKey(t *testing.T){
 		t.Errorf("Well-formed but bogus public key validated when it should not have.")
 	}
 }
+
+func TestHashPasswd(t *testing.T){
+	passwd := "abc123"
+	expected := "c70b5dd9ebfb6f51d09d4132b7170c9d20750a7852f00680f65658f0310e810056e6763c34c9a00b0e940076f54495c169fc2302cceb312039271c43469507dc"
+	hashedPw, err := HashPasswd(passwd)
+	if err != nil {
+		t.Errorf("Error with hashed password! %s", err.Error())
+	}
+	if hashedPw == passwd {
+		t.Errorf("password and hashed password should not be equal")
+	}
+	if hashedPw != expected {
+		t.Errorf("hashed password was not equal to the expected hash")
+	}
+}

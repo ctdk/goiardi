@@ -27,6 +27,8 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"math/big"
+	"crypto/sha512"
+	"encoding/hex"
 )
 
 // Creates a pair of private and public keys for a client.
@@ -126,4 +128,14 @@ func decrypt(pubKey *rsa.PublicKey, data []byte) ([]byte, error) {
 	out := c.Bytes()
 
 	return out, nil
+}
+
+func HashPasswd(passwd string) (string, error) {
+	if passwd == "" {
+		err := fmt.Errorf("Password is empty")
+		return "", err
+	}
+	hashPwByte := sha512.Sum512([]byte(passwd))
+	hashPw := hex.EncodeToString(hashPwByte[:])
+	return hashPw, nil
 }
