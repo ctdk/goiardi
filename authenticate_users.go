@@ -21,6 +21,7 @@ package main
 import (
 	"net/http"
 	"encoding/json"
+	"fmt"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 )
@@ -37,9 +38,15 @@ func authenticate_user_handler(w http.ResponseWriter, r *http.Request){
 	/* Suss out what methods to allow */
 
 	dec := json.NewDecoder(r.Body)
-	var auth authenticator
-	if err := dec.Decode(&auth); err != nil {
+	authJson := make(map[string]interface{})
+	if err := dec.Decode(&authJson); err != nil {
 		JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+		return
+	}
+	auth, authErr := validateJson(authJson)
+	if authErr != nil {
+		JsonErrorReport(w, r, authErr.Error(), http.StatusBadRequest)
+		return
 	}
 
 	resp := validateLogin(auth)
@@ -50,7 +57,7 @@ func authenticate_user_handler(w http.ResponseWriter, r *http.Request){
 	}
 }
 
-func validateLogin(auth authenticator) authResponse {
+func validateLogin(auth *authenticator) authResponse {
 	// Check passwords and such later.
 	// Automatically validate if UseAuth is not on
 	var resp authResponse
@@ -66,4 +73,33 @@ func validateLogin(auth authenticator) authResponse {
 		resp.Verified = true
 	}
 	return resp
+}
+
+func validateJson(authJson map[string]interface{}) (*authenticator, error) {
+	auth := new(authenticator)
+	if name, ok := authJson["name"]; ok {
+		switch name := name.(type) {
+			case string:
+				auth.Name = name
+			default:
+				err := fmt.Errorf("Field 'name' invalid")
+				return nil, err
+		}
+	} else {
+		err := fmt.Errorf("Field 'name' missing")
+		return nil, err
+	}
+	if passwd, ok := authJson["password"]; ok {
+		switch passwd := passwd.(type) {
+			case string:
+				auth.Password = passwd
+			default:
+				err := fmt.Errorf("Field 'password' invalid")
+				return nil, err
+		}
+	} else {
+		err := fmt.Errorf("Field 'password' missing")
+		return nil, err
+	}
+	return auth, nil
 }
