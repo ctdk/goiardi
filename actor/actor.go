@@ -209,7 +209,7 @@ func NewFromJson(json_actor map[string]interface{}, cheftype string) (*Actor, ut
 	// check if the password is supplied if this is a user, and fail if
 	// it isn't.
 	if _, ok := json_actor["password"]; !ok && cheftype == "user" {
-		err := util.Errorf("no password supplied")
+		err := util.Errorf("Field 'password' missing")
 		return nil, err
 	}
 	err = actor.UpdateFromJson(json_actor, cheftype)
@@ -457,7 +457,7 @@ func (c *Actor) SetPasswd(password string) util.Gerror {
 		return err
 	}
 	if len(password) < 6 {
-		err := util.Errorf("password too short")
+		err := util.Errorf("Password must have at least 6 characters")
 		return err
 	}
 	/* If those validations pass, set the password */
