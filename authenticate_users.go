@@ -66,8 +66,13 @@ func validateLogin(auth *authenticator) authResponse {
 		resp.Verified = true
 		return resp
 	}
-	_, err := actor.Get(auth.Name)
+	u, err := actor.Get(auth.Name)
 	if err != nil {
+		resp.Verified = false
+		return resp
+	} 
+	perr := u.CheckPasswd(auth.Password)
+	if perr != nil {
 		resp.Verified = false
 	} else {
 		resp.Verified = true

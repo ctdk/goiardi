@@ -48,18 +48,18 @@ type Actor struct {
 	passwd string
 }
 
-// for gob encoding
+// for gob encoding. Needs the json tags for flattening
 type privActor struct {
-	Name string
-	NodeName string
-	JsonClass string
-	ChefType string
-	Validator bool
-	Orgname string
-	PublicKey string
-	Admin bool
-	Certificate string
-	Passwd string
+	Name string `json:"name"`
+	NodeName string `json:"node_name"`
+	JsonClass string `json:"json_class"`
+	ChefType string `json:"chef_type"`
+	Validator bool `json:"validator"`
+	Orgname string `json:"orgname"`
+	PublicKey string `json:"public_key"`
+	Admin bool `json:"admin"`
+	Certificate string `json:"certificate"`
+	Passwd string `json:"passwd"`
 }
 
 func New(clientname string, cheftype string) (*Actor, util.Gerror){
@@ -206,6 +206,12 @@ func NewFromJson(json_actor map[string]interface{}, cheftype string) (*Actor, ut
 	if err != nil {
 		return nil, err
 	}
+	// check if the password is supplied if this is a user, and fail if
+	// it isn't.
+	if _, ok := json_actor["password"]; !ok && cheftype == "user" {
+		err := util.Errorf("no password supplied")
+		return nil, err
+	}
 	err = actor.UpdateFromJson(json_actor, cheftype)
 	if err != nil {
 		return nil, err
@@ -239,6 +245,24 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 		return err
 	}
 	var verr util.Gerror
+
+	// Check the password first. If it's bad, bail before touching anything
+	// else.
+	if passwd, ok := json_actor["password"]; ok {
+		if cheftype != "user" {
+			verr = util.Errorf("clients don't have passwords")
+			return verr
+		}
+		passwd, verr = util.ValidateAsString(passwd)
+		if verr != nil {
+			return verr
+		}
+		verr = c.SetPasswd(passwd.(string))
+		if verr != nil {
+			return verr
+		}
+	} 
+
 	json_actor["json_class"], verr = util.ValidateAsFieldString(json_actor["json_class"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' nil" {
@@ -375,7 +399,8 @@ func (c *Actor) Index() string {
 }
 
 func (c *Actor) Flatten() []string {
-	flatten := util.FlattenObj(c)
+	flatten := util.FlattenObj(c.export())
+	delete(flatten, "passwd")
 	indexified := util.Indexify(flatten)
 	return indexified
 }

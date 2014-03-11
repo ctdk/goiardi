@@ -75,7 +75,7 @@ func CreateNewCollection(idxName string) {
 // Delete a collection from the index. Useful only for data bags.
 func DeleteCollection(idxName string) error {
 	/* Don't try and delete built-in indexes */
-	if idxName == "node" || idxName == "client" || idxName == "environment" || idxName == "client" {
+	if idxName == "node" || idxName == "client" || idxName == "environment" || idxName == "role" {
 		err := fmt.Errorf("%s is a default search index, cannot be deleted.", idxName)
 		return err
 	}
