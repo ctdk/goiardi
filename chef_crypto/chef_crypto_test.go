@@ -91,15 +91,28 @@ func TestMapPubKey(t *testing.T){
 
 func TestHashPasswd(t *testing.T){
 	passwd := "abc123"
+	salt := []byte{ 1, 2, 4, 5, 3, 5, 2, 1, 10 }
+	nosalt := []byte{}
 	expected := "c70b5dd9ebfb6f51d09d4132b7170c9d20750a7852f00680f65658f0310e810056e6763c34c9a00b0e940076f54495c169fc2302cceb312039271c43469507dc"
-	hashedPw, err := HashPasswd(passwd)
+	saltedExpected := "f4d643377e0809b0a0620bdcb01d7c76b246ee6c19f5d7539ecdbc7d4360b588f0e0254954ece97e9a38a6df6ea72dea4d82166c31ac02415f4e716dfd1b49d0"
+	hashedPw, err := HashPasswd(passwd, nosalt)
+	if err != nil {
+		t.Errorf("Error with unsalted hashed password! %s", err.Error())
+	}
+	if hashedPw == passwd {
+		t.Errorf("password and unsalted hashed password should not be equal")
+	}
+	if hashedPw != expected {
+		t.Errorf("unsalted hashed password was not equal to the expected hash")
+	}
+	hashedPw, err = HashPasswd(passwd, salt)
 	if err != nil {
 		t.Errorf("Error with hashed password! %s", err.Error())
 	}
 	if hashedPw == passwd {
 		t.Errorf("password and hashed password should not be equal")
 	}
-	if hashedPw != expected {
+	if hashedPw != saltedExpected {
 		t.Errorf("hashed password was not equal to the expected hash")
 	}
 }

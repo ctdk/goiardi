@@ -130,12 +130,22 @@ func decrypt(pubKey *rsa.PublicKey, data []byte) ([]byte, error) {
 	return out, nil
 }
 
-func HashPasswd(passwd string) (string, error) {
+func HashPasswd(passwd string, salt []byte) (string, error) {
 	if passwd == "" {
 		err := fmt.Errorf("Password is empty")
 		return "", err
 	}
-	hashPwByte := sha512.Sum512([]byte(passwd))
+	hashPwByte := sha512.Sum512(append(salt, []byte(passwd)...))
 	hashPw := hex.EncodeToString(hashPwByte[:])
 	return hashPw, nil
+}
+
+func GenerateSalt() ([]byte, error) {
+	numbytes := 64
+	b := make([]byte, numbytes)
+	_, err := rand.Read(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
