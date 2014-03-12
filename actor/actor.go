@@ -46,7 +46,7 @@ type Actor struct {
 	Admin bool `json:"admin"`
 	Certificate string `json:"certificate"`
 	passwd string
-	salt []byte
+	Salt []byte
 }
 
 // for gob encoding. Needs the json tags for flattening
@@ -99,7 +99,7 @@ func New(clientname string, cheftype string) (*Actor, util.Gerror){
 			err := util.Errorf(saltErr.Error())
 			return nil, err
 		}
-		actor.salt = salt
+		actor.Salt = salt
 	}
 	return actor, nil
 }
@@ -474,7 +474,7 @@ func (c *Actor) SetPasswd(password string) util.Gerror {
 	}
 	/* If those validations pass, set the password */
 	var perr error
-	c.passwd, perr = chef_crypto.HashPasswd(password, c.salt)
+	c.passwd, perr = chef_crypto.HashPasswd(password, c.Salt)
 	if perr != nil {
 		err := util.Errorf(perr.Error())
 		return err
@@ -487,7 +487,7 @@ func (c *Actor) CheckPasswd(password string) util.Gerror {
 		err := util.Errorf("Clients still don't have passwords")
 		return err
 	}
-	h, perr := chef_crypto.HashPasswd(password, c.salt) 
+	h, perr := chef_crypto.HashPasswd(password, c.Salt) 
 	if perr != nil {
 		err := util.Errorf(perr.Error())
 		return err
@@ -501,7 +501,7 @@ func (c *Actor) CheckPasswd(password string) util.Gerror {
 }
 
 func (c *Actor) export() *privActor {
-	return &privActor{ Name: &c.Name, NodeName: &c.NodeName, JsonClass: &c.JsonClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.PublicKey, Admin: &c.Admin, Certificate: &c.Certificate, Passwd: &c.passwd, Salt: &c.salt }
+	return &privActor{ Name: &c.Name, NodeName: &c.NodeName, JsonClass: &c.JsonClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.PublicKey, Admin: &c.Admin, Certificate: &c.Certificate, Passwd: &c.passwd, Salt: &c.Salt }
 }
 
 func (c *Actor) GobEncode() ([]byte, error) {
@@ -522,17 +522,6 @@ func (c *Actor) GobDecode(b []byte) error {
 	if err != nil {
 		return err
 	}
-	/* c.Name = prv.Name
-	c.NodeName = prv.NodeName
-	c.JsonClass = prv.JsonClass
-	c.ChefType = prv.ChefType
-	c.Validator = prv.Validator
-	c.Orgname = prv.Orgname
-	c.PublicKey = prv.PublicKey
-	c.Admin = prv.Admin
-	c.Certificate = prv.Certificate
-	c.passwd = prv.Passwd
-	*/
 
 	return nil
 }
