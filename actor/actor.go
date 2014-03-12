@@ -100,6 +100,11 @@ func New(clientname string, cheftype string) (*Actor, util.Gerror){
 			return nil, err
 		}
 		actor.Salt = salt
+	} else {
+		/* May not be strictly necessary, but since this would be set
+		 * by the data store when the client is loaded from the data
+		 * store anyway, it may as well be set to an empty array. */
+		actor.Salt = make([]byte, 0)
 	}
 	return actor, nil
 }
