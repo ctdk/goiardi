@@ -19,6 +19,9 @@ package actor
 
 import (
 	"testing"
+	"bytes"
+	"encoding/gob"
+	"fmt"
 )
 
 func TestSetPasswd(t *testing.T) {
@@ -48,5 +51,32 @@ func TestClientPasswd(t *testing.T) {
 	err := c.SetPasswd("abc123")
 	if err == nil {
 		t.Errorf("That client should not have been able to set a password, but it was allowed to")
+	}
+}
+
+func TestGobEncodeDecode(t *testing.T){
+	c, _ := New("foo", "user")
+	c.SetPasswd("abc123")
+	c.JsonClass = "Chef::ApiClient"
+	saved := new(bytes.Buffer)
+	var err error
+	enc := gob.NewEncoder(saved)
+	defer func() {
+		if x := recover(); x != nil {
+			err = fmt.Errorf("Something went wrong encoding the data store with Gob")
+		}
+	}()
+	err = enc.Encode(c)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	dec := gob.NewDecoder(saved)
+	c2 := new(Actor)
+	err = dec.Decode(&c2)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if c2.Name != c.Name {
+		t.Errorf("saved user doesn't seem to be equal to original: %v vs %v", c2, c)
 	}
 }

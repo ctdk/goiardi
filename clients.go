@@ -48,7 +48,7 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 		} else {
 			other_actor_type = "client"
 		}
-		err_user := fmt.Errorf("%s is a %s, not a client.", client_name, chef_type, other_actor_type)
+		err_user := fmt.Errorf("%s is a %s, not a %s.", client_name, chef_type, other_actor_type)
 		JsonErrorReport(w, r, err_user.Error(), http.StatusBadRequest)
 		return
 	}

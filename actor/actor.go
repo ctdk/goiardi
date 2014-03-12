@@ -302,6 +302,7 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 		} else if c.Admin && !ab {
 			if c.IsLastAdmin() {
 				verr = util.Errorf("Cannot remove admin status from the last admin")
+				verr.SetStatus(http.StatusForbidden)
 				return verr
 			}
 		}
@@ -506,5 +507,20 @@ func (c *Actor) GobDecode(b []byte) error {
 	prv := c.export()
 	buf := bytes.NewReader(b)
 	encoder := gob.NewDecoder(buf)
-	return encoder.Decode(prv)
+	err := encoder.Decode(prv)
+	if err != nil {
+		return err
+	}
+	c.Name = prv.Name
+	c.NodeName = prv.NodeName
+	c.JsonClass = prv.JsonClass
+	c.ChefType = prv.ChefType
+	c.Validator = prv.Validator
+	c.Orgname = prv.Orgname
+	c.PublicKey = prv.PublicKey
+	c.Admin = prv.Admin
+	c.Certificate = prv.Certificate
+	c.passwd = prv.Passwd
+
+	return nil
 }
