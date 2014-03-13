@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: Testing - Goiardi</title>
+  <title>Meanwhile, in the Auth Branch... - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="Category: testing">
+  <meta name="description" content="While there is still some work remaining with finishing some needed authorization checks, I&rsquo;m happy to report that in the goiardi auth branch, &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardiblog/categories/testing">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -82,36 +82,101 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: Testing</h1>
+    
+      <h1 class="entry-title">Meanwhile, in the Auth Branch...</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-13T10:03:30-07:00" pubdate data-updated="true">Mar 13<span>th</span>, 2014</time>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p>While there is still some work remaining with finishing some needed authorization checks, I&rsquo;m happy to report that in the <a href="https://github.com/ctdk/goiardi/tree/auth">goiardi auth branch</a>, authentication for chef clients and webui is working and passing the chef-pedant tests.</p>
 
-  
-  <h2>2014</h2>
+<p>Once those authorization issues are ironed out, I&rsquo;ll start work on updating the documentation and making a new formal release. If, in the meantime, anyone felt like testing it, it&rsquo;s pretty easy. Start goiardi with the <tt>-A</tt> or <tt>&#8211;use-auth</tt> flags, and set <tt>&#8211;conf-root</tt> to whereever you&rsquo;d like the chef-validator, chef-webui, and admin certificates to be stored. You&rsquo;d probably also want to specify index and data files for persistence, but you don&rsquo;t have to. Goiardi works with chef-webui fine as well, but at the moment you&rsquo;ll have to set a password for the admin user with knife.</p>
 
-<article>
-  
-<h1><a href="/goiardi/blog/2014/02/13/go-test-coverage-progressing/">Go Test Coverage Progressing</a></h1>
-<time datetime="2014-02-13T09:28:49-08:00" pubdate><span class='month'>Feb</span> <span class='day'>13</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/testing/'>testing</a></span>
-</footer>
-
-
-</article>
-
+<p>As of this writing goiardi authentication is still a work in progress, but it&rsquo;s far enough along to start banging on to look for problems. The chef-pedant tests are pretty happy, but that doesn&rsquo;t always catch every real world issue.</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Jeremy Bingham</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-13T10:03:30-07:00" pubdate data-updated="true">Mar 13<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/goiardi/blog/categories/authentication/'>authentication</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+  
+<a href='https://alpha.app.net/intent/post/?text=App.net%20social%20buttons%20are%20here' class='adn-button' target='_blank' data-type='share' data-width='121' data-height='20' data-text='' >Share on App.net</a>
+<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='//d2zh9g63fcvyrq.cloudfront.net/adn.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'adn-button-js'));</script>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released/" title="Previous Post: Version 0.3.3 of goiardi released">&laquo; Version 0.3.3 of goiardi released</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -183,7 +248,10 @@
       var disqus_shortname = 'goiardi';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/';
+        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
