@@ -132,7 +132,13 @@ func assembleSignedHeader(r *http.Request) (string, util.Gerror) {
 	}
 
 	sH := make([]string, len(sHeadStore))
+	sHlimit := len(sH)
 	for k, v := range sHeadStore {
+		if k > sHlimit {
+			gerr := util.Errorf("malformed authentication headers")
+			gerr.SetStatus(http.StatusUnauthorized)
+			return "", gerr
+		}
 		sH[k - 1] = v
 	}
 	signedHeaders := strings.Join(sH, "")

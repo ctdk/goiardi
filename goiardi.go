@@ -139,6 +139,14 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 
 	user_id := r.Header.Get("X-OPS-USERID")
 	if rs := r.Header.Get("X-Ops-Request-Source"); rs == "web" {
+		/* Check that the user in question with the web request exists.
+		 * If not, fail. */
+		if _, uherr := actor.Get(user_id); uherr != nil {
+			w.Header().Set("Content-Type", "application/json")
+			log.Printf("Attempting to use invalid user %s through X-Ops-Request-Source = web", user_id)
+			JsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
+			return
+		}
 		user_id = "chef-webui"
 	}
 	/* Only perform the authorization check if that's configured. Bomb with
