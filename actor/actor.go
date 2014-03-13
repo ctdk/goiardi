@@ -49,7 +49,9 @@ type Actor struct {
 	Salt []byte
 }
 
-// for gob encoding. Needs the json tags for flattening
+// for gob encoding. Needed the json tags for flattening, but that's handled
+// by a different struct now. However, they're staying because they may still be
+// useful.
 type privActor struct {
 	Name *string `json:"name"`
 	NodeName *string `json:"node_name"`
@@ -62,6 +64,19 @@ type privActor struct {
 	Certificate *string `json:"certificate"`
 	Passwd *string `json:"passwd"`
 	Salt *[]byte `json:"salt"`
+}
+
+// for flattening. Needs the json tags for flattening.
+type flatActor struct {
+	Name string `json:"name"`
+	NodeName string `json:"node_name"`
+	JsonClass string `json:"json_class"`
+	ChefType string `json:"chef_type"`
+	Validator bool `json:"validator"`
+	Orgname string `json:"orgname"`
+	PublicKey string `json:"public_key"`
+	Admin bool `json:"admin"`
+	Certificate string `json:"certificate"`
 }
 
 func New(clientname string, cheftype string) (*Actor, util.Gerror){
@@ -415,9 +430,7 @@ func (c *Actor) Index() string {
 }
 
 func (c *Actor) Flatten() []string {
-	flatten := util.FlattenObj(c.export())
-	delete(flatten, "passwd")
-	delete(flatten, "salt")
+	flatten := util.FlattenObj(c.flatExport())
 	indexified := util.Indexify(flatten)
 	return indexified
 }
@@ -507,6 +520,10 @@ func (c *Actor) CheckPasswd(password string) util.Gerror {
 
 func (c *Actor) export() *privActor {
 	return &privActor{ Name: &c.Name, NodeName: &c.NodeName, JsonClass: &c.JsonClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.PublicKey, Admin: &c.Admin, Certificate: &c.Certificate, Passwd: &c.passwd, Salt: &c.Salt }
+}
+
+func (c *Actor) flatExport() *flatActor {
+	return &flatActor{ Name: c.Name, NodeName: c.NodeName, JsonClass: c.JsonClass, ChefType: c.ChefType, Validator: c.Validator, Orgname: c.Orgname, PublicKey: c.PublicKey, Admin: c.Admin, Certificate: c.Certificate }
 }
 
 func (c *Actor) GobEncode() ([]byte, error) {

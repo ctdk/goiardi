@@ -255,6 +255,11 @@ func partialSearchFormat(results []map[string]interface{}, partialFormat map[str
 							return nil, err
 					}
 				}
+			case []string:
+				psearchKeys[k] = make([]string, len(v))
+				for i, j := range v {
+					psearchKeys[k][i] = j
+				}
 			default:
 				err := fmt.Errorf("Partial search key %s badly formatted: %T %v", k, v, v)
 				return nil, err

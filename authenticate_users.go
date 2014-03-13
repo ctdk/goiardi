@@ -35,7 +35,7 @@ type authResponse struct {
 }
 
 func authenticate_user_handler(w http.ResponseWriter, r *http.Request){
-	/* Suss out what methods to allow */
+	w.Header().Set("Content-Type", "application/json")
 
 	dec := json.NewDecoder(r.Body)
 	authJson := make(map[string]interface{})

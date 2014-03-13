@@ -138,6 +138,9 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("X-Ops-API-Info", api_info)
 
 	user_id := r.Header.Get("X-OPS-USERID")
+	if rs := r.Header.Get("X-Ops-Request-Source"); rs == "web" {
+		user_id = "chef-webui"
+	}
 	/* Only perform the authorization check if that's configured. Bomb with
 	 * an error if the check of the headers, timestamps, etc. fails. */
 	if config.Config.UseAuth && !strings.HasPrefix(r.URL.Path, "/file_store") {
