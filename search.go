@@ -205,8 +205,17 @@ func search_handler(w http.ResponseWriter, r *http.Request){
 func reindexHandler(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
 	reindex_response := make(map[string]interface{})
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
 	switch r.Method {
 		case "POST":
+			if !opUser.IsAdmin() {
+				JsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+				return
+			}
 			reindexObjs := make([]indexer.Indexable, 0)
 			// We clear the index, *then* do the fetch because if
 			// something comes in between the time we fetch the
