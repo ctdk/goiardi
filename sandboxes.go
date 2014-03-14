@@ -36,14 +36,15 @@ func sandbox_handler(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
+
 	switch r.Method {
 		case "POST":
-			if !opUser.IsAdmin(){
-				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			if len(path_array) != 1 {
+				JsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 				return
 			}
-			if len(path_array) != 1 {
-				JsonErrorReport(w, r, "Bad request.", http.StatusBadRequest)
+			if !opUser.IsAdmin(){
+				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 				return
 			}
 			json_req, jerr := ParseObjJson(r.Body)
@@ -78,12 +79,12 @@ func sandbox_handler(w http.ResponseWriter, r *http.Request){
 			sbox_response["checksums"] = sbox.UploadChkList()
 			w.WriteHeader(http.StatusCreated)
 		case "PUT":
-			if !opUser.IsAdmin(){
-				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			if len(path_array) != 2 {
+				JsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 				return
 			}
-			if len(path_array) != 2 {
-				JsonErrorReport(w, r, "Bad request.", http.StatusBadRequest)
+			if !opUser.IsAdmin(){
+				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 				return
 			}
 
@@ -126,6 +127,7 @@ func sandbox_handler(w http.ResponseWriter, r *http.Request){
 			sbox_response["checksums"] = sbox.Checksums
 		default:
 			JsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
+			return
 	}
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&sbox_response); err != nil {

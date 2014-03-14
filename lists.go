@@ -57,14 +57,27 @@ func list_handler(w http.ResponseWriter, r *http.Request){
 func node_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 	/* We're dealing with nodes, then. */
 	node_response := make(map[string]string)
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return nil
+	}
 	switch r.Method {
 		case "GET":
+			if opUser.IsValidator() {
+				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+				return nil
+			}
 			node_list := node.GetList()
 			for _, k := range node_list {
 				item_url := fmt.Sprintf("/nodes/%s", k)
 				node_response[k] = util.CustomURL(item_url)
 			}
 		case "POST":
+			if opUser.IsValidator() {
+				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+				return nil
+			}
 			node_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -121,6 +134,10 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 			client_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return nil
+			}
+			if averr := util.CheckAdminPlusValidator(client_data); averr != nil {
+				JsonErrorReport(w, r, averr.Error(), averr.Status())
 				return nil
 			}
 			if !opUser.IsAdmin() && !opUser.IsValidator() {
@@ -192,14 +209,27 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 
 func role_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 	role_response := make(map[string]string)
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return nil
+	}
 	switch r.Method {
 		case "GET":
+			if opUser.IsValidator() {
+				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+				return nil
+			}
 			role_list := role.GetList()
 			for _, k := range role_list {
 				item_url := fmt.Sprintf("/roles/%s", k)
 				role_response[k] = util.CustomURL(item_url)
 			}
 		case "POST":
+			if !opUser.IsAdmin() {
+				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+				return nil
+			}
 			role_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)

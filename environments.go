@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"strings"
+	"github.com/ctdk/goiardi/actor"
 )
 
 func environment_handler(w http.ResponseWriter, r *http.Request){
@@ -36,6 +37,13 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 		JsonErrorReport(w, r, accErr.Error(), http.StatusNotAcceptable)
 		return
 	}
+
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
 	path_array := SplitPath(r.URL.Path)
 	env_response := make(map[string]interface{})
 	// num_results := r.FormValue("num_versions")
@@ -59,12 +67,20 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 	if path_array_len == 1 {
 		switch r.Method {
 			case "GET":
+				if opUser.IsValidator() {
+					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					return
+				}
 				env_list := environment.GetList()
 				for _, env := range env_list {
 					item_url := fmt.Sprintf("/environments/%s", env)
 					env_response[env] = util.CustomURL(item_url)
 				}
 			case "POST":
+				if !opUser.IsAdmin() {
+					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					return
+				}
 				env_data, jerr := ParseObjJson(r.Body)
 				if jerr != nil {
 					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -112,14 +128,27 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 			case "GET", "DELETE":
 				/* We don't actually have to do much here. */
 				if r.Method == "DELETE" {
+					if !opUser.IsAdmin() {
+							JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+							return
+						}
 					if env_name == "_default" {
 						JsonErrorReport(w, r, "The '_default' environment cannot be modified.", http.StatusMethodNotAllowed)
 						return	
 					} else {
 						del_env = true
 					}
+				} else {
+					if opUser.IsValidator() {
+						JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+						return
+					}
 				}
 			case "PUT":
+				if !opUser.IsAdmin() {
+					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					return
+				}
 				env_data, jerr := ParseObjJson(r.Body)
 				if jerr != nil {
 					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -196,6 +225,11 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 
 		if op == "cookbook_versions" && r.Method != "POST" || op != "cookbook_versions" && r.Method != "GET" {
 			JsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		if opUser.IsValidator() {
+			JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
 
@@ -277,6 +311,10 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 
 		if r.Method != "GET" {
 			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if opUser.IsValidator() {
+			JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
 

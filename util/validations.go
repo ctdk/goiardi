@@ -23,6 +23,7 @@ import (
 	"strings"
 	"strconv"
 	"github.com/ctdk/goiardi/filestore"
+	"net/http"
 )
 
 /* Validations for different types and input. */
@@ -443,4 +444,22 @@ func validateRecipeName(name string) bool {
 	n := final_chk.MatchString(name)
 
 	return n
+}
+
+// Check that client/user json is not trying to set admin and validator at the
+// same time. This has to be checked separately to make chef-pedent happy.
+func CheckAdminPlusValidator(json_actor map[string]interface{}) Gerror {
+	var ab, vb bool
+	if admin_val, ok := json_actor["admin"]; ok {
+		ab, _ = ValidateAsBool(admin_val)
+	}
+	if validator_val, ok := json_actor["validator"]; ok {
+		vb, _ = ValidateAsBool(validator_val)
+	}
+	if ab && vb {
+		err := Errorf("Client can be either an admin or a validator, but not both.")
+		err.SetStatus(http.StatusBadRequest)
+		return err
+	}
+	return nil
 }

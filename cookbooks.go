@@ -34,6 +34,12 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 	path_array := SplitPath(r.URL.Path)
 	cookbook_response := make(map[string]interface{})
 
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
 	// num_results := r.FormValue("num_versions")
 	var num_results string
 	r.ParseForm()
@@ -62,7 +68,19 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 	if path_array_len < 3 && r.Method != "GET" {
 		JsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 		return
+	} else if path_array_len < 3 && opUser.IsValidator() {
+		JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+		return
 	}
+
+	/* chef-pedant is happier when checking if a validator can do something
+	 * surprisingly late in the game. It wants the perm checks to be 
+	 * checked after the method for the end point is checked out as
+	 * something it's going to handle, so, for instance, issuing a DELETE
+	 * against an endpoint where that isn't allowed should respond with a
+	 * 405, rather than a 403, which also makes sense in areas where
+	 * validators shouldn't be able to do anything. *shrugs*
+	 */
 
 	if path_array_len == 1 {
 		/* list all cookbooks */
@@ -149,6 +167,10 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 		}
 		switch r.Method {
 			case "DELETE", "GET":
+				if opUser.IsValidator() {
+					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					return
+				}
 				cb, err := cookbook.Get(cookbook_name)
 				if err != nil {
 					if err.Status() == http.StatusNotFound {
@@ -190,6 +212,10 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 					cookbook_response = cb_ver.ToJson(r.Method)
 				}
 			case "PUT":
+				if !opUser.IsAdmin() {
+					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					return
+				}
 				/* First, see if the cookbook already exists, &
 				 * if not create it. Second, see if this 
 				 * specific version of the cookbook exists. If

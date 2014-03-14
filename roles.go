@@ -24,11 +24,18 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/environment"
 	"encoding/json"
+	"github.com/ctdk/goiardi/actor"
 )
 
 func role_handler(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
 	
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
 	/* Roles are bit weird in that there's /roles/NAME, but also
 	 * /roles/NAME/environments and /roles/NAME/environments/NAME, so we'll
 	 * split up the whole path to get those values. */
@@ -46,6 +53,10 @@ func role_handler(w http.ResponseWriter, r *http.Request){
 		/* Normal /roles/NAME case */
 		switch r.Method {
 			case "GET", "DELETE":
+				if opUser.IsValidator() || (!opUser.IsAdmin() && r.Method == "DELETE") {
+					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					return
+				}
 				enc := json.NewEncoder(w)
 				if err = enc.Encode(&chef_role); err != nil {
 					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -59,6 +70,10 @@ func role_handler(w http.ResponseWriter, r *http.Request){
 					}
 				}
 			case "PUT":
+				if !opUser.IsAdmin() {
+					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					return
+				}
 				role_data, jerr := ParseObjJson(r.Body)
 				if jerr != nil {
 					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -111,6 +126,10 @@ func role_handler(w http.ResponseWriter, r *http.Request){
 				 * return the environments we have run lists
 				 * for. Always at least return "_default",
 				 * which refers to run_list. */
+				if opUser.IsValidator() {
+					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					return
+				}
 
 				enc := json.NewEncoder(w)
 				if environment_name != "" {

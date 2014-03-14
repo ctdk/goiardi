@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/actor"
 )
 
 func node_handler(w http.ResponseWriter, r *http.Request){
@@ -30,9 +31,19 @@ func node_handler(w http.ResponseWriter, r *http.Request){
 	
 	node_name := r.URL.Path[7:]
 
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
 	/* So, what are we doing? Depends on the HTTP method, of course */
 	switch r.Method {
 		case "GET", "DELETE":
+			if opUser.IsValidator() || !opUser.IsAdmin() && r.Method == "DELETE" {
+				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				return
+			}
 			chef_node, err := node.Get(node_name)
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
@@ -51,6 +62,10 @@ func node_handler(w http.ResponseWriter, r *http.Request){
 				}
 			}
 		case "PUT":
+			if !opUser.IsAdmin() {
+				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				return
+			}
 			node_data, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)

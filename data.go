@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/data_bag"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/actor"
 )
 
 func data_handler(w http.ResponseWriter, r *http.Request){
@@ -32,10 +33,20 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 	path_array := SplitPath(r.URL.Path)
 
 	db_response := make(map[string]interface{})
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
 	if len(path_array) == 1 {
 		/* Either a list of data bags, or a POST to create a new one */
 		switch r.Method {
 			case "GET":
+				if opUser.IsValidator() {
+					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					return
+				}
 				/* The list */
 				db_list := data_bag.GetList()
 				for _, k := range db_list {
@@ -43,6 +54,10 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 					db_response[k] = util.CustomURL(item_url)
 				}
 			case "POST":
+				if !opUser.IsAdmin() {
+					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					return
+				}
 				db_data, jerr := ParseObjJson(r.Body)
 				if jerr != nil {
 					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -87,6 +102,10 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 		 * is allowed, so do a quick check for that here. */
 		if (len(path_array) == 2  && r.Method == "PUT") || (len(path_array) == 3 && r.Method == "POST"){
 			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if opUser.IsValidator() || (!opUser.IsAdmin() && r.Method != "GET") {
+			JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
 		chef_dbag, err := data_bag.Get(db_name)

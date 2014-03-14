@@ -40,6 +40,12 @@ func search_handler(w http.ResponseWriter, r *http.Request){
 	path_array := SplitPath(r.URL.Path)
 	path_array_len := len(path_array)
 
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
 	/* set up query params for searching */
 	var (
 		paramQuery string
@@ -86,6 +92,10 @@ func search_handler(w http.ResponseWriter, r *http.Request){
 		/* base end points */
 		switch r.Method {
 			case "GET":
+				if opUser.IsValidator() {
+					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					return
+				}
 				searchEndpoints := search.GetEndpoints()
 				for _, s := range searchEndpoints {
 					search_response[s] = util.CustomURL(fmt.Sprintf("/search/%s", s))
@@ -97,6 +107,10 @@ func search_handler(w http.ResponseWriter, r *http.Request){
 	} else if path_array_len == 2 {
 		switch r.Method {
 			case "GET", "POST":
+				if opUser.IsValidator() {
+					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					return
+				}
 				/* start figuring out what comes in POSTS now,
 				 * so the partial search tests don't complain
 				 * anymore. */

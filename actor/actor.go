@@ -214,6 +214,7 @@ func (c *Actor) Rename(new_name string) util.Gerror {
 	}
 	if c.IsLastAdmin() {
 		err := util.Errorf("Cannot rename the last admin")
+		err.SetStatus(http.StatusForbidden)
 		return err
 	}
 	if _, found := ds.Get("client", new_name); found {

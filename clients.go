@@ -111,6 +111,13 @@ func actor_handler(w http.ResponseWriter, r *http.Request){
 				return
 			}
 
+			/* Makes chef-pedant happy. I suppose it is, after all,
+			 * pedantic. */
+			if averr := util.CheckAdminPlusValidator(client_data); averr != nil {
+				JsonErrorReport(w, r, averr.Error(), averr.Status())
+				return
+			}
+
 			if !opUser.IsAdmin() && !opUser.IsSelf(chef_client) {
 				JsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 				return
