@@ -439,6 +439,7 @@ func (c *Actor) Flatten() []string {
 /* Permission functions. Later role-based perms may be implemented, but for now
  * it's just the basic admin/validator/user perms */
 
+// Is the user an admin? If use-auth is false, this always returns true.
 func (c *Actor) IsAdmin() bool {
 	if !useAuth(){
 		return true
@@ -446,9 +447,11 @@ func (c *Actor) IsAdmin() bool {
 	return c.Admin
 }
 
+// Is the user a validator client? If use-auth is false, this always returns 
+// false. Users also always return false.
 func (c *Actor) IsValidator() bool {
 	if !useAuth(){
-		return true
+		return false
 	}
 	if c.ChefType == "client" && c.Validator {
 		return c.Validator
