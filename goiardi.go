@@ -99,7 +99,12 @@ func main(){
 	http.HandleFunc("/", root_handler)
 
 	listen_addr := config.ListenAddr()
-	err := http.ListenAndServe(listen_addr, &InterceptHandler{})
+	var err error
+	if config.Config.UseSSL {
+		err = http.ListenAndServeTLS(listen_addr, config.Config.SslCert, config.Config.SslKey, &InterceptHandler{})
+	} else {
+		err = http.ListenAndServe(listen_addr, &InterceptHandler{})
+	}
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}

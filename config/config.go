@@ -44,6 +44,10 @@ type Conf struct {
 	TimeSlew string
 	TimeSlewDur time.Duration
 	ConfRoot string
+	UseSSL bool
+	SslCert string
+	SslKey string
+	HttpsUrls bool
 }
 
 /* Struct for command line options. */
@@ -53,7 +57,7 @@ type Options struct {
 	ConfFile string `short:"c" long:"config" description:"Specify a config file to use."`
 	Ipaddress string `short:"I" long:"ipaddress" description:"Listen on a specific IP address."`
 	Hostname string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel."`
-	Port int `short:"P" long:"port" description:"Port to listen on. (default: 4545)"`
+	Port int `short:"P" long:"port" description:"Port to listen on. If port is set to 443, SSL will be activated. (default: 4545)"`
 	IndexFile string `short:"i" long:"index-file" description:"File to save search index data to."`
 	DataStoreFile string `short:"D" long:"data-file" description:"File to save data store data to."`
 	FreezeInterval int `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk (requires -i/--index-file and -D/--data-file options to be set). (Default 300 seconds/5 minutes.)"`
@@ -61,6 +65,10 @@ type Options struct {
 	TimeSlew string `long:"time-slew" description:"Time difference allowed between the server's clock at the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m."`
 	ConfRoot string `long:"conf-root" description:"Root directory for configs and certificates. Default: /etc/goiardi, or the directory the config file is in."`
 	UseAuth bool `short:"A" long:"use-auth" description:"Use authentication. Default: false."`
+	UseSSL bool `long:"use-ssl" description:"Use SSL for connections. If --port is set to 433, this will automatically be turned on. If it is set to 80, it will automatically be turned off. Default: off. Requires --ssl-cert and --ssl-key."`
+	SslCert string `long:"ssl-cert" description:"SSL certificate file."`
+	SslKey string `long:"ssl-key" description:"SSL key file."`
+	HttpsUrls bool `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP."`
 }
 
 // The goiardi version
@@ -163,6 +171,32 @@ func ParseConfigOptions() error {
 	if Config.Port == 0 {
 		Config.Port = 4545
 	}
+
+	if opts.UseSSL {
+		Config.UseSSL = opts.UseSSL
+	}
+	if opts.SslCert != "" {
+		Config.SslCert = opts.SslCert
+	}
+	if opts.SslKey != "" {
+		Config.SslKey = opts.SslKey
+	}
+	if opts.HttpsUrls {
+		Config.HttpsUrls = opts.HttpsUrls
+	}
+	// SSL setup
+	if Config.Port == 80 {
+		Config.UseSSL = false
+	} else if Config.Port == 443 {
+		Config.UseSSL = true
+	}
+	if Config.UseSSL {
+		if Config.SslCert == "" || Config.SslKey == "" {
+			log.Println("SSL mode requires specifying both a certificate and a key file.")
+			os.Exit(1)
+		}
+	}
+
 	Config.DebugLevel = len(opts.Verbose)
 
 	if opts.TimeSlew != "" {
@@ -206,13 +240,23 @@ func ListenAddr() string {
 
 // The hostname and port goiardi is configured to use.
 func ServerHostname() string {
-	hostname := fmt.Sprintf("%s:%d", Config.Hostname, Config.Port)
+	var portStr string
+	if !(Config.Port == 80 || Config.Port == 443) {
+		portStr = fmt.Sprintf(":%d", Config.Port)
+	}
+	hostname := fmt.Sprintf("%s%s", Config.Hostname, portStr)
 	return hostname
 }
 
 // The base URL
 func ServerBaseURL() string {
 	/* TODO: allow configuring using http vs. https */
-	url := fmt.Sprintf("http://%s", ServerHostname())
+	var urlScheme string
+	if Config.UseSSL || Config.HttpsUrls {
+		urlScheme = "https"
+	} else {
+		urlScheme = "http"
+	}
+	url := fmt.Sprintf("%s://%s", urlScheme, ServerHostname())
 	return url
 }
