@@ -49,13 +49,13 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 	contentHash := r.Header.Get("X-OPS-CONTENT-HASH")
 	if contentHash == "" {
 		gerr := util.Errorf("no content hash provided")
-		gerr.SetStatus(http.StatusUnauthorized)
+		gerr.SetStatus(http.StatusBadRequest)
 		return gerr
 	}
 	authTimestamp := r.Header.Get("x-ops-timestamp")
 	if authTimestamp == "" {
 		gerr := util.Errorf("no timestamp header provided")
-		gerr.SetStatus(http.StatusUnauthorized)
+		gerr.SetStatus(http.StatusBadRequest)
 		return gerr
 	} else {
 		// check the time stamp w/ allowed slew
@@ -64,6 +64,38 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 			return terr
 		}
 	}
+	// Eventually this may be put to some sort of use, but for now just
+	// make sure that it's there. Presumably eventually it would be used to
+	// use algorithms other than sha1 for hashing the body, or using a 
+	// different version of the header signing algorithm.
+	xopssign := r.Header.Get("x-ops-sign")
+	if xopssign == "" {
+		gerr := util.Errorf("missing X-Ops-Sign header")
+		return gerr
+	} else {
+		re := regexp.MustCompile(`version=(\d+\.\d+)`)
+		shaRe := regexp.MustCompile(`algorithm=(\w+)`)
+		if verChk := re.FindStringSubmatch(xopssign); verChk != nil {
+			apiVer := verChk[1]
+			if apiVer != "1.0" && apiVer != "1.1" {
+				gerr := util.Errorf("Bad version number '%s' in X-Ops-Header", apiVer)
+				return gerr
+			}
+		} else {
+			gerr := util.Errorf("malformed version in X-Ops-Header")
+			return gerr
+		}
+
+		// if algorithm is missing, it uses sha1. Of course, no other
+		// hashing algorithm is supported yet...
+		if shaChk := shaRe.FindStringSubmatch(xopssign); shaChk != nil {
+			if shaChk[1] != "sha1" {
+				gerr := util.Errorf("Unsupported hashing algorithm '%s' specified in X-Ops-Header", shaChk[1])
+				return gerr
+			}
+		}
+	}
+
 	chkHash, chkerr := calcBodyHash(r)
 	if chkerr != nil {
 		return chkerr
