@@ -377,7 +377,8 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 	return nil
 }
 
-// Checks that the provided public key is valid.
+// Checks that the provided public key is valid. Wrapper around 
+// chef_crypto.ValidatePublicKey(), but with a different error type.
 func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
 	ok, pkerr := chef_crypto.ValidatePublicKey(publicKey)
 	var err util.Gerror

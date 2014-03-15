@@ -65,6 +65,7 @@ func GenerateRSAKeys() (string, string, error){
 	return priv_pem, pub_pem, nil
 }
 
+// Checks that the provided public key is valid.
 func ValidatePublicKey(publicKey interface{}) (bool, error) {
 	switch publicKey := publicKey.(type) {
 		case string:
@@ -85,8 +86,9 @@ func ValidatePublicKey(publicKey interface{}) (bool, error) {
 	}
 }
 
-// Decrypt the encrypted header for validating requests. This function is
-// informed by chef-golang's privateDecrypt function.
+// Decrypt the encrypted header with the client or user's public key for 
+// validating requests. This function is informed by chef-golang's 
+// privateDecrypt function.
 func HeaderDecrypt(pkPem string, data string) ([]byte, error){
 	block, _ := pem.Decode([]byte(pkPem))
 	if block == nil {
@@ -130,6 +132,7 @@ func decrypt(pubKey *rsa.PublicKey, data []byte) ([]byte, error) {
 	return out, nil
 }
 
+// SHA512 hash a password string with the provided salt.
 func HashPasswd(passwd string, salt []byte) (string, error) {
 	if passwd == "" {
 		err := fmt.Errorf("Password is empty")
@@ -140,6 +143,7 @@ func HashPasswd(passwd string, salt []byte) (string, error) {
 	return hashPw, nil
 }
 
+// Generate a new salt for hashing a password.
 func GenerateSalt() ([]byte, error) {
 	numbytes := 64
 	b := make([]byte, numbytes)

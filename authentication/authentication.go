@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+// Package authentication contains functions used to authenticate requests from
+// the signed headers.
 package authentication
 
 /* Geez, import all the things why don't you. */
@@ -37,8 +39,8 @@ import (
 	"fmt"
 )
 
-// Check the signed headers sent by the client against the expected result to
-// verify their authorization.
+// Check the signed headers sent by the client against the expected result
+// assembled from the request headers to verify their authorization.
 func CheckHeader(user_id string, r *http.Request) util.Gerror {
 	user, err := actor.Get(user_id)
 	if err != nil {

@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+// Package config parses command line flags and config files, and defines
+// options used elsewhere in goiardi.
 package config
 
 import (
@@ -71,9 +73,9 @@ type Options struct {
 	HttpsUrls bool `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP."`
 }
 
-// The goiardi version
+// The goiardi version.
 const Version = "0.4.0"
-// The chef version we're at least aiming for, even if it's not complete yet
+// The chef version we're at least aiming for, even if it's not complete yet.
 const ChefVersion = "11.0.8"
 
 /* The general plan is to read the command-line options, then parse the config
@@ -84,6 +86,8 @@ const ChefVersion = "11.0.8"
 
 func InitConfig() *Conf { return &Conf{ } }
 
+// Conf struct with the options specified on the command line or in the config
+// file.
 var Config = InitConfig()
 
 // Read and apply arguments from the command line.
