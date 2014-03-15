@@ -18,8 +18,9 @@
 
 /* 
 Package actor in goiardi encompasses both Chef clients and users. They're
-basically the same thing. Clients are the more usual case - users are mainly
-used for the web interface (which goiardi doesn't have yet). 
+basically the same thing. Clients are the more usual case, but users are used
+for the webui and often for general user (as opposed to node) interactions with
+the server.
 */
 package actor
 
@@ -35,6 +36,10 @@ import (
 	"bytes"
 )
 
+// An actor is either a client or a user. They're very similar, with some small
+// differences - users can never be validators, while clients don't have
+// passwords. Generally nodes and the like will be clients, while people
+// interacting with the goiardi server will be users.
 type Actor struct {
 	Name string `json:"name"`
 	NodeName string `json:"node_name"`
@@ -79,6 +84,8 @@ type flatActor struct {
 	Certificate string `json:"certificate"`
 }
 
+// Creates a new actor of type `cheftype`. If it's a user, it will also create
+// a password salt.
 func New(clientname string, cheftype string) (*Actor, util.Gerror){
 	ds := data_store.New()
 	if _, found := ds.Get("client", clientname); found {
@@ -125,6 +132,7 @@ func New(clientname string, cheftype string) (*Actor, util.Gerror){
 }
 
 
+// Gets an actor from the data store.
 func Get(clientname string) (*Actor, error){
 	ds := data_store.New()
 	client, found := ds.Get("client", clientname)
@@ -135,6 +143,8 @@ func Get(clientname string) (*Actor, error){
 	return client.(*Actor), nil
 }
 
+// Gets the actor making the request. If use-auth is not on, always returns 
+// true.
 func GetReqUser(clientname string) (*Actor, util.Gerror) {
 	/* If UseAuth is turned off, use the automatically created admin user */
 	if !config.Config.UseAuth {
@@ -159,6 +169,8 @@ func (c *Actor) Save() error {
 	return nil
 }
 
+// Deletes a client or user, but will refuse to do so if it is the last
+// adminstrator of that type.
 func (c *Actor) Delete() error {
 	// Make sure this isn't the last admin or something
 	// This will be a *lot* easier with an actual database.
@@ -189,6 +201,7 @@ func (c *Actor) ToJson() map[string]interface{} {
 	return toJson
 }
 
+// Is this the last admin of its type?
 func (c *Actor) IsLastAdmin() bool {
 	if c.Admin {
 		clist := GetList()
@@ -207,6 +220,7 @@ func (c *Actor) IsLastAdmin() bool {
 }
 
 // Renames the client or user. Save() must be called after this method is used.
+// Will not rename the last admin.
 func (c *Actor) Rename(new_name string) util.Gerror {
 	ds := data_store.New()
 	if err := validateClientName(new_name, c.ChefType); err != nil {
@@ -363,6 +377,7 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 	return nil
 }
 
+// Checks that the provided public key is valid.
 func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
 	ok, pkerr := chef_crypto.ValidatePublicKey(publicKey)
 	var err util.Gerror
@@ -382,7 +397,7 @@ func GetList() []string {
 
 // Generate a new set of RSA keys for the client. The new private key is saved
 // with the client, the public key is given to the client and not saved on the
-// server at all. */
+// server at all. 
 func (c *Actor) GenerateKeys() (string, error){
 	priv_pem, pub_pem, err := chef_crypto.GenerateRSAKeys()
 	if err != nil {
@@ -422,6 +437,7 @@ func validateUserName(name string) util.Gerror {
 }
 
 /* Search indexing functions */
+
 func (c *Actor) DocId() string {
 	return c.Name
 }
@@ -459,6 +475,7 @@ func (c *Actor) IsValidator() bool {
 	return false
 }
 
+// Is the other actor provided the same as the caller.
 func (c *Actor) IsSelf(other *Actor) bool {
 	if !useAuth(){
 		return true
@@ -469,6 +486,7 @@ func (c *Actor) IsSelf(other *Actor) bool {
 	return false
 }
 
+// A check to see if the actor is trying to edit admin and validator attributes.
 func (c *Actor) CheckPermEdit(client_data map[string]interface{}, perm string) util.Gerror {
 	gerr := util.Errorf("You are not allowed to take this action.")
 	gerr.SetStatus(http.StatusForbidden)
@@ -481,10 +499,12 @@ func (c *Actor) CheckPermEdit(client_data map[string]interface{}, perm string) u
 	return nil
 }
 
+/* a check to see if we should do perm checks */
 func useAuth() bool {
 	return config.Config.UseAuth
 }
 
+// Validate and set the user's password. Will not set a password for a client.
 func (c *Actor) SetPasswd(password string) util.Gerror {
 	if c.ChefType != "user" {
 		err := util.Errorf("Clients don't have passwords, dawg")
@@ -504,6 +524,7 @@ func (c *Actor) SetPasswd(password string) util.Gerror {
 	return nil
 }
 
+// Check the provided password to see if it matches the stored password hash.
 func (c *Actor) CheckPasswd(password string) util.Gerror {
 	if c.ChefType != "user" {
 		err := util.Errorf("Clients still don't have passwords")

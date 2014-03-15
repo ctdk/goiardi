@@ -19,12 +19,15 @@ Goiardi is an implementation of the Chef server (http://www.opscode.com) written
 in Go. It currently runs entirely in memory with the option to save and load the
 in-memory data to and from disk, and draws heavy inspiration from chef-zero.
 
-It is very much a work in progress. At the moment basic functionality as tested
-with knife works, and chef-client runs complete successfully. It is far enough 
-along to run chef-pendant tests. The authentication and permissions tests from
-chef-pedant all fail at this time, but the other relevant tests pass except for a few areas with disagreements about formatting.
+It is a work in progress. At the moment normal functionality as tested with 
+knife works, and chef-client runs complete successfully. It is far enough along 
+to run most chef-pendant tests successfully. It does pretty well against the
+official chef-pedant, but because goiardi handles some authentication matters a
+little differently than the official chef-server, there is also a fork of
+chef-pedant located at https://github.com/ctdk/chef-pedant that's more custom
+tailored to goiardi.
 
-Adding go tests is on the TODO list.
+Many go tests are present as well in different goiardi subdirectories.
 
 Goiardi currently has four dependencies: go-flags, go-cache, go-trie, and toml. 
 To install them, run:
@@ -67,28 +70,73 @@ To install:
 
    goiardi <options>
 
-   You can get a list of current options with the '-h' flag. Some of them may
-   even work. As of this writing you can specify the hostname, IP address, port,
-   log, data, and index files, and the interval to save data to disk goiardi 
-   uses.
+You can get a list of command-line options with the '-h' flag. 
 
-   Goiardi can also take a config file, run like `goiardi -c 
-   /path/to/conf-file`. See `etc/goiardi.conf-sample` for an example documented
-   configuration file. Currently `hostname`, `ipaddress`, `port`, `log-file`,
-   `data-file`, `index-file`, and `freeze-interval` can be configured in the 
-   conf file (one per line). Options specified on the command line override 
-   options in the config file.
+Goiardi can also take a config file, run like goiardi -c 
+/path/to/conf-file. See etc/goiardi.conf-sample for an example documented
+configuration file. Options in the configuration file share the same name
+as the long command line arguments (so, for example, --ipaddress=127.0.0.1
+on the command line would be ipaddress = "127.0.0.1" in the config file.
+
+Currently available command line and config file options:
+
+   -v, --version          Print version info.
+   -V, --verbose          Show verbose debug information. (not implemented)
+   -c, --config=          Specify a config file to use.
+   -I, --ipaddress=       Listen on a specific IP address.
+   -H, --hostname=        Hostname to use for this server. Defaults to hostname
+                          reported by the kernel.
+   -P, --port=            Port to listen on. If port is set to 443, SSL will be
+                          activated. (default: 4545)
+   -i, --index-file=      File to save search index data to.
+   -D, --data-file=       File to save data store data to.
+   -F, --freeze-interval= Interval in seconds to freeze in-memory data
+                          structures to disk (requires -i/--index-file and
+                          -D/--data-file options to be set). (Default 300
+                          seconds/5 minutes.)
+   -L, --log-file=        Log to file X
+       --time-slew=       Time difference allowed between the server's clock at
+                          the time in the X-OPS-TIMESTAMP header. Formatted like
+                          5m, 150s, etc. Defaults to 15m.
+       --conf-root=       Root directory for configs and certificates. Default:
+                          the directory the config file is in, or the current
+                          directory if no config file is set.
+   -A, --use-auth         Use authentication. Default: false.
+       --use-ssl          Use SSL for connections. If --port is set to 433, this
+                          will automatically be turned on. If it is set to 80,
+                          it will automatically be turned off. Default: off.
+                          Requires --ssl-cert and --ssl-key.
+       --ssl-cert=        SSL certificate file. If a relative path, will be set
+                          relative to --conf-root.
+       --ssl-key=         SSL key file. If a relative path, will be set relative
+                          to --conf-root.
+       --https-urls       Use 'https://' in URLs to server resources if goiardi
+                          is not using SSL for its connections. Useful when
+                          goiardi is sitting behind a reverse proxy that uses
+                          SSL, but is communicating with the proxy over HTTP.
+
+   Options specified on the command line override options in the config file.
 
 For more documentation on Chef, see http://docs.opscode.com.
 
-Goiardi does not actually care about .pem files at all at the moment, but you
-still need to have one to keep knife and chef-client happy. It's like chef-zero
-in that regard.
+If goiardi is not running in use-auth mode, it does not actually care about .pem
+files at all. You still need to have one to keep knife and chef-client happy. 
+It's like chef-zero in that regard.
+
+If goiardi is running in use-auth mode, then proper keys are needed. When 
+goiardi is started, if the chef-webui and chef-validator clients, and the admin 
+user, are not present, it will create new keys in the --conf-root directory. Use
+them as you would normally for validating clients, performing tasks with the
+admin user, or using chef-webui if webui will run in front of goiardi.
+
+*Note:* The admin user, when created on startup, does not have a password. This
+prevents logging in to the webui with the admin user, so a password will have to
+be set for admin before doing so.
 
 Tested Platforms:
 
 Goiardi has been built and run with the native 6g compiler on Mac OS X (10.7 and
-10.8), Debian wheezy, a fairly recent Arch Linux, and FreeBSD 9.2.
+10.8), Debian squeeze and wheezy, a fairly recent Arch Linux, and FreeBSD 9.2.
 
 Goiardi has also been built and run with gccgo (using the "-compiler gccgo"
 option with the "go" command) on Arch Linux. Building it with gccgo without 
@@ -109,6 +157,13 @@ replace the old save files until the new one is all finished writing. However,
 it's still not anywhere near a real database with transaction protection, etc.,
 so while it should work fine in the general case, possibilities for data loss
 and corruption do exist. The appropriate caution is warranted.
+
+Documentation:
+
+In addition to the aforementioned Chef documentation at http://docs.opscode.com,
+more documentation specific to goiardi can be viewed with godoc. See 
+http://godoc.org/code.google.com/p/go.tools/cmd/godoc for an explanation of how
+godoc works. 
 
 To do:
 

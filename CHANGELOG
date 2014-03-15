@@ -1,0 +1,26 @@
+0.4.0 (unreleased)
+-----
+* Fix bug with pessimistic matching (https://github.com/ctdk/goiardi/issues/1)
+* Add authentication, authorization as an option.
+* Add SSL as an option.
+* Fixed a few small bugs that turned up while working on authentication.
+* Improved test coverage further, both with go tests and a forked chef-pedant
+  (https://github.com/ctdk/chef-pedant)
+
+0.3.3
+-----
+* Data store and indexer tweaks.
+* Improved test coverage.
+
+0.3.0
+-----
+* Added ability to freeze data store and search index to disk.
+
+0.2.1
+-----
+* Added support for configuration files.
+* Fixed issue parsing flags with newer version of go-flags.
+
+0.2.0
+-----
+* Initial widely announced release. First version with working search.

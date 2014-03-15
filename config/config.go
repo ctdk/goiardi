@@ -63,11 +63,11 @@ type Options struct {
 	FreezeInterval int `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk (requires -i/--index-file and -D/--data-file options to be set). (Default 300 seconds/5 minutes.)"`
 	LogFile string `short:"L" long:"log-file" description:"Log to file X"`
 	TimeSlew string `long:"time-slew" description:"Time difference allowed between the server's clock at the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m."`
-	ConfRoot string `long:"conf-root" description:"Root directory for configs and certificates. Default: /etc/goiardi, or the directory the config file is in."`
+	ConfRoot string `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set."`
 	UseAuth bool `short:"A" long:"use-auth" description:"Use authentication. Default: false."`
 	UseSSL bool `long:"use-ssl" description:"Use SSL for connections. If --port is set to 433, this will automatically be turned on. If it is set to 80, it will automatically be turned off. Default: off. Requires --ssl-cert and --ssl-key."`
-	SslCert string `long:"ssl-cert" description:"SSL certificate file."`
-	SslKey string `long:"ssl-key" description:"SSL key file."`
+	SslCert string `long:"ssl-cert" description:"SSL certificate file. If a relative path, will be set relative to --conf-root."`
+	SslKey string `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root."`
 	HttpsUrls bool `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP."`
 }
 
@@ -164,6 +164,18 @@ func ParseConfigOptions() error {
 		Config.FreezeInterval = 300
 	}
 
+	/* Root directory for certs and the like */
+	if opts.ConfRoot != "" {
+		Config.ConfRoot = opts.ConfRoot
+	} 
+	if Config.ConfRoot == "" {
+		if Config.ConfFile != "" {
+			Config.ConfRoot = path.Dir(Config.ConfFile)
+		} else {
+			Config.ConfRoot = "."
+		}
+	}
+
 	Config.Ipaddress = opts.Ipaddress
 	if opts.Port != 0 {
 		Config.Port = opts.Port
@@ -195,6 +207,14 @@ func ParseConfigOptions() error {
 			log.Println("SSL mode requires specifying both a certificate and a key file.")
 			os.Exit(1)
 		}
+		/* If the SSL cert and key are not absolute files, join them
+		 * with the conf root */
+		if !path.IsAbs(Config.SslCert) {
+			Config.SslCert = path.Join(Config.ConfRoot, Config.SslCert)
+		}
+		if !path.IsAbs(Config.SslKey) {
+			Config.SslKey = path.Join(Config.ConfRoot, Config.SslKey)
+		}
 	}
 
 	Config.DebugLevel = len(opts.Verbose)
@@ -213,17 +233,7 @@ func ParseConfigOptions() error {
 		Config.TimeSlewDur, _ = time.ParseDuration("15m")
 	}
 
-	/* config root - make this a real option */
-	if opts.ConfRoot != "" {
-		Config.ConfRoot = opts.ConfRoot
-	} 
-	if Config.ConfRoot == "" {
-		if Config.ConfFile != "" {
-			Config.ConfRoot = path.Dir(Config.ConfFile)
-		} else {
-			Config.ConfRoot = "."
-		}
-	}
+
 
 	if opts.UseAuth {
 		Config.UseAuth = opts.UseAuth
