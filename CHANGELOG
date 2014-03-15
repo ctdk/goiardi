@@ -1,4 +1,4 @@
-0.4.0 (unreleased)
+0.4.0
 -----
 * Fix bug with pessimistic matching (https://github.com/ctdk/goiardi/issues/1)
 * Add authentication, authorization as an option.
@@ -6,6 +6,7 @@
 * Fixed a few small bugs that turned up while working on authentication.
 * Improved test coverage further, both with go tests and a forked chef-pedant
   (https://github.com/ctdk/chef-pedant)
+* Updated and expanded documentation.
 
 0.3.3
 -----
