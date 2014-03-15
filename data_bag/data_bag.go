@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-// Data bags provide a convenient way to store arbitrary data on the server.
+// Package data_bag provides a convenient way to store arbitrary data on the 
+// server.
 package data_bag
 
 import (
@@ -30,11 +31,13 @@ import (
 	"strings"
 )
 
+// The overall data bag.
 type DataBag struct {
 	Name string
 	DataBagItems map[string]DataBagItem
 }
 
+// An item within a data bag.
 type DataBagItem struct {
 	Name string `json:"name"`
 	ChefType string `json:"chef_type"`
@@ -96,6 +99,7 @@ func (db *DataBag) Delete() error {
 	return nil
 }
 
+// Returns a list of data bags on the server.
 func GetList() []string {
 	ds := data_store.New()
 	db_list := ds.GetList("data_bag")
@@ -115,6 +119,7 @@ func (db *DataBag) URLType() string {
 /* To do: Idle test; see if changes to the returned data bag item are reflected
  * in the one stored in the hash there */
 
+// Create a new data bag item in the associated data bag.
 func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagItem, util.Gerror){
 	//dbi_id := raw_dbag_item["id"].(string)
 	var dbi_id string
@@ -157,6 +162,7 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 	return &dbag_item, nil
 }
 
+// Updates a data bag item in this data bag.
 func (db *DataBag) UpdateDBItem(dbi_id string, raw_dbag_item map[string]interface{}) (*DataBagItem, error){
 	db_item, found := db.DataBagItems[dbi_id]
 	if !found {
@@ -177,6 +183,8 @@ func (db *DataBag) DeleteDBItem(db_item_name string) error {
 	return nil
 }
 
+// Extract the data bag item's raw data from the request saving it to the 
+// server.
 func RawDataBagJson (data io.ReadCloser) map[string]interface{} {
 	raw_dbag_item := make(map[string]interface{})
 	json.NewDecoder(data).Decode(&raw_dbag_item)

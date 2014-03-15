@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-// Package cookbook handles the basic building blocks of any chef (or goiardi)
+// Package cookbook handles the basic building block of any chef (or goiardi)
 // run, the humble cookbook.
 package cookbook
 
@@ -36,6 +36,8 @@ import (
 // Make version strings with the format "x.y.z" sortable.
 type VersionStrings []string
 
+// The Cookbook struct holds an array of cookbook versions, which is where the
+// run lists, definitions, attributes, etc. are.
 type Cookbook struct {
 	Name string
 	Versions map[string]*CookbookVersion
@@ -44,6 +46,8 @@ type Cookbook struct {
 
 /* We... want the JSON tags for this. */
 
+// CookbookVersion is the meat of the cookbook. This is what's set when a new
+// cookbook is uploaded.
 type CookbookVersion struct {
 	CookbookName string `json:"cookbook_name"`
 	Name string `json:"name"`
@@ -64,6 +68,7 @@ type CookbookVersion struct {
 }
 
 /* Cookbook methods and functions */
+
 func (c *Cookbook) GetName() string {
 	return c.Name
 }
@@ -115,6 +120,7 @@ func (c *Cookbook) Delete() error {
 	return nil
 }
 
+// Get a list of all cookbooks on this server.
 func GetList() []string {
 	ds := data_store.New()
 	cb_list := ds.GetList("cookbook")
@@ -143,11 +149,13 @@ func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
 	return sorted
 }
 
+// Update what the cookbook stores as the latest version available.
 func (c *Cookbook) UpdateLatestVersion() {
 	c.latest = nil
 	c.LatestVersion()
 }
 
+// Get the latest version of this cookbook.
 func (c *Cookbook) LatestVersion() *CookbookVersion {
 	if c.latest == nil {
 		sorted := c.sortedVersions()
@@ -169,6 +177,8 @@ func (c *Cookbook)ConstrainedInfoHash(num_results interface{}, constraint string
 	return c.infoHashBase(num_results, constraint)
 }
 
+// For the given run list and environment constraints, return the cookbook
+// dependencies.
 func DependsCookbooks(run_list []string, env_constraints map[string]string) (map[string]interface{}, error) {
 	cd_list := make(map[string][]string, len(run_list))
 	run_list_ref := make([]string, len(run_list))
@@ -450,6 +460,7 @@ func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion{
 
 /* CookbookVersion methods and functions */
 
+// Create a new version of the cookbook.
 func (c *Cookbook)NewVersion(cb_version string, cbv_data map[string]interface{}) (*CookbookVersion, util.Gerror){
 	if _, err := c.GetVersion(cb_version); err == nil {
 		err := util.Errorf("Version %s of cookbook %s already exists, and shouldn't be created like this. Use UpdateVersion instead.", cb_version, c.Name)
@@ -476,6 +487,7 @@ func (c *Cookbook)NewVersion(cb_version string, cbv_data map[string]interface{})
 	return cbv, nil
 }
 
+// Get a particular version of the cookbook.
 func (c *Cookbook)GetVersion(cb_version string) (*CookbookVersion, util.Gerror) {
 	if cb_version == "_latest" {
 		return c.LatestVersion(), nil
@@ -538,6 +550,7 @@ func (c *Cookbook)deleteHashes(file_hashes []string) {
 	}
 }
 
+// Delete a particular version of a cookbook.
 func (c *Cookbook)DeleteVersion(cb_version string) util.Gerror {
 	/* Check for existence */
 	cbv, _ := c.GetVersion(cb_version)
@@ -555,6 +568,7 @@ func (c *Cookbook)DeleteVersion(cb_version string) util.Gerror {
 	return nil
 }
 
+// Update a specific version of a cookbook.
 func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force string) util.Gerror {
 	/* Allow force to update a frozen cookbook */
 	if cbv.IsFrozen == true && force != "true" {
@@ -724,6 +738,8 @@ func (cbv *CookbookVersion)fileHashes() []string{
 	return fhashes
 }
 
+// Helper function that coverts the internal representation of a cookbook
+// version to JSON in a way that knife and chef-client expect.
 func (cbv *CookbookVersion)ToJson(method string) map[string]interface{} {
 	toJson := make(map[string]interface{})
 	toJson["name"] = cbv.Name
