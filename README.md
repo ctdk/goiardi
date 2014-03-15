@@ -56,7 +56,8 @@ INSTALLATION
    go get github.com/ctdk/goiardi
 ```
 
-4. Run tests, as soon as there are tests to run.
+4. Run tests, if desired. Several goiardi subdirectories have go tests, and
+   chef-pedant can and should be used for testing goiardi as well.
 
 5. Install the goiardi binaries.
 
@@ -194,9 +195,8 @@ CONTRIBUTING
 If you feel like contributing, great! Just fork the repo, make your
 improvements, and submit a pull request. Tests would, of course, be appreciated.
 Adding tests where there are no tests currently would be even more appreciated.
-At least, though, try and not break anything worse than it is. Test coverage is
-an ongoing concern.
-
+At least, though, try and not break anything worse than it is. Test coverage has
+improved, but is still an ongoing concern.
 AUTHOR
 ------
 

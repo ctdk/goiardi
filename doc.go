@@ -51,16 +51,17 @@ though, you won't need that.
 To install:
 
 1. Install go. (http://golang.org/doc/install.html) You may need to upgrade to
-   go 1.2 to compile all the dependencies.
+go 1.2 to compile all the dependencies.
 
 2. Make sure your $GOROOT and PATH are set up correctly per the Go installation
-   instructions.
+instructions.
 
 3. Download goairdi
 
    go get github.com/ctdk/goiardi
 
-4. Run tests, as soon as there are tests to run.
+4. Run tests, if desired. Several goiardi subdirectories have go tests, and
+chef-pedant can and should be used for testing goiardi as well.
 
 5. Install the goiardi binaries.
 
@@ -186,8 +187,8 @@ under any platform Go supports (only partially at this time though).
 If you feel like contributing, great! Just fork the repo, make your
 improvements, and submit a pull request. Tests would, of course, be appreciated.
 Adding tests where there are no tests currently would be even more appreciated.
-At least, though, try and not break anything worse than it is. Test coverage is
-an ongoing concern.
+At least, though, try and not break anything worse than it is. Test coverage has
+improved, but is still an ongoing concern.
 
 Goiardi is authored and copyright (c) Jeremy Bingham, 2013.  Like many Chef 
 ecosystem programs, goairdi is licensed under the Apache 2.0 License. See the 
