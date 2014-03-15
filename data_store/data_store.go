@@ -15,10 +15,13 @@
  */
 
 /* 
-Data store functionality. For now, we're just keeping in memory, but optional
-use of a persistent storage backend eventually is on the list of things to do
-down the road. Using go-cache (https://github.com/pmylund/go-cache) for
-storing our data - might be worth using for normal caching later as well.
+Package data_store provides data store functionality. The data store is kept in
+memory, but optionally the data store may be saved to a file to provide a
+perisistent data store. This uses go-cache (https://github.com/pmylund/go-cache)
+for storing the data.
+
+The methods that set, get, and delete key/value pairs also take a `key_type`
+argument that specifies what kind of object it is.
 */
 package data_store
 
@@ -38,7 +41,7 @@ import (
 	"path"
 )
 
-// Main data store
+// Main data store.
 type DataStore struct {
 	dsc *cache.Cache
 	obj_list map[string]map[string]bool
@@ -59,6 +62,7 @@ func initDataStore() *DataStore {
 	return ds
 }
 
+// Create a new data store instance, or return an already created one.
 func New() *DataStore {
 	return dataStoreCache
 }

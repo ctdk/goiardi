@@ -18,6 +18,9 @@
  * limitations under the License.
  */
 
+// Package filestore provides local file uploads and downloads for cookbook
+// uploading and downloading. All access to the files is through the checksum,
+// rather than the file name.
 package filestore
 
 import (
@@ -29,6 +32,9 @@ import (
 
 /* Local filestorage struct. Add fields as needed. */
 
+// An individual file in the filestore. Note that there is no actual name for
+// the file used, but it is identified by the file's checksum. The file's data
+// is stored as a pointer to an array of bytes.
 type FileStore struct {
 	Chksum string
 	Data *[]byte
@@ -36,6 +42,9 @@ type FileStore struct {
 
 /* New, for this, includes giving it the file data */
 
+// Create a new filestore item with the given checksum, io.ReadCloser holding
+// the file's data, and the length of the file. If the file data's checksum does
+// not match the provided checksum an error will be trhown.
 func New(chksum string, data io.ReadCloser, data_length int64) (*FileStore, error){
 	if _, err := Get(chksum); err == nil {
 		err := fmt.Errorf("File with checksum %s already exists.", chksum)
@@ -86,6 +95,7 @@ func (f *FileStore) Delete() error {
 	return nil
 }
 
+// Get a list of files that have been uploaded.
 func GetList() []string {
 	ds := data_store.New()
 	file_list := ds.GetList("filestore")

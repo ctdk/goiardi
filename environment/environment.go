@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+// Package environment provides... environments. They're like roles, but more
+// so, except without run lists. They're a convenient way to share many
+// attributes and cookbook version constraints among many servers.
 package environment
 
 import (
@@ -60,6 +63,7 @@ func New(name string) (*ChefEnvironment, util.Gerror){
 	return env, nil
 }
 
+// Create a new environment from JSON uploaded to the server.
 func NewFromJson(json_env map[string]interface{}) (*ChefEnvironment, util.Gerror){
 	env, err := New(json_env["name"].(string))
 	if err != nil {
@@ -72,6 +76,7 @@ func NewFromJson(json_env map[string]interface{}) (*ChefEnvironment, util.Gerror
 	return env, nil
 }
 
+// Updates an existing environment from JSON uploaded to the server.
 func (e *ChefEnvironment)UpdateFromJson(json_env map[string]interface{}) util.Gerror {
 	if e.Name != json_env["name"].(string) {
 		err := util.Errorf("Environment name %s and %s from JSON do not match", e.Name, json_env["name"].(string))
@@ -242,6 +247,7 @@ func (e *ChefEnvironment) Delete() error {
 	return nil
 }
 
+// Get a list of all environments on this server.
 func GetList() []string {
 	ds := data_store.New()
 	env_list := ds.GetList("env")
@@ -266,6 +272,8 @@ func (e *ChefEnvironment) cookbookList() []*cookbook.Cookbook {
 	return cookbooks
 }
 
+// Gets a list of the cookbooks and their versions available to this 
+// environment.
 func (e *ChefEnvironment) AllCookbookHash(num_versions interface{}) map[string]interface{} {
 	cb_hash := make(map[string]interface{})
 	cb_list := e.cookbookList()
@@ -278,6 +286,7 @@ func (e *ChefEnvironment) AllCookbookHash(num_versions interface{}) map[string]i
 	return cb_hash
 }
 
+// Gets a list of recipes available to this environment.
 func (e *ChefEnvironment) RecipeList() []string {
 	recipe_list := make(map[string]string)
 	cb_list := e.cookbookList()
@@ -306,6 +315,7 @@ func (e *ChefEnvironment) RecipeList() []string {
 }
 
 /* Search indexing methods */
+
 func (e *ChefEnvironment) DocId() string {
 	return e.Name
 }

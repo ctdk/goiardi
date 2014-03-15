@@ -37,6 +37,7 @@ import (
 )
 
 // Interface that provides all the information necessary to index an object.
+// All objects that will be indexed need to implement this.
 type Indexable interface {
 	DocId() string
 	Index() string
@@ -265,6 +266,8 @@ func (idoc *IdxDoc) update(object Indexable) {
 	}
 }
 
+// Searches a document, determining if it needs to do a search for an exact term
+// or a regexp search.
 func (idoc *IdxDoc) Examine(term string) (bool, error) {
 	idoc.m.RLock()
 	defer idoc.m.RUnlock()
@@ -279,6 +282,7 @@ func (idoc *IdxDoc) Examine(term string) (bool, error) {
 	}
 }
 
+// Perform a text search of an index document.
 func (idoc *IdxDoc) TextSearch(term string) (bool, error) {
 	if term[0] == '*' || term[0] == '?' {
 		err := fmt.Errorf("Can't start a term with a wildcard character")
@@ -297,6 +301,7 @@ func (idoc *IdxDoc) TextSearch(term string) (bool, error) {
 	return m, nil
 }
 
+// Searches for a range of values.
 func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusive bool) (bool, error) {
 	// The parser should catch a lot of possible errors, happily
 
