@@ -5,6 +5,8 @@
 * Go code should be idiomatic where it isn't
 * More Go language features should be used where appropriate
 * Get sorting searches working properly
+* Provide a smooth and easy installation process, possibly packages where
+  appropriate.
 
 # Down the road
 * Allow using a database in addition to running in-memory
