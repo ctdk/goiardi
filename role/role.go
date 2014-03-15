@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+// Package role provides roles, which are a way to share common attributes and
+// run lists between different nodes.
 package role
 
 import (
@@ -27,6 +29,7 @@ import (
 )
 
 /* Need env_run_lists?!!? */
+
 type Role struct {
 	Name string `json:"name"`
 	ChefType string `json:"chef_type"`
@@ -63,6 +66,7 @@ func New(name string) (*Role, util.Gerror){
 	return role, nil
 }
 
+// Create a new role from the uploaded JSON.
 func NewFromJson(json_role map[string]interface{}) (*Role, util.Gerror){
 	role, err := New(json_role["name"].(string))
 	if err != nil {
@@ -75,6 +79,7 @@ func NewFromJson(json_role map[string]interface{}) (*Role, util.Gerror){
 	return role, nil
 }
 
+// Update an existing role with the uploaded JSON.
 func (r *Role) UpdateFromJson(json_role map[string]interface{}) util.Gerror {
 	/* TODO - this and node.UpdateFromJson may be generalizeable with
 	 * reflect - look into it. */
@@ -185,6 +190,7 @@ func (r *Role) Delete() error {
 	return nil
 }
 
+// Get a list of the roles on this server.
 func GetList() []string {
 	ds := data_store.New()
 	role_list := ds.GetList("role")

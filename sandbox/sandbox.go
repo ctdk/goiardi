@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+// Package sandbox allows checking files before re-uploading the, so any given
+// version of a file need only be uploaded once rather than being uploaded
+// repeatedly.
 package sandbox
 
 import (
@@ -31,6 +34,7 @@ import (
 )
 
 /* The structure of the sandbox responses is... inconsistent. */
+
 type Sandbox struct {
 	Id string
 	CreationTime time.Time
@@ -39,6 +43,8 @@ type Sandbox struct {
 }
 
 /* We actually generate the sandbox_id ourselves, so we don't pass that in. */
+
+// Create a new sandbox, given a map of null values with file checksums as keys.
 func New(checksum_hash map[string]interface{}) (*Sandbox, error){
 	/* For some reason the checksums come in a JSON hash that looks like
 	 * this:
@@ -131,6 +137,8 @@ func GetList() []string {
 	return sandbox_list
 }
 
+// Creates the list of file checksums and whether or not they need to be
+// uploaded or not. If they do, the upload URL is also provided.
 func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 	/* Uh... */
 	chksum_stats := make(map[string]map[string]interface{})
@@ -149,6 +157,7 @@ func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 	return chksum_stats
 }
 
+// Is the sandbox complete?
 func (s *Sandbox) IsComplete() error {
 	for _, chk := range s.Checksums {
 		k, _ := filestore.Get(chk)

@@ -45,6 +45,8 @@ type gerror struct {
 	status int
 }
 
+// An error type that includes an http status code (defaults to 
+// http.BadRequest).
 type Gerror interface {
 	Error() string
 	Status() int
@@ -57,18 +59,22 @@ func New(text string) Gerror {
 		}
 }
 
+// Create a new Gerror, with a formatted error string.
 func Errorf(format string, a ...interface{}) Gerror {
 	return New(fmt.Sprintf(format, a...))
 }
 
+// Returns the Gerror error message.
 func (e *gerror) Error() string {
 	return e.msg
 }
 
+// Set the Gerror HTTP status code.
 func (e *gerror) SetStatus(s int) {
 	e.status = s
 }
 
+// Returns the Gerror's HTTP status code.
 func (e *gerror) Status() int {
 	return e.status
 }
@@ -137,6 +143,8 @@ func MapifyObject(obj interface{}) map[string]interface{} {
 	return mapified
 }
 
+// Given a flattened object, prepares it for indexing by turning it into a 
+// sorted slice of strings formatted like "key:value".
 func Indexify(flattened map[string]interface{}) []string {
 	readyToIndex := make([]string, 0)
 	for k, v := range flattened {
@@ -167,6 +175,7 @@ func escapeStr(s string) string {
 	return s
 }
 
+// Merge disparate data structures into a flat hash.
 func DeepMerge(key string, source interface{}) map[string]interface{} {
 	merger := make(map[string]interface{})
 	switch v := source.(type) {

@@ -61,6 +61,7 @@ type Token struct {
 	Latest Queryable
 }
 
+// An individual query term and its operator.
 type QueryTerm struct {
 	term Term
 	mod Op
@@ -68,6 +69,8 @@ type QueryTerm struct {
 	fuzzparam string
 }
 
+// The no frills basic query type, without groups or ranges. Can contain regexp
+// terms, however.
 type BasicQuery struct {
 	field Field
 	term QueryTerm
@@ -76,6 +79,7 @@ type BasicQuery struct {
 	complete bool
 }
 
+// Query grouped results.
 type GroupedQuery struct {
 	field Field
 	terms []QueryTerm
@@ -84,6 +88,7 @@ type GroupedQuery struct {
 	complete bool
 }
 
+// Query a range of values.
 type RangeQuery struct {
 	field Field
 	start RangeTerm
@@ -95,7 +100,7 @@ type RangeQuery struct {
 }
 
 // Subquery's really just a marker in the chain of queries. Later it will be 
-// processed by itself though
+// processed by itself though.
 type SubQuery struct {
 	start bool
 	end bool
@@ -104,18 +109,32 @@ type SubQuery struct {
 	next Queryable
 }
 
+// Interface of methods all the query chain types have to be able to implement 
+// to search the index.
 type Queryable interface{
+	// Search the index for the given term.
 	SearchIndex(string) (map[string]*indexer.IdxDoc, error)
+	// Add an operator to this query chain link.
 	AddOp(Op)
+	// Get this query chain link's op.
 	Op() Op
+	// Add a field to this query chain link.
 	AddField(Field)
+	// Add a term to this link.
 	AddTerm(Term)
+	// Add an operator to the query chain link's term.
 	AddTermOp(Op)
+	// Set the next query in the query chain.
 	SetNext(Queryable)
+	// Get the next link in the query chain.
 	Next() Queryable
+	// Is the query chain incomplete?
 	IsIncomplete() bool
+	// Sets the completed flag for this query chain on this link.
 	SetCompleted()
+	// Add fuzz boost to the query. NOTE: doesn't do much.
 	AddFuzzBoost(Op)
+	// Add a fuzz param to the query. NOTE: doesn't do much.
 	AddFuzzParam(string)
 }
 
@@ -382,11 +401,6 @@ func (q *SubQuery) AddFuzzBoost(o Op) {
 
 func (q *SubQuery) AddFuzzParam(s string){
 	;
-}
-
-type Qt struct {
-	QueryChain Queryable
-	Latest Queryable
 }
 
 func (z *Token) AddOp(o Op) {

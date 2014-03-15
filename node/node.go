@@ -1,5 +1,4 @@
-/* Node object/class/whatever it is that Go calls them.
- * TODO: document what a node is. */
+/* Node object/class/whatever it is that Go calls them. */
 
 /*
  * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
@@ -17,6 +16,7 @@
  * limitations under the License.
  */
 
+// Package node implements nodes. They do chef-client runs.
 package node
 
 import (
@@ -66,6 +66,7 @@ func New(name string) (*Node, util.Gerror) {
 	return node, nil
 }
 
+// Create a new node from the uploaded JSON.
 func NewFromJson(json_node map[string]interface{}) (*Node, util.Gerror){
 	node_name, nerr := util.ValidateAsString(json_node["name"])
 	if nerr != nil {
@@ -92,6 +93,7 @@ func Get(node_name string) (*Node, error) {
 	return node.(*Node), nil
 }
 
+// Update an existing node with the uploaded JSON.
 func (n *Node) UpdateFromJson(json_node map[string]interface{}) util.Gerror {
 	/* It's actually totally legitimate to save a node with a different
 	 * name than you started with, but we need to get/create a new node for
@@ -205,6 +207,7 @@ func (n *Node) Delete() error {
 	return nil
 }
 
+// Get a list of the nodes on this server.
 func GetList() []string {
 	ds := data_store.New()
 	node_list := ds.GetList("node")
@@ -220,6 +223,7 @@ func (n *Node) URLType() string {
 }
 
 /* Functions to support indexing */
+
 func (n *Node) DocId() string {
 	return n.Name
 }
