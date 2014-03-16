@@ -144,6 +144,15 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 
 	user_id := r.Header.Get("X-OPS-USERID")
 	if rs := r.Header.Get("X-Ops-Request-Source"); rs == "web" {
+		/* If use-auth is on and disable-webui is on, and this is a
+		 * webui connection, it needs to fail. */
+		if config.Config.DisableWebUI {
+			w.Header().Set("Content-Type", "application/json")
+			log.Printf("Attempting to log in through webui, but webui is disabled")
+			JsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
+			return
+		}
+
 		/* Check that the user in question with the web request exists.
 		 * If not, fail. */
 		if _, uherr := actor.Get(user_id); uherr != nil {

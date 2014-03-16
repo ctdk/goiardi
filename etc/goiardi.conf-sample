@@ -52,3 +52,7 @@ use-ssl = false
 # when goiardi is sitting behind a reverse proxy that uses SSL, but is 
 # communicating with the proxy over HTTP.
 https-urls = false
+
+# Disable webui: If true, connections and logins from the webui interface will
+# not be allowed.
+disable-webui = false

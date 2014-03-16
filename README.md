@@ -116,6 +116,8 @@ INSTALLATION
                           is not using SSL for its connections. Useful when
                           goiardi is sitting behind a reverse proxy that uses
                           SSL, but is communicating with the proxy over HTTP.
+       --disable-webui    If enabled, disables connections and logins to goiardi
+                          over the webui interface.
 ```
 
    Options specified on the command line override options in the config file.

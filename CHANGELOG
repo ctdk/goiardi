@@ -1,8 +1,10 @@
-0.4.1 (unreleased)
+0.4.1 (unreleased) (unreleased)
 -----
 * Small documentation tweaks
 * Fix bug with parsing config file options and rearrange setting some of those
   config struct items, fix typo in sample config file.
+* Add disable-webui option for command line and config file to disable the
+  chef webui rails app from connecting to goiardi.
 
 0.4.0
 -----

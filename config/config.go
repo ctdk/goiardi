@@ -50,6 +50,7 @@ type Conf struct {
 	SslCert string `toml:"ssl-cert"`
 	SslKey string `toml:"ssl-key"`
 	HttpsUrls bool `toml:"https-urls"`
+	DisableWebUI bool `toml:"disable-webui"`
 }
 
 /* Struct for command line options. */
@@ -71,6 +72,7 @@ type Options struct {
 	SslCert string `long:"ssl-cert" description:"SSL certificate file. If a relative path, will be set relative to --conf-root."`
 	SslKey string `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root."`
 	HttpsUrls bool `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP."`
+	DisableWebUI bool `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface."`
 }
 
 // The goiardi version.
@@ -242,11 +244,13 @@ func ParseConfigOptions() error {
 		Config.TimeSlewDur, _ = time.ParseDuration("15m")
 	}
 
-
-
 	if opts.UseAuth {
 		Config.UseAuth = opts.UseAuth
 	} 
+
+	if opts.DisableWebUI {
+		Config.DisableWebUI = opts.DisableWebUI
+	}
 
 	return nil
 }
