@@ -35,21 +35,21 @@ type Conf struct {
 	Ipaddress string
 	Port int
 	Hostname string
-	ConfFile string
-	IndexFile string
-	DataStoreFile string
-	DebugLevel int
-	FreezeInterval int
-	FreezeData bool
-	LogFile string
-	UseAuth bool
-	TimeSlew string
+	ConfFile string `toml:"conf-file"`
+	IndexFile string `toml:"index-file"`
+	DataStoreFile string `toml:"data-file"`
+	DebugLevel int `toml:"debug-level"`
+	FreezeInterval int `toml:"freeze-interval"`
+	FreezeData bool `toml:"freeze-data"`
+	LogFile string `toml:"log-file"`
+	UseAuth bool `toml:"use-auth"`
+	TimeSlew string `toml:"time-slew"`
 	TimeSlewDur time.Duration
-	ConfRoot string
-	UseSSL bool
-	SslCert string
-	SslKey string
-	HttpsUrls bool
+	ConfRoot string `toml:"conf-root"`
+	UseSSL bool `toml:"use-ssl"`
+	SslCert string `toml:"ssl-cert"`
+	SslKey string `toml:"ssl-key"`
+	HttpsUrls bool `toml:"https-urls"`
 }
 
 /* Struct for command line options. */
@@ -116,6 +116,7 @@ func ParseConfigOptions() error {
 			panic(err)
 			os.Exit(1)
 		}
+		Config.ConfFile = opts.ConfFile
 		Config.FreezeData = false
 	}
 	
@@ -131,18 +132,21 @@ func ParseConfigOptions() error {
 		}
 	}
 
-	if !((opts.DataStoreFile == "" && opts.IndexFile == "") || (opts.DataStoreFile != "" && opts.IndexFile != "")) {
-		err := fmt.Errorf("-i and -D must either both be specified, or not specified.")
-		panic(err)
-		os.Exit(1)
-	}
 	if opts.DataStoreFile != "" {
 		Config.DataStoreFile = opts.DataStoreFile
-		Config.FreezeData = true
 	}
 
 	if opts.IndexFile != "" {
 		Config.IndexFile = opts.IndexFile
+	}
+
+	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || (Config.DataStoreFile != "" && Config.IndexFile != "")) {
+		err := fmt.Errorf("-i and -D must either both be specified, or not specified.")
+		panic(err)
+		os.Exit(1)
+	}
+
+	if Config.IndexFile != "" && Config.DataStoreFile != "" {
 		Config.FreezeData = true
 	}
 
@@ -172,6 +176,7 @@ func ParseConfigOptions() error {
 	if opts.ConfRoot != "" {
 		Config.ConfRoot = opts.ConfRoot
 	} 
+
 	if Config.ConfRoot == "" {
 		if Config.ConfFile != "" {
 			Config.ConfRoot = path.Dir(Config.ConfFile)
