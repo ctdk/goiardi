@@ -1,4 +1,4 @@
-0.4.1 (unreleased) (unreleased)
+0.4.1
 -----
 * Small documentation tweaks
 * Fix bug with parsing config file options and rearrange setting some of those
