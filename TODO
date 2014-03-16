@@ -10,3 +10,4 @@
 
 # Down the road
 * Allow using a database in addition to running in-memory
+* Config option to turn off webui logins entirely

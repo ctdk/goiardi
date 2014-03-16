@@ -1,3 +1,7 @@
+0.4.1 (unreleased)
+-----
+* Small documentation tweaks
+
 0.4.0
 -----
 * Fix bug with pessimistic matching (https://github.com/ctdk/goiardi/issues/1)
