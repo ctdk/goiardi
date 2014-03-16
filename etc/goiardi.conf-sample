@@ -39,7 +39,7 @@ use-auth = true
 # Use SSL: Use SSL for connections to the server. Defaults to false. If set to
 # true, ssl-cert and ssl-key must be set. If the port is set to 80, this will
 # be forced to false. If port is set to 443, it will be forced to true.
-use-ssl: false
+use-ssl = false
 
 # SSL certificate file. If a relative path, it will be set relative to
 # conf-root.
