@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-//Index objects that implement the Indexable interface. All in memory right now,
-//but the index can be saved to disk for persistence.
+// Package indexer indexes objects that implement the Indexable interface. The
+// index is all in memory right now, but it can be frozen and saved to disk for 
+// persistence.
 package indexer
 
 import (
