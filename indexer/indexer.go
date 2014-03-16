@@ -15,9 +15,7 @@
  */
 
 //Index objects that implement the Indexable interface. All in memory right now,
-//but the possibility is open to later saving the index to disk for later use if
-//a full solr installation (with the attendant improved functionality, 
-//admittedly) is not needed.
+//but the index can be saved to disk for persistence.
 package indexer
 
 import (
