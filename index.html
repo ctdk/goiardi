@@ -9,7 +9,7 @@
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="While there is still some work remaining with finishing some needed authorization checks, I&rsquo;m happy to report that in the goiardi auth branch, &hellip;">
+  <meta name="description" content="A new version of goiardi, version 0.4.0, as been released. This version fixes a bug with pessimistic matching, adds more tests, improves the &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,52 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/">Version 0.4.0 of Goiardi Released. Now, With Authentication!</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-16T10:28:50-07:00" pubdate data-updated="true">Mar 16<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>A new version of goiardi, <a href="https://github.com/ctdk/goiardi/releases/tag/v0.4.0">version 0.4.0</a>, as been released.</p>
+
+<p>This version fixes a bug with pessimistic matching, adds more tests, improves the documentation with an expanded <a href="https://github.com/ctdk/goiardi/blob/master/README.md">README</a> and <a href="http://godoc.org/github.com/ctdk/goiardi">more godocs</a>, and introduces client/user authentication and authorization and SSL for connections as optional settings. It will also run and authenticate properly with the chef webui, if you&rsquo;re so inclined. The webui is a separate install, however, and does not ship with goiardi.</p>
+
+<p>There is also a <a href="https://github.com/ctdk/chef-pedant">fork of chef-pedant</a> customized for goiardi now, to handle some tests with authentication where goiardi and the chef-server make slightly different decisions.</p>
+
+<p>Goiardi still works fine in no-auth mode. The authentication and authorization parts are completely optional, but they&rsquo;re there if you want or need authentication. It&rsquo;s recommended that if you do use authentication that you should set the <tt>&mdash;index-file</tt> and <tt>&mdash;data-file</tt> options for persistent data and index storage, but it&rsquo;s not strictly necessary. See the <a href="https://github.com/ctdk/goiardi/blob/master/README.md">README</a> for more on how to set up authentication.</p>
+
+<p>SSL is pretty straightforward, and also explained in the README. You&rsquo;ll need to <a href="http://stackoverflow.com/questions/10175812/how-to-build-a-self-signed-certificate-with-openssl">generate a certificate/key pair</a> for it to work, but that isn&rsquo;t too hard. This does assume that you&rsquo;d use a self-signed certificate for this; if you&rsquo;re going to use a real cert I assume you know what you&rsquo;re doing (and am a little surprised, to be honest).</p>
+
+<p>That&rsquo;s it for this release. The next major goiardi task coming up, barring any unexpected changes, is allowing it to use a database for the backend. This will be optional, of course; I plan on supporting the in-memory, no-auth mode a la chef-zero for goiardi indefinitely. Further out, there may be a smoother installation process, and someday even perhaps goiardi-specific features.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -417,6 +463,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/">Version 0.4.0 of Goiardi Released. Now, With Authentication!</a>
+      </li>
+    
+      <li class="post">
         <a href="/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/">Meanwhile, in the Auth Branch&#8230;</a>
       </li>
     
@@ -430,10 +480,6 @@
     
       <li class="post">
         <a href="/goiardi/blog/2014/01/18/save-persistent-store-fix/">Save Persistent Store Fix</a>
-      </li>
-    
-      <li class="post">
-        <a href="/goiardi/blog/2014/01/09/reindexing-search-capability-added/">Reindexing Search Capability Added</a>
       </li>
     
   </ul>
