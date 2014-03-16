@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Version 0.4.0 of Goiardi Released. Now, With Authentication! - Goiardi</title>
+  <title>Goiardi Version 0.4.1 Release - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="A new version of goiardi, version 0.4.0, as been released. This version fixes a bug with pessimistic matching, adds more tests, improves the &hellip;">
+  <meta name="description" content="Hot on the heels of the 0.4.0 release comes goiardi version 0.4.1. This release adds a &mdash;disable-webui option to disable using chef-webui with &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -86,7 +86,7 @@
   
   <header>
     
-      <h1 class="entry-title">Version 0.4.0 of Goiardi Released. Now, With Authentication!</h1>
+      <h1 class="entry-title">Goiardi Version 0.4.1 Release</h1>
     
     
       <p class="meta">
@@ -102,24 +102,16 @@
   
 
 
-<time datetime="2014-03-16T10:28:50-07:00" pubdate data-updated="true">Mar 16<span>th</span>, 2014</time>
+<time datetime="2014-03-16T14:32:27-07:00" pubdate data-updated="true">Mar 16<span>th</span>, 2014</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>A new version of goiardi, <a href="https://github.com/ctdk/goiardi/releases/tag/v0.4.0">version 0.4.0</a>, as been released.</p>
+<div class="entry-content"><p>Hot on the heels of the 0.4.0 release comes <a href="https://github.com/ctdk/goiardi/releases/tag/v0.4.1">goiardi version 0.4.1</a>. This release adds a <tt>&mdash;disable-webui</tt> option to disable using chef-webui with goiardi, fixes a bug with parsing configuration file options and rearranges how some of the config struct items are set, fixes a typo in the sample config file, and makes some small documentation tweaks.</p>
 
-<p>This version fixes a bug with pessimistic matching, adds more tests, improves the documentation with an expanded <a href="https://github.com/ctdk/goiardi/blob/master/README.md">README</a> and <a href="http://godoc.org/github.com/ctdk/goiardi">more godocs</a>, and introduces client/user authentication and authorization and SSL for connections as optional settings. It will also run and authenticate properly with the chef webui, if you&rsquo;re so inclined. The webui is a separate install, however, and does not ship with goiardi.</p>
-
-<p>There is also a <a href="https://github.com/ctdk/chef-pedant">fork of chef-pedant</a> customized for goiardi now, to handle some tests with authentication where goiardi and the chef-server make slightly different decisions.</p>
-
-<p>Goiardi still works fine in no-auth mode. The authentication and authorization parts are completely optional, but they&rsquo;re there if you want or need authentication. It&rsquo;s recommended that if you do use authentication that you should set the <tt>&mdash;index-file</tt> and <tt>&mdash;data-file</tt> options for persistent data and index storage, but it&rsquo;s not strictly necessary. See the <a href="https://github.com/ctdk/goiardi/blob/master/README.md">README</a> for more on how to set up authentication.</p>
-
-<p>SSL is pretty straightforward, and also explained in the README. You&rsquo;ll need to <a href="http://stackoverflow.com/questions/10175812/how-to-build-a-self-signed-certificate-with-openssl">generate a certificate/key pair</a> for it to work, but that isn&rsquo;t too hard. This does assume that you&rsquo;d use a self-signed certificate for this; if you&rsquo;re going to use a real cert I assume you know what you&rsquo;re doing (and am a little surprised, to be honest).</p>
-
-<p>That&rsquo;s it for this release. The next major goiardi task coming up, barring any unexpected changes, is allowing it to use a database for the backend. This will be optional, of course; I plan on supporting the in-memory, no-auth mode a la chef-zero for goiardi indefinitely. Further out, there may be a smoother installation process, and someday even perhaps goiardi-specific features.</p>
+<p>Other than that, all the changes announced in the <a href="/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/">0.4.0 release announcement</a> and previous releases remain relevant.</p>
 </div>
 
 
@@ -142,12 +134,12 @@
   
 
 
-<time datetime="2014-03-16T10:28:50-07:00" pubdate data-updated="true">Mar 16<span>th</span>, 2014</time>
+<time datetime="2014-03-16T14:32:27-07:00" pubdate data-updated="true">Mar 16<span>th</span>, 2014</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/goiardi/blog/categories/authentication/'>authentication</a>, <a class='category' href='/goiardi/blog/categories/goairdi/'>goairdi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a>
+    <a class='category' href='/goiardi/blog/categories/bugfix-releases/'>bugfix releases</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a>
   
 </span>
 
@@ -156,7 +148,7 @@
     
       <div class="sharing">
   
-  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/" >Tweet</a>
+  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release/" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
@@ -171,10 +163,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/" title="Previous Post: Meanwhile, in the auth branch...">&laquo; Meanwhile, in the auth branch...</a>
+        <a class="basic-alignment left" href="/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/" title="Previous Post: Version 0.4.0 of goiardi released. Now, with authentication!">&laquo; Version 0.4.0 of goiardi released. Now, with authentication!</a>
       
-      
-        <a class="basic-alignment right" href="/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release/" title="Next Post: goiardi version 0.4.1 release">goiardi version 0.4.1 release &raquo;</a>
       
     </p>
   </footer>
@@ -258,8 +248,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/';
-        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/';
+        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release/';
+        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release/';
         var disqus_script = 'embed.js';
       
     (function () {

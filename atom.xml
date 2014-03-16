@@ -4,7 +4,7 @@
   <title><![CDATA[Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-03-16T12:00:19-07:00</updated>
+  <updated>2014-03-16T14:48:40-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,17 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Version 0.4.1 Release]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release/"/>
+    <updated>2014-03-16T14:32:27-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release</id>
+    <content type="html"><![CDATA[<p>Hot on the heels of the 0.4.0 release comes <a href="https://github.com/ctdk/goiardi/releases/tag/v0.4.1">goiardi version 0.4.1</a>. This release adds a <tt>&mdash;disable-webui</tt> option to disable using chef-webui with goiardi, fixes a bug with parsing configuration file options and rearranges how some of the config struct items are set, fixes a typo in the sample config file, and makes some small documentation tweaks.</p>
+
+<p>Other than that, all the changes announced in the <a href="http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/">0.4.0 release announcement</a> and previous releases remain relevant.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Version 0.4.0 of Goiardi Released. Now, With Authentication!]]></title>
