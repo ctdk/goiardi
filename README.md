@@ -166,7 +166,8 @@ DOCUMENTATION
 In addition to the aforementioned Chef documentation at http://docs.opscode.com,
 more documentation specific to goiardi can be viewed with godoc. See 
 http://godoc.org/code.google.com/p/go.tools/cmd/godoc for an explanation of how
-godoc works.
+godoc works. The goiardi godocs can also be viewed online at 
+http://godoc.org/github.com/ctdk/goiardi.
 
 TODO
 ----
