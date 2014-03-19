@@ -187,6 +187,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 			for k, u := range v {
 				if key != "" {
 					topLev[n] = k
+					n++
 				}
 				var nkey string
 				if key == "" {
@@ -210,6 +211,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 			for k, u := range v {
 				if key != "" {
 					topLev[n] = k
+					n++
 				}
 				var nkey string
 				if key == "" {

@@ -516,7 +516,7 @@ func (i *Index) save(idxFile string) error {
 		err := fmt.Errorf("Yikes! Cannot save index to disk because no file was specified.")
 		return err
 	}
-	fp, err := ioutil.TempFile(path.Dir(idxFile), "ds-store")
+	fp, err := ioutil.TempFile(path.Dir(idxFile), "idx-build")
 	if err != nil {
 		return err
 	}
