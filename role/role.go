@@ -141,6 +141,8 @@ func (r *Role) UpdateFromJson(json_role map[string]interface{}) util.Gerror {
 		}
 	}
 
+	// Roles can be empty, just force it into being a string
+	json_role["description"], _ = util.ValidateAsString(json_role["description"])
 
 	json_role["chef_type"], verr = util.ValidateAsFieldString(json_role["chef_type"])
 	if verr != nil {
