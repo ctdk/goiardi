@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Meanwhile, in the Auth Branch... - Goiardi</title>
+  <title>Goiardi Version 0.4.2 - This Is Spinal Tap - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="While there is still some work remaining with finishing some needed authorization checks, I&rsquo;m happy to report that in the goiardi auth branch, &hellip;">
+  <meta name="description" content="It seems like only yesterday that there was a goiardi release, but really it was a few days ago. Goiardi version 0.4.2 is hot off the presses and &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/03/19/goiardi-version-0-dot-4-2-this-is-spinal-tap">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -86,7 +86,7 @@
   
   <header>
     
-      <h1 class="entry-title">Meanwhile, in the Auth Branch...</h1>
+      <h1 class="entry-title">Goiardi Version 0.4.2 - This Is Spinal Tap</h1>
     
     
       <p class="meta">
@@ -102,18 +102,29 @@
   
 
 
-<time datetime="2014-03-13T10:03:30-07:00" pubdate data-updated="true">Mar 13<span>th</span>, 2014</time>
+<time datetime="2014-03-19T23:04:46-07:00" pubdate data-updated="true">Mar 19<span>th</span>, 2014</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>While there is still some work remaining with finishing some needed authorization checks, I&rsquo;m happy to report that in the <a href="https://github.com/ctdk/goiardi/tree/auth">goiardi auth branch</a>, authentication for chef clients and webui is working and passing the chef-pedant tests.</p>
+<div class="entry-content"><p>It seems like only yesterday that there was a goiardi release, but really it was a few days ago. <a href="https://github.com/ctdk/goiardi/releases/tag/v0.4.2">Goiardi version 0.4.2</a> is hot off the presses and ready for your perusal.</p>
 
-<p>Once those authorization issues are ironed out, I&rsquo;ll start work on updating the documentation and making a new formal release. If, in the meantime, anyone felt like testing it, it&rsquo;s pretty easy. Start goiardi with the <tt>-A</tt> or <tt>&#8211;use-auth</tt> flags, and set <tt>&#8211;conf-root</tt> to whereever you&rsquo;d like the chef-validator, chef-webui, and admin certificates to be stored. You&rsquo;d probably also want to specify index and data files for persistence, but you don&rsquo;t have to. Goiardi works with chef-webui fine as well, but at the moment you&rsquo;ll have to set a password for the admin user with knife.</p>
+<p>This is a bugfix release. The reason this is the &ldquo;Spinal Tap&rdquo; release was because I noticed these problems while I took the day off after getting a spinal tap and was bored, so it seemed fitting. The bug fixes, from the CHANGELOG, are:</p>
 
-<p>As of this writing goiardi authentication is still a work in progress, but it&rsquo;s far enough along to start banging on to look for problems. The chef-pedant tests are pretty happy, but that doesn&rsquo;t always catch every real world issue.</p>
+<ul>
+<li>Perm tweak for nodes updating themselves.</li>
+<li>Small change with validating role descriptions when creating or updating from JSON.</li>
+<li>Fix issue with saving complicated indexed objects to disk where improperly flattened indexable objects were making the gob encoder puke all over itself when encoding the tries in the index docs.</li>
+<li>Fixed a possible regression with synchronizing cookbooks that did not show up in testing, but only in real use.</li>
+<li>An absolutely bonkers fix for listing cookbook files with webui. Webui wants all of the cookbook top level attributes sent over with a request to /cookbooks/&lt;name&gt;/&lt;version&gt;, but this is the exact <em>opposite</em> of the behavior chef-pedant wants, where empty definitions, attributes, etc. are not sent over. Knife also seems quite content with this, so the fix for now, since the two cases are mutually exclusionary, is to only send the empty hashes for those top level attributes with a GET if the request is coming from the webui. Bizarre, but it seems to be what&rsquo;s necessary.</li>
+</ul>
+
+
+<p>These were all problems that evaded notice during testing, but did pop up when I was using goiardi to set up a vagrant VM to start working on letting goiardi run a real database (optionally, of course) instead of the in-memory data store system it&rsquo;s using now. The in-memory mode is great and all for testing, and being able to freeze the data to disk for persistence is very handy, but being able to use a real database would be nice for some workloads. Supporting both the current in-memory storage and a database backend is a top priority.</p>
+
+<p>Which database to use is still a bit up in the air, but I&rsquo;m leaning towards throwing caution to the wind and providing support for both MySQL and Postgres, with SQLite as a distinct possibility down the line. MySQL is likely to come first, but that is not set in stone.</p>
 </div>
 
 
@@ -136,12 +147,12 @@
   
 
 
-<time datetime="2014-03-13T10:03:30-07:00" pubdate data-updated="true">Mar 13<span>th</span>, 2014</time>
+<time datetime="2014-03-19T23:04:46-07:00" pubdate data-updated="true">Mar 19<span>th</span>, 2014</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/goiardi/blog/categories/authentication/'>authentication</a>
+    <a class='category' href='/goiardi/blog/categories/bugfix-releases/'>bugfix releases</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a>
   
 </span>
 
@@ -150,7 +161,7 @@
     
       <div class="sharing">
   
-  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/" >Tweet</a>
+  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/03/19/goiardi-version-0-dot-4-2-this-is-spinal-tap/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/03/19/goiardi-version-0-dot-4-2-this-is-spinal-tap/" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
@@ -165,10 +176,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released/" title="Previous Post: Version 0.3.3 of goiardi released">&laquo; Version 0.3.3 of goiardi released</a>
+        <a class="basic-alignment left" href="/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release/" title="Previous Post: goiardi version 0.4.1 release">&laquo; goiardi version 0.4.1 release</a>
       
-      
-        <a class="basic-alignment right" href="/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/" title="Next Post: Version 0.4.0 of goiardi released. Now, with authentication!">Version 0.4.0 of goiardi released. Now, with authentication! &raquo;</a>
       
     </p>
   </footer>
@@ -252,8 +261,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/';
-        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/';
+        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/03/19/goiardi-version-0-dot-4-2-this-is-spinal-tap/';
+        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/03/19/goiardi-version-0-dot-4-2-this-is-spinal-tap/';
         var disqus_script = 'embed.js';
       
     (function () {

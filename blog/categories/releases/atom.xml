@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Releases | Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/blog/categories/releases/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-03-16T14:48:40-07:00</updated>
+  <updated>2014-03-19T23:21:51-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,30 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Version 0.4.2 - This Is Spinal Tap]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/03/19/goiardi-version-0-dot-4-2-this-is-spinal-tap/"/>
+    <updated>2014-03-19T23:04:46-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/03/19/goiardi-version-0-dot-4-2-this-is-spinal-tap</id>
+    <content type="html"><![CDATA[<p>It seems like only yesterday that there was a goiardi release, but really it was a few days ago. <a href="https://github.com/ctdk/goiardi/releases/tag/v0.4.2">Goiardi version 0.4.2</a> is hot off the presses and ready for your perusal.</p>
+
+<p>This is a bugfix release. The reason this is the &ldquo;Spinal Tap&rdquo; release was because I noticed these problems while I took the day off after getting a spinal tap and was bored, so it seemed fitting. The bug fixes, from the CHANGELOG, are:</p>
+
+<ul>
+<li>Perm tweak for nodes updating themselves.</li>
+<li>Small change with validating role descriptions when creating or updating from JSON.</li>
+<li>Fix issue with saving complicated indexed objects to disk where improperly flattened indexable objects were making the gob encoder puke all over itself when encoding the tries in the index docs.</li>
+<li>Fixed a possible regression with synchronizing cookbooks that did not show up in testing, but only in real use.</li>
+<li>An absolutely bonkers fix for listing cookbook files with webui. Webui wants all of the cookbook top level attributes sent over with a request to /cookbooks/&lt;name&gt;/&lt;version&gt;, but this is the exact <em>opposite</em> of the behavior chef-pedant wants, where empty definitions, attributes, etc. are not sent over. Knife also seems quite content with this, so the fix for now, since the two cases are mutually exclusionary, is to only send the empty hashes for those top level attributes with a GET if the request is coming from the webui. Bizarre, but it seems to be what&rsquo;s necessary.</li>
+</ul>
+
+
+<p>These were all problems that evaded notice during testing, but did pop up when I was using goiardi to set up a vagrant VM to start working on letting goiardi run a real database (optionally, of course) instead of the in-memory data store system it&rsquo;s using now. The in-memory mode is great and all for testing, and being able to freeze the data to disk for persistence is very handy, but being able to use a real database would be nice for some workloads. Supporting both the current in-memory storage and a database backend is a top priority.</p>
+
+<p>Which database to use is still a bit up in the air, but I&rsquo;m leaning towards throwing caution to the wind and providing support for both MySQL and Postgres, with SQLite as a distinct possibility down the line. MySQL is likely to come first, but that is not set in stone.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Goiardi Version 0.4.1 Release]]></title>
