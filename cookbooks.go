@@ -210,6 +210,26 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 					 * cookbook with some but not all of
 					 * the fields. */
 					cookbook_response = cb_ver.ToJson(r.Method)
+					/* Sometimes, but not always, chef needs
+					 * empty slices of maps for these 
+					 * values. Arrrgh. */
+					/* Doing it this way is absolutely
+					 * insane. However, webui really wants
+					 * this information, while chef-pedant
+					 * absolutely does NOT want it there.
+					 * knife seems happy without it as well.
+					 * Until such time that this gets 
+					 * resolved in a non-crazy manner, for
+					 * this only send that info back if it's
+					 * a webui request. */
+					if rs := r.Header.Get("X-Ops-Request-Source"); rs == "web" {
+						chkDiv := []string{ "definitions", "libraries", "attributes", "providers", "resources", "templates", "root_files", "files" }
+						for _, cd := range chkDiv {
+							if cookbook_response[cd] == nil {
+								cookbook_response[cd] = make([]map[string]interface{}, 0)
+							}
+						}
+					}
 				}
 			case "PUT":
 				if !opUser.IsAdmin() {

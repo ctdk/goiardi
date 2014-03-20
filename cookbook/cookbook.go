@@ -187,7 +187,7 @@ func DependsCookbooks(run_list []string, env_constraints map[string]string) (map
 		var cbName string
 		var constraint string
 		cx := strings.Split(cb_v, "@")
-		cbName = cx[0]
+		cbName = strings.Split(cx[0], "::")[0]
 		if len(cx) == 2 {
 			constraint = fmt.Sprintf("= %s", cx[1])
 		}
@@ -298,7 +298,21 @@ func DependsCookbooks(run_list []string, env_constraints map[string]string) (map
 			err := fmt.Errorf("Unfortunately no version of %s could satisfy the requested constraints: %s", cname, strings.Join(traints, ", "))
 			return nil, err
 		} else {
-			cookbook_deps[gcbv.CookbookName] = gcbv.ToJson("POST")
+			gcbvJson := gcbv.ToJson("POST")
+			/* Sigh. For some reason, *some* places want nothing
+			 * sent for cookbook information divisions like 
+			 * attributes, libraries, providers, etc. However, 
+			 * others will flip out if nothing is sent at all, and
+			 * environment/<env>/cookbook_versions is one of them.
+			 * Go through the list of possibly guilty divisions and
+			 * set them to an empty slice of maps if they're nil. */
+			chkDiv := []string{ "definitions", "libraries", "attributes", "providers", "resources", "templates", "root_files", "files" }
+			for _, cd := range chkDiv {
+				if gcbvJson[cd] == nil {
+					gcbvJson[cd] = make([]map[string]interface{}, 0)
+				}
+			}
+			cookbook_deps[gcbv.CookbookName] = gcbvJson
 		}
 	}
 
