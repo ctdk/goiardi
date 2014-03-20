@@ -1,3 +1,23 @@
+0.4.2
+-----
+Bugfix release:
+* Perm tweak for nodes updating themselves.
+* Small change with validating role descriptions when creating or updating
+  from JSON.
+* Fix issue with saving complicated indexed objects to disk where improperly
+  flattened indexable objects were making the gob encoder puke all over itself
+  when encoding the tries in the index docs.
+* Fixed a possible regression with synchronizing cookbooks that did not show
+  up in testing, but only in real use.
+* An absolutely bonkers fix for listing cookbook files with webui. Webui wants
+  all of the cookbook top level attributes sent over with a request to
+  /cookbooks/<name>/<version>, but this is the exact *opposite* of the
+  behavior chef-pedant wants, where empty definitions, attributes, etc. are
+  not sent over. Knife also seems quite content with this, so the fix for now,
+  since the two cases are mutually exclusionary, is to only send the empty
+  hashes for those top level attributes with a GET if the request is coming
+  from the webui. Bizarre, but it seems to be what's necessary.
+
 0.4.1
 -----
 * Small documentation tweaks
