@@ -36,7 +36,13 @@ func ConnectDB(dbEngine string, params map[string]string) (*sql.DB, error) {
 				return nil, cerr
 			}
 			db, err := sql.Open(strings.ToLower(dbEngine), connectStr)
-			return db, err
+			if err != nil {
+				return nil, err
+			}
+			if err = db.Ping(); err != nil {
+				return nil, err
+			}
+			return db, nil
 		default:
 			err := fmt.Errorf("cannot connect to database: unsupported database type %s", dbEngine)
 			return nil, err
