@@ -50,6 +50,18 @@ func main(){
 	config.ParseConfigOptions()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
+	/* Here goes nothing, db... */
+	if config.Config.UseMySQL {
+		var derr error
+		data_store.Dbh, derr = data_store.ConnectDB("mysql", config.Config.MySQL)
+		if derr != nil {
+			log.Println(derr)
+			os.Exit(1)
+		} else {
+			log.Println("connected!")
+		}
+	}
+
 	gobRegister()
 	ds := data_store.New()
 	if config.Config.FreezeData {

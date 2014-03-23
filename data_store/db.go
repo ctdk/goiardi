@@ -25,10 +25,10 @@ import (
 	"fmt"
 )
 
-var dbh *sql.DB
+var Dbh *sql.DB
 
 // Connect to a database with the database name and a map of connection options.
-func ConnectDB(dbEngine string, params map[string]string) (*sql.DB, error) {
+func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	switch strings.ToLower(dbEngine) {
 		case "mysql":
 			connectStr, cerr := formatMysqlConStr(params)

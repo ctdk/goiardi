@@ -18,13 +18,15 @@
 package data_store
 
 import (
+	"github.com/ctdk/goiardi/config"
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 )
 
-func formatMysqlConStr(params map[string]string) (string, error) {
-	mainParams := map[string]bool{ "username": true, "password": true, "protocol": true, "address": true, "dbname": true }
+func formatMysqlConStr(p interface{}) (string, error) {
+	params := p.(config.MySQLdb)
 	var (
 		userpass string
 		protocol string
@@ -33,29 +35,33 @@ func formatMysqlConStr(params map[string]string) (string, error) {
 		extraParamStr string
 	)
 	extraParams := make([]string, 0)
-	if d, found := params["dbname"]; !found {
+	if params.Dbname == "" {
 		err := fmt.Errorf("no database name specified")
 		return "", err
 	} else {
-		dbname = d
+		dbname = params.Dbname
 	}
-	if u, found := params["username"]; found {
-		if p, f := params["password"]; f {
-			userpass = fmt.Sprintf("%s:%s@", u, p)	
+	if params.Username != "" {
+		if params.Password != "" {
+			userpass = fmt.Sprintf("%s:%s@", params.Username, params.Password)
 		} else {
-			userpass = fmt.Sprintf("%s@", u)
+			userpass = fmt.Sprintf("%s@", params.Username)
 		}
 	}
 	// TODO: see if protocol is needed if address is specified?
-	protocol = params["protocol"]
-	if a, found := params["address"]; found {
-		address = fmt.Sprintf("(%s)", a)
-	}
-	for k, v := range params {
-		if !mainParams[k] {
-			escVal := url.QueryEscape(v)
-			extraParams = append(extraParams, fmt.Sprintf("%s=%s", k, escVal))
+	protocol = params.Protocol
+	if params.Address != "" {
+		var addr string
+		if !strings.HasPrefix(protocol, "unix") {
+			addr = net.JoinHostPort(params.Address, params.Port)
+		} else {
+			addr = params.Address
 		}
+		address = fmt.Sprintf("(%s)", addr)
+	}
+	for k, v := range params.ExtraParams {
+		escVal := url.QueryEscape(v)
+		extraParams = append(extraParams, fmt.Sprintf("%s=%s", k, escVal))
 	}
 	if len(extraParams) != 0 {
 		extraParamStr = fmt.Sprintf("?%s", strings.Join(extraParams, "&"))

@@ -51,6 +51,19 @@ type Conf struct {
 	SslKey string `toml:"ssl-key"`
 	HttpsUrls bool `toml:"https-urls"`
 	DisableWebUI bool `toml:"disable-webui"`
+	UseMySQL bool `toml:"use-mysql"`
+	MySQL MySQLdb `toml:"mysql"`
+}
+
+// MySQL connection options
+type MySQLdb struct {
+	Username string
+	Password string
+	Protocol string
+	Address string
+	Port string
+	Dbname string
+	ExtraParams map[string]string `toml:"extra_params"`
 }
 
 /* Struct for command line options. */
@@ -73,6 +86,7 @@ type Options struct {
 	SslKey string `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root."`
 	HttpsUrls bool `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP."`
 	DisableWebUI bool `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface."`
+	UseMySQL bool `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file."`
 }
 
 // The goiardi version.
@@ -163,6 +177,20 @@ func ParseConfigOptions() error {
 		}
 		log.SetOutput(lfp)
 	}
+
+	/* Database options */
+	if opts.UseMySQL {
+		Config.UseMySQL = opts.UseMySQL
+	}
+	// Don't bother setting a default mysql port if mysql isn't used
+	if Config.UseMySQL {
+		if Config.MySQL.Port == "" {
+			Config.MySQL.Port = "3306"
+		}
+	}
+
+	// TODO: once db support is more mature, the dance with freezing data
+	// will become more complicated and need to be changed.
 
 	if !Config.FreezeData && (opts.FreezeInterval != 0 || Config.FreezeInterval != 0) {
 		log.Printf("FYI, setting the freeze data interval's not especially useful without setting the index and data files.")
