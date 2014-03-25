@@ -20,11 +20,14 @@
 package node
 
 import (
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/indexer"
 	"fmt"
 	"net/http"
+	"log"
+	"database/sql"
 )
 
 type Node struct {
@@ -41,11 +44,32 @@ type Node struct {
 
 func New(name string) (*Node, util.Gerror) {
 	/* check for an existing node with this name */
-	ds := data_store.New()
-	if _, found := ds.Get("node", name); found {
-		err := util.Errorf("Node %s already exists", name)
-		err.SetStatus(http.StatusConflict)
-		return nil, err
+	if config.Config.UseMySQL {
+		var node_id int
+		// will need redone if orgs ever get implemented
+		stmt, err := data_store.Dbh.Prepare("select id from nodes where name = ?")
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = stmt.QueryRow(name).Scan(&node_id)
+		if err == nil {
+			gerr := util.Errorf("Node %s already exists", name)
+			gerr.SetStatus(http.StatusConflict)
+			return nil, gerr
+		} else {
+			if err != sql.ErrNoRows {
+				gerr := util.Errorf(err.Error())
+				gerr.SetStatus(http.StatusInternalServerError)
+				return nil, gerr
+			}
+		}
+	} else {
+		ds := data_store.New()
+		if _, found := ds.Get("node", name); found {
+			err := util.Errorf("Node %s already exists", name)
+			err.SetStatus(http.StatusConflict)
+			return nil, err
+		}
 	}
 	if !util.ValidateDBagName(name){
 		err := util.Errorf("Field 'name' invalid")
@@ -84,13 +108,65 @@ func NewFromJson(json_node map[string]interface{}) (*Node, util.Gerror){
 }
 
 func Get(node_name string) (*Node, error) {
-	ds := data_store.New()
-	node, found := ds.Get("node", node_name)
+	var node *Node
+	var found bool
+	if config.Config.UseMySQL {
+		var (
+			rl []byte
+			aa []byte
+			na []byte
+			da []byte
+			oa []byte
+		)
+		node = new(Node)
+		stmt, err := data_store.Dbh.Prepare("select n.name, e.name as chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n join environments as e on n.environment_id = e.id where n.name = ?")
+		defer stmt.Close()
+		if err != nil {
+			return nil, err
+		}
+		err = stmt.QueryRow(1).Scan(&node.Name, &node.ChefEnvironment, &rl, &aa, &na, &da, &oa)
+		log.Println(err)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				found = false
+			} else {
+				return nil, err
+			}
+		} else {
+			node.ChefType = "node"
+			node.JsonClass = "Chef::Node"
+			err = data_store.DecodeBlob(rl, node.RunList)
+			if err != nil {
+				return nil, err
+			}
+			err = data_store.DecodeBlob(aa, node.Automatic)
+			if err != nil {
+				return nil, err
+			}
+			err = data_store.DecodeBlob(na, node.Normal)
+			if err != nil {
+				return nil, err
+			}
+			err = data_store.DecodeBlob(da, node.Default)
+			if err != nil {
+				return nil, err
+			}
+			err = data_store.DecodeBlob(oa, node.Override)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		ds := data_store.New()
+		var n interface{}
+		n, found = ds.Get("node", node_name)
+		node = n.(*Node)
+	}
 	if !found {
 		err := fmt.Errorf("node '%s' not found", node_name)
 		return nil, err
 	}
-	return node.(*Node), nil
+	return node, nil
 }
 
 // Update an existing node with the uploaded JSON.
@@ -193,24 +269,46 @@ func (n *Node) UpdateFromJson(json_node map[string]interface{}) util.Gerror {
 }
 
 func (n *Node) Save() error {
-	ds := data_store.New()
-	ds.Set("node", n.Name, n)
+	if config.Config.UseMySQL {
+
+	} else {
+		ds := data_store.New()
+		ds.Set("node", n.Name, n)
+	}
 	/* TODO Later: excellent candidate for a goroutine */
 	indexer.IndexObj(n)
 	return nil
 }
 
 func (n *Node) Delete() error {
-	ds := data_store.New()
-	ds.Delete("node", n.Name)
+	if config.Config.UseMySQL {
+		tx := data_store.Dbh.Begin()
+		_, err := tx.Exec("DELETE FROM nodes WHERE name = ?", n.Name)
+		if err != nil {
+			terr := tx.Rollback()
+			if terr != nil {
+				err = fmt.Errorf("deleting node %s had an error '%s', and then rolling back the transaction gave another error '%s', n.Name, err.Error(), terr.Error())
+			}
+			return err
+		}
+		tx.Commit()
+	} else {
+		ds := data_store.New()
+		ds.Delete("node", n.Name)
+	}
 	indexer.DeleteItemFromCollection("node", n.Name)
 	return nil
 }
 
 // Get a list of the nodes on this server.
 func GetList() []string {
-	ds := data_store.New()
-	node_list := ds.GetList("node")
+	var node_list []string
+	if config.Config.UseMySQL {
+		
+	} else {
+		ds := data_store.New()
+		node_list = ds.GetList("node")
+	}
 	return node_list
 }
 

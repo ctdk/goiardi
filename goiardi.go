@@ -303,6 +303,9 @@ func handleSignals() {
 						log.Println(err)
 					}
 				}
+				if config.Config.UseMySQL {
+					data_store.Dbh.Close()
+				}
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
 				log.Println("Reloading configuration...")

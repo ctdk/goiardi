@@ -23,6 +23,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"strings"
 	"fmt"
+	"bytes"
+	"encoding/gob"
 )
 
 var Dbh *sql.DB
@@ -47,4 +49,29 @@ func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 			err := fmt.Errorf("cannot connect to database: unsupported database type %s", dbEngine)
 			return nil, err
 	}
+}
+
+// Encode a slice or map of goiardi object data to save in the database
+func EncodeBlob(obj interface{}) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	enc := gob.NewEncoder(buf)
+	var err error
+	defer func() {
+		if x := recover(); x != nil {
+			err = fmt.Errorf("Something went wrong encoding an object for storing in the database with Gob")
+		}
+	}()
+	err = enc.Encode(obj)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// Decode the data encoded with EncodeBlob that was stored in the database so it
+// can be loaded back into a goiardi object.
+func DecodeBlob(data []byte, obj interface{}) error {
+	dbuf := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(dbuf)
+	return dec.Decode(&obj)
 }
