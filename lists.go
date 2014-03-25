@@ -27,7 +27,6 @@ import (
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"strings"
-	"log"
 )
 
 func list_handler(w http.ResponseWriter, r *http.Request){
@@ -75,7 +74,6 @@ func node_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 				node_response[k] = util.CustomURL(item_url)
 			}
 		case "POST":
-			log.Printf("It is this one, right?")
 			if opUser.IsValidator() {
 				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 				return nil
