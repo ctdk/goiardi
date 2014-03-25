@@ -61,7 +61,7 @@ func EncodeBlob(obj interface{}) ([]byte, error) {
 			err = fmt.Errorf("Something went wrong encoding an object for storing in the database with Gob")
 		}
 	}()
-	err = enc.Encode(obj)
+	err = enc.Encode(&obj)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +70,14 @@ func EncodeBlob(obj interface{}) ([]byte, error) {
 
 // Decode the data encoded with EncodeBlob that was stored in the database so it
 // can be loaded back into a goiardi object.
-func DecodeBlob(data []byte, obj interface{}) error {
+func DecodeBlob(data []byte, obj interface{}) (interface{}, error) {
 	dbuf := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(dbuf)
-	return dec.Decode(&obj)
+	err := dec.Decode(&obj)
+	if err != nil {
+		return nil, err
+	}
+	/* Tried to do a pointer to an interface as an argument here, but that
+	 * made the compiler pretty unhappy. */
+	return obj, nil
 }

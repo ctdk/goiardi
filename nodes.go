@@ -100,7 +100,11 @@ func node_handler(w http.ResponseWriter, r *http.Request){
 					return
 				}
 			}
-			chef_node.Save()
+			err = chef_node.Save()
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			enc := json.NewEncoder(w)
 			if err = enc.Encode(&chef_node); err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)

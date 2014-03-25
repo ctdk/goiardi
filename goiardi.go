@@ -57,8 +57,6 @@ func main(){
 		if derr != nil {
 			log.Println(derr)
 			os.Exit(1)
-		} else {
-			log.Println("connected!")
 		}
 	}
 

@@ -124,8 +124,7 @@ func Get(node_name string) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = stmt.QueryRow(1).Scan(&node.Name, &node.ChefEnvironment, &rl, &aa, &na, &da, &oa)
-		log.Println(err)
+		err = stmt.QueryRow(node_name).Scan(&node.Name, &node.ChefEnvironment, &rl, &aa, &na, &da, &oa)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -133,28 +132,40 @@ func Get(node_name string) (*Node, error) {
 				return nil, err
 			}
 		} else {
+			found = true
 			node.ChefType = "node"
 			node.JsonClass = "Chef::Node"
-			err = data_store.DecodeBlob(rl, node.RunList)
+			var q interface{}
+			q, err = data_store.DecodeBlob(rl, node.RunList)
 			if err != nil {
 				return nil, err
 			}
-			err = data_store.DecodeBlob(aa, node.Automatic)
+			node.RunList = q.([]string)
+			/* handle nulls with decoded empty []string in json 
+			 * down the road */
+			if len(node.RunList) == 0 {
+				node.RunList = make([]string, 0)
+			}
+			q, err = data_store.DecodeBlob(aa, node.Automatic)
 			if err != nil {
 				return nil, err
 			}
-			err = data_store.DecodeBlob(na, node.Normal)
+			node.Automatic = q.(map[string]interface{})
+			q, err = data_store.DecodeBlob(na, node.Normal)
 			if err != nil {
 				return nil, err
 			}
-			err = data_store.DecodeBlob(da, node.Default)
+			node.Normal = q.(map[string]interface{})
+			q, err = data_store.DecodeBlob(da, node.Default)
 			if err != nil {
 				return nil, err
 			}
-			err = data_store.DecodeBlob(oa, node.Override)
+			node.Default = q.(map[string]interface{})
+			q, err = data_store.DecodeBlob(oa, node.Override)
 			if err != nil {
 				return nil, err
 			}
+			node.Override = q.(map[string]interface{})
 		}
 	} else {
 		ds := data_store.New()
@@ -293,15 +304,35 @@ func (n *Node) Save() error {
 		}
 
 		tx, err := data_store.Dbh.Begin()
+		var node_id uint32
 		if err != nil {
 			return err
 		}
-		// probably want binlog_format set to MIXED or ROW for this
-		// query
-		_, err = tx.Exec("UPDATE nodes n, environments e SET n.environment_id = e.id, n.run_list = ?, n.automatic_attr = ?, n.normal_attr = ?, n.default_attr = ?, n.override_attr = ?, n.updated_at = NOW() WHERE n.name = ?", rlb, aab, nab, dab, oab, n.Name)
-		if err != nil {
-			tx.Rollback()
-			return err
+		err = tx.QueryRow("SELECT id FROM nodes WHERE name = ?", n.Name).Scan(&node_id)
+		if err == nil {
+			// probably want binlog_format set to MIXED or ROW for 
+			// this query
+			_, err := tx.Exec("UPDATE nodes n, environments e SET n.environment_id = e.id, n.run_list = ?, n.automatic_attr = ?, n.normal_attr = ?, n.default_attr = ?, n.override_attr = ?, n.updated_at = NOW() WHERE n.id = ? and e.name = ?", rlb, aab, nab, dab, oab, node_id, n.ChefEnvironment)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		} else {
+			if err != sql.ErrNoRows {
+				tx.Rollback()
+				return err
+			}
+			var environment_id uint32
+			err = tx.QueryRow("SELECT id FROM environments WHERE name = ?", n.ChefEnvironment).Scan(&environment_id)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+			_, err = tx.Exec("INSERT INTO nodes (name, environment_id, run_list, automatic_attr, normal_attr, default_attr, override_attr, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())", n.Name, environment_id, rlb, aab, nab, dab, oab)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
 		}
 		tx.Commit()
 	} else {
@@ -323,7 +354,7 @@ func (n *Node) Delete() error {
 		if err != nil {
 			terr := tx.Rollback()
 			if terr != nil {
-				err = fmt.Errorf("deleting node %s had an error '%s', and then rolling back the transaction gave another error '%s', n.Name, err.Error(), terr.Error())
+				err = fmt.Errorf("deleting node %s had an error '%s', and then rolling back the transaction gave another error '%s'", n.Name, err.Error(), terr.Error())
 			}
 			return err
 		}
