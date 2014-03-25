@@ -270,7 +270,40 @@ func (n *Node) UpdateFromJson(json_node map[string]interface{}) util.Gerror {
 
 func (n *Node) Save() error {
 	if config.Config.UseMySQL {
+		// prepare the complex structures for saving
+		rlb, rlerr := data_store.EncodeBlob(n.RunList)
+		if rlerr != nil {
+			return rlerr
+		}
+		aab, aaerr := data_store.EncodeBlob(n.Automatic)
+		if aaerr != nil {
+			return aaerr
+		}
+		nab, naerr := data_store.EncodeBlob(n.Normal)
+		if naerr != nil {
+			return naerr
+		}
+		dab, daerr := data_store.EncodeBlob(n.Default)
+		if daerr != nil {
+			return daerr
+		}
+		oab, oaerr := data_store.EncodeBlob(n.Override)
+		if oaerr != nil {
+			return oaerr
+		}
 
+		tx, err := data_store.Dbh.Begin()
+		if err != nil {
+			return err
+		}
+		// probably want binlog_format set to MIXED or ROW for this
+		// query
+		_, err = tx.Exec("UPDATE nodes n, environments e SET n.environment_id = e.id, n.run_list = ?, n.automatic_attr = ?, n.normal_attr = ?, n.default_attr = ?, n.override_attr = ?, n.updated_at = NOW() WHERE n.name = ?", rlb, aab, nab, dab, oab, n.Name)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		tx.Commit()
 	} else {
 		ds := data_store.New()
 		ds.Set("node", n.Name, n)
@@ -282,8 +315,11 @@ func (n *Node) Save() error {
 
 func (n *Node) Delete() error {
 	if config.Config.UseMySQL {
-		tx := data_store.Dbh.Begin()
-		_, err := tx.Exec("DELETE FROM nodes WHERE name = ?", n.Name)
+		tx, err := data_store.Dbh.Begin()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("DELETE FROM nodes WHERE name = ?", n.Name)
 		if err != nil {
 			terr := tx.Rollback()
 			if terr != nil {
@@ -304,7 +340,27 @@ func (n *Node) Delete() error {
 func GetList() []string {
 	var node_list []string
 	if config.Config.UseMySQL {
-		
+		rows, err := data_store.Dbh.Query("SELECT name FROM nodes")
+		if err != nil {
+			rows.Close()
+			if err != sql.ErrNoRows {
+				log.Fatal(err)
+			}
+			return node_list
+		}
+		node_list = make([]string, 0)
+		for rows.Next() {
+			var node_name string
+			err = rows.Scan(&node_name)
+			if err != nil {
+				log.Fatal(err)
+			}
+			node_list = append(node_list, node_name)
+		}
+		rows.Close()
+		if err = rows.Err(); err != nil {
+			log.Fatal(err)
+		}
 	} else {
 		ds := data_store.New()
 		node_list = ds.GetList("node")
