@@ -88,7 +88,7 @@ func (ds *DataStore) Get(key_type string, key string) (interface {}, bool){
 	defer ds.m.RUnlock()
 	val, found := ds.dsc.Get(ds_key)
 	if val != nil {
-		chkNilArray(val)
+		ChkNilArray(val)
 	}
 	return val, found
 }
@@ -235,7 +235,12 @@ func (ds *DataStore) Load(dsFile string) error {
 	return fp.Close()
 }
 
-func chkNilArray(obj interface{}) {
+// When restoring an object from either the in-memory data store after it has
+// been saved to disk, or loading an object from the database with gob encoded
+// data structures, empty slices are encoded as "null" when they're sent out as
+// JSON to the client. This makes the client very unhappy, so those empty slices
+// need to be recreated again. Annoying, but it's how it goes.
+func ChkNilArray(obj interface{}) {
 	s := reflect.ValueOf(obj).Elem()
 	for i := 0; i < s.NumField(); i++ {
 		v := s.Field(i)

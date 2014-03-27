@@ -45,13 +45,8 @@ type Node struct {
 func New(name string) (*Node, util.Gerror) {
 	/* check for an existing node with this name */
 	if config.Config.UseMySQL {
-		var node_id int
 		// will need redone if orgs ever get implemented
-		stmt, err := data_store.Dbh.Prepare("select id from nodes where name = ?")
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = stmt.QueryRow(name).Scan(&node_id)
+		_, err := data_store.CheckForOne(data_store.Dbh, "nodes", name)
 		if err == nil {
 			gerr := util.Errorf("Node %s already exists", name)
 			gerr.SetStatus(http.StatusConflict)
@@ -107,9 +102,13 @@ func NewFromJson(json_node map[string]interface{}) (*Node, util.Gerror){
 	return node, nil
 }
 
-func Get(node_name string) (*Node, error) {
-	var node *Node
-	var found bool
+// Fill in a node from a row returned from the SQL server. Useful for the case
+// down the road where an array of objects is needed, but building it with
+// a call to GetList(), then repeated calls to Get() sucks with a real db even
+// if it's marginally acceptable in in-memory mode.
+//
+// NB: This does require the query to look like the one in Get().
+func (n *Node) fillNodeFromSQL(row *sql.Row) error {
 	if config.Config.UseMySQL {
 		var (
 			rl []byte
@@ -118,13 +117,59 @@ func Get(node_name string) (*Node, error) {
 			da []byte
 			oa []byte
 		)
+		err := row.Scan(&n.Name, &n.ChefEnvironment, &rl, &aa, &na, &da, &oa)
+		if err != nil {
+			return err
+		}
+		n.ChefType = "node"
+		n.JsonClass = "Chef::Node"
+		var q interface{}
+		q, err = data_store.DecodeBlob(rl, n.RunList)
+		if err != nil {
+			return err
+		}
+		n.RunList = q.([]string)
+		q, err = data_store.DecodeBlob(aa, n.Automatic)
+		if err != nil {
+			return err
+		}
+		n.Automatic = q.(map[string]interface{})
+		q, err = data_store.DecodeBlob(na, n.Normal)
+		if err != nil {
+			return err
+		}
+		n.Normal = q.(map[string]interface{})
+		q, err = data_store.DecodeBlob(da, n.Default)
+		if err != nil {
+			return err
+		}
+		n.Default = q.(map[string]interface{})
+		q, err = data_store.DecodeBlob(oa, n.Override)
+		if err != nil {
+			return err
+		}
+		n.Override = q.(map[string]interface{})
+		data_store.ChkNilArray(n)
+	} else { // add Postgres later
+		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillNodeFromSQL cannot be run")
+		return err
+	}
+	return nil
+}
+
+func Get(node_name string) (*Node, error) {
+	var node *Node
+	var found bool
+	if config.Config.UseMySQL {
 		node = new(Node)
 		stmt, err := data_store.Dbh.Prepare("select n.name, e.name as chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n join environments as e on n.environment_id = e.id where n.name = ?")
 		defer stmt.Close()
 		if err != nil {
 			return nil, err
 		}
-		err = stmt.QueryRow(node_name).Scan(&node.Name, &node.ChefEnvironment, &rl, &aa, &na, &da, &oa)
+		row := stmt.QueryRow(node_name)
+		err = node.fillNodeFromSQL(row)
+
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -133,39 +178,6 @@ func Get(node_name string) (*Node, error) {
 			}
 		} else {
 			found = true
-			node.ChefType = "node"
-			node.JsonClass = "Chef::Node"
-			var q interface{}
-			q, err = data_store.DecodeBlob(rl, node.RunList)
-			if err != nil {
-				return nil, err
-			}
-			node.RunList = q.([]string)
-			/* handle nulls with decoded empty []string in json 
-			 * down the road */
-			if len(node.RunList) == 0 {
-				node.RunList = make([]string, 0)
-			}
-			q, err = data_store.DecodeBlob(aa, node.Automatic)
-			if err != nil {
-				return nil, err
-			}
-			node.Automatic = q.(map[string]interface{})
-			q, err = data_store.DecodeBlob(na, node.Normal)
-			if err != nil {
-				return nil, err
-			}
-			node.Normal = q.(map[string]interface{})
-			q, err = data_store.DecodeBlob(da, node.Default)
-			if err != nil {
-				return nil, err
-			}
-			node.Default = q.(map[string]interface{})
-			q, err = data_store.DecodeBlob(oa, node.Override)
-			if err != nil {
-				return nil, err
-			}
-			node.Override = q.(map[string]interface{})
 		}
 	} else {
 		ds := data_store.New()
@@ -304,11 +316,11 @@ func (n *Node) Save() error {
 		}
 
 		tx, err := data_store.Dbh.Begin()
-		var node_id uint32
+		var node_id int32
 		if err != nil {
 			return err
 		}
-		err = tx.QueryRow("SELECT id FROM nodes WHERE name = ?", n.Name).Scan(&node_id)
+		node_id, err = data_store.CheckForOne(tx, "nodes", n.Name)
 		if err == nil {
 			// probably want binlog_format set to MIXED or ROW for 
 			// this query
@@ -322,8 +334,8 @@ func (n *Node) Save() error {
 				tx.Rollback()
 				return err
 			}
-			var environment_id uint32
-			err = tx.QueryRow("SELECT id FROM environments WHERE name = ?", n.ChefEnvironment).Scan(&environment_id)
+			var environment_id int32
+			environment_id, err = data_store.CheckForOne(tx, "environments", n.ChefEnvironment)
 			if err != nil {
 				tx.Rollback()
 				return err

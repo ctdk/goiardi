@@ -340,6 +340,8 @@ func gobRegister() {
 	gob.Register(i)
 	gob.Register(ic)
 	gob.Register(id)
+	ms := make(map[string]string)
+	gob.Register(ms)
 }
 
 func setSaveTicker() {

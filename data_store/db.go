@@ -29,6 +29,14 @@ import (
 
 var Dbh *sql.DB
 
+// Interface for db handle types that can execute queries
+type Dbhandle interface {
+	Prepare(query string) (*sql.Stmt, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
+}
+
 // Connect to a database with the database name and a map of connection options.
 func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	switch strings.ToLower(dbEngine) {
@@ -80,4 +88,16 @@ func DecodeBlob(data []byte, obj interface{}) (interface{}, error) {
 	/* Tried to do a pointer to an interface as an argument here, but that
 	 * made the compiler pretty unhappy. */
 	return obj, nil
+}
+
+func CheckForOne(dbhandle Dbhandle, kind string, name string) (int32, error){
+	var obj_id int32
+	prepStatement := fmt.Sprintf("SELECT id FROM %s WHERE name = ?", kind)
+	stmt, err := dbhandle.Prepare(prepStatement)
+	defer stmt.Close()
+	if err != nil {
+		return 0, err
+	}
+	err = stmt.QueryRow(name).Scan(&obj_id)
+	return obj_id, err
 }
