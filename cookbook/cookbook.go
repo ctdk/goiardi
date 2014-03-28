@@ -21,6 +21,7 @@
 package cookbook
 
 import (
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/util"
@@ -31,6 +32,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"database/sql"
 )
 
 // Make version strings with the format "x.y.z" sortable.
@@ -78,22 +80,71 @@ func (c *Cookbook) URLType() string {
 }
 
 func New(name string) (*Cookbook, util.Gerror){
-	ds := data_store.New()
-
 	if !util.ValidateEnvName(name) {
 		err := util.Errorf("Invalid cookbook name '%s' using regex: 'Malformed cookbook name. Must only contain A-Z, a-z, 0-9, _ or -'.", name)
 		return nil, err
 	}
-	if _, found := ds.Get("cookbook", name); found {
-		err := util.Errorf("Cookbook %s already exists", name)
-		err.SetStatus(http.StatusConflict)
-		return nil, err
+	if config.Config.UseMySQL {
+		_, err := data_store.CheckForOne(data_store.Dbh, "cookbooks", name)
+		if err == nil {
+			gerr := util.Errorf("Cookbook %s already exists", name)
+			gerr.SetStatus(http.StatusConflict)
+			return nil gerr
+		} else {
+			if err != sql.ErrNoRows {
+				gerr := util.Errorf(err.Error())
+				gerr.SetStatus(http.StatusInternalServerError)
+				return nil, gerr
+			}
+		}
+	} else {
+		ds := data_store.New()
+		if _, found := ds.Get("cookbook", name); found {
+			err := util.Errorf("Cookbook %s already exists", name)
+			err.SetStatus(http.StatusConflict)
+			return nil, err
+		}
 	}
 	cookbook := &Cookbook{
 		Name: name,
 		Versions: make(map[string]*CookbookVersion),
 	}
 	return cookbook, nil
+}
+
+func (c *Cookbook)NumVersions() int {
+	if config.Config.UseMySQL {
+		var cbv_count int
+		stmt, err := data_store.Dbh.Prepare("SELECT count(*) AS c FROM cookbook_versions cbv LEFT JOIN cookbooks cv ON cbv.cookbook_id = cb.id WHERE cb.name = ?")
+		defer stmt.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = stmt.QueryRow(c.Name).Scan(&cbv_count)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return 0
+			}
+			log.Fatal(err)
+		}
+		return cbv_count
+	} else {
+		return len(c.Versions)
+	}
+}
+
+func (c *Cookbook) fillCookbookFromSQL(row *sql.Row) error {
+	if config.Config.UseMySQL {
+		var cookbook_id int
+		err := row.Scan(&cookbook_id, &c.Name)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillCookbookFromSQL cannot be run")
+		return err
+	}
+	return nil
 }
 
 func Get(name string) (*Cookbook, util.Gerror){
@@ -499,6 +550,30 @@ func (c *Cookbook)NewVersion(cb_version string, cbv_data map[string]interface{})
 	c.UpdateLatestVersion()
 	c.Save()
 	return cbv, nil
+}
+
+func (cbv *CookbookVersion)fillCookbookVersionFromSQL(row *sql.Row) error {
+	if config.Config.UseMySQL {
+		var (
+			defb []byte
+			libb []byte
+			attb []byte
+			recb []byte
+			prob []byte
+			resb []byte
+			temb []byte
+			roob []byte
+			filb []byte
+			metb []byte
+			major int32
+			minor int32
+			patch int32
+		)
+	} else {
+		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillCookbookVersionFromSQL cannot be run")
+		return err
+	}
+	return nil
 }
 
 // Get a particular version of the cookbook.

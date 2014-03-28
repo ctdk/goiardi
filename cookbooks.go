@@ -199,7 +199,7 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 					/* If all versions are gone, remove the
 					 * cookbook - seems to be the desired
 					 * behavior. */
-					if len(cb.Versions) == 0 {
+					if cb.NumVersions() == 0 {
 						if cerr := cb.Delete(); cerr != nil {
 							JsonErrorReport(w, r, cerr.Error(), http.StatusInternalServerError)
 							return
