@@ -153,54 +153,163 @@ func (c *Cookbook) fillCookbookFromSQL(row *sql.Row) error {
 }
 
 func Get(name string) (*Cookbook, util.Gerror){
-	ds := data_store.New()
-	cookbook, found := ds.Get("cookbook", name)
+	var cookbook *Cookbook
+	var found bool
+	if config.Config.UseMySQL {
+		cookbook = new(Cookbook)
+		stmt, err = data_store.Dbh.Prepare("SELECT id, name FROM cookbooks WHERE name = ?", name)
+		defer stmt.Close()
+		if err != nil {
+			gerr := util.Errorf(err.Error())
+			return nil, gerr
+		}
+		row := stmt.QueryRow(name)
+		err = cookbook.fillCookbookFromSQL(row)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				found = false
+			} else {
+				gerr := util.Errorf(err.Error())
+				return nil, gerr
+			}
+		} else {
+			found = true
+			cookbook.Versions = make(map[string]*CookbookVersion)
+		}
+	} else {
+		ds := data_store.New()
+		var c interface{}
+		c, found = ds.Get("cookbook", name)
+		cookbook = c.(*Cookbook)
+	}
 	if !found {
 		err := util.Errorf("Cannot find a cookbook named %s", name)
 		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
-	return cookbook.(*Cookbook), nil
+	return cookbook, nil
 }
 
 func (c *Cookbook) Save() error {
-	ds := data_store.New()
-	ds.Set("cookbook", c.Name, c)
+	if config.Config.UseMySQL {
+
+	} else {
+		ds := data_store.New()
+		ds.Set("cookbook", c.Name, c)
+	}
 	return nil
 }
 
 func (c *Cookbook) Delete() error {
-	ds := data_store.New()
-	ds.Delete("cookbook", c.Name)
+	if config.Config.UseMySQL {
+		tx, err := data_store.Dbh.Begin()
+		if err != nil {
+			return err
+		}
+		/* Delete the versions first. */
+		_, err = tx.Exec("DELETE FROM cookbook_versions WHERE cookbook_id = ?", c.id)
+		if err != nil && err != sql.ErrNoRows {
+			terr := tx.Rollback()
+			if terr != nil {
+				err = fmt.Errorf("deleting cookbook versions for %s had an error '%s', and then rolling back the transaction gave another error '%s'", c.Name, err.Error(), terr.Error())
+			}
+			return err
+		}
+		_, err = tx.Exec("DELETE FROM cookbooks WHERE id = ?", c.id)
+		if err != nil {
+			terr := tx.Rollback()
+			if terr != nil {
+				err = fmt.Errorf("deleting cookbook versions for %s had an error '%s', and then rolling back the transaction gave another error '%s'", c.Name, err.Error(), terr.Error())
+			}
+			return err
+		}
+		tx.Commit()
+	} else {
+		ds := data_store.New()
+		ds.Delete("cookbook", c.Name)
+	}
 	log.Printf("deleted %s\n", c.Name)
 	return nil
 }
 
 // Get a list of all cookbooks on this server.
 func GetList() []string {
-	ds := data_store.New()
-	cb_list := ds.GetList("cookbook")
+	var cb_list []string
+	if config.Config.UseMySQL {
+		cb_list = make([]string, 0)
+		rows, err := data_store.Dbh.Query("SELECT name FROM cookbooks")
+		if err != nil {
+			rows.Close()
+			if err != sql.ErrNoRows {
+				log.Fatal(err)
+			}
+			return cb_list
+		}
+		for rows.Next() {
+			var cb_name string
+			err = rows.Scan(&cb_name)
+			if err != nil {
+				log.Fatal(err)
+			}
+			cb_list = append(cb_list, cb_name)
+		}
+		rows.Close()
+		if err = rows.Err(); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		ds := data_store.New()
+		cb_list = ds.GetList("cookbook")
+	}
 	return cb_list
 }
 
 func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
-	sorted := make([]*CookbookVersion, len(c.Versions))
-	keys := make(VersionStrings, len(c.Versions))
-
-	u := 0
-	for k, _ := range c.Versions {
-		keys[u] = k
-		u++
-	}
-	sort.Sort(sort.Reverse(keys))
-
-	/* populate sorted now */
-	for i, s := range keys {
-		/* This shouldn't be able to happen, but somehow it... does? */
-		if i >= len(sorted) {
-			break
+	var sorted []*CookbookVersion
+	
+	if config.Config.UseMySQL {
+		sorted = make([]*CookbookVersion, 0)
+		stmt, err := data_store.Dbh.Prepare("SELECT definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks ON cv.cookbook_id = c.id WHERE cookbook_id = ? ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC")
+		defer stmt.Close()
+		if err != nil {
+			log.Fatal(err)
 		}
-		sorted[i] = c.Versions[s]
+		rows, qerr := stmt.Query(c.id)
+		if qerr != nil {
+			if qerr == sql.ErrNoRows {
+				return sorted
+			}
+			log.Fatal(qerr)
+		}
+		for rows.Next() {
+			cbv := new(CookbookVersion)
+			err = cbv.fillCookbookVersionFromSQL(rows)
+			if err != nil {
+				log.Fatal(err)
+			}
+			// may as well populate this while we have it
+			c.Versions[cbv.Version] = cbv
+			sorted = append(sorted, cbv)
+		}
+	} else {
+		sorted = make([]*CookbookVersion, len(c.Versions))
+		keys := make(VersionStrings, len(c.Versions))
+
+		u := 0
+		for k, _ := range c.Versions {
+			keys[u] = k
+			u++
+		}
+		sort.Sort(sort.Reverse(keys))
+
+		/* populate sorted now */
+		for i, s := range keys {
+			/* This shouldn't be able to happen, but somehow it... does? */
+			if i >= len(sorted) {
+				break
+			}
+			sorted[i] = c.Versions[s]
+		}
 	}
 	return sorted
 }
@@ -585,12 +694,61 @@ func (cbv *CookbookVersion)fillCookbookVersionFromSQL(row *sql.Row) error {
 		cbv.Name = fmt.Sprintf("%s-%s", cbv.CookbookName, cbv.Version)
 		cbv.ChefType = "cookbook_version"
 		cbv.JsonClass = "Chef::JsonClass"
+
+		/* TODO: experiment some more with getting this done with
+		 * pointers. */
 		var q interface{}
+		q, err = data_store.DecodeBlob(metb, cbv.Metadata)
+		if err != nil {
+			return err
+		}
+		cbv.Metadata = q.(map[string]interface{})
 		q, err = data_store.DecodeBlob(defb, cbv.Definitions)
 		if err != nil {
 			return err
 		}
 		cbv.Definitions = q.([]map[string]interface{})
+		q, err = data_store.DecodeBlob(libb, cbv.Libraries)
+		if err != nil {
+			return err
+		}
+		cbv.Libraries = q.([]map[string]interface{})
+		q, err = data_store.DecodeBlob(attb, cbv.Attributes)
+		if err != nil {
+			return err
+		}
+		cbv.Attributes = q.([]map[string]interface{})
+		q, err = data_store.DecodeBlob(recb, cbv.Recipes)
+		if err != nil {
+			return err
+		}
+		cbv.Recipes = q.([]map[string]interface{})
+		q, err = data_store.DecodeBlob(prob, cbv.Providers)
+		if err != nil {
+			return err
+		}
+		cbv.Providers = q.([]map[string]interface{})
+		q, err = data_store.DecodeBlob(temb, cbv.Templates)
+		if err != nil {
+			return err
+		}
+		cbv.Templates = q.([]map[string]interface{})
+		q, err = data_store.DecodeBlob(resb, cbv.Resources)
+		if err != nil {
+			return err
+		}
+		cbv.Resources = q.([]map[string]interface{})
+		q, err = data_store.DecodeBlob(roob, cbv.RootFiles)
+		if err != nil {
+			return err
+		}
+		cbv.RootFiles = q.([]map[string]interface{})
+		q, err = data_store.DecodeBlob(filb, cbv.Files)
+		if err != nil {
+			return err
+		}
+		cbv.Files = q.([]map[string]interface{})
+		data_store.ChkNilArray(cbv)
 	} else {
 		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillCookbookVersionFromSQL cannot be run")
 		return err
@@ -609,31 +767,34 @@ func (c *Cookbook)GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
 	if config.Config.UseMySQL {
 		// Ridiculously cacheable, but let's get it working first. This
 		// applies all over the place w/ the SQL bits.
-		cbv = new(CookbookVersion)
-		maj, min, patch, cverr := extractVerNums(cbVersion)
-		if cverr != nil {
-			return nil, cverr
-		}
-		stmt, err := data_store.Dbh.Prepare("SELECT definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks ON cv.cookbook_id = c.id WHERE cookbook_id = ?")
-		defer stmt.Close()
-		var gerr util.Gerror
-		if err != nil {
-			gerr = util.Errorf(err.Error())
-			gerr.SetStatus(http.StatusInternalServerError)
-			return nil, gerr
-		}
-		row := stmt.QueryRow(c.id)
-		err = cbv.fillCookbookVersionFromSQL(row)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				found = false
-			} else {
+		if cbv, found = c.Versions[cbVersion]; !found {
+			cbv = new(CookbookVersion)
+			maj, min, patch, cverr := extractVerNums(cbVersion)
+			if cverr != nil {
+				return nil, cverr
+			}
+			stmt, err := data_store.Dbh.Prepare("SELECT definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks ON cv.cookbook_id = c.id WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?")
+			defer stmt.Close()
+			var gerr util.Gerror
+			if err != nil {
 				gerr = util.Errorf(err.Error())
 				gerr.SetStatus(http.StatusInternalServerError)
 				return nil, gerr
 			}
-		} else {
-			found = true
+			row := stmt.QueryRow(c.id, maj, min, patch)
+			err = cbv.fillCookbookVersionFromSQL(row)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					found = false
+				} else {
+					gerr = util.Errorf(err.Error())
+					gerr.SetStatus(http.StatusInternalServerError)
+					return nil, gerr
+				}
+			} else {
+				found = true
+				c.Versions[cbVersion] = cbv
+			}
 		}
 	} else {
 		cbv, found = c.Versions[cbVersion]

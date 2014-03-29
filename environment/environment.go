@@ -404,6 +404,7 @@ func (e *ChefEnvironment) Delete() error {
 func GetList() []string {
 	var env_list []string
 	if config.Config.UseMySQL {
+		env_list = make([]string, 0)
 		rows, err := data_store.Dbh.Query("SELECT name FROM environments")
 		if err != nil {
 			rows.Close()
