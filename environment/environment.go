@@ -346,7 +346,7 @@ func (e *ChefEnvironment) Save() error {
 		var env_id int32
 		env_id, err = data_store.CheckForOne(tx, "environments", e.Name)
 		if err == nil {
-			_, err := tx.Exec("UPDATE environments SET description = ?, default_attr = ?, override_attr = ?, cookbook_vers = ? WHERE id = ?", e.Description, dab, oab, cvb, env_id)
+			_, err := tx.Exec("UPDATE environments SET description = ?, default_attr = ?, override_attr = ?, cookbook_vers = ?, updated_at = NOW() WHERE id = ?", e.Description, dab, oab, cvb, env_id)
 			if err != nil {
 				tx.Rollback()
 				return err
@@ -417,6 +417,7 @@ func GetList() []string {
 			var env_name string
 			err = rows.Scan(&env_name)
 			if err != nil {
+				rows.Close()
 				log.Fatal(err)
 			}
 			env_list = append(env_list, env_name)

@@ -192,7 +192,36 @@ func Get(name string) (*Cookbook, util.Gerror){
 
 func (c *Cookbook) Save() error {
 	if config.Config.UseMySQL {
+		tx, err := data_store.Dbh.Begin()
+		if err != nil {
+			return err
+		}
+		var cookbook_id int32
+		cookbook_id, err = data_store.CheckForOne(tx, "cookbooks", c.Name)
+		if err == nil {
+			_, err = tx.Exec("UPDATE cookbooks SET name = ?, updated_at = NOW() WHERE c.id = ?", c.id)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		} else {
+			if err != sql.ErrNoRows {
+				tx.Rollback()
+				return err
+			}
+			res, rerr := tx.Exec("INSERT INTO cookbooks (name, created_at, updated_at) VALUES (?, NOW(), NOW())", c.Name)
+			if rerr != nil {
+				tx.Rollback()
+				return rerr
+			}
+			c.id, err = res.LastInsertedId()
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
 
+			tx.Commit()
+		}
 	} else {
 		ds := data_store.New()
 		ds.Set("cookbook", c.Name, c)
@@ -249,6 +278,7 @@ func GetList() []string {
 			var cb_name string
 			err = rows.Scan(&cb_name)
 			if err != nil {
+				rows.Close()
 				log.Fatal(err)
 			}
 			cb_list = append(cb_list, cb_name)
@@ -285,6 +315,7 @@ func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
 			cbv := new(CookbookVersion)
 			err = cbv.fillCookbookVersionFromSQL(rows)
 			if err != nil {
+				rows.Close()
 				log.Fatal(err)
 			}
 			// may as well populate this while we have it

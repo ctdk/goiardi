@@ -248,6 +248,13 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 						JsonErrorReport(w, r, err.Error(), err.Status())
 						return
 					}
+					/* save it so we get the id with mysql
+					 * for createing versions & such */
+					serr := cb.Save()
+					if serr != nil {
+						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+						return
+					}
 				}
 				cbv, err := cb.GetVersion(cookbook_version)
 				cbv_data, jerr := ParseObjJson(r.Body)
