@@ -69,6 +69,8 @@ type CookbookVersion struct {
 	Files []map[string]interface{} `json:"files"`
 	IsFrozen bool `json:"frozen?"`
 	Metadata map[string]interface{} `json:"metadata"` 
+	id int32
+	cookbook_id int32
 }
 
 /* Cookbook methods and functions */
@@ -236,6 +238,17 @@ func (c *Cookbook) Delete() error {
 			return err
 		}
 		/* Delete the versions first. */
+		/* First delete the hashes. This is a relatively unlikely 
+		 * scenario, but it's best to make sure to reap any straggling
+		 * versions and file hashes. */
+		fileHashes := make([]string, 0)
+		for _, cbv := range c.sortedVersions() {
+			fileHashes = append(fileHashes, cbv.fileHashes())
+		}
+		sort.Strings(fileHashes)
+		fileHashes = removeDupHashes(fileHashes)
+		c.deleteHashes(fileHashes)
+		
 		_, err = tx.Exec("DELETE FROM cookbook_versions WHERE cookbook_id = ?", c.id)
 		if err != nil && err != sql.ErrNoRows {
 			terr := tx.Rollback()
@@ -253,6 +266,7 @@ func (c *Cookbook) Delete() error {
 			return err
 		}
 		tx.Commit()
+		c.deleteHashes(fileHashes)
 	} else {
 		ds := data_store.New()
 		ds.Delete("cookbook", c.Name)
@@ -684,6 +698,7 @@ func (c *Cookbook)NewVersion(cb_version string, cbv_data map[string]interface{})
 		ChefType: "cookbook_version",
 		JsonClass: "Chef::CookbookVersion",
 		IsFrozen: false,
+		cookbook_id: c.id, // should be ok even with in-mem
 	}
 	err := cbv.UpdateVersion(cbv_data, "")
 	if err != nil {
@@ -714,7 +729,7 @@ func (cbv *CookbookVersion)fillCookbookVersionFromSQL(row *sql.Row) error {
 			minor int32
 			patch int32
 		)
-		err := row.Scan(&defb, &libb, &attb, &recb, &prob, &resb, &temb, &roob, &filb, &metb, &major, &minor, &patch, &cbv.Frozen, &cbv.CookbookName)
+		err := row.Scan(&cbv.id, &cbv.cookbook_id, &defb, &libb, &attb, &recb, &prob, &resb, &temb, &roob, &filb, &metb, &major, &minor, &patch, &cbv.Frozen, &cbv.CookbookName)
 		if err != nil {
 			return err
 		}
@@ -804,7 +819,7 @@ func (c *Cookbook)GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
 			if cverr != nil {
 				return nil, cverr
 			}
-			stmt, err := data_store.Dbh.Prepare("SELECT definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks ON cv.cookbook_id = c.id WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?")
+			stmt, err := data_store.Dbh.Prepare("SELECT id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks ON cv.cookbook_id = c.id WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?")
 			defer stmt.Close()
 			var gerr util.Gerror
 			if err != nil {
@@ -930,6 +945,27 @@ func (c *Cookbook)DeleteVersion(cb_version string) util.Gerror {
 	} 
 
 	file_hashes := cbv.fileHashes()
+
+	if config.Config.UseMySQL {
+		tx, err := data_store.Dbh.Begin()
+		if err != nil {
+			gerr := util.Errorf(err.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		_, err = tx.Exec("DELETE FROM cookbook_versions WHERE id = ?", cbv.id)
+		if err != nil {
+			terr := tx.Rollback()
+			if terr != nil {
+				err = fmt.Errorf("deleting cookbook %s version %s had an error '%s', and then rolling back the transaction gave another error '%s'", c.Name, cbv.Version, err.Error(), terr.Error())
+			}
+			gerr := util.Errorf(err.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return err
+		}
+		tx.Commit()
+	}
+
 	delete(c.Versions, cb_version)
 	c.deleteHashes(file_hashes)
 	
@@ -1063,6 +1099,100 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 		cbv.IsFrozen = cbv_data["frozen?"].(bool)
 	}
 	cbv.Metadata = cbv_data["metadata"].(map[string]interface{})
+
+	/* If we're using SQL, update this version in the DB. */
+	if config.Config.UseMySQL {
+		// Preparing the complex data structures to be saved 
+		defb, deferr := data_store.EncodeBlob(cbv.Definitions)
+		if deferr != nil {
+			gerr := util.Errorf(deferr.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		libb, liberr := data_store.EncodeBlob(cbv.Libraries)
+		if liberr != nil {
+			gerr := util.Errorf(liberr.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		attb, atterr := data_store.EncodeBlob(cbv.Attributes)
+		if atterr != nil {
+			gerr := util.Errorf(atterr.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		recb, recerr := data_store.EncodeBlob(cbv.Recipes)
+		if recerr != nil {
+			gerr := util.Errorf(recerr.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		prob, proerr := data_store.EncodeBlob(cbv.Providers)
+		if proerr != nil {
+			gerr := util.Errorf(proerr.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		resb, reserr := data_store.EncodeBlob(cbv.Resources)
+		if reserr != nil {
+			gerr := util.Errorf(reserr.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		temb, temerr := data_store.EncodeBlob(cbv.Templates)
+		if temerr != nil {
+			gerr := util.Errorf(temerr.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		roob, rooerr := data_store.EncodeBlob(cbv.RootFiles)
+		if rooerr != nil {
+			gerr := util.Errorf(rooerr.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		filb, filerr := data_store.EncodeBlob(cbv.Files)
+		if filerr != nil {
+			gerr := util.Errorf(filerr.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		metb, meterr := data_store.EncodeBlob(cbv.Metadata)
+		if meterr != nil {
+			gerr := util.Errorf(meterr.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		/* version already validated */
+		maj, min, patch, _ := extractVerNums(cbv.Version)
+		/* Gotta look for an existing version ourselves. */
+		tx, err := data_store.Dbh.Begin()
+		if err != nil {
+			gerr := util.Errorf(err.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		var cbv_id int32
+		err = tx.QueryRow("SELECT id FROM cookbook_versions WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?", cbv.cookbook_id, maj, min, patch).Scan(&cbv_id)
+		if err == nil {
+			_, err := tx.Exec("UPDATE cookbook_versions SET frozen = ?, metadata = ?, definitions = ?, libraries = ?, attributes = ?, recipes = ?, providers = ?, resources = ?, templates = ?, root_files = ?, files = ?, updated_at = NOW() WHERE id = ?", cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb, cbv.cookbook_id)
+			if err != nil {
+				tx.Rollback()
+				gerr := util.Errorf(err.Error())
+				gerr.SetStatus(http.StatusInternalServerError)
+				return gerr
+			}
+		} else {
+			if err != sql.ErrNoRows {
+				tx.Rollback()
+				gerr := util.Errorf(err.Error())
+				gerr.SetStatus(http.StatusInternalServerError)
+				return gerr
+			}
+			
+		}
+		tx.Commit()
+	}
 
 	/* Clean cookbook hashes */
 	if len(file_hashes) > 0 {
