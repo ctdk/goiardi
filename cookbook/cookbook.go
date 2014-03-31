@@ -154,6 +154,10 @@ func (c *Cookbook) fillCookbookFromSQL(row *sql.Row) error {
 	return nil
 }
 
+func AllCookbooks() []*Cookbook {
+	cookbooks := make([]*Cookbook, 0)
+}
+
 func Get(name string) (*Cookbook, util.Gerror){
 	var cookbook *Cookbook
 	var found bool
@@ -1189,6 +1193,14 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 				gerr.SetStatus(http.StatusInternalServerError)
 				return gerr
 			}
+			res, err = tx.Exec("INSERT INTO cookbook_versions (cookbook_id, major_ver, minor_ver, patch_ver, frozen, metadata, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())", cbv.cookbook_id, maj, min, patch, cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb)
+			if err != nil {
+				tx.Rollback()
+				gerr := util.Errorf(err.Error())
+				gerr.SetStatus(http.StatusInternalServerError)
+				return gerr
+			}
+			cbv.id = res.LastInsertedId()
 			
 		}
 		tx.Commit()
