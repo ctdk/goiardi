@@ -156,6 +156,37 @@ func (c *Cookbook) fillCookbookFromSQL(row *sql.Row) error {
 
 func AllCookbooks() []*Cookbook {
 	cookbooks := make([]*Cookbook, 0)
+	if config.Config.UseMySQL {
+		stmt, err := data_store.Dbh.Prepare("SELECT id, name FROM cookbooks")
+		defer stmt.Close()
+		rows, qerr := stmt.Query()
+		if qerr != nil {
+			if qerr == sql.ErrNoRows {
+				return cookbooks
+			}
+			log.Fatal(qerr)
+		}
+		for rows.Next() {
+			cb := new(Cookbook)
+			err = cb.fillCookbookFromSQL(rows)
+			if err != nil {
+				rows.Close()
+				log.Fatal(err)
+			}
+			cookbooks = append(cookbooks, cb)
+		}
+	} else {
+		cookbook_list := GetList()
+		for _, c := range cookbook_list {
+			cb, err := Get(c)
+			if err != nil {
+				log.Printf("Curious. Cookbook %s was in the cookbook list, but wasn't found when fetched. Continuing.", c)
+				continue
+			}
+			cookbooks = append(cookbooks, c)
+		}
+	}
+	return cookbooks
 }
 
 func Get(name string) (*Cookbook, util.Gerror){

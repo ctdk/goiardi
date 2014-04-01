@@ -84,13 +84,7 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 
 	if path_array_len == 1 {
 		/* list all cookbooks */
-		cookbook_list := cookbook.GetList()
-		for _, c := range cookbook_list {
-			cb, err := cookbook.Get(c)
-			if err != nil {
-				log.Printf("Curious. Cookbook %s was in the cookbook list, but wasn't found when fetched. Continuing.", c)
-				continue
-			}
+		for _, cb := range cookbook.AllCookbooks() {
 			cookbook_response[cb.Name] = cb.InfoHash(num_results)
 		}
 	} else if path_array_len == 2 {
@@ -101,13 +95,7 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 		 * gets the recipes of the latest cookbooks. */
 		rlist := make([]string, 0)
 		if cookbook_name == "_latest" || cookbook_name == "_recipes" {
-			cb_list := cookbook.GetList()
-			for _, c := range cb_list {
-				cb, err := cookbook.Get(c)
-				if err != nil {
-					log.Printf("Curious. Cookbook %s was in the cookbook list, but wasn't found when fetched. Continuing.", c)
-					continue
-				}
+			for _, cb := range cookbook.AllCookbooks()
 				if cookbook_name == "_latest" {
 					cookbook_response[cb.Name] = util.CustomObjURL(cb, cb.LatestVersion().Version)
 				} else {
