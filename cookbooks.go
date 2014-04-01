@@ -20,7 +20,6 @@ package main
 
 import (
 	"net/http"
-	"log"
 	"encoding/json"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/util"
@@ -95,7 +94,7 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 		 * gets the recipes of the latest cookbooks. */
 		rlist := make([]string, 0)
 		if cookbook_name == "_latest" || cookbook_name == "_recipes" {
-			for _, cb := range cookbook.AllCookbooks()
+			for _, cb := range cookbook.AllCookbooks() {
 				if cookbook_name == "_latest" {
 					cookbook_response[cb.Name] = util.CustomObjURL(cb, cb.LatestVersion().Version)
 				} else {

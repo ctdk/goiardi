@@ -37,6 +37,10 @@ type Dbhandle interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 }
 
+type ResRow interface {
+	Scan(dest ...interface{}) error
+}
+
 // Connect to a database with the database name and a map of connection options.
 func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	switch strings.ToLower(dbEngine) {
