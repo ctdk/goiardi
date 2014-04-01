@@ -21,11 +21,13 @@
 package role
 
 import (
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/indexer"
 	"fmt"
 	"net/http"
+	"database/sql"
 )
 
 /* Need env_run_lists?!!? */
@@ -42,11 +44,26 @@ type Role struct {
 }
 
 func New(name string) (*Role, util.Gerror){
-	ds := data_store.New()
-	if _, found := ds.Get("role", name); found {
-		err := util.Errorf("Role %s already exists", name)
-		err.SetStatus(http.StatusConflict)
-		return nil, err
+	if config.Config.UseMySQL {
+		_, err := data_store.CheckForOne(data_store.Dbh, roles", name)
+		if err == nil {
+			gerr := util.Errorf("Role %s already exists", name)
+			gerr.SetStatus(http.StatusConflict)
+			return nil, gerr
+		} else {
+			if err != sql.ErrNoRows {
+				gerr := util.Errorf(err.Error())
+				gerr.SetStatus(http.StatusInternalServerError)
+				return nil, gerr
+			}
+		}
+	} else {
+		ds := data_store.New()
+		if _, found := ds.Get("role", name); found {
+			err := util.Errorf("Role %s already exists", name)
+			err.SetStatus(http.StatusConflict)
+			return nil, err
+		}
 	}
 	if !util.ValidateDBagName(name){
 		err := util.Errorf("Field 'name' invalid")
@@ -168,14 +185,80 @@ func (r *Role) UpdateFromJson(json_role map[string]interface{}) util.Gerror {
 	return nil
 }
 
+func (r *Role)fillRoleFromSQL(row *sql.Row) error {
+	if config.Config.UseMySQL {
+		var (
+			rl []byte
+			er []byte
+			da []byte
+			oa []byte
+		)
+		err := row.Scan(&r.Name, &r.Description, &rl, &er, &da, &oa)
+		if err != nil {
+			return err
+		}
+		r.ChefType = "role"
+		r.JsonClass = "Chef::Node"
+		var q interface{}
+		q, err = data_store.DecodeBlob(rl, r.RunList)
+		if err != nil {
+			return err
+		}
+		r.RunList = q([]string)
+		q, err = data_store.DecodeBlob(er, r.EnvRunLists)
+		if err != nil {
+			return err
+		}
+		r.EnvRunLists = q.(map[string][]string)
+		q, err = data_store.DecodeBlob(da, r.Default)
+		if err != nil {
+			return err
+		}
+		r.Default = q.(map[string]interface{})
+		q, err = data_store.DecodeBlob(oa, r.Override)
+		if err != nil {
+			return err
+		}
+		r.Override = q.(map[string]interface{})
+		data_store.ChkNilArray(r)
+	} else { 
+		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillRoleFromSQL cannot be run")
+		return err
+	}
+	return nil
+}
+
 func Get(role_name string) (*Role, error){
-	ds := data_store.New()
-	role, found := ds.Get("role", role_name)
+	var role *Role
+	var found bool
+	if config.Config.UseMySQL {
+		role = new(Role)
+		stmt, err := data_store.Dbh.Prepare("SELECT name, description, run_list, env_run_lists, default_attributes, override_attributes FROM roles WHERE name = ?")
+		defer stmt.Close()
+		if err != nil {
+			return nil, err
+		}
+		err = role.fillRoleFromSQL(role_name)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				found = false
+			} else {
+				return nil, err
+			}
+		} else {
+			found = true
+		}
+	} else {
+		ds := data_store.New()
+		var r interface{}
+		r, found = ds.Get("role", role_name)
+		role = r.(*Role)
+	}
 	if !found {
 		err := fmt.Errorf("Cannot load role %s", role_name)
 		return nil, err
 	}
-	return role.(*Role), nil
+	return role, nil
 }
 
 func (r *Role) Save() error {
@@ -186,8 +269,12 @@ func (r *Role) Save() error {
 }
 
 func (r *Role) Delete() error {
-	ds := data_store.New()
-	ds.Delete("role", r.Name)
+	if config.Config.UseMySQL {
+		tx, err := data_store.Dbh.Begin()
+	} else {
+		ds := data_store.New()
+		ds.Delete("role", r.Name)
+	}
 	indexer.DeleteItemFromCollection("role", r.Name)
 	return nil
 }
