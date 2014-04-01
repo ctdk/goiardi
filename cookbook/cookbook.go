@@ -173,7 +173,6 @@ func AllCookbooks() []*Cookbook {
 			cb := new(Cookbook)
 			err = cb.fillCookbookFromSQL(rows)
 			if err != nil {
-				rows.Close()
 				log.Fatal(err)
 			}
 			cb.Versions = make(map[string]*CookbookVersion)
@@ -265,9 +264,8 @@ func (c *Cookbook) Save() error {
 				tx.Rollback()
 				return err
 			}
-
-			tx.Commit()
 		}
+		tx.Commit()
 	} else {
 		ds := data_store.New()
 		ds.Set("cookbook", c.Name, c)
@@ -326,17 +324,16 @@ func GetList() []string {
 		cb_list = make([]string, 0)
 		rows, err := data_store.Dbh.Query("SELECT name FROM cookbooks")
 		if err != nil {
-			rows.Close()
 			if err != sql.ErrNoRows {
 				log.Fatal(err)
 			}
+			rows.Close()
 			return cb_list
 		}
 		for rows.Next() {
 			var cb_name string
 			err = rows.Scan(&cb_name)
 			if err != nil {
-				rows.Close()
 				log.Fatal(err)
 			}
 			cb_list = append(cb_list, cb_name)
@@ -374,12 +371,15 @@ func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
 			cbv := new(CookbookVersion)
 			err = cbv.fillCookbookVersionFromSQL(rows)
 			if err != nil {
-				rows.Close()
 				log.Fatal(err)
 			}
 			// may as well populate this while we have it
 			c.Versions[cbv.Version] = cbv
 			sorted = append(sorted, cbv)
+		}
+		rows.Close()
+		if err = rows.Err(); err != nil {
+			log.Fatal(err)
 		}
 	} else {
 		sorted = make([]*CookbookVersion, len(c.Versions))

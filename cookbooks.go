@@ -283,7 +283,11 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 						JsonErrorReport(w, r, err.Error(), err.Status())
 						return
 					} else {
-						cb.Save()
+						err := cb.Save()
+						if err != nil {
+							JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+							return
+						}
 					}
 				}
 				/* API docs are wrong. The docs claim that this

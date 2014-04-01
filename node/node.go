@@ -163,10 +163,10 @@ func Get(node_name string) (*Node, error) {
 	if config.Config.UseMySQL {
 		node = new(Node)
 		stmt, err := data_store.Dbh.Prepare("select n.name, e.name as chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n join environments as e on n.environment_id = e.id where n.name = ?")
-		defer stmt.Close()
 		if err != nil {
 			return nil, err
 		}
+		defer stmt.Close()
 		row := stmt.QueryRow(node_name)
 		err = node.fillNodeFromSQL(row)
 
@@ -320,6 +320,9 @@ func (n *Node) Save() error {
 		if err != nil {
 			return err
 		}
+		// This does not use the INSERT ... ON DUPLICATE KEY UPDATE
+		// syntax to keep the MySQL code & the future Postgres code
+		// closer together.
 		node_id, err = data_store.CheckForOne(tx, "nodes", n.Name)
 		if err == nil {
 			// probably want binlog_format set to MIXED or ROW for 
@@ -385,10 +388,10 @@ func GetList() []string {
 	if config.Config.UseMySQL {
 		rows, err := data_store.Dbh.Query("SELECT name FROM nodes")
 		if err != nil {
-			rows.Close()
 			if err != sql.ErrNoRows {
 				log.Fatal(err)
 			}
+			rows.Close()
 			return node_list
 		}
 		node_list = make([]string, 0)

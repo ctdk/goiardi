@@ -258,10 +258,10 @@ func Get(env_name string) (*ChefEnvironment, error){
 	if config.Config.UseMySQL {
 		env = new(ChefEnvironment)
 		stmt, err := data_store.Dbh.Prepare("SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments WHERE name = ?")
-		defer stmt.Close()
 		if err != nil {
 			return nil, err
 		}
+		defer stmt.Close()
 		row := stmt.QueryRow(env_name)
 		err = env.fillEnvFromSQL(row)
 		if err != nil {
@@ -407,17 +407,16 @@ func GetList() []string {
 		env_list = make([]string, 0)
 		rows, err := data_store.Dbh.Query("SELECT name FROM environments")
 		if err != nil {
-			rows.Close()
 			if err != sql.ErrNoRows {
 				log.Fatal(err)
 			}
+			rows.Close()
 			return env_list
 		}
 		for rows.Next() {
 			var env_name string
 			err = rows.Scan(&env_name)
 			if err != nil {
-				rows.Close()
 				log.Fatal(err)
 			}
 			env_list = append(env_list, env_name)

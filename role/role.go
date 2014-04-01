@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"net/http"
 	"database/sql"
+	"log"
 )
 
 /* Need env_run_lists?!!? */
@@ -45,7 +46,7 @@ type Role struct {
 
 func New(name string) (*Role, util.Gerror){
 	if config.Config.UseMySQL {
-		_, err := data_store.CheckForOne(data_store.Dbh, roles", name)
+		_, err := data_store.CheckForOne(data_store.Dbh, "roles", name)
 		if err == nil {
 			gerr := util.Errorf("Role %s already exists", name)
 			gerr.SetStatus(http.StatusConflict)
@@ -204,7 +205,7 @@ func (r *Role)fillRoleFromSQL(row *sql.Row) error {
 		if err != nil {
 			return err
 		}
-		r.RunList = q([]string)
+		r.RunList = q.([]string)
 		q, err = data_store.DecodeBlob(er, r.EnvRunLists)
 		if err != nil {
 			return err
@@ -233,12 +234,13 @@ func Get(role_name string) (*Role, error){
 	var found bool
 	if config.Config.UseMySQL {
 		role = new(Role)
-		stmt, err := data_store.Dbh.Prepare("SELECT name, description, run_list, env_run_lists, default_attributes, override_attributes FROM roles WHERE name = ?")
-		defer stmt.Close()
+		stmt, err := data_store.Dbh.Prepare("SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM roles WHERE name = ?")
 		if err != nil {
 			return nil, err
 		}
-		err = role.fillRoleFromSQL(role_name)
+		defer stmt.Close()
+		row := stmt.QueryRow(role_name)
+		err = role.fillRoleFromSQL(row)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -262,8 +264,51 @@ func Get(role_name string) (*Role, error){
 }
 
 func (r *Role) Save() error {
-	ds := data_store.New()
-	ds.Set("role", r.Name, r)
+	if config.Config.UseMySQL {
+		rlb, rlerr := data_store.EncodeBlob(r.RunList)
+		if rlerr != nil {
+			return rlerr
+		}
+		erb, ererr := data_store.EncodeBlob(r.EnvRunLists)
+		if ererr != nil {
+			return ererr
+		}
+		dab, daerr := data_store.EncodeBlob(r.Default)
+		if daerr != nil {
+			return daerr
+		}
+		oab, oaerr := data_store.EncodeBlob(r.Override)
+		if oaerr != nil {
+			return oaerr
+		}
+		tx, err := data_store.Dbh.Begin()
+		var role_id int32
+		if err != nil {
+			return nil
+		}
+		role_id, err = data_store.CheckForOne(tx, "roles", r.Name)
+		if err == nil {
+			_, err := tx.Exec("UPDATE roles SET description = ?, run_list = ?, env_run_lists = ?, default_attr = ?, override_attr = ?, updated_at = NOW() WHERE id = ?", r.Description, rlb, erb, dab, oab, role_id)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		} else {
+			if err != sql.ErrNoRows {
+				tx.Rollback()
+				return err
+			}
+			_, err = tx.Exec("INSERT INTO roles (name, description, run_list, env_run_lists, default_attr, override_attr, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())", r.Name, r.Description, rlb, erb, dab, oab)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+		tx.Commit()
+	} else {
+		ds := data_store.New()
+		ds.Set("role", r.Name, r)
+	}
 	indexer.IndexObj(r)
 	return nil
 }
@@ -271,6 +316,18 @@ func (r *Role) Save() error {
 func (r *Role) Delete() error {
 	if config.Config.UseMySQL {
 		tx, err := data_store.Dbh.Begin()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("DELETE FROM roles WHERE name = ?", r.Name)
+		if err != nil {
+			terr := tx.Rollback()
+			if terr != nil {
+				err = fmt.Errorf("deleting role %s had an error '%s', and then rolling back the transaction gave another error '%s'", r.Name, err.Error(), terr.Error())
+			}
+			return err
+		}
+		tx.Commit()
 	} else {
 		ds := data_store.New()
 		ds.Delete("role", r.Name)
@@ -281,8 +338,33 @@ func (r *Role) Delete() error {
 
 // Get a list of the roles on this server.
 func GetList() []string {
-	ds := data_store.New()
-	role_list := ds.GetList("role")
+	var role_list []string
+	if config.Config.UseMySQL {
+		rows, err := data_store.Dbh.Query("SELECT name FROM roles")
+		if err != nil {
+			rows.Close()
+			if err != sql.ErrNoRows {
+				log.Fatal(err)
+			}
+			return role_list
+		}
+		role_list = make([]string, 0)
+		for rows.Next() {
+			var role_name string
+			err = rows.Scan(&role_name)
+			if err != nil {
+				log.Fatal(err)
+			}
+			role_list = append(role_list, role_name)
+		}
+		rows.Close()
+		if err = rows.Err(); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		ds := data_store.New()
+		role_list = ds.GetList("role")
+	}
 	return role_list
 }
 
