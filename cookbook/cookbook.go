@@ -93,7 +93,7 @@ func New(name string) (*Cookbook, util.Gerror){
 		if err == nil {
 			gerr := util.Errorf("Cookbook %s already exists", name)
 			gerr.SetStatus(http.StatusConflict)
-			return nil gerr
+			return nil, gerr
 		} else {
 			if err != sql.ErrNoRows {
 				gerr := util.Errorf(err.Error())
@@ -120,11 +120,11 @@ func (c *Cookbook)NumVersions() int {
 	if config.Config.UseMySQL {
 		if c.numVersions == nil {
 			var cbv_count int
-			stmt, err := data_store.Dbh.Prepare("SELECT count(*) AS c FROM cookbook_versions cbv WHERE cb.id = ?")
-			defer stmt.Close()
+			stmt, err := data_store.Dbh.Prepare("SELECT count(*) AS c FROM cookbook_versions cbv WHERE cbv.id = ?")
 			if err != nil {
 				log.Fatal(err)
 			}
+			defer stmt.Close()
 			err = stmt.QueryRow(c.id).Scan(&cbv_count)
 			if err != nil {
 				if err == sql.ErrNoRows {
@@ -141,7 +141,7 @@ func (c *Cookbook)NumVersions() int {
 	}
 }
 
-func (c *Cookbook) fillCookbookFromSQL(row *sql.Row) error {
+func (c *Cookbook) fillCookbookFromSQL(row data_store.ResRow) error {
 	if config.Config.UseMySQL {
 		err := row.Scan(&c.id, &c.Name)
 		if err != nil {
@@ -158,6 +158,9 @@ func AllCookbooks() []*Cookbook {
 	cookbooks := make([]*Cookbook, 0)
 	if config.Config.UseMySQL {
 		stmt, err := data_store.Dbh.Prepare("SELECT id, name FROM cookbooks")
+		if err != nil {
+			log.Fatal(err)
+		}
 		defer stmt.Close()
 		rows, qerr := stmt.Query()
 		if qerr != nil {
@@ -173,7 +176,12 @@ func AllCookbooks() []*Cookbook {
 				rows.Close()
 				log.Fatal(err)
 			}
+			cb.Versions = make(map[string]*CookbookVersion)
 			cookbooks = append(cookbooks, cb)
+		}
+		rows.Close()
+		if err = rows.Err(); err != nil {
+			log.Fatal(err)
 		}
 	} else {
 		cookbook_list := GetList()
@@ -183,7 +191,7 @@ func AllCookbooks() []*Cookbook {
 				log.Printf("Curious. Cookbook %s was in the cookbook list, but wasn't found when fetched. Continuing.", c)
 				continue
 			}
-			cookbooks = append(cookbooks, c)
+			cookbooks = append(cookbooks, cb)
 		}
 	}
 	return cookbooks
@@ -194,12 +202,13 @@ func Get(name string) (*Cookbook, util.Gerror){
 	var found bool
 	if config.Config.UseMySQL {
 		cookbook = new(Cookbook)
-		stmt, err = data_store.Dbh.Prepare("SELECT id, name FROM cookbooks WHERE name = ?", name)
-		defer stmt.Close()
+		stmt, err := data_store.Dbh.Prepare("SELECT id, name FROM cookbooks WHERE name = ?")
 		if err != nil {
 			gerr := util.Errorf(err.Error())
 			return nil, gerr
 		}
+		defer stmt.Close()
+		
 		row := stmt.QueryRow(name)
 		err = cookbook.fillCookbookFromSQL(row)
 		if err != nil {
@@ -233,8 +242,7 @@ func (c *Cookbook) Save() error {
 		if err != nil {
 			return err
 		}
-		var cookbook_id int32
-		cookbook_id, err = data_store.CheckForOne(tx, "cookbooks", c.Name)
+		_, err = data_store.CheckForOne(tx, "cookbooks", c.Name)
 		if err == nil {
 			_, err = tx.Exec("UPDATE cookbooks SET name = ?, updated_at = NOW() WHERE c.id = ?", c.id)
 			if err != nil {
@@ -251,7 +259,8 @@ func (c *Cookbook) Save() error {
 				tx.Rollback()
 				return rerr
 			}
-			c.id, err = res.LastInsertedId()
+			c_id, err := res.LastInsertId()
+			c.id = int32(c_id)
 			if err != nil {
 				tx.Rollback()
 				return err
@@ -278,7 +287,7 @@ func (c *Cookbook) Delete() error {
 		 * versions and file hashes. */
 		fileHashes := make([]string, 0)
 		for _, cbv := range c.sortedVersions() {
-			fileHashes = append(fileHashes, cbv.fileHashes())
+			fileHashes = append(fileHashes, cbv.fileHashes()...)
 		}
 		sort.Strings(fileHashes)
 		fileHashes = removeDupHashes(fileHashes)
@@ -348,11 +357,12 @@ func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
 	
 	if config.Config.UseMySQL {
 		sorted = make([]*CookbookVersion, 0)
-		stmt, err := data_store.Dbh.Prepare("SELECT definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks ON cv.cookbook_id = c.id WHERE cookbook_id = ? ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC")
-		defer stmt.Close()
+		stmt, err := data_store.Dbh.Prepare("SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC")
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer stmt.Close()
+		
 		rows, qerr := stmt.Query(c.id)
 		if qerr != nil {
 			if qerr == sql.ErrNoRows {
@@ -747,7 +757,7 @@ func (c *Cookbook)NewVersion(cb_version string, cbv_data map[string]interface{})
 	return cbv, nil
 }
 
-func (cbv *CookbookVersion)fillCookbookVersionFromSQL(row *sql.Row) error {
+func (cbv *CookbookVersion)fillCookbookVersionFromSQL(row data_store.ResRow) error {
 	if config.Config.UseMySQL {
 		var (
 			defb []byte
@@ -764,17 +774,17 @@ func (cbv *CookbookVersion)fillCookbookVersionFromSQL(row *sql.Row) error {
 			minor int32
 			patch int32
 		)
-		err := row.Scan(&cbv.id, &cbv.cookbook_id, &defb, &libb, &attb, &recb, &prob, &resb, &temb, &roob, &filb, &metb, &major, &minor, &patch, &cbv.Frozen, &cbv.CookbookName)
+		err := row.Scan(&cbv.id, &cbv.cookbook_id, &defb, &libb, &attb, &recb, &prob, &resb, &temb, &roob, &filb, &metb, &major, &minor, &patch, &cbv.IsFrozen, &cbv.CookbookName)
 		if err != nil {
 			return err
 		}
 		/* Now... populate it. :-/ */
 		// These may need to accept x.y versions with only two elements
 		// instead of x.y.0 with the added default 0 patch number.
-		cbv.Version = fmt.Sprint("%d.%d.%d", major, minor, patch)
+		cbv.Version = fmt.Sprintf("%d.%d.%d", major, minor, patch)
 		cbv.Name = fmt.Sprintf("%s-%s", cbv.CookbookName, cbv.Version)
 		cbv.ChefType = "cookbook_version"
-		cbv.JsonClass = "Chef::JsonClass"
+		cbv.JsonClass = "Chef::CookbookVersion"
 
 		/* TODO: experiment some more with getting this done with
 		 * pointers. */
@@ -854,14 +864,14 @@ func (c *Cookbook)GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
 			if cverr != nil {
 				return nil, cverr
 			}
-			stmt, err := data_store.Dbh.Prepare("SELECT id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks ON cv.cookbook_id = c.id WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?")
-			defer stmt.Close()
+			stmt, err := data_store.Dbh.Prepare("SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?")
 			var gerr util.Gerror
 			if err != nil {
 				gerr = util.Errorf(err.Error())
 				gerr.SetStatus(http.StatusInternalServerError)
 				return nil, gerr
 			}
+			defer stmt.Close()
 			row := stmt.QueryRow(c.id, maj, min, patch)
 			err = cbv.fillCookbookVersionFromSQL(row)
 			if err != nil {
@@ -898,22 +908,27 @@ func extractVerNums(cbVersion string) (maj, min, patch int32, err util.Gerror) {
 		err = util.Errorf("incorrect number of numbers in version string '%s'", len(nums))
 		return 0, 0, 0, err
 	}
-	maj, nerr = strconv.Atoi(nums[0])
+	var vt int64
+	var nerr error
+	vt, nerr = strconv.ParseInt(nums[0], 0, 32)
 	if nerr != nil {
 		err = util.Errorf(nerr.Error())
 		return 0, 0, 0, err
 	}
-	min, nerr = strconv.Atoi(nums[1])
+	maj = int32(vt)
+	vt, nerr = strconv.ParseInt(nums[1], 0, 32)
 	if nerr != nil {
 		err = util.Errorf(nerr.Error())
 		return 0, 0, 0, err
 	}
+	min = int32(vt)
 	if len(nums) == 3 {
-		patch, nerr = strconv.Atoi(nums[2])
+		vt, nerr = strconv.ParseInt(nums[2], 0, 32)
 		if nerr != nil {
 			err = util.Errorf(nerr.Error())
 			return 0, 0, 0, err
 		}
+		patch = int32(vt)
 	} else {
 		patch = 0
 	}
@@ -996,7 +1011,7 @@ func (c *Cookbook)DeleteVersion(cb_version string) util.Gerror {
 			}
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
-			return err
+			return gerr
 		}
 		tx.Commit()
 	}
@@ -1224,15 +1239,21 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 				gerr.SetStatus(http.StatusInternalServerError)
 				return gerr
 			}
-			res, err = tx.Exec("INSERT INTO cookbook_versions (cookbook_id, major_ver, minor_ver, patch_ver, frozen, metadata, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())", cbv.cookbook_id, maj, min, patch, cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb)
+			res, err := tx.Exec("INSERT INTO cookbook_versions (cookbook_id, major_ver, minor_ver, patch_ver, frozen, metadata, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())", cbv.cookbook_id, maj, min, patch, cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb)
 			if err != nil {
 				tx.Rollback()
 				gerr := util.Errorf(err.Error())
 				gerr.SetStatus(http.StatusInternalServerError)
 				return gerr
 			}
-			cbv.id = res.LastInsertedId()
-			
+			c_id, err := res.LastInsertId()
+			if err != nil {
+				tx.Rollback()
+				gerr := util.Errorf(err.Error())
+				gerr.SetStatus(http.StatusInternalServerError)
+				return gerr
+			}
+			cbv.id = int32(c_id)
 		}
 		tx.Commit()
 	}
