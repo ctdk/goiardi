@@ -344,6 +344,8 @@ func gobRegister() {
 	gob.Register(ms)
 	smsi := make([]map[string]interface{},0)
 	gob.Register(smsi)
+	msss := make(map[string][]string)
+	gob.Register(msss)
 }
 
 func setSaveTicker() {

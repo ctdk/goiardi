@@ -101,7 +101,11 @@ func role_handler(w http.ResponseWriter, r *http.Request){
 					}
 				}
 	
-				chef_role.Save()
+				err = chef_role.Save()
+				if err != nil {
+					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+					return
+				}
 				enc := json.NewEncoder(w)
 				if err = enc.Encode(&chef_role); err != nil {
 					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)

@@ -255,7 +255,11 @@ func role_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 				JsonErrorReport(w, r, nerr.Error(), nerr.Status())
 				return nil
 			}
-			chef_role.Save()
+			err := chef_role.Save()
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return nil
+			}
 			role_response["uri"] = util.ObjURL(chef_role)
 			w.WriteHeader(http.StatusCreated)
 		default:

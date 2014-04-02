@@ -199,7 +199,7 @@ func (r *Role)fillRoleFromSQL(row *sql.Row) error {
 			return err
 		}
 		r.ChefType = "role"
-		r.JsonClass = "Chef::Node"
+		r.JsonClass = "Chef::Role"
 		var q interface{}
 		q, err = data_store.DecodeBlob(rl, r.RunList)
 		if err != nil {
