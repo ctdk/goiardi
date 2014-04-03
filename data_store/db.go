@@ -29,6 +29,8 @@ import (
 
 var Dbh *sql.DB
 
+const MySQLTimeFormat = "2006-01-02 15:04:05"
+
 // Interface for db handle types that can execute queries
 type Dbhandle interface {
 	Prepare(query string) (*sql.Stmt, error)

@@ -113,12 +113,17 @@ func generate_sandbox_id() (string, error) {
 func (s *Sandbox)fillSandboxFromSQL(row *sql.Row) error {
 	if config.Config.UseMySQL {
 		var csb []byte
-		err := row.Scan(&s.Id, &s.CreationTime, &csb, &s.Completed)
+		var tb []byte
+		err := row.Scan(&s.Id, &tb, &csb, &s.Completed)
 		if err != nil {
 			return err
 		}
 		var q interface{}
 		q, err = data_store.DecodeBlob(csb, s.Checksums)
+		if err != nil {
+			return err
+		}
+		s.CreationTime, err = time.Parse(data_store.MySQLTimeFormat, string(tb))
 		if err != nil {
 			return err
 		}
@@ -177,7 +182,7 @@ func (s *Sandbox) Save() error {
 			return err
 		}
 		var sbox_id string
-		err = tx.QueryRow(s.Id).Scan(&sbox_id)
+		err = tx.QueryRow("SELECT sbox_id FROM sandboxes WHERE sbox_id = ?", s.Id).Scan(&sbox_id)
 		if err == nil {
 			_, err = tx.Exec("UPDATE sandboxes SET checksums = ?, completed = ? WHERE sbox_id = ?", ckb, s.Completed, s.Id)
 				if err != nil {
@@ -189,7 +194,7 @@ func (s *Sandbox) Save() error {
 				tx.Rollback()
 				return err
 			}
-			_, err = tx.Exec("INSERT INTO sandboxes (sbox_id, creation_time, checksums, completed) VALUES (?, ?, ?, ?)", s.Id, s.CreationTime, ckb, s.Completed)
+			_, err = tx.Exec("INSERT INTO sandboxes (sbox_id, creation_time, checksums, completed) VALUES (?, ?, ?, ?)", s.Id, s.CreationTime.UTC().Format(data_store.MySQLTimeFormat), ckb, s.Completed)
 			if err != nil {
 				tx.Rollback()
 				return err

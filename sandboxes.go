@@ -68,11 +68,16 @@ func sandbox_handler(w http.ResponseWriter, r *http.Request){
 				}
 			}
 			sbox, err := sandbox.New(sbox_hash)
-			sbox.Save()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 				return 
 			}
+			err = sbox.Save()
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return 
+			}
+			
 			/* If we're here, make the slightly weird response. */
 			sbox_response["uri"] = util.ObjURL(sbox)
 			sbox_response["sandbox_id"] = sbox.Id
@@ -109,7 +114,11 @@ func sandbox_handler(w http.ResponseWriter, r *http.Request){
 
 			if err = sbox.IsComplete(); err == nil {
 				sbox.Completed = sbox_commit
-				sbox.Save()
+				err = sbox.Save()
+				if err != nil {
+					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+					return 
+				}
 			} else {
 				JsonErrorReport(w, r, err.Error(), http.StatusServiceUnavailable)
 				return
