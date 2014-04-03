@@ -31,6 +31,7 @@ import (
 	"io"
 	"log"
 	"time"
+	"database/sql"
 )
 
 /* The structure of the sandbox responses is... inconsistent. */
@@ -62,14 +63,13 @@ func New(checksum_hash map[string]interface{}) (*Sandbox, error){
 	 * method, but we'll see. */
 	var sandbox_id string
 	var err error
-	ds := data_store.New()
 	for i := 0; i < 5; i++ {
 		sandbox_id, err = generate_sandbox_id()
 		if err != nil {
 			/* Something went very wrong. */
 			return nil, err 
 		}
-		if _, found := ds.Get("sandbox", sandbox_id); found {
+		if s := Get(sandbox_id); s != nil {
 			err = fmt.Errorf("Collision! Somehow %s already existed as a sandbox id on attempt %d. Trying again.", sandbox_id, i)
 			sandbox_id = ""
 			log.Println(err)
@@ -109,31 +109,148 @@ func generate_sandbox_id() (string, error) {
 	return sandbox_id, nil
 }
 
+func (s *Sandbox)fillSandboxFromSQL(row *sql.Row) error {
+	if config.Config.UseMySQL {
+		var csb []byte
+		err := row.Scan(&s.Id, &s.CreationTime, &csb, &s.Completed)
+		if err != nil {
+			return err
+		}
+		var q interface{}
+		q, err = data_store.DecodeBlob(csb, s.Checksums)
+		if err != nil {
+			return err
+		}
+		s.Checksums = q.([]string)
+	} else {
+		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillSandboxFromSQL cannot be run")
+		return err
+	}
+}
+
 func Get(sandbox_id string) (*Sandbox, error){
-	ds := data_store.New()
-	sandbox, found := ds.Get("sandbox", sandbox_id)
+	var sandbox *Sandbox
+	var found bool
+
+	if config.Config.UseMySQL {
+		sandbox = new(Sandbox)
+		stmt, err := data_store.Dbh.Prepare("SELECT sbox_id, creation_time, checksums, completed FROM sandboxes WHERE sbox_id = ?")
+		if err != nil {
+			return nil, err
+		}
+		defer stmt.Close()
+		row := stmt.QueryRow(sandbox_id)
+		err = sandbox.fillSandboxFromSQL(sandbox_id)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				found = false
+			} else {
+				return nil, err
+			}
+		} else {
+			found = true
+		}
+	} else {
+		ds := data_store.New()
+		var s interface{}
+		s, found = ds.Get("sandbox", sandbox_id)
+		sandbox = s.(*Sandbox)
+	}
+
 	if !found {
 		err := fmt.Errorf("Sandbox %s not found", sandbox_id)
 		return nil, err
 	}
-	return sandbox.(*Sandbox), nil
+	return sandbox, nil
 }
 
 func (s *Sandbox) Save() error {
-	ds := data_store.New()
-	ds.Set("sandbox", s.Id, s)
+	if config.Config.UseMySQL {
+		ckb, ckerr := data_store.EncodeBlob(s.Checksums)
+		if ckerr != nil {
+			return ckerr
+		}
+		tx, err := data_store.Dbh.Begin()
+		if err != nil {
+			return err
+		}
+		var sbox_id string
+		err = tx.QueryRow(s.Id).Scan(&sbox_id)
+		if err == nil {
+			_, err = tx.Exec("UPDATE sandboxes SET checksums = ?, completed = ? WHERE sbox_id = ?", ckb, s.Completed, s.Id)
+				if err != nil {
+					tx.Rollback()
+					return err
+				}
+		} else {
+			if err != sql.ErrNoRows {
+				tx.Rollback()
+				return err
+			}
+			_, err = tx.Exec("INSERT INTO sandboxes (sbox_id, creation_time, checksums, completed) VALUES (?, ?, ?, ?)", s.Id, s.CreationTime, ckb, s.Completed)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+		tx.Commit()
+	} else {
+		ds := data_store.New()
+		ds.Set("sandbox", s.Id, s)
+	}
 	return nil
 }
 
 func (s *Sandbox) Delete() error {
-	ds := data_store.New()
-	ds.Delete("sandbox", s.Id)
+	if config.Config.UseMySQL {
+		tx, err := data_store.Dbh.Begin()
+		if err != nil {
+			return err
+		}
+		_, err := tx.Exec("DELETE FROM sandboxes WHERE sbox_id = ?", s.Id)
+		if err != nil {
+			terr := tx.Rollback()
+			if terr != nil {
+				err = fmt.Errorf("deleting sandbox %s had an error '%s', and then rolling back the transaction gave another error '%s'", s.Id, err.Error(), terr.Error())
+			}
+			return err
+		}
+		tx.Commit()
+	} else {
+		ds := data_store.New()
+		ds.Delete("sandbox", s.Id)
+	}
 	return nil
 }
 
 func GetList() []string {
-	ds := data_store.New()
-	sandbox_list := ds.GetList("sandbox")
+	var sandbox_list []string
+	if config.Config.UseMySQL {
+		rows, err := data_store.Dbh.Query("SELECT sbox_id FROM sandboxes")
+		if err != nil {
+			if err != sql.ErrNoRows {
+				log.Fatal(err)
+			}
+			rows.Close()
+			return sandbox_list
+		}
+		sandbox_list = make([]string, 0)
+		for rows.Next() {
+			var sbox_id string
+			err = rows.Scan(&sbox_id)
+			if err != nil {
+				log.Fatal(err)
+			}
+			sandbox_list = append(sandbox_list, sbox_id)
+		}
+		rows.Close()
+		if err = rows.Err(); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		ds := data_store.New()
+		sandbox_list = ds.GetList("sandbox")
+	}
 	return sandbox_list
 }
 
