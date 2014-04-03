@@ -22,6 +22,7 @@
 package sandbox
 
 import (
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/util"
@@ -69,7 +70,7 @@ func New(checksum_hash map[string]interface{}) (*Sandbox, error){
 			/* Something went very wrong. */
 			return nil, err 
 		}
-		if s := Get(sandbox_id); s != nil {
+		if s, _ := Get(sandbox_id); s != nil {
 			err = fmt.Errorf("Collision! Somehow %s already existed as a sandbox id on attempt %d. Trying again.", sandbox_id, i)
 			sandbox_id = ""
 			log.Println(err)
@@ -126,6 +127,7 @@ func (s *Sandbox)fillSandboxFromSQL(row *sql.Row) error {
 		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillSandboxFromSQL cannot be run")
 		return err
 	}
+	return nil
 }
 
 func Get(sandbox_id string) (*Sandbox, error){
@@ -140,7 +142,7 @@ func Get(sandbox_id string) (*Sandbox, error){
 		}
 		defer stmt.Close()
 		row := stmt.QueryRow(sandbox_id)
-		err = sandbox.fillSandboxFromSQL(sandbox_id)
+		err = sandbox.fillSandboxFromSQL(row)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -207,7 +209,7 @@ func (s *Sandbox) Delete() error {
 		if err != nil {
 			return err
 		}
-		_, err := tx.Exec("DELETE FROM sandboxes WHERE sbox_id = ?", s.Id)
+		_, err = tx.Exec("DELETE FROM sandboxes WHERE sbox_id = ?", s.Id)
 		if err != nil {
 			terr := tx.Rollback()
 			if terr != nil {
