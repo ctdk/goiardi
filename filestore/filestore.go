@@ -26,8 +26,13 @@ package filestore
 import (
 	"io"
 	"fmt"
+	"log"
 	"github.com/ctdk/goiardi/data_store"
 	"crypto/md5"
+	"github.com/ctdk/goiardi/config"
+	"database/sql"
+	"os"
+	"path"
 )
 
 /* Local filestorage struct. Add fields as needed. */
@@ -74,30 +79,159 @@ func New(chksum string, data io.ReadCloser, data_length int64) (*FileStore, erro
 }
 
 func Get(chksum string) (*FileStore, error){
-	ds := data_store.New()
-	filestore, found := ds.Get("filestore", chksum)
+	var filestore *FileStore
+	var found bool
+	if config.Config.UseMySQL {
+		filestore = new(FileStore)
+		stmt, err := data_store.Dbh.Prepare("SELECT checksum FROM file_checksums WHERE checksum = ?")
+		if err != nil {
+			return nil, err
+		}
+		defer stmt.Close()
+		err = stmt.QueryRow(chksum).Scan(&filestore.Chksum)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				found = false
+			} else {
+				return nil, err
+			}
+		} else {
+			found = true
+		}
+	} else {
+		ds := data_store.New()
+		var f interface{}
+		f, found = ds.Get("filestore", chksum)
+		filestore = f.(*FileStore)
+	}
 	if !found {
 		err := fmt.Errorf("File with checksum %s not found", chksum)
 		return nil, err
 	}
-	return filestore.(*FileStore), nil
+	if config.Config.LocalFstoreDir != "" {
+		/* File data is stored on disk */
+		chkPath := path.Join(config.Config.LocalFstoreDir, chksum)
+		
+		fp, err := os.Open(chkPath)
+		if err != nil {
+			return nil, err
+		}
+		defer fp.Close()
+		stat, sterr := fp.Stat()
+		if sterr != nil {
+			return nil, sterr
+		}
+		fdata := make([]byte, stat.Size())
+		n, fperr := fp.Read(fdata)
+		if fperr != nil {
+			return nil, fperr
+		} else if int64(n) != stat.Size() {
+			err = fmt.Errorf("only %d bytes were read from the expected %d", n, stat.Size())
+			return nil, err
+		}
+		filestore.Data = &fdata
+	}
+	return filestore, nil
 }
 
 func (f *FileStore) Save() error {
-	ds := data_store.New()
-	ds.Set("filestore", f.Chksum, f)
+	if config.Config.UseMySQL {
+		tx, err := data_store.Dbh.Begin()
+		if err != nil {
+			return err
+		}
+		var chksum string
+		err = tx.QueryRow("SELECT checksum FROM file_checksums WHERE checksum = ?", f.Chksum).Scan(&chksum)
+		if err != nil { // if err is nil we're just updating the file,
+				// don't need a new row
+			if err != sql.ErrNoRows {
+				tx.Rollback()
+				return err
+			}
+			_, err = tx.Exec("INSERT INTO file_checksums (checksum) VALUES (?)", f.Chksum)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+			tx.Commit()
+		}
+	} else {
+		ds := data_store.New()
+		ds.Set("filestore", f.Chksum, f)
+	}
+	if config.Config.LocalFstoreDir != "" {
+		fp, err := os.Create(path.Join(config.Config.LocalFstoreDir, f.Chksum))
+		if err != nil {
+			return err
+		}
+		defer fp.Close()
+		_, err = fp.Write(*f.Data)
+		if err != nil {
+			return err
+		}
+		return fp.Close()
+	}
 	return nil
 }
 
 func (f *FileStore) Delete() error {
-	ds := data_store.New()
-	ds.Delete("filestore", f.Chksum)
+	if config.Config.UseMySQL {
+		tx, err := data_store.Dbh.Begin()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("DELETE FROM file_checksums WHERE checksum = ?", f.Chksum)
+		if err != nil {
+			terr := tx.Rollback()
+			if terr != nil {
+				err = fmt.Errorf("deleting file %s had an error '%s', and then rolling back the transaction gave another error '%s'", f.Chksum, err.Error(), terr.Error())
+			}
+			return err
+		}
+		tx.Commit()
+	} else {
+		ds := data_store.New()
+		ds.Delete("filestore", f.Chksum)
+	}
+
+	if config.Config.LocalFstoreDir != "" {
+		err := os.Remove(path.Join(config.Config.LocalFstoreDir, f.Chksum))
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 // Get a list of files that have been uploaded.
 func GetList() []string {
-	ds := data_store.New()
-	file_list := ds.GetList("filestore")
+	var file_list []string
+	if config.Config.UseMySQL {
+		stmt, perr := data_store.Dbh.Prepare("SELECT checksum FROM file_checksums")
+		if perr != nil {
+			if perr != sql.ErrNoRows {
+				log.Fatal(perr)
+			}
+			stmt.Close()
+			return file_list
+		}
+		rows, err := stmt.Query()
+		file_list = make([]string, 0)
+		for rows.Next() {
+			var chksum string
+			err = rows.Scan(&chksum)
+			if err != nil {
+				log.Fatal(err)
+			}
+			file_list = append(file_list, chksum)
+		}
+		rows.Close()
+		if err = rows.Err(); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		ds := data_store.New()
+		file_list = ds.GetList("filestore")
+	}
 	return file_list
 }

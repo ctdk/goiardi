@@ -53,6 +53,7 @@ type Conf struct {
 	DisableWebUI bool `toml:"disable-webui"`
 	UseMySQL bool `toml:"use-mysql"`
 	MySQL MySQLdb `toml:"mysql"`
+	LocalFstoreDir string `toml:"local-filestore-dir"`
 }
 
 // MySQL connection options
@@ -87,6 +88,7 @@ type Options struct {
 	HttpsUrls bool `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP."`
 	DisableWebUI bool `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface."`
 	UseMySQL bool `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file."`
+	LocalFstoreDir string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* for SQL mode."`
 }
 
 // The goiardi version.
@@ -187,6 +189,15 @@ func ParseConfigOptions() error {
 		if Config.MySQL.Port == "" {
 			Config.MySQL.Port = "3306"
 		}
+	}
+
+	if opts.LocalFstoreDir != "" {
+		Config.LocalFstoreDir = opts.LocalFstoreDir
+	}
+	if Config.LocalFstoreDir == "" && Config.UseMySQL {
+		err := fmt.Errorf("local-filestore-dir must be set when running goiardi in SQL mode")
+		log.Println(err)
+		os.Exit(1)
 	}
 
 	// TODO: once db support is more mature, the dance with freezing data

@@ -62,6 +62,11 @@ disable-webui = false
 # MySQL options must be strings.
 use-mysql = false
 
+# Local directory for storing cookbook files on the filesystem. Optional in 
+# in-memory mode (standard behavior is to keep the files in memory), and
+# mandatory for SQL mode.
+# local-filestore-dir = "/var/goiardi/file_checksums"
+
 [mysql]
 	username = "foo" # technically optional, although you probably want it
 	password = "s3kr1t" # optional, if you have no password set for MySQL
@@ -75,3 +80,4 @@ use-mysql = false
 	[mysql.extra_params]
 		tls = "false"
 		foo = "bar"
+

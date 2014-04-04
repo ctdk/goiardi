@@ -31,6 +31,9 @@ func file_store_handler(w http.ResponseWriter, r *http.Request){
 	 * for obvious reasons. Still do for the PUT/POST though. */
 	chksum := r.URL.Path[12:]
 	
+	/* Eventually, both local storage (in-memory or on disk, depending) or
+	 * uploading to s3 or a similar cloud storage provider needs to be
+	 * supported. */
 	switch r.Method {
 		case "GET":
 			w.Header().Set("Content-Type", "application/x-binary")
@@ -58,7 +61,11 @@ func file_store_handler(w http.ResponseWriter, r *http.Request){
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			file_store.Save()
+			err = file_store.Save()
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			file_response := make(map[string]string)
 			file_response[file_store.Chksum] = fmt.Sprintf("File with checksum %s uploaded.", file_store.Chksum)
 			enc := json.NewEncoder(w)
