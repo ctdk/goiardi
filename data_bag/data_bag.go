@@ -29,12 +29,14 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"database/sql"
 )
 
 // The overall data bag.
 type DataBag struct {
 	Name string
-	DataBagItems map[string]DataBagItem
+	dataBagItems map[string]*DataBagItem
+	id int32
 }
 
 // An item within a data bag.
@@ -44,24 +46,39 @@ type DataBagItem struct {
 	JsonClass string `json:"json_class"`
 	DataBagName string `json:"data_bag"`
 	RawData map[string]interface{} `json:"raw_data"`
+	id int32
+	data_bag_id int32
 }
 
 /* Data bag functions and methods */
 
 func New(name string) (*DataBag, util.Gerror){
-	ds := data_store.New()
-	if _, found := ds.Get("data_bag", name); found {
-		err := util.Errorf("Data bag %s already exists", name)
+	var found bool
+	var err error
+
+	if err = validateDataBagName(name, false); err != nil {
+		return nil, err
+	}
+
+	if config.Config.UseMySQL {
+		_, err = checkForDataBagMySQL(name)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		ds := data_store.New()
+		_, found = ds.Get("data_bag", name)
+	}
+	if found {
+		err = util.Errorf("Data bag %s already exists", name)
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
-	if err := validateDataBagName(name, false); err != nil {
-		return nil, err
-	}
-	dbi_map := make(map[string]DataBagItem)
+	
+	dbi_map := make(map[string]*DataBagItem)
 	data_bag := &DataBag{
 		Name: name,
-		DataBagItems: dbi_map,
+		dataBagItems: dbi_map,
 	}
 	indexer.CreateNewCollection(name)
 	return data_bag, nil
@@ -75,7 +92,7 @@ func Get(db_name string) (*DataBag, util.Gerror){
 		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
-	for _, v := range data_bag.(*DataBag).DataBagItems {
+	for _, v := range data_bag.(*DataBag).dataBagItems {
 		z := data_store.WalkMapForNil(v.RawData)
 		v.RawData = z.(map[string]interface{})
 	}
@@ -91,7 +108,7 @@ func (db *DataBag) Save() error {
 func (db *DataBag) Delete() error {
 	ds := data_store.New()
 	/* be thorough, and remove DBItems too */
-	for dbiName := range db.DataBagItems {
+	for dbiName := range db.dataBagItems {
 		db.DeleteDBItem(dbiName)
 	}
 	ds.Delete("data_bag", db.Name)
@@ -137,7 +154,7 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 	}
 
 	/* Look for an existing dbag item with this name */
-	if _, found := db.DataBagItems[dbi_id]; found {
+	if _, found := db.dataBagItems[dbi_id]; found {
 		err := util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
 		err.SetStatus(http.StatusConflict)
 		return nil, err
@@ -148,39 +165,69 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 	}
 	dbi_full_name := fmt.Sprintf("data_bag_item_%s_%s", db.Name, dbi_id)
 	/* But should we store the raw data as a JSON string? */
-	dbag_item := DataBagItem{
+	dbag_item := &DataBagItem{
 		Name: dbi_full_name,
 		ChefType: "data_bag_item",
 		JsonClass: "Chef::DataBagItem",
 		DataBagName: db.Name,
 		RawData: raw_dbag_item,
 	}
-	db.DataBagItems[dbi_id] = dbag_item
+	db.dataBagItems[dbi_id] = dbag_item
 	/* ? */
 	db.Save()
-	indexer.IndexObj(&dbag_item)
-	return &dbag_item, nil
+	indexer.IndexObj(dbag_item)
+	return dbag_item, nil
 }
 
 // Updates a data bag item in this data bag.
 func (db *DataBag) UpdateDBItem(dbi_id string, raw_dbag_item map[string]interface{}) (*DataBagItem, error){
-	db_item, found := db.DataBagItems[dbi_id]
+	db_item, found := db.dataBagItems[dbi_id]
 	if !found {
 		err := fmt.Errorf("Cannot load data bag item %s for data bag %s", dbi_id, db.Name)
 		return nil, err
 	}
 	db_item.RawData = raw_dbag_item
-	db.DataBagItems[dbi_id] = db_item
+	db.dataBagItems[dbi_id] = db_item
 	db.Save()
-	indexer.IndexObj(&db_item)
-	return &db_item, nil
+	indexer.IndexObj(db_item)
+	return db_item, nil
 }
 
 func (db *DataBag) DeleteDBItem(db_item_name string) error {
-	delete(db.DataBagItems, db_item_name)
+	delete(db.dataBagItems, db_item_name)
 	db.Save()
 	indexer.DeleteItemFromCollection(db.Name, db_item_name)
 	return nil
+}
+
+func (db *DataBag) GetDBItem(db_item_name string) (*DataBagItem, error) {
+	if config.Config.UseMySQL {
+		dbi, err := db.getDBItemMySQL(db_item_name)
+		return dbi, err
+	} else {
+		dbi, ok := db.DataBagItem[db_item_name]
+		if !ok {
+			err := fmt.Errorf("data bag item %s in %s not found", db_item_name, db.Name)
+			return nil, err
+		}
+		return dbi, nil
+	}
+}
+
+func (db *DataBag) AllDBItems() (map[string]*DataBagItem, error) {
+
+}
+
+func (db *DataBag) ListDBItems() []string {
+
+}
+
+func (db *DataBag) NumDBItems() int {
+	if config.Config.UseMySQL {
+		return db.numDBItemsMySQL()
+	} else {
+		return len(db.dataBagItems)
+	}
 }
 
 // Extract the data bag item's raw data from the request saving it to the 
