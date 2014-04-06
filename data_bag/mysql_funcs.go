@@ -24,8 +24,8 @@ import (
 
 // Functions for finding, saving, etc. data bags with a MySQL database.
 
-func checkForDataBagMySQL(name string) (bool, error) {
-	_, err := data_store.CheckForOne(data_store.Dbh, "data_bags", name)
+func checkForDataBagMySQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
+	_, err := data_store.CheckForOne(dbhandle, "data_bags", name)
 	if err == nil {
 		return true, nil
 	} else {
@@ -159,4 +159,93 @@ func (db *DataBag) listDBItemsMySQL() []string {
 	}
 
 	return dbi_list
+}
+
+func (db *DataBag) deleteMySQL() error {
+	tx, err := data_store.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("DELETE FROM data_bag_items WHERE data_bag_id = ?", db.id)
+	if err != nil && err != sql.ErrNoRows {
+		terr := tx.Rollback()
+		if terr != nil {
+			err = ftm.Errorf("deleting data bag items for data bag %s had an error '%s', and then rolling back the transaction gave another erorr '%s'", db.Name, err.Error(), terr.Error())
+		}
+		return err
+	}
+	_, err = tx.Exec("DELETE FROM data_bags WHERE id = ?", db.id)
+	if err != nil {
+		terr := tx.Rollback()
+		if terr != nil {
+			err = ftm.Errorf("deleting data bag %s had an error '%s', and then rolling back the transaction gave another erorr '%s'", db.Name, err.Error(), terr.Error())
+		}
+		return err
+	}
+	tx.Commit()
+	return nil
+}
+
+func (db *DataBag) saveMySQL() error {
+	tx, err := data_store.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	found, ferr := checkForDataBagMySQL(tx, db.Name)
+	if err == nil {
+		_, err = tx.Exec("UPDATE data_bags SET updated_at = NOW() WHERE id = ?", db.id)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	} else {
+		if err != sql.ErrNoRows {
+			tx.Rollback()
+			return err
+		}
+		res, rerr := tx.Exec("INSERT INTO data_bags (name, created_at, updated_at) VALUES (?, NOW(), NOW())", db.Name)
+		if rerr != nil {
+			tx.Rollback()
+			return rerr
+		}
+		db_id, err := res.LastInsertId()
+		db.id = int32(db_id)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	tx.Commit()
+	return nil
+}
+
+func getListMySQL() []string {
+	db_list := make([]string, 0)
+	stmt, err := data_store.Dbh.Prepare("SELECT name FROM data_bags")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query()
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Fatal(err)
+		}
+		return dbi_list
+	}
+	for rows.Next() {
+		var db_name string
+		err = rows.Scan(&db_name)
+		if err != nil {
+			rows.Close()
+			log.Fatal(err)
+		}
+		db_list = append(db_list, db_name)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return db_list
 }

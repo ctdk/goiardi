@@ -334,6 +334,7 @@ func GetList() []string {
 			var cb_name string
 			err = rows.Scan(&cb_name)
 			if err != nil {
+				rows.Close()
 				log.Fatal(err)
 			}
 			cb_list = append(cb_list, cb_name)

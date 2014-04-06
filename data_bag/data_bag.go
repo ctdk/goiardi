@@ -61,7 +61,7 @@ func New(name string) (*DataBag, util.Gerror){
 	}
 
 	if config.Config.UseMySQL {
-		_, err = checkForDataBagMySQL(name)
+		_, err = checkForDataBagMySQL(data_store.Dbh, name)
 		if err != nil {
 			return nil, err
 		}
@@ -118,26 +118,42 @@ func Get(db_name string) (*DataBag, util.Gerror){
 }
 
 func (db *DataBag) Save() error {
-	ds := data_store.New()
-	ds.Set("data_bag", db.Name, db)
+	if config.Config.UseMySQL {
+		return db.saveMySQL()
+	} else {
+		ds := data_store.New()
+		ds.Set("data_bag", db.Name, db)
+	}
 	return nil
 }
 
 func (db *DataBag) Delete() error {
-	ds := data_store.New()
-	/* be thorough, and remove DBItems too */
-	for dbiName := range db.dataBagItems {
-		db.DeleteDBItem(dbiName)
+	if config.Config.UseMySQL {
+		err := db.deleteMySQL()
+		if err != nil {
+			return err
+		}
+	} else {
+		ds := data_store.New()
+		/* be thorough, and remove DBItems too */
+		for dbiName := range db.dataBagItems {
+			db.DeleteDBItem(dbiName)
+		}
+		ds.Delete("data_bag", db.Name)
 	}
-	ds.Delete("data_bag", db.Name)
 	indexer.DeleteCollection(db.Name)
 	return nil
 }
 
 // Returns a list of data bags on the server.
 func GetList() []string {
-	ds := data_store.New()
-	db_list := ds.GetList("data_bag")
+	var db_list []string
+	if config.Config.UseMySQL {
+		db_list = getListMySQL()
+	} else {
+		ds := data_store.New()
+		db_list := ds.GetList("data_bag")
+	}
 	return db_list
 }
 
@@ -241,7 +257,17 @@ func (db *DataBag) AllDBItems() (map[string]*DataBagItem, error) {
 }
 
 func (db *DataBag) ListDBItems() []string {
-
+	if config.Config.UseMySQL {
+		return db.listDBItemsMySQL()
+	} else {
+		dbis := make([]string, len(db.dataBagItems)
+		n := 0
+		for k := range db.dataBagItems {
+			dbis[n] = k
+			n++
+		}
+		return dbis
+	}
 }
 
 func (db *DataBag) NumDBItems() int {
