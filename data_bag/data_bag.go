@@ -85,16 +85,34 @@ func New(name string) (*DataBag, util.Gerror){
 }
 
 func Get(db_name string) (*DataBag, util.Gerror){
-	ds := data_store.New()
-	data_bag, found := ds.Get("data_bag", db_name)
-	if !found {
-		err := util.Errorf("Cannot load data bag %s", db_name)
-		err.SetStatus(http.StatusNotFound)
-		return nil, err
-	}
-	for _, v := range data_bag.(*DataBag).dataBagItems {
-		z := data_store.WalkMapForNil(v.RawData)
-		v.RawData = z.(map[string]interface{})
+	var data_bag *DataBag
+	var err error
+	if config.Config.UseMySQL {
+		data_bag, err = getDataBagMySQL(db_name)
+		if err != nil {
+			var gerr util.Gerror
+			if err == sql.ErrNoRows {
+				gerr = util.Errorf("Cannot load data bag %s", db_name)
+				gerr.SetStatus(http.StatusNotFound)
+			} else {
+				gerr = util.Errorf(err.Error())
+				gerr.SetStatus(http.StatusInternalServerError)
+			}
+			return nil, gerr
+		}
+	} else {
+		ds := data_store.New()
+		d, found := ds.Get("data_bag", db_name)
+		if !found {
+			err := util.Errorf("Cannot load data bag %s", db_name)
+			err.SetStatus(http.StatusNotFound)
+			return nil, err
+		}
+		data_bag = d.(*DataBag)
+		for _, v := range data_bag.(*DataBag).dataBagItems {
+			z := data_store.WalkMapForNil(v.RawData)
+			v.RawData = z.(map[string]interface{})
+		}
 	}
 	return data_bag.(*DataBag), nil
 }
@@ -215,7 +233,11 @@ func (db *DataBag) GetDBItem(db_item_name string) (*DataBagItem, error) {
 }
 
 func (db *DataBag) AllDBItems() (map[string]*DataBagItem, error) {
-
+	if config.Config.UseMySQL {
+		return db.allDBItemsMySQL()
+	} else {
+		return db.dataBagItems, nil
+	}
 }
 
 func (db *DataBag) ListDBItems() []string {
