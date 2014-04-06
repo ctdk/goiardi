@@ -53,7 +53,7 @@ func getDataBagMySQL(name string) (*DataBag, error) {
 
 func (dbi *DataBagItem) fillDBItemFromMySQL(row data_store.ResRow) error {
 	var rawb []byte
-	err := row.Scan(&dbi.id, &dbi.data_bag_id, &dbi.Name, &dbi.DataBagName, &rawb)
+	err := row.Scan(&dbi.id, &dbi.data_bag_id, &dbi.Name, &dbi.origName, &dbi.DataBagName, &rawb)
 	dbi.ChefType = "data_bag_item"
 	dbi.JsonClass = "Chef::DataBagItem"
 	var q interface{}
@@ -68,7 +68,7 @@ func (dbi *DataBagItem) fillDBItemFromMySQL(row data_store.ResRow) error {
 
 func (db *DataBag) getDBItemMySQL(db_item_name string) (*DataBagItem, error) {
 	dbi := new(DataBagItem)
-	stmt, err := data_store.Dbh.Prepare("SELECT dbi.id, dbi.data_bag_id, dbi.name, db.name, dbi.raw_data FROM data_bag_items dbi JOIN data_bags db on dbi.data_bag_id = db.id WHERE dbi.name = ? AND dbi.data_bag_id = ?")
+	stmt, err := data_store.Dbh.Prepare("SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM data_bag_items dbi JOIN data_bags db on dbi.data_bag_id = db.id WHERE dbi.orig_name = ? AND dbi.data_bag_id = ?")
 	if err != nil {
 		return nil, err
 	}
@@ -81,9 +81,60 @@ func (db *DataBag) getDBItemMySQL(db_item_name string) (*DataBagItem, error) {
 	return dbi, nil
 }
 
+func (db *DataBag) newDBItemMySQL(dbi_id string, raw_dbag_item map[string]interface{}) (*DataBagItem, error){
+	rawb, rawerr := data_store.EncodeBlob(raw_dbag_item)
+	if rawerr != nil {
+		return nil, rawerr
+	}
+
+	dbi := &DataBagItem{
+		Name: db.fullDBItemName(dbi_id),
+		ChefType: "data_bag_item",
+		JsonClass: "Chef::DataBagItem",
+		DataBagName: db.Name,
+		RawData: raw_dbag_item,
+		origName: dbi_id,
+		data_bag_id: db.id,
+	}
+	
+	tx, err := data_store.Dbh.Begin()
+	// make sure this data bag didn't go away while we were doing something
+	// else
+	found, ferr := checkForDataBagMySQL(tx, db.Name)
+	if ferr != nil {
+		tx.Rollback()
+		return nil, err
+	} else if !found {
+		tx.Rollback()
+		err = fmt.Errorf("aiiiie! The data bag %s was deleted from the db while we were doing something else", db.Name)
+		return nil, err
+	}
+	res, err := tx.Exec("INSERT INTO data_bag_items (name, orig_name, data_bag_id, raw_data, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())", dbi.Name, dbi.origName, db.id, rawb)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	did, err := res.LastInsertId()
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	dbi.id = int32(did)
+
+	return dbi, nil
+}
+
+func (dbi *DataBagItem) updateDBItemMySQL() error {
+
+}
+
+func (dbi *DataBagItem) deleteDBItemMySQL() error {
+
+}
+
 func (db *DataBag) allDBItemsMySQL()(map[string]*DataBagItem, error) {
 	dbis := make(map[string]*DataBagItem)
-	stmt, err := data_store.Dbh.Prepare("SELECT dbi.id, dbi.data_bag_id, dbi.name, db.name, dbi.raw_data FROM data_bag_items dbi JOIN data_bags db on dbi.data_bag_id = db.id WHERE dbi.data_bag_id = ?")
+	stmt, err := data_store.Dbh.Prepare("SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM data_bag_items dbi JOIN data_bags db on dbi.data_bag_id = db.id WHERE dbi.data_bag_id = ?")
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +183,7 @@ func (db *DataBag) numDBItemsMySQL() int {
 
 func (db *DataBag) listDBItemsMySQL() []string {
 	dbi_list := make([]string, 0)
-	stmt, err := data_store.Dbh.Prepare("SELECT name FROM data_bag_items WHERE data_bag_id = ?")
+	stmt, err := data_store.Dbh.Prepare("SELECT orig_name FROM data_bag_items WHERE data_bag_id = ?")
 	if err != nil {
 		log.Fatal(err)
 	}

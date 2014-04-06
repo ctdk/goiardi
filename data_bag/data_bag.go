@@ -48,6 +48,7 @@ type DataBagItem struct {
 	RawData map[string]interface{} `json:"raw_data"`
 	id int32
 	data_bag_id int32
+	origName string
 }
 
 /* Data bag functions and methods */
@@ -174,6 +175,7 @@ func (db *DataBag) URLType() string {
 func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagItem, util.Gerror){
 	//dbi_id := raw_dbag_item["id"].(string)
 	var dbi_id string
+	var dbag_item *DataBag
 	switch t := raw_dbag_item["id"].(type) {
 		case string:
 			if t == "" {
@@ -186,50 +188,93 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 			err := util.Errorf("Field 'id' missing")
 			return nil, err
 	}
-
-	/* Look for an existing dbag item with this name */
-	if _, found := db.dataBagItems[dbi_id]; found {
-		err := util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
-		err.SetStatus(http.StatusConflict)
-		return nil, err
-	}
-
 	if err := validateDataBagName(dbi_id, true); err != nil {
 		return nil, err
 	}
 	dbi_full_name := fmt.Sprintf("data_bag_item_%s_%s", db.Name, dbi_id)
-	/* But should we store the raw data as a JSON string? */
-	dbag_item := &DataBagItem{
-		Name: dbi_full_name,
-		ChefType: "data_bag_item",
-		JsonClass: "Chef::DataBagItem",
-		DataBagName: db.Name,
-		RawData: raw_dbag_item,
+
+	if config.Config.UseMySQL {
+		var err error
+		dbag_item, err = db.newDBItemMySQL(dbi_id, raw_dbag_item)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		/* Look for an existing dbag item with this name */
+		if _, err := db.GetDBItem(dbi_id]); err != nil {
+			var gerr util.Gerror
+			if err == sql.ErrNoRows {
+				gerr = util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
+				gerr.SetStatus(http.StatusConflict)
+			} else {
+				gerr = util.Errorf(err.Error())
+				gerr.SetStatus(http.StatusInternalServerError)
+			}
+			return nil, gerr
+		}
+		/* But should we store the raw data as a JSON string? */
+		dbag_item = &DataBagItem{
+			Name: dbi_full_name,
+			ChefType: "data_bag_item",
+			JsonClass: "Chef::DataBagItem",
+			DataBagName: db.Name,
+			RawData: raw_dbag_item,
+		}
+		db.dataBagItems[dbi_id] = dbag_item
 	}
-	db.dataBagItems[dbi_id] = dbag_item
-	/* ? */
-	db.Save()
+	err := db.Save()
+	if err != nil {
+		gerr := util.Errorf(err.Error())
+		gerr.SetStatus(http.StatusInternalServerError)
+		return nil, gerr
+	}
 	indexer.IndexObj(dbag_item)
 	return dbag_item, nil
 }
 
 // Updates a data bag item in this data bag.
 func (db *DataBag) UpdateDBItem(dbi_id string, raw_dbag_item map[string]interface{}) (*DataBagItem, error){
-	db_item, found := db.dataBagItems[dbi_id]
-	if !found {
-		err := fmt.Errorf("Cannot load data bag item %s for data bag %s", dbi_id, db.Name)
+	db_item, err := db.GetDBItem(dbi_id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			err = fmt.Errorf("Cannot load data bag item %s for data bag %s", dbi_id, db.Name)
+		}
 		return nil, err
 	}
 	db_item.RawData = raw_dbag_item
-	db.dataBagItems[dbi_id] = db_item
-	db.Save()
+	if config.Config.UseMySQL {
+		err = db_item.updateDBItemMySQL()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		db.dataBagItems[dbi_id] = db_item
+	}
+	err = db.Save()
+	if err != nil {
+		return nil, err
+	}
 	indexer.IndexObj(db_item)
 	return db_item, nil
 }
 
 func (db *DataBag) DeleteDBItem(db_item_name string) error {
-	delete(db.dataBagItems, db_item_name)
-	db.Save()
+	if config.Config.UseMySQL {
+		dbi, err := db.GetDBItem(db_item_name)
+		if err != nil {
+			return err
+		}
+		err = dbi.deleteMySQL()
+		if err != nil {
+			return err
+		}
+	} else {
+		delete(db.dataBagItems, db_item_name)
+	}
+	err := db.Save()
+	if err != nil {
+		return err
+	}
 	indexer.DeleteItemFromCollection(db.Name, db_item_name)
 	return nil
 }
@@ -276,6 +321,10 @@ func (db *DataBag) NumDBItems() int {
 	} else {
 		return len(db.dataBagItems)
 	}
+}
+
+func (db *DataBag) fullDBItemName(db_item_name string) string {
+	return fmt.Sprintf("data_bag_item_%s_%s", db.Name, db_item_name)
 }
 
 // Extract the data bag item's raw data from the request saving it to the 
