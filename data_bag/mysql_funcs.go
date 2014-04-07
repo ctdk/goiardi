@@ -55,6 +55,9 @@ func getDataBagMySQL(name string) (*DataBag, error) {
 func (dbi *DataBagItem) fillDBItemFromMySQL(row data_store.ResRow) error {
 	var rawb []byte
 	err := row.Scan(&dbi.id, &dbi.data_bag_id, &dbi.Name, &dbi.origName, &dbi.DataBagName, &rawb)
+	if err != nil {
+		return err
+	}
 	dbi.ChefType = "data_bag_item"
 	dbi.JsonClass = "Chef::DataBagItem"
 	var q interface{}
@@ -121,6 +124,7 @@ func (db *DataBag) newDBItemMySQL(dbi_id string, raw_dbag_item map[string]interf
 		return nil, err
 	}
 	dbi.id = int32(did)
+	tx.Commit()
 
 	return dbi, nil
 }
@@ -142,6 +146,7 @@ func (dbi *DataBagItem) updateDBItemMySQL() error {
 		}
 		return err
 	}
+	tx.Commit()
 	return nil
 }
 
@@ -276,17 +281,14 @@ func (db *DataBag) saveMySQL() error {
 	if ferr != nil {
 		tx.Rollback()
 		return ferr
-	} else if !found {
+	} else if found {
 		_, err = tx.Exec("UPDATE data_bags SET updated_at = NOW() WHERE id = ?", db.id)
+		
 		if err != nil {
 			tx.Rollback()
 			return err
 		}
 	} else {
-		if err != sql.ErrNoRows {
-			tx.Rollback()
-			return err
-		}
 		res, rerr := tx.Exec("INSERT INTO data_bags (name, created_at, updated_at) VALUES (?, NOW(), NOW())", db.Name)
 		if rerr != nil {
 			tx.Rollback()

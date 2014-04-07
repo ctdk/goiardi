@@ -85,7 +85,11 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 					JsonErrorReport(w, r, nerr.Error(), nerr.Status())
 					return
 				}
-				chef_dbag.Save()
+				serr := chef_dbag.Save()
+				if serr != nil {
+					JsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
+					return
+				}
 				db_response["uri"] = util.ObjURL(chef_dbag)
 				w.WriteHeader(http.StatusCreated)
 			default:

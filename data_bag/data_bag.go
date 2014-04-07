@@ -198,7 +198,7 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 	dbi_full_name := fmt.Sprintf("data_bag_item_%s_%s", db.Name, dbi_id)
 
 	if config.Config.UseMySQL {
-		d, err := db.GetDBItem(dbi_id)
+		d, err := db.getDBItemMySQL(dbi_id)
 		if d != nil {
 			gerr := util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
 			gerr.SetStatus(http.StatusConflict)
