@@ -125,11 +125,39 @@ func (db *DataBag) newDBItemMySQL(dbi_id string, raw_dbag_item map[string]interf
 }
 
 func (dbi *DataBagItem) updateDBItemMySQL() error {
-
+	rawb, rawerr := data_store.EncodeBlob(raw_dbag_item)
+	if rawerr != nil {
+		return nil, rawerr
+	}
+	tx, err := data_store.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("UPDATE data_bag_items SET raw_data = ?, updated_at = NOW() WHERE id = ?", rawb, dbi.id)
+	if err != nil {
+		terr := tx.Rollback()
+		if terr != nil {
+			err = fmt.Errorf("updating data bag item %s in data bag %s had an error '%s', and then rolling back the transaction gave another erorr '%s'", dbi.origName, dbi.DataBagName, err.Error(), terr.Error())
+		}
+		return err
+	}
 }
 
 func (dbi *DataBagItem) deleteDBItemMySQL() error {
-
+	tx, err := data_store.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("DELETE FROM data_bag_items WHERE id = ?", dbi.id)
+	if err != nil {
+		terr := tx.Rollback()
+		if terr != nil {
+			err = fmt.Errorf("deleting data bag item %s in data bag %s had an error '%s', and then rolling back the transaction gave another erorr '%s'", dbi.origName, dbi.DataBagName, err.Error(), terr.Error())
+		}
+		return err
+	}
+	tx.Commit()
+	return nil
 }
 
 func (db *DataBag) allDBItemsMySQL()(map[string]*DataBagItem, error) {
@@ -221,7 +249,7 @@ func (db *DataBag) deleteMySQL() error {
 	if err != nil && err != sql.ErrNoRows {
 		terr := tx.Rollback()
 		if terr != nil {
-			err = ftm.Errorf("deleting data bag items for data bag %s had an error '%s', and then rolling back the transaction gave another erorr '%s'", db.Name, err.Error(), terr.Error())
+			err = fmt.Errorf("deleting data bag items for data bag %s had an error '%s', and then rolling back the transaction gave another erorr '%s'", db.Name, err.Error(), terr.Error())
 		}
 		return err
 	}
@@ -229,7 +257,7 @@ func (db *DataBag) deleteMySQL() error {
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
-			err = ftm.Errorf("deleting data bag %s had an error '%s', and then rolling back the transaction gave another erorr '%s'", db.Name, err.Error(), terr.Error())
+			err = fmt.Errorf("deleting data bag %s had an error '%s', and then rolling back the transaction gave another erorr '%s'", db.Name, err.Error(), terr.Error())
 		}
 		return err
 	}

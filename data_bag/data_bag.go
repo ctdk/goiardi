@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/config"
 	"fmt"
 	"encoding/json"
 	"io"
@@ -55,7 +56,7 @@ type DataBagItem struct {
 
 func New(name string) (*DataBag, util.Gerror){
 	var found bool
-	var err error
+	var err util.Gerror
 
 	if err = validateDataBagName(name, false); err != nil {
 		return nil, err
@@ -110,12 +111,12 @@ func Get(db_name string) (*DataBag, util.Gerror){
 			return nil, err
 		}
 		data_bag = d.(*DataBag)
-		for _, v := range data_bag.(*DataBag).dataBagItems {
+		for _, v := range data_bag.dataBagItems {
 			z := data_store.WalkMapForNil(v.RawData)
 			v.RawData = z.(map[string]interface{})
 		}
 	}
-	return data_bag.(*DataBag), nil
+	return data_bag, nil
 }
 
 func (db *DataBag) Save() error {
@@ -175,7 +176,7 @@ func (db *DataBag) URLType() string {
 func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagItem, util.Gerror){
 	//dbi_id := raw_dbag_item["id"].(string)
 	var dbi_id string
-	var dbag_item *DataBag
+	var dbag_item *DataBagItem
 	switch t := raw_dbag_item["id"].(type) {
 		case string:
 			if t == "" {
@@ -194,22 +195,26 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 	dbi_full_name := fmt.Sprintf("data_bag_item_%s_%s", db.Name, dbi_id)
 
 	if config.Config.UseMySQL {
-		var err error
+		d, err := db.GetDBItem(dbi_id)
+		if d != nil {
+			gerr = util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
+			gerr.SetStatus(http.StatusConflict)
+		} else if err != nil && err != sql.ErrNoRows {
+			gerr := util.Errorf(err.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return nil, gerr
+		}
 		dbag_item, err = db.newDBItemMySQL(dbi_id, raw_dbag_item)
 		if err != nil {
-			return nil, err
+			gerr := util.Errorf(err.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return nil, gerr
 		}
 	} else {
 		/* Look for an existing dbag item with this name */
-		if _, err := db.GetDBItem(dbi_id]); err != nil {
-			var gerr util.Gerror
-			if err == sql.ErrNoRows {
-				gerr = util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
-				gerr.SetStatus(http.StatusConflict)
-			} else {
-				gerr = util.Errorf(err.Error())
-				gerr.SetStatus(http.StatusInternalServerError)
-			}
+		if d, _ := db.GetDBItem(dbi_id); d != nil {
+			gerr := util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
+			gerr.SetStatus(http.StatusConflict)
 			return nil, gerr
 		}
 		/* But should we store the raw data as a JSON string? */
@@ -284,7 +289,7 @@ func (db *DataBag) GetDBItem(db_item_name string) (*DataBagItem, error) {
 		dbi, err := db.getDBItemMySQL(db_item_name)
 		return dbi, err
 	} else {
-		dbi, ok := db.DataBagItem[db_item_name]
+		dbi, ok := db.dataBagItem[db_item_name]
 		if !ok {
 			err := fmt.Errorf("data bag item %s in %s not found", db_item_name, db.Name)
 			return nil, err
@@ -305,7 +310,7 @@ func (db *DataBag) ListDBItems() []string {
 	if config.Config.UseMySQL {
 		return db.listDBItemsMySQL()
 	} else {
-		dbis := make([]string, len(db.dataBagItems)
+		dbis := make([]string, len(db.dataBagItems))
 		n := 0
 		for k := range db.dataBagItems {
 			dbis[n] = k
