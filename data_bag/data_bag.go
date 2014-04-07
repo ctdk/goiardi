@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"strings"
 	"database/sql"
+	"log"
 )
 
 // The overall data bag.
@@ -199,12 +200,12 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 
 	if config.Config.UseMySQL {
 		d, err := db.getDBItemMySQL(dbi_id)
-		if d != nil {
+		if d != nil || (err != nil && err != sql.ErrNoRows) {
+			if err != nil {
+				log.Printf("Log real SQL error in NewDBItem: %s", err.Error())
+			}
 			gerr := util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
 			gerr.SetStatus(http.StatusConflict)
-		} else if err != nil && err != sql.ErrNoRows {
-			gerr := util.Errorf(err.Error())
-			gerr.SetStatus(http.StatusInternalServerError)
 			return nil, gerr
 		}
 		dbag_item, err = db.newDBItemMySQL(dbi_id, raw_dbag_item)
