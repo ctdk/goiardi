@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"strconv"
 	"regexp"
+	"log"
 )
 
 func search_handler(w http.ResponseWriter, r *http.Request){
@@ -241,11 +242,16 @@ func reindexHandler(w http.ResponseWriter, r *http.Request){
 				if err != nil {
 					continue
 				}
-				dbis := make([]indexer.Indexable, len(dbag.DataBagItems))
+				dbis := make([]indexer.Indexable, dbag.NumDBItems())
 				i := 0
-				for _, k := range dbag.DataBagItems {
+				allDBItems, derr := dbag.AllDBItems()
+				if derr != nil {
+					log.Println(derr)
+					continue
+				}
+				for _, k := range allDBItems {
 					n := k
-					dbis[i] = &n
+					dbis[i] = n
 					i++
 				}
 				reindexObjs = append(reindexObjs, dbis...)

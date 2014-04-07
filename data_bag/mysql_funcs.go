@@ -20,6 +20,7 @@ import (
 	"github.com/ctdk/goiardi/data_store"
 	"database/sql"
 	"fmt"
+	"log"
 )
 
 // Functions for finding, saving, etc. data bags with a MySQL database.
@@ -62,7 +63,7 @@ func (dbi *DataBagItem) fillDBItemFromMySQL(row data_store.ResRow) error {
 		return err
 	}
 	dbi.RawData = q.(map[string]interface{})
-	data_store.CheckNilArray(dbi)
+	data_store.ChkNilArray(dbi)
 	return nil
 }
 
@@ -125,9 +126,9 @@ func (db *DataBag) newDBItemMySQL(dbi_id string, raw_dbag_item map[string]interf
 }
 
 func (dbi *DataBagItem) updateDBItemMySQL() error {
-	rawb, rawerr := data_store.EncodeBlob(raw_dbag_item)
+	rawb, rawerr := data_store.EncodeBlob(dbi.RawData)
 	if rawerr != nil {
-		return nil, rawerr
+		return rawerr
 	}
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
@@ -141,6 +142,7 @@ func (dbi *DataBagItem) updateDBItemMySQL() error {
 		}
 		return err
 	}
+	return nil
 }
 
 func (dbi *DataBagItem) deleteDBItemMySQL() error {
@@ -182,7 +184,7 @@ func (db *DataBag) allDBItemsMySQL()(map[string]*DataBagItem, error) {
 			rows.Close()
 			return nil, err
 		}
-		dbis = append(dbis, dbi)
+		dbis[dbi.origName] = dbi
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
@@ -271,7 +273,10 @@ func (db *DataBag) saveMySQL() error {
 		return err
 	}
 	found, ferr := checkForDataBagMySQL(tx, db.Name)
-	if err == nil {
+	if ferr != nil {
+		tx.Rollback()
+		return ferr
+	} else if !found {
 		_, err = tx.Exec("UPDATE data_bags SET updated_at = NOW() WHERE id = ?", db.id)
 		if err != nil {
 			tx.Rollback()
@@ -310,7 +315,7 @@ func getListMySQL() []string {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
 		}
-		return dbi_list
+		return db_list
 	}
 	for rows.Next() {
 		var db_name string

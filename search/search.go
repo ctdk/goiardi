@@ -189,7 +189,12 @@ func getResults(variety string, toGet []string) []indexer.Indexable {
 			dbag, _ := data_bag.Get(variety)
 			if dbag != nil {
 				for _, k := range toGet {
-					dbi := dbag.DataBagItems[k] // hmm
+					dbi, err := dbag.GetDBItem(k)
+					if err != nil {
+						// at least log the error for
+						// now
+						log.Println(err)
+					}
 					results = append(results, dbi)
 				}
 			}

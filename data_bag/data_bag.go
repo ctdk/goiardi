@@ -63,8 +63,11 @@ func New(name string) (*DataBag, util.Gerror){
 	}
 
 	if config.Config.UseMySQL {
-		_, err = checkForDataBagMySQL(data_store.Dbh, name)
-		if err != nil {
+		var cerr error
+		found, cerr = checkForDataBagMySQL(data_store.Dbh, name)
+		if cerr != nil {
+			err = util.Errorf(cerr.Error())
+			err.SetStatus(http.StatusInternalServerError)
 			return nil, err
 		}
 	} else {
@@ -154,7 +157,7 @@ func GetList() []string {
 		db_list = getListMySQL()
 	} else {
 		ds := data_store.New()
-		db_list := ds.GetList("data_bag")
+		db_list = ds.GetList("data_bag")
 	}
 	return db_list
 }
@@ -197,7 +200,7 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 	if config.Config.UseMySQL {
 		d, err := db.GetDBItem(dbi_id)
 		if d != nil {
-			gerr = util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
+			gerr := util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
 			gerr.SetStatus(http.StatusConflict)
 		} else if err != nil && err != sql.ErrNoRows {
 			gerr := util.Errorf(err.Error())
@@ -269,7 +272,7 @@ func (db *DataBag) DeleteDBItem(db_item_name string) error {
 		if err != nil {
 			return err
 		}
-		err = dbi.deleteMySQL()
+		err = dbi.deleteDBItemMySQL()
 		if err != nil {
 			return err
 		}
@@ -287,9 +290,12 @@ func (db *DataBag) DeleteDBItem(db_item_name string) error {
 func (db *DataBag) GetDBItem(db_item_name string) (*DataBagItem, error) {
 	if config.Config.UseMySQL {
 		dbi, err := db.getDBItemMySQL(db_item_name)
+		if err == sql.ErrNoRows {
+			err = fmt.Errorf("data bag item %s in %s not found", db_item_name, db.Name)
+		}
 		return dbi, err
 	} else {
-		dbi, ok := db.dataBagItem[db_item_name]
+		dbi, ok := db.dataBagItems[db_item_name]
 		if !ok {
 			err := fmt.Errorf("data bag item %s in %s not found", db_item_name, db.Name)
 			return nil, err

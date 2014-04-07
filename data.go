@@ -135,7 +135,8 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 			 * items. */
 			switch r.Method {
 				case "GET":
-					for k, _ := range chef_dbag.DataBagItems {
+					
+					for _, k := range chef_dbag.ListDBItems() {
 						db_response[k] = util.CustomObjURL(chef_dbag, k)
 					}
 				case "DELETE":
@@ -181,7 +182,7 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 		} else {
 			/* getting, editing, and deleting existing data bag items. */
 			db_item_name := path_array[2]
-			if _, ok := chef_dbag.DataBagItems[db_item_name]; !ok {
+			if _, err := chef_dbag.GetDBItem(db_item_name); err != nil {
 				var httperr string
 				if r.Method != "DELETE" {
 					httperr = fmt.Sprintf("Cannot load data bag item %s for data bag %s", db_item_name, chef_dbag.Name)
@@ -193,16 +194,25 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 			}
 			switch r.Method {
 				case "GET":
-					db_response = chef_dbag.DataBagItems[db_item_name].RawData
+					dbi, err := chef_dbag.GetDBItem(db_item_name)
+					if err != nil {
+						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+						return
+					}
+					db_response = dbi.RawData
 				case "DELETE":
-					dbi := chef_dbag.DataBagItems[db_item_name]
+					dbi, err := chef_dbag.GetDBItem(db_item_name)
+					if err != nil {
+						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+						return
+					}
 					/* Gotta short circuit this */
 					enc := json.NewEncoder(w)
 					if err := enc.Encode(&dbi); err != nil {
 						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 						return
 					}
-					err := chef_dbag.DeleteDBItem(db_item_name)
+					err = chef_dbag.DeleteDBItem(db_item_name)
 					if err != nil {
 						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 						return
