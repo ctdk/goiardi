@@ -46,6 +46,56 @@ type User struct {
 	Salt []byte
 }
 
+// Create a new API user.
+func New(name string) (*User, util.Gerror) {
+
+}
+
+// Gets a user.
+func Get(name string) (*User, util.Gerror){
+
+}
+
+func (u *User) Save() util.Gerror {
+
+}
+
+// Deletes a user, but will refuse to do so and give an error if it is the last
+// administrator user.
+func (u *User) Delete() util.Gerror {
+
+}
+
+// Renames a user. Save() must be called after this method is used. Will not 
+// rename the last administrator user. 
+func (u *User) Rename(new_name string) util.Gerror {
+
+}
+
+// Build a new user from a JSON object.
+func NewFromJson(json_user map[string]interface{}) (*User, util.Gerror) {
+
+}
+
+// Update a user from a JSON object, carrying out a bunch of validations inside.
+func UpdateFromJson(json_user map[string]interface{}) util.Gerror {
+
+}
+
+// Returns a list of users.
+func GetList() []string {
+
+}
+
+// Convert the user to a JSON object, massaging it as needed to keep the chef
+// client happy (be it knife, chef-pedant, etc.)
+func (u *User) ToJson() map[string]interface{} {
+
+}
+
+func (u *User) isLastAdmin() bool {
+
+}
 
 // Generate a new set of RSA keys for the user. The new private key is saved
 // with the user object, the public key is given to the user and not saved on 
@@ -88,6 +138,12 @@ func (u *User) IsSelf(other *Actor) bool {
 	if !config.Config.UseAuth {
 		return true
 	}
+	if ou, ok := other.(*User); ok {
+		if u.Username == ou.Username {
+			return true
+		}
+	}
+	return false
 }
 
 func (u *User) IsUser() bool {
@@ -101,6 +157,21 @@ func (u *User) IsClient() bool {
 // Return the user's public key. Part of the Actor interface.
 func (u *User) PublicKey() string {
 	return u.pubKey
+}
+
+// Set the user's public key. Part of the Actor interface.
+func (u *User) SetPublicKey(pk interface{}) error {
+	switch pk := pk.(type) {
+		case string:
+			ok, err := ValidatePublicKey(pk)
+			if !ok {
+				return err
+			}
+			u.pubKey = pk
+		default:
+			err := fmt.Errorf("invalid type %T for public key", pk)
+	}
+	return nil
 }
 
 // Validate and set the user's password. Will not set a password for a client.
