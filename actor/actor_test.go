@@ -24,28 +24,6 @@ import (
 	"fmt"
 )
 
-func TestSetPasswd(t *testing.T) {
-	c, _ := New("foo", "user")
-	pass := "abc123"
-	tooShort := "123"
-	err := c.SetPasswd(tooShort)
-	if err == nil {
-		t.Errorf("Should not have set a password less than 6 characters, but it did")
-	}
-	err = c.SetPasswd(pass)
-	if err != nil {
-		t.Errorf("Should have allowed %s as a password, but didn't", pass)
-	}
-	err = c.CheckPasswd("abc123")
-	if err != nil {
-		t.Errorf("abc123 should have been accepted as a password, but it wasn't")
-	}
-	err = c.CheckPasswd("badpass")
-	if err == nil {
-		t.Errorf("badpass should not have been accepted, but it was")
-	}
-}
-
 func TestClientPasswd(t *testing.T) {
 	c, _ := New("foo", "client")
 	err := c.SetPasswd("abc123")

@@ -32,8 +32,6 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/config"
 	"net/http"
-	"encoding/gob"
-	"bytes"
 )
 
 type User struct {
@@ -46,55 +44,130 @@ type User struct {
 	Salt []byte
 }
 
+type Actor interface {
+	IsAdmin() bool
+}
+
 // Create a new API user.
 func New(name string) (*User, util.Gerror) {
+	ds := data_store.New()
+	if _, found := ds.Get("user", name); found {
+		err := util.Errorf("User '%s' already exists", name)
+		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
+	if err := validateUserName(name); err != nil {
+		return nil, err
+	}
 
+	salt, saltErr := chef_crypto.GenerateSalt()
+	if saltErr != nil {
+		err := util.Errorf(saltErr.Error())
+		return nil, err
+	}
+	user := &User{
+		Username: name,
+		Name: name,
+		Admin: false,
+		pubKey: "",
+		Salt: salt,
+	}
+	return user, nil
 }
 
 // Gets a user.
 func Get(name string) (*User, util.Gerror){
-
+	ds := data_store.New()
+	user, found := ds.Get("user", name)
+	if !found {
+		err := util.Errorf("User %s not found", name)
+		return nil, err
+	}
+	return user.(*User), nil
 }
 
+// Save the user's current state.
 func (u *User) Save() util.Gerror {
-
+	ds := data_store.New()
+	ds.Set("user", u.Username, u)
+	return nil
 }
 
 // Deletes a user, but will refuse to do so and give an error if it is the last
 // administrator user.
 func (u *User) Delete() util.Gerror {
-
+	if u.isLastAdmin() {
+		err := util.Errorf("Cannot delete the last admin")
+		return err
+	}
+	ds := data_store.New()
+	ds.Delete("User", u.Username)
+	return nil
 }
 
 // Renames a user. Save() must be called after this method is used. Will not 
 // rename the last administrator user. 
 func (u *User) Rename(new_name string) util.Gerror {
-
+	ds := data_store.New()
+	if err := validateUserName(new_name); err != nil {
+		return err
+	}
+	if u.isLastAdmin() {
+		err := util.Errorf("Cannot rename the last admin")
+		err.SetStatus(http.StatusForbidden)
+		return err
+	}
+	if _, found := ds.Get("user", new_name); found {
+		err := util.Errorf("User %s already exists, cannot rename %s", new_name, u.Username)
+		err.SetStatus(http.StatusConflict)
+		return err
+	}
+	ds.Delete("client", u.Username)
+	u.Username = new_name
+	return nil
 }
 
 // Build a new user from a JSON object.
 func NewFromJson(json_user map[string]interface{}) (*User, util.Gerror) {
 
+	return nil, nil
 }
 
 // Update a user from a JSON object, carrying out a bunch of validations inside.
 func UpdateFromJson(json_user map[string]interface{}) util.Gerror {
 
+	return nil
 }
 
 // Returns a list of users.
 func GetList() []string {
-
+	ds := data_store.New()
+	user_list := ds.GetList("user")
+	return user_list
 }
 
 // Convert the user to a JSON object, massaging it as needed to keep the chef
 // client happy (be it knife, chef-pedant, etc.)
 func (u *User) ToJson() map[string]interface{} {
 
+	return nil
 }
 
 func (u *User) isLastAdmin() bool {
-
+	if u.Admin {
+		user_list := GetList()
+		numAdmins := 0
+		for _, u := range user_list {
+			u1, _ := Get(u)
+			if u1 != nil && u1.Admin {
+				numAdmins++
+			}
+		}
+		if numAdmins == 1 {
+			return true
+		}
+	}
+	return false
 }
 
 // Generate a new set of RSA keys for the user. The new private key is saved
@@ -105,7 +178,7 @@ func (u *User) GenerateKeys() (string, error){
 	if err != nil {
 		return "", err
 	}
-	c.pubKey = pub_pem
+	u.pubKey = pub_pem
 	return priv_pem, nil
 }
 
@@ -134,7 +207,8 @@ func (u *User) IsValidator() bool {
 	return false
 }
 
-func (u *User) IsSelf(other *Actor) bool {
+// this actor is a fake-out for now
+func (u *User) IsSelf(other Actor) bool {
 	if !config.Config.UseAuth {
 		return true
 	}
@@ -170,6 +244,7 @@ func (u *User) SetPublicKey(pk interface{}) error {
 			u.pubKey = pk
 		default:
 			err := fmt.Errorf("invalid type %T for public key", pk)
+			return err
 	}
 	return nil
 }
