@@ -129,12 +129,82 @@ func (u *User) Rename(new_name string) util.Gerror {
 
 // Build a new user from a JSON object.
 func NewFromJson(json_user map[string]interface{}) (*User, util.Gerror) {
-
-	return nil, nil
+	user_name, nerr := util.ValidateAsString(json_user["name"])
+	if nerr != nil {
+		return nil, nerr
+	}
+	user, err := New(user_name)
+	if err != nil {
+		return nil, err
+	}
+	// check if the password is supplied if this is a user, and fail if
+	// it isn't.
+	if _, ok := json_user["password"]; !ok {
+		err := util.Errorf("Field 'password' missing")
+		return nil, err
+	}
+	err = user.UpdateFromJson(json_user)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 // Update a user from a JSON object, carrying out a bunch of validations inside.
-func UpdateFromJson(json_user map[string]interface{}) util.Gerror {
+func (u *User)UpdateFromJson(json_user map[string]interface{}) util.Gerror {
+	user_name, nerr := util.ValidateAsString(json_user["name"])
+	if nerr != nil {
+		return nerr
+	}
+	if u.Username != user_name {
+		err := util.Errorf("User name %s and %s from JSON do not match", u.Username, user_name)
+		return err
+	}
+
+	/* Validations. */
+	/* Invalid top level elements */
+	valid_elements := []string{ "username", "name", "org_name", "public_key", "private_key", "admin", "password" }
+	ValidElem:
+	for k, _ := range json_user {
+		for _, i := range valid_elements {
+			if k == i {
+				continue ValidElem
+			}
+		}
+		err := util.Errorf("Invalid key %s in request body", k)
+		return err
+	}
+	var verr util.Gerror
+
+	// Check the password first. If it's bad, bail before touching anything
+	// else.
+	if passwd, ok := json_user["password"]; ok {
+		passwd, verr = util.ValidateAsString(passwd)
+		if verr != nil {
+			return verr
+		}
+		verr = u.SetPasswd(passwd.(string))
+		if verr != nil {
+			return verr
+		}
+	} 
+
+	if admin_val, ok := json_user["admin"]; ok {
+		var ab bool
+		if ab, verr = util.ValidateAsBool(admin_val); verr != nil {
+			// NOTE: may need to tweak this error message depending
+			// if this is a user or a client
+			verr = util.Errorf("Field 'admin' invalid")
+			return verr
+		} else if u.Admin && !ab {
+			if u.isLastAdmin() {
+				verr = util.Errorf("Cannot remove admin status from the last admin")
+				verr.SetStatus(http.StatusForbidden)
+				return verr
+			}
+		}
+		u.Admin = ab
+	}
 
 	return nil
 }
@@ -147,7 +217,8 @@ func GetList() []string {
 }
 
 // Convert the user to a JSON object, massaging it as needed to keep the chef
-// client happy (be it knife, chef-pedant, etc.)
+// client happy (be it knife, chef-pedant, etc.) NOTE: There may be a more
+// idiomatic way to do this.
 func (u *User) ToJson() map[string]interface{} {
 
 	return nil
