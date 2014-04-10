@@ -32,6 +32,7 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/config"
 	"net/http"
+	"github.com/ctdk/goiardi/actor"
 )
 
 type User struct {
@@ -42,10 +43,6 @@ type User struct {
 	pubKey string `json:"public_key"`
 	passwd string
 	Salt []byte
-}
-
-type Actor interface {
-	IsAdmin() bool
 }
 
 // Create a new API user.
@@ -278,8 +275,8 @@ func (u *User) IsValidator() bool {
 	return false
 }
 
-// this actor is a fake-out for now
-func (u *User) IsSelf(other Actor) bool {
+// Is the actor in question the same client or user as the caller?
+func (u *User) IsSelf(other actor.Actor) bool {
 	if !config.Config.UseAuth {
 		return true
 	}

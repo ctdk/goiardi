@@ -15,7 +15,7 @@
  */
 
 // Some user password tests, for now.
-package actor
+package client
 
 import (
 	"testing"
@@ -24,18 +24,8 @@ import (
 	"fmt"
 )
 
-func TestClientPasswd(t *testing.T) {
-	c, _ := New("foo", "client")
-	err := c.SetPasswd("abc123")
-	if err == nil {
-		t.Errorf("That client should not have been able to set a password, but it was allowed to")
-	}
-}
-
 func TestGobEncodeDecode(t *testing.T){
-	c, _ := New("foo", "user")
-	c.SetPasswd("abc123")
-	c.JsonClass = "Chef::ApiClient"
+	c, _ := New("foo")
 	saved := new(bytes.Buffer)
 	var err error
 	enc := gob.NewEncoder(saved)

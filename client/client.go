@@ -17,12 +17,14 @@
  */
 
 /* 
-Package actor in goiardi encompasses both Chef clients and users. They're
-basically the same thing. Clients are the more usual case, but users are used
-for the webui and often for general user (as opposed to node) interactions with
-the server.
+Package client defines the Chef clients. Formerly clients and users were the
+same kind of object and stored together, but they have now been split apart.
+They do both implement the Actor interface, though. Clients are the more usual
+case for the nodes interacting with the server, but users are used for the 
+webui and often for general user (as opposed to node) interactions with the 
+server.
 */
-package actor
+package client
 
 import (
 	"github.com/ctdk/goiardi/data_store"
@@ -36,11 +38,11 @@ import (
 	"bytes"
 )
 
-// An actor is either a client or a user. They're very similar, with some small
-// differences - users can never be validators, while clients don't have
-// passwords. Generally nodes and the like will be clients, while people
-// interacting with the goiardi server will be users.
-type Actor struct {
+// A client and a user are very similar, with some small differences - users 
+// can never be validators, while clients don't have passwords. Generally nodes 
+// and the like will be clients, while people interacting with the goiardi 
+// server will be users.
+type Client struct {
 	Name string `json:"name"`
 	NodeName string `json:"node_name"`
 	JsonClass string `json:"json_class"`
@@ -50,14 +52,12 @@ type Actor struct {
 	PublicKey string `json:"public_key"`
 	Admin bool `json:"admin"`
 	Certificate string `json:"certificate"`
-	passwd string
-	Salt []byte
 }
 
 // for gob encoding. Needed the json tags for flattening, but that's handled
 // by a different struct now. However, they're staying because they may still be
 // useful.
-type privActor struct {
+type privClient struct {
 	Name *string `json:"name"`
 	NodeName *string `json:"node_name"`
 	JsonClass *string `json:"json_class"`
@@ -67,12 +67,10 @@ type privActor struct {
 	PublicKey *string `json:"public_key"`
 	Admin *bool `json:"admin"`
 	Certificate *string `json:"certificate"`
-	Passwd *string `json:"passwd"`
-	Salt *[]byte `json:"salt"`
 }
 
-// for flattening. Needs the json tags for flattening.
-type flatActor struct {
+// For flattening. Needs the json tags for flattening.
+type flatClient struct {
 	Name string `json:"name"`
 	NodeName string `json:"node_name"`
 	JsonClass string `json:"json_class"`
@@ -84,27 +82,18 @@ type flatActor struct {
 	Certificate string `json:"certificate"`
 }
 
-// Creates a new actor of type `cheftype`. If it's a user, it will also create
-// a password salt.
-func New(clientname string, cheftype string) (*Actor, util.Gerror){
+// Creates a new actor.
+func New(clientname string) (*Client, util.Gerror){
 	ds := data_store.New()
 	if _, found := ds.Get("client", clientname); found {
-		/* Hrmph, needs slightly different messages for clients and
-		 * users. */
-		var errstr string
-		if cheftype == "user" {
-			errstr = fmt.Sprintf("User '%s' already exists", clientname)
-		} else {
-			errstr = "Client already exists"
-		}
-		err := util.Errorf(errstr)
+		err := util.Errorf("Client already exists")
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
-	if err := validateClientName(clientname, cheftype); err != nil {
+	if err := validateClientName(clientname); err != nil {
 		return nil, err
 	}
-	actor := &Actor{
+	client := &Client{
 		Name: clientname,
 		NodeName: clientname,
 		JsonClass: "Chef::ApiClient",
@@ -115,54 +104,22 @@ func New(clientname string, cheftype string) (*Actor, util.Gerror){
 		Admin: false,
 		Certificate: "",
 	}
-	if cheftype == "user" {
-		salt, saltErr := chef_crypto.GenerateSalt()
-		if saltErr != nil {
-			err := util.Errorf(saltErr.Error())
-			return nil, err
-		}
-		actor.Salt = salt
-	} else {
-		/* May not be strictly necessary, but since this would be set
-		 * by the data store when the client is loaded from the data
-		 * store anyway, it may as well be set to an empty array. */
-		actor.Salt = make([]byte, 0)
-	}
-	return actor, nil
+	return client, nil
 }
 
 
 // Gets an actor from the data store.
-func Get(clientname string) (*Actor, error){
+func Get(clientname string) (*Client, error){
 	ds := data_store.New()
 	client, found := ds.Get("client", clientname)
 	if !found{
-		err := fmt.Errorf("Client (or user) %s not found", clientname)
+		err := fmt.Errorf("Client %s not found", clientname)
 		return nil, err
 	}
-	return client.(*Actor), nil
+	return client.(*Client), nil
 }
 
-// Gets the actor making the request. If use-auth is not on, always returns 
-// true.
-func GetReqUser(clientname string) (*Actor, util.Gerror) {
-	/* If UseAuth is turned off, use the automatically created admin user */
-	if !config.Config.UseAuth {
-		clientname = "admin"
-	}
-	c, err := Get(clientname)
-	if err != nil {
-		/* Theoretically it should be hard to reach this point, since
-		 * if the signed request was accepted the user ought to exist.
-		 * Still, best to be cautious. */
-		gerr := util.Errorf(err.Error())
-		gerr.SetStatus(http.StatusUnauthorized)
-		return nil, gerr
-	}
-	return c, nil
-}
-
-func (c *Actor) Save() error {
+func (c *Client) Save() error {
 	ds := data_store.New()
 	ds.Set("client", c.Name, c)
 	indexer.IndexObj(c)
@@ -171,10 +128,10 @@ func (c *Actor) Save() error {
 
 // Deletes a client or user, but will refuse to do so if it is the last
 // adminstrator of that type.
-func (c *Actor) Delete() error {
+func (c *Client) Delete() error {
 	// Make sure this isn't the last admin or something
 	// This will be a *lot* easier with an actual database.
-	if c.IsLastAdmin() {
+	if c.isLastAdmin() {
 		err := fmt.Errorf("Cannot delete the last admin")
 		return err
 	}
@@ -186,7 +143,7 @@ func (c *Actor) Delete() error {
 
 // Convert the client or user object into a JSON object, massaging it as needed
 // to make chef-pedant happy.
-func (c *Actor) ToJson() map[string]interface{} {
+func (c *Client) ToJson() map[string]interface{} {
 	toJson := make(map[string]interface{})
 	toJson["name"] = c.Name
 	toJson["admin"] = c.Admin
@@ -201,8 +158,7 @@ func (c *Actor) ToJson() map[string]interface{} {
 	return toJson
 }
 
-// Is this the last admin of its type?
-func (c *Actor) IsLastAdmin() bool {
+func (c *Client) isLastAdmin() bool {
 	if c.Admin {
 		clist := GetList()
 		numAdmins := 0
@@ -221,18 +177,18 @@ func (c *Actor) IsLastAdmin() bool {
 
 // Renames the client or user. Save() must be called after this method is used.
 // Will not rename the last admin.
-func (c *Actor) Rename(new_name string) util.Gerror {
+func (c *Client) Rename(new_name string) util.Gerror {
 	ds := data_store.New()
-	if err := validateClientName(new_name, c.ChefType); err != nil {
+	if err := validateClientName(new_name); err != nil {
 		return err
 	}
-	if c.IsLastAdmin() {
+	if c.isLastAdmin() {
 		err := util.Errorf("Cannot rename the last admin")
 		err.SetStatus(http.StatusForbidden)
 		return err
 	}
 	if _, found := ds.Get("client", new_name); found {
-		err := util.Errorf("Client (or user) %s already exists, cannot rename %s", new_name, c.Name)
+		err := util.Errorf("Client %s already exists, cannot rename %s", new_name, c.Name)
 		err.SetStatus(http.StatusConflict)
 		return err
 	}
@@ -242,31 +198,25 @@ func (c *Actor) Rename(new_name string) util.Gerror {
 }
 
 // Build a new client/user from a json object
-func NewFromJson(json_actor map[string]interface{}, cheftype string) (*Actor, util.Gerror) {
+func NewFromJson(json_actor map[string]interface{}, cheftype string) (*Client, util.Gerror) {
 	actor_name, nerr := util.ValidateAsString(json_actor["name"])
 	if nerr != nil {
 		return nil, nerr
 	}
-	actor, err := New(actor_name, cheftype)
+	client, err := New(actor_name)
 	if err != nil {
 		return nil, err
 	}
-	// check if the password is supplied if this is a user, and fail if
-	// it isn't.
-	if _, ok := json_actor["password"]; !ok && cheftype == "user" {
-		err := util.Errorf("Field 'password' missing")
-		return nil, err
-	}
-	err = actor.UpdateFromJson(json_actor, cheftype)
+	err = client.UpdateFromJson(json_actor)
 	if err != nil {
 		return nil, err
 	}
-	return actor, nil
+	return client, nil
 }
 
 // Update a client/user from a json object. Does a bunch of validations inside
 // rather than in the handler.
-func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string) util.Gerror {
+func (c *Client)UpdateFromJson(json_actor map[string]interface{}, cheftype string) util.Gerror {
 	actor_name, nerr := util.ValidateAsString(json_actor["name"])
 	if nerr != nil {
 		return nerr
@@ -345,7 +295,7 @@ func (c *Actor)UpdateFromJson(json_actor map[string]interface{}, cheftype string
 			verr = util.Errorf("Field 'admin' invalid")
 			return verr
 		} else if c.Admin && !ab {
-			if c.IsLastAdmin() {
+			if c.isLastAdmin() {
 				verr = util.Errorf("Cannot remove admin status from the last admin")
 				verr.SetStatus(http.StatusForbidden)
 				return verr
@@ -399,7 +349,7 @@ func GetList() []string {
 // Generate a new set of RSA keys for the client. The new private key is saved
 // with the client, the public key is given to the client and not saved on the
 // server at all. 
-func (c *Actor) GenerateKeys() (string, error){
+func (c *Client) GenerateKeys() (string, error){
 	priv_pem, pub_pem, err := chef_crypto.GenerateRSAKeys()
 	if err != nil {
 		return "", err
@@ -408,20 +358,16 @@ func (c *Actor) GenerateKeys() (string, error){
 	return priv_pem, nil
 }
 
-func (a *Actor) GetName() string {
+func (a *Client) GetName() string {
 	return a.Name
 }
 
-func (a *Actor) URLType() string {
+func (a *Client) URLType() string {
 	url_type := fmt.Sprintf("%ss", a.ChefType)
 	return url_type
 }
 
-func validateClientName(name string, cheftype string) util.Gerror {
-	if cheftype == "user" {
-		userErr := validateUserName(name)
-		return userErr
-	}
+func validateClientName(name string) util.Gerror {
 	if !util.ValidateName(name) {
 		err := util.Errorf("Invalid client name '%s' using regex: 'Malformed client name.  Must be A-Z, a-z, 0-9, _, -, or .'.", name)
 		return err
@@ -429,25 +375,17 @@ func validateClientName(name string, cheftype string) util.Gerror {
 	return nil
 }
 
-func validateUserName(name string) util.Gerror {
-	if !util.ValidateUserName(name) {
-		err := util.Errorf("Field 'name' invalid")
-		return err
-	}
-	return nil
-}
-
 /* Search indexing functions */
 
-func (c *Actor) DocId() string {
+func (c *Client) DocId() string {
 	return c.Name
 }
 
-func (c *Actor) Index() string {
+func (c *Client) Index() string {
 	return "client"
 }
 
-func (c *Actor) Flatten() []string {
+func (c *Client) Flatten() []string {
 	flatten := util.FlattenObj(c.flatExport())
 	indexified := util.Indexify(flatten)
 	return indexified
@@ -457,7 +395,7 @@ func (c *Actor) Flatten() []string {
  * it's just the basic admin/validator/user perms */
 
 // Is the user an admin? If use-auth is false, this always returns true.
-func (c *Actor) IsAdmin() bool {
+func (c *Client) IsAdmin() bool {
 	if !useAuth(){
 		return true
 	}
@@ -466,7 +404,7 @@ func (c *Actor) IsAdmin() bool {
 
 // Is the user a validator client? If use-auth is false, this always returns 
 // false. Users also always return false.
-func (c *Actor) IsValidator() bool {
+func (c *Client) IsValidator() bool {
 	if !useAuth(){
 		return false
 	}
@@ -477,7 +415,7 @@ func (c *Actor) IsValidator() bool {
 }
 
 // Is the other actor provided the same as the caller.
-func (c *Actor) IsSelf(other *Actor) bool {
+func (c *Client) IsSelf(other *Client) bool {
 	if !useAuth(){
 		return true
 	}
@@ -488,7 +426,7 @@ func (c *Actor) IsSelf(other *Actor) bool {
 }
 
 // A check to see if the actor is trying to edit admin and validator attributes.
-func (c *Actor) CheckPermEdit(client_data map[string]interface{}, perm string) util.Gerror {
+func (c *Client) CheckPermEdit(client_data map[string]interface{}, perm string) util.Gerror {
 	gerr := util.Errorf("You are not allowed to take this action.")
 	gerr.SetStatus(http.StatusForbidden)
 
@@ -505,54 +443,15 @@ func useAuth() bool {
 	return config.Config.UseAuth
 }
 
-// Validate and set the user's password. Will not set a password for a client.
-func (c *Actor) SetPasswd(password string) util.Gerror {
-	if c.ChefType != "user" {
-		err := util.Errorf("Clients don't have passwords, dawg")
-		return err
-	}
-	if len(password) < 6 {
-		err := util.Errorf("Password must have at least 6 characters")
-		return err
-	}
-	/* If those validations pass, set the password */
-	var perr error
-	c.passwd, perr = chef_crypto.HashPasswd(password, c.Salt)
-	if perr != nil {
-		err := util.Errorf(perr.Error())
-		return err
-	}
-	return nil
+func (c *Client) export() *privClient {
+	return &privClient{ Name: &c.Name, NodeName: &c.NodeName, JsonClass: &c.JsonClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.PublicKey, Admin: &c.Admin, Certificate: &c.Certificate, Passwd: &c.passwd, Salt: &c.Salt }
 }
 
-// Check the provided password to see if it matches the stored password hash.
-func (c *Actor) CheckPasswd(password string) util.Gerror {
-	if c.ChefType != "user" {
-		err := util.Errorf("Clients still don't have passwords")
-		return err
-	}
-	h, perr := chef_crypto.HashPasswd(password, c.Salt) 
-	if perr != nil {
-		err := util.Errorf(perr.Error())
-		return err
-	}
-	if c.passwd != h {
-		err := util.Errorf("password did not match")
-		return err
-	}
-	
-	return nil
+func (c *Client) flatExport() *flatClient {
+	return &flatClient{ Name: c.Name, NodeName: c.NodeName, JsonClass: c.JsonClass, ChefType: c.ChefType, Validator: c.Validator, Orgname: c.Orgname, PublicKey: c.PublicKey, Admin: c.Admin, Certificate: c.Certificate }
 }
 
-func (c *Actor) export() *privActor {
-	return &privActor{ Name: &c.Name, NodeName: &c.NodeName, JsonClass: &c.JsonClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.PublicKey, Admin: &c.Admin, Certificate: &c.Certificate, Passwd: &c.passwd, Salt: &c.Salt }
-}
-
-func (c *Actor) flatExport() *flatActor {
-	return &flatActor{ Name: c.Name, NodeName: c.NodeName, JsonClass: c.JsonClass, ChefType: c.ChefType, Validator: c.Validator, Orgname: c.Orgname, PublicKey: c.PublicKey, Admin: c.Admin, Certificate: c.Certificate }
-}
-
-func (c *Actor) GobEncode() ([]byte, error) {
+func (c *Client) GobEncode() ([]byte, error) {
 	prv := c.export()
 	buf := new(bytes.Buffer)
 	decoder := gob.NewEncoder(buf)
@@ -562,7 +461,7 @@ func (c *Actor) GobEncode() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (c *Actor) GobDecode(b []byte) error {
+func (c *Client) GobDecode(b []byte) error {
 	prv := c.export()
 	buf := bytes.NewReader(b)
 	encoder := gob.NewDecoder(buf)
