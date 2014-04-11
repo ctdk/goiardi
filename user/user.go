@@ -32,7 +32,7 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/config"
 	"net/http"
-	"github.com/ctdk/goiardi/actor"
+	//"github.com/ctdk/goiardi/actor"
 )
 
 type User struct {
@@ -276,7 +276,7 @@ func (u *User) IsValidator() bool {
 }
 
 // Is the actor in question the same client or user as the caller?
-func (u *User) IsSelf(other actor.Actor) bool {
+func (u *User) IsSelf(other interface{}) bool {
 	if !config.Config.UseAuth {
 		return true
 	}

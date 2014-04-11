@@ -20,20 +20,21 @@
 package actor
 
 import (
-	"github.com/ctdk/goiardi/client"
+	//"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/config"
+	"net/http"
 )
 
 type Actor interface {
 	IsAdmin() bool
 	IsValidator() bool
-	IsSelf(other Actor) bool
+	IsSelf(interface{}) bool
 	IsUser() bool
 	IsClient() bool
 	PublicKey() string
-	SetPublicKey() error
+	SetPublicKey(interface{}) error
 	GetName() string
 }
 
@@ -42,11 +43,11 @@ type Actor interface {
 func GetReqUser(name string) (Actor, util.Gerror) {
 	/* If UseAuth is turned off, use the automatically created admin user */
 	if !config.Config.UseAuth {
-		clientname = "admin"
+		name = "admin"
 	}
 	var c Actor
 	var err error
-	c, err := client.Get(name)
+	c, err = user.Get(name)
 	if err != nil {
 		/* Theoretically it should be hard to reach this point, since
 		 * if the signed request was accepted the user ought to exist.
@@ -61,3 +62,4 @@ func GetReqUser(name string) (Actor, util.Gerror) {
 	}
 	return c, nil
 }
+
