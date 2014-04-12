@@ -20,7 +20,7 @@
 package actor
 
 import (
-	//"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/config"
@@ -47,14 +47,14 @@ func GetReqUser(name string) (Actor, util.Gerror) {
 	}
 	var c Actor
 	var err error
-	c, err = user.Get(name)
+	c, err = client.Get(name)
 	if err != nil {
 		/* Theoretically it should be hard to reach this point, since
 		 * if the signed request was accepted the user ought to exist.
 		 * Still, best to be cautious. */
 		u, cerr := user.Get(name)
 		if cerr != nil {
-			gerr := util.Errorf("Neither a client nor a user named '%s' could be found. In addition, the following errors were reported: %s -- %s", err.Error(), cerr.Error())
+			gerr := util.Errorf("Neither a client nor a user named '%s' could be found. In addition, the following errors were reported: %s -- %s", name, err.Error(), cerr.Error())
 			gerr.SetStatus(http.StatusUnauthorized)
 			return nil, gerr
 		}

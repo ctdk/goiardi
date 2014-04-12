@@ -39,7 +39,7 @@ func TestActorClient(t *testing.T) {
 	c2, _ := client.New("foo2client")
 	y = c1.IsSelf(c2)
 	if y != false {
-		t.Errorf("client %s was equal to client %s, but should not have been", c1.GetName(), c2.Username)
+		t.Errorf("client %s was equal to client %s, but should not have been", c1.GetName(), c2.Name)
 	}
 
 	u, _ := user.New("foouser")
@@ -79,9 +79,9 @@ func TestActorUser(t *testing.T) {
 	c, _ := client.New("fooclient")
 	c.Save()
 
-	y = c1.IsSelf(c)
+	y = u1.IsSelf(c)
 	if y != false {
-		t.Errorf("user %s was equal to client %s, but should not have been", c1.GetName(), c.Username)
+		t.Errorf("user %s was equal to client %s, but should not have been", u1.GetName(), c.Name)
 	}
 
 	u.Delete()

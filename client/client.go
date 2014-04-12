@@ -97,7 +97,6 @@ func New(clientname string) (*Client, util.Gerror){
 		Name: clientname,
 		NodeName: clientname,
 		JsonClass: "Chef::ApiClient",
-		ChefType: cheftype,
 		Validator: false,
 		Orgname: "",
 		PublicKey: "",
@@ -216,13 +215,13 @@ func NewFromJson(json_actor map[string]interface{}, cheftype string) (*Client, u
 
 // Update a client/user from a json object. Does a bunch of validations inside
 // rather than in the handler.
-func (c *Client)UpdateFromJson(json_actor map[string]interface{}, cheftype string) util.Gerror {
+func (c *Client)UpdateFromJson(json_actor map[string]interface{}) util.Gerror {
 	actor_name, nerr := util.ValidateAsString(json_actor["name"])
 	if nerr != nil {
 		return nerr
 	}
 	if c.Name != actor_name {
-		err := util.Errorf("Client (or user) name %s and %s from JSON do not match", c.Name, actor_name)
+		err := util.Errorf("Client name %s and %s from JSON do not match", c.Name, actor_name)
 		return err
 	}
 
@@ -240,23 +239,6 @@ func (c *Client)UpdateFromJson(json_actor map[string]interface{}, cheftype strin
 		return err
 	}
 	var verr util.Gerror
-
-	// Check the password first. If it's bad, bail before touching anything
-	// else.
-	if passwd, ok := json_actor["password"]; ok {
-		if cheftype != "user" {
-			verr = util.Errorf("clients don't have passwords")
-			return verr
-		}
-		passwd, verr = util.ValidateAsString(passwd)
-		if verr != nil {
-			return verr
-		}
-		verr = c.SetPasswd(passwd.(string))
-		if verr != nil {
-			return verr
-		}
-	} 
 
 	json_actor["json_class"], verr = util.ValidateAsFieldString(json_actor["json_class"])
 	if verr != nil {
@@ -305,13 +287,7 @@ func (c *Client)UpdateFromJson(json_actor map[string]interface{}, cheftype strin
 	if validator_val, ok := json_actor["validator"]; ok {
 		if vb, verr = util.ValidateAsBool(validator_val); verr != nil {
 			return verr
-		} else {
-			/* Just set admin flag here */
-			if cheftype == "user" {
-				verr = util.Errorf("Cannot make a user a validator")
-				return verr
-			}
-		}
+		} 
 	}
 	if ab && vb {
 		verr = util.Errorf("Client can be either an admin or a validator, but not both.")
@@ -444,7 +420,7 @@ func useAuth() bool {
 }
 
 func (c *Client) export() *privClient {
-	return &privClient{ Name: &c.Name, NodeName: &c.NodeName, JsonClass: &c.JsonClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.PublicKey, Admin: &c.Admin, Certificate: &c.Certificate, Passwd: &c.passwd, Salt: &c.Salt }
+	return &privClient{ Name: &c.Name, NodeName: &c.NodeName, JsonClass: &c.JsonClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.PublicKey, Admin: &c.Admin, Certificate: &c.Certificate }
 }
 
 func (c *Client) flatExport() *flatClient {

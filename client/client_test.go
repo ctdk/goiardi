@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Some user password tests, for now.
+// Some client tests, for now.
 package client
 
 import (
