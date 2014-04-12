@@ -32,6 +32,8 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/config"
 	"net/http"
+	"encoding/gob"
+	"bytes"
 )
 
 type User struct {
@@ -42,6 +44,16 @@ type User struct {
 	pubKey string `json:"public_key"`
 	passwd string
 	Salt []byte
+}
+
+type privUser struct {
+	Username *string `json:"username"`
+	Name *string `json:"name"`
+	Email *string `json:"email"`
+	Admin *bool `json:"admin"`
+	PublicKey *string `json:"public_key"`
+	Passwd *string `json:"public_key"`
+	Salt *[]byte `json:"salt"`
 }
 
 // Create a new API user.
@@ -373,4 +385,30 @@ func (u *User) GetName() string {
 
 func (u *User) URLType() string {
 	return "users"
+}
+
+func (u *User) export() *privUser {
+	return &privUser{ Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.Salt }
+}
+
+func (u *User) GobEncode() ([]byte, error) {
+	prv := u.export()
+	buf := new(bytes.Buffer)
+	decoder := gob.NewEncoder(buf)
+	if err := decoder.Encode(prv); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (u *User) GobDecode(b []byte) error {
+	prv := u.export()
+	buf := bytes.NewReader(b)
+	encoder := gob.NewDecoder(buf)
+	err := encoder.Decode(prv)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

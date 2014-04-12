@@ -160,7 +160,7 @@ func (c *Client) isLastAdmin() bool {
 		numAdmins := 0
 		for _, cc := range clist {
 			c1, _ := Get(cc)
-			if c1 != nil && c1.Admin && (c1.ChefType == c.ChefType){
+			if c1 != nil && c1.Admin {
 				numAdmins++
 			}
 		}
@@ -260,7 +260,7 @@ func (c *Client)UpdateFromJson(json_actor map[string]interface{}) util.Gerror {
 			return verr
 		}
 	} else {
-		if json_actor["chef_type"].(string) != "client" && json_actor["chef_type"].(string) != "user" {
+		if json_actor["chef_type"].(string) != "client" {
 			verr = util.Errorf("Field 'chef_type' invalid")
 			return verr
 		}

@@ -316,8 +316,6 @@ func handleSignals() {
 }
 
 func gobRegister() {
-	a := new(actor.Actor)
-	gob.Register(a)
 	e := new(environment.ChefEnvironment)
 	gob.Register(e)
 	c := new(cookbook.Cookbook)
@@ -348,6 +346,10 @@ func gobRegister() {
 	gob.Register(smsi)
 	msss := make(map[string][]string)
 	gob.Register(msss)
+	cc := new(client.Client)
+	gob.Register(cc)
+	uu := new(user.User)
+	gob.Register(uu)
 }
 
 func setSaveTicker() {

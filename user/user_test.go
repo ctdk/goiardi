@@ -20,6 +20,9 @@ package user
 
 import (
 	"testing"
+	"bytes"
+	"fmt"
+	"encoding/gob"
 )
 
 func TestNewUser(t *testing.T) {
@@ -51,5 +54,30 @@ func TestSetPasswd(t *testing.T) {
 	err = c.CheckPasswd("badpass")
 	if err == nil {
 		t.Errorf("badpass should not have been accepted, but it was")
+	}
+}
+
+func TestGobEncodeDecode(t *testing.T){
+	c, _ := New("footged")
+	saved := new(bytes.Buffer)
+	var err error
+	enc := gob.NewEncoder(saved)
+	defer func() {
+		if x := recover(); x != nil {
+			err = fmt.Errorf("Something went wrong encoding the data store with Gob")
+		}
+	}()
+	err = enc.Encode(c)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	dec := gob.NewDecoder(saved)
+	c2 := new(User)
+	err = dec.Decode(&c2)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if c2.Name != c.Name {
+		t.Errorf("saved user doesn't seem to be equal to original: %v vs %v", c2, c)
 	}
 }
