@@ -56,8 +56,8 @@ func user_handler(w http.ResponseWriter, r *http.Request){
 				return
 			}
 			enc := json.NewEncoder(w)
-			if err = enc.Encode(&json_user); err != nil{
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			if encerr := enc.Encode(&json_user); encerr != nil{
+				JsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
 				return
 			}
 		case "GET":
@@ -79,8 +79,8 @@ func user_handler(w http.ResponseWriter, r *http.Request){
 			 */
 			json_user := chef_user.ToJson()
 			enc := json.NewEncoder(w)
-			if err = enc.Encode(&json_user); err != nil{
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			if encerr := enc.Encode(&json_user); encerr != nil{
+				JsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
 				return
 			}
 		case "PUT":
@@ -102,12 +102,11 @@ func user_handler(w http.ResponseWriter, r *http.Request){
 				return
 			}
 
-			if !opUser.IsAdmin() && !opUser.IsSelf(chef_client) {
+			if !opUser.IsAdmin() && !opUser.IsSelf(chef_user) {
 				JsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 				return
 			}
 			if !opUser.IsAdmin() {
-				var verr util.Gerror
 				aerr := opUser.CheckPermEdit(user_data, "admin")
 				if aerr != nil {
 					JsonErrorReport(w, r, aerr.Error(), aerr.Status())
@@ -161,8 +160,9 @@ func user_handler(w http.ResponseWriter, r *http.Request){
 				switch p := p.(type) {
 					case bool:
 						if p {
-							if json_user["private_key"], err = chef_user.GenerateKeys(); err != nil {
-								JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+							var perr error
+							if json_user["private_key"], perr = chef_user.GenerateKeys(); perr != nil {
+								JsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 								return
 							}
 							// make sure the json
@@ -179,8 +179,8 @@ func user_handler(w http.ResponseWriter, r *http.Request){
 			chef_user.Save()
 			
 			enc := json.NewEncoder(w)
-			if err = enc.Encode(&json_user); err != nil{
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			if encerr := enc.Encode(&json_user); encerr != nil{
+				JsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
 				return
 			}
 		default:

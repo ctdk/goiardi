@@ -130,7 +130,6 @@ func client_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			client_list := client.GetList()
 			for _, k := range client_list {
 				/* Make sure it's a client and not a user. */
-				client_chk, _ := client.Get(k)
 				item_url := fmt.Sprintf("/clients/%s", k)
 				client_response[k] = util.CustomURL(item_url)
 			}
@@ -225,7 +224,6 @@ func user_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			user_list := user.GetList()
 			for _, k := range user_list {
 				/* Make sure it's a client and not a user. */
-				user_chk, _ := user.Get(k)
 				item_url := fmt.Sprintf("/users/%s", k)
 				user_response[k] = util.CustomURL(item_url)
 			}

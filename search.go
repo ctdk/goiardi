@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/search"
 	"github.com/ctdk/goiardi/data_bag"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/data_store"
 	"net/http"
@@ -141,7 +142,7 @@ func search_handler(w http.ResponseWriter, r *http.Request){
 				res := make([]map[string]interface{}, len(rObjs))
 				for i, r := range rObjs {
 					switch r := r.(type) {
-						case *actor.Actor:
+						case *client.Client:
 							jc := map[string]interface{}{
 								"name": r.Name,
 								"chef_type": r.ChefType,
