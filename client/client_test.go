@@ -39,7 +39,7 @@ func TestGobEncodeDecode(t *testing.T){
 		t.Errorf(err.Error())
 	}
 	dec := gob.NewDecoder(saved)
-	c2 := new(Actor)
+	c2 := new(Client)
 	err = dec.Decode(&c2)
 	if err != nil {
 		t.Errorf(err.Error())
