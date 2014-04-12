@@ -316,6 +316,18 @@ func (u *User) SetPublicKey(pk interface{}) error {
 	return nil
 }
 
+func (u *User) CheckPermEdit(user_data map[string]interface{}, perm string) util.Gerror {
+	gerr := util.Errorf("You are not allowed to take this action.")
+	gerr.SetStatus(http.StatusForbidden)
+
+	if av, ok := user_data[perm]; ok {
+		if a, _ := util.ValidateAsBool(av); a {
+			return gerr
+		}
+	}
+	return nil
+}
+
 // Validate and set the user's password. Will not set a password for a client.
 func (u *User) SetPasswd(password string) util.Gerror {
 	if len(password) < 6 {

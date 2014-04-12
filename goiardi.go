@@ -25,6 +25,8 @@ import (
 	"log"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/indexer"
@@ -84,7 +86,7 @@ func main(){
 	/* Register the various handlers, found in their own source files. */
 	http.HandleFunc("/authenticate_user", authenticate_user_handler)
 	http.HandleFunc("/clients", list_handler)
-	http.HandleFunc("/clients/", actor_handler)
+	http.HandleFunc("/clients/", client_handler)
 	http.HandleFunc("/cookbooks", cookbook_handler)
 	http.HandleFunc("/cookbooks/", cookbook_handler)
 	http.HandleFunc("/data", data_handler)
@@ -102,7 +104,7 @@ func main(){
 	http.HandleFunc("/search/", search_handler)
 	http.HandleFunc("/search/reindex", reindexHandler)
 	http.HandleFunc("/users", list_handler)
-	http.HandleFunc("/users/", actor_handler)
+	http.HandleFunc("/users/", user_handler)
 	http.HandleFunc("/file_store/", file_store_handler)
 
 	/* TODO: figure out how to handle the root & not found pages */
@@ -165,7 +167,7 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 
 		/* Check that the user in question with the web request exists.
 		 * If not, fail. */
-		if _, uherr := actor.Get(user_id); uherr != nil {
+		if _, uherr := actor.GetReqUser(user_id); uherr != nil {
 			w.Header().Set("Content-Type", "application/json")
 			log.Printf("Attempting to use invalid user %s through X-Ops-Request-Source = web", user_id)
 			JsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
@@ -208,8 +210,8 @@ func cleanPath(p string) string {
 }
 
 func createDefaultActors() {
-	if cwebui, _ := actor.Get("chef-webui"); cwebui == nil {
-		if webui, nerr := actor.New("chef-webui", "client"); nerr != nil {
+	if cwebui, _ := client.Get("chef-webui"); cwebui == nil {
+		if webui, nerr := client.New("chef-webui"); nerr != nil {
 			log.Fatalln(nerr)
 		} else {
 			webui.Admin = true
@@ -231,8 +233,8 @@ func createDefaultActors() {
 		}
 	}
 
-	if cvalid, _ := actor.Get("chef-validator"); cvalid == nil {
-		if validator, verr := actor.New("chef-validator", "client"); verr != nil {
+	if cvalid, _ := client.Get("chef-validator"); cvalid == nil {
+		if validator, verr := client.New("chef-validator"); verr != nil {
 			log.Fatalln(verr)
 		} else {
 			validator.Validator = true
@@ -253,8 +255,8 @@ func createDefaultActors() {
 		}
 	}
 
-	if uadmin, _ := actor.Get("admin"); uadmin == nil {
-		if admin, aerr := actor.New("admin", "user"); aerr != nil {
+	if uadmin, _ := user.Get("admin"); uadmin == nil {
+		if admin, aerr := user.New("admin"); aerr != nil {
 			log.Fatalln(aerr)
 		} else {
 			admin.Admin = true

@@ -22,7 +22,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/environment"
-	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/data_bag"
 	"net/url"
 	"log"
@@ -172,10 +172,8 @@ func getResults(variety string, toGet []string) []indexer.Indexable {
 			}
 		case "client":
 			for _, c := range toGet {
-				if client, _ := actor.Get(c); client != nil {
-					if client.ChefType == "client" {
-						results = append(results, client)
-					}
+				if client, _ := client.Get(c); client != nil {
+					results = append(results, client)
 				}
 			}
 		case "environment":

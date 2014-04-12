@@ -26,7 +26,8 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
-	"strings"
+	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/user"
 )
 
 func list_handler(w http.ResponseWriter, r *http.Request){
@@ -38,8 +39,10 @@ func list_handler(w http.ResponseWriter, r *http.Request){
 	switch op {
 		case "nodes":
 			list_data = node_handling(w, r)
-		case "clients", "users":
-			list_data = actor_handling(w, r, op)
+		case "clients":
+			list_data = client_handling(w, r)
+		case "users":
+			list_data = user_handling(w, r)
 		case "roles":
 			list_data = role_handling(w, r)
 		default:
@@ -114,9 +117,8 @@ func node_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 	return node_response
 }
 
-func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[string]string {
+func client_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 	client_response := make(map[string]string)
-	chef_type := strings.TrimSuffix(op, "s")
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
@@ -125,14 +127,12 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 
 	switch r.Method {
 		case "GET":
-			client_list := actor.GetList()
+			client_list := client.GetList()
 			for _, k := range client_list {
 				/* Make sure it's a client and not a user. */
-				client_chk, _ := actor.Get(k)
-				if client_chk.ChefType == chef_type {
-					item_url := fmt.Sprintf("/%s/%s", op, k)
-					client_response[k] = util.CustomURL(item_url)
-				}
+				client_chk, _ := client.Get(k)
+				item_url := fmt.Sprintf("/clients/%s", k)
+				client_response[k] = util.CustomURL(item_url)
 			}
 		case "POST":
 			client_data, jerr := ParseObjJson(r.Body)
@@ -165,7 +165,7 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 				return nil
 			}
 
-			chef_client, err := actor.NewFromJson(client_data, chef_type)
+			chef_client, err := client.NewFromJson(client_data)
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), err.Status())
 				return nil
@@ -180,11 +180,11 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 			} else {
 				switch public_key := public_key.(type) {
 					case string:
-						if pkok, pkerr := actor.ValidatePublicKey(public_key); !pkok {
+						if pkok, pkerr := client.ValidatePublicKey(public_key); !pkok {
 							JsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
 							return nil
 						}
-						chef_client.PublicKey = public_key
+						chef_client.SetPublicKey(public_key)
 					case nil:
 			
 						var perr error
@@ -199,7 +199,7 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 			}
 			/* If we make it here, we want the public key in the
 			 * response. I think. */
-			client_response["public_key"] = chef_client.PublicKey
+			client_response["public_key"] = chef_client.PublicKey()
 			
 			chef_client.Save()
 			client_response["uri"] = util.ObjURL(chef_client)
@@ -209,6 +209,101 @@ func actor_handling(w http.ResponseWriter, r *http.Request, op string) map[strin
 			return nil
 	}
 	return client_response
+}
+
+// user handling
+func user_handling(w http.ResponseWriter, r *http.Request) map[string]string {
+	user_response := make(map[string]string)
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return nil
+	}
+
+	switch r.Method {
+		case "GET":
+			user_list := user.GetList()
+			for _, k := range user_list {
+				/* Make sure it's a client and not a user. */
+				user_chk, _ := user.Get(k)
+				item_url := fmt.Sprintf("/users/%s", k)
+				user_response[k] = util.CustomURL(item_url)
+			}
+		case "POST":
+			user_data, jerr := ParseObjJson(r.Body)
+			if jerr != nil {
+				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return nil
+			}
+			if averr := util.CheckAdminPlusValidator(user_data); averr != nil {
+				JsonErrorReport(w, r, averr.Error(), averr.Status())
+				return nil
+			}
+			if !opUser.IsAdmin() && !opUser.IsValidator() {
+				JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+				return nil
+			} else if !opUser.IsAdmin() && opUser.IsValidator() {
+				if aerr := opUser.CheckPermEdit(user_data, "admin"); aerr != nil {
+					JsonErrorReport(w, r, aerr.Error(), aerr.Status())
+					return nil
+				}
+				if verr := opUser.CheckPermEdit(user_data, "validator"); verr != nil {
+					JsonErrorReport(w, r, verr.Error(), verr.Status())
+					return nil
+				}
+
+			}
+			user_name, sterr := util.ValidateAsString(user_data["name"])
+			if sterr != nil || user_name == "" {
+				err := fmt.Errorf("Field 'name' missing")
+				JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				return nil
+			}
+
+			chef_user, err := user.NewFromJson(user_data)
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), err.Status())
+				return nil
+			}
+
+			if public_key, pkok := user_data["public_key"]; !pkok {
+				var perr error
+				if user_response["private_key"], perr = chef_user.GenerateKeys(); perr != nil {
+					JsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
+					return nil
+				}
+			} else {
+				switch public_key := public_key.(type) {
+					case string:
+						if pkok, pkerr := user.ValidatePublicKey(public_key); !pkok {
+							JsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
+							return nil
+						}
+						chef_user.SetPublicKey(public_key)
+					case nil:
+			
+						var perr error
+						if user_response["private_key"], perr = chef_user.GenerateKeys(); perr != nil {
+							JsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
+							return nil
+						}
+					default:
+						JsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
+						return nil
+				}
+			}
+			/* If we make it here, we want the public key in the
+			 * response. I think. */
+			user_response["public_key"] = chef_user.PublicKey()
+			
+			chef_user.Save()
+			user_response["uri"] = util.ObjURL(chef_user)
+			w.WriteHeader(http.StatusCreated)
+		default:
+			JsonErrorReport(w, r, "Method not allowed for clients or users", http.StatusMethodNotAllowed)
+			return nil
+	}
+	return user_response
 }
 
 func role_handling(w http.ResponseWriter, r *http.Request) map[string]string {

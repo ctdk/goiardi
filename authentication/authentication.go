@@ -42,7 +42,7 @@ import (
 // Check the signed headers sent by the client against the expected result
 // assembled from the request headers to verify their authorization.
 func CheckHeader(user_id string, r *http.Request) util.Gerror {
-	user, err := actor.Get(user_id)
+	user, err := actor.GetReqUser(user_id)
 	if err != nil {
 		gerr := util.Errorf("Failed to authenticate as '%s'. Ensure that your node_name and client key are correct.", user_id)
 		gerr.SetStatus(http.StatusUnauthorized)
@@ -114,7 +114,7 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 	}
 	headToCheck := assembleHeaderToCheck(r, chkHash)
 
-	decHead, berr := chef_crypto.HeaderDecrypt(user.PublicKey, signedHeaders)
+	decHead, berr := chef_crypto.HeaderDecrypt(user.PublicKey(), signedHeaders)
 
 	if berr != nil {
 		gerr := util.Errorf(berr.Error())

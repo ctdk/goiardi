@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/client"
 )
 
 func node_handler(w http.ResponseWriter, r *http.Request){
@@ -40,7 +41,7 @@ func node_handler(w http.ResponseWriter, r *http.Request){
 	/* So, what are we doing? Depends on the HTTP method, of course */
 	switch r.Method {
 		case "GET", "DELETE":
-			if opUser.IsValidator() || !opUser.IsAdmin() && r.Method == "DELETE" && opUser.NodeName != node_name {
+			if opUser.IsValidator() || !opUser.IsAdmin() && r.Method == "DELETE" && opUser.IsClient() && opUser.(*client.Client).NodeName != node_name {
 				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
@@ -62,7 +63,7 @@ func node_handler(w http.ResponseWriter, r *http.Request){
 				}
 			}
 		case "PUT":
-			if !opUser.IsAdmin() && opUser.NodeName != node_name {
+			if !opUser.IsAdmin() && opUser.IsClient() && opUser.(*client.Client).NodeName != node_name {
 				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}

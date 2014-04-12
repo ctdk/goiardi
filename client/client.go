@@ -194,7 +194,7 @@ func (c *Client) Rename(new_name string) util.Gerror {
 }
 
 // Build a new client/user from a json object
-func NewFromJson(json_actor map[string]interface{}, cheftype string) (*Client, util.Gerror) {
+func NewFromJson(json_actor map[string]interface{}) (*Client, util.Gerror) {
 	actor_name, nerr := util.ValidateAsString(json_actor["name"])
 	if nerr != nil {
 		return nil, nerr

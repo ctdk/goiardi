@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/config"
 )
 
@@ -66,7 +66,7 @@ func validateLogin(auth *authenticator) authResponse {
 		resp.Verified = true
 		return resp
 	}
-	u, err := actor.Get(auth.Name)
+	u, err := user.Get(auth.Name)
 	if err != nil {
 		resp.Verified = false
 		return resp
