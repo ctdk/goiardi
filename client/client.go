@@ -49,7 +49,7 @@ type Client struct {
 	ChefType string `json:"chef_type"`
 	Validator bool `json:"validator"`
 	Orgname string `json:"orgname"`
-	PublicKey string `json:"public_key"`
+	pubKey string `json:"public_key"`
 	Admin bool `json:"admin"`
 	Certificate string `json:"certificate"`
 }
@@ -99,7 +99,7 @@ func New(clientname string) (*Client, util.Gerror){
 		JsonClass: "Chef::ApiClient",
 		Validator: false,
 		Orgname: "",
-		PublicKey: "",
+		pubKey: "",
 		Admin: false,
 		Certificate: "",
 	}
@@ -146,13 +146,10 @@ func (c *Client) ToJson() map[string]interface{} {
 	toJson := make(map[string]interface{})
 	toJson["name"] = c.Name
 	toJson["admin"] = c.Admin
-	toJson["public_key"] = c.PublicKey
-
-	if c.ChefType != "user" {
-		toJson["validator"] = c.Validator
-		toJson["json_class"] = c.JsonClass
-		toJson["chef_type"] = c.ChefType
-	}
+	toJson["public_key"] = c.PublicKey()
+	toJson["validator"] = c.Validator
+	toJson["json_class"] = c.JsonClass
+	toJson["chef_type"] = c.ChefType
 
 	return toJson
 }
@@ -330,7 +327,7 @@ func (c *Client) GenerateKeys() (string, error){
 	if err != nil {
 		return "", err
 	}
-	c.PublicKey = pub_pem
+	c.pubKey = pub_pem
 	return priv_pem, nil
 }
 
@@ -391,14 +388,43 @@ func (c *Client) IsValidator() bool {
 }
 
 // Is the other actor provided the same as the caller.
-func (c *Client) IsSelf(other *Client) bool {
+func (c *Client) IsSelf(other interface{}) bool {
 	if !useAuth(){
 		return true
 	}
-	if c.Name == other.Name {
-		return true
+	if oc, ok := other.(*Client); ok {
+		if c.Name == oc.Name {
+			return true
+		}
 	}
 	return false
+}
+
+func (c *Client) IsUser() bool {
+	return false
+}
+
+func (c *Client) IsClient() bool {
+	return true
+}
+
+func (c *Client) PublicKey() string {
+	return c.pubKey
+}
+
+func (c *Client) SetPublicKey(pk interface{}) error {
+	switch pk := pk.(type) {
+		case string:
+			ok, err := ValidatePublicKey(pk)
+			if !ok {
+				return err
+			}
+			c.pubKey = pk
+		default:
+			err := fmt.Errorf("invalid type %T for public key", pk)
+			return err
+	}
+	return nil
 }
 
 // A check to see if the actor is trying to edit admin and validator attributes.
@@ -420,11 +446,11 @@ func useAuth() bool {
 }
 
 func (c *Client) export() *privClient {
-	return &privClient{ Name: &c.Name, NodeName: &c.NodeName, JsonClass: &c.JsonClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.PublicKey, Admin: &c.Admin, Certificate: &c.Certificate }
+	return &privClient{ Name: &c.Name, NodeName: &c.NodeName, JsonClass: &c.JsonClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.pubKey, Admin: &c.Admin, Certificate: &c.Certificate }
 }
 
 func (c *Client) flatExport() *flatClient {
-	return &flatClient{ Name: c.Name, NodeName: c.NodeName, JsonClass: c.JsonClass, ChefType: c.ChefType, Validator: c.Validator, Orgname: c.Orgname, PublicKey: c.PublicKey, Admin: c.Admin, Certificate: c.Certificate }
+	return &flatClient{ Name: c.Name, NodeName: c.NodeName, JsonClass: c.JsonClass, ChefType: c.ChefType, Validator: c.Validator, Orgname: c.Orgname, PublicKey: c.pubKey, Admin: c.Admin, Certificate: c.Certificate }
 }
 
 func (c *Client) GobEncode() ([]byte, error) {

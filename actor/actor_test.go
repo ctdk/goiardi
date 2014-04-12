@@ -51,18 +51,18 @@ func TestActorClient(t *testing.T) {
 	}
 
 	c.Delete()
-	c.Save()
 	c2.Delete()
-	c2.Save()
 	u.Delete()
-	u.Save()
 }
 
 func TestActorUser(t *testing.T) {
 	config.Config.UseAuth = true
-	u, _ := user.New("foouser")
+	u, err := user.New("foo1user")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 	u.Save()
-	u1, err := GetReqUser("foouser")
+	u1, err := GetReqUser("foo1user")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -76,7 +76,7 @@ func TestActorUser(t *testing.T) {
 		t.Errorf("user %s was equal to user %s, but should not have been", u1.GetName(), u2.Username)
 	}
 
-	c, _ := client.New("fooclient")
+	c, _ := client.New("foo1client")
 	c.Save()
 
 	y = u1.IsSelf(c)
@@ -85,9 +85,6 @@ func TestActorUser(t *testing.T) {
 	}
 
 	u.Delete()
-	u.Save()
 	u2.Delete()
-	u2.Save()
 	c.Delete()
-	c.Save()
 }

@@ -32,7 +32,6 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/config"
 	"net/http"
-	//"github.com/ctdk/goiardi/actor"
 )
 
 type User struct {
