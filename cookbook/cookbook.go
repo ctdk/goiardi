@@ -243,7 +243,7 @@ func (c *Cookbook) Save() error {
 		}
 		_, err = data_store.CheckForOne(tx, "cookbooks", c.Name)
 		if err == nil {
-			_, err = tx.Exec("UPDATE cookbooks SET name = ?, updated_at = NOW() WHERE c.id = ?", c.id)
+			_, err = tx.Exec("UPDATE cookbooks SET name = ?, updated_at = NOW() WHERE id = ?", c.id)
 			if err != nil {
 				tx.Rollback()
 				return err
