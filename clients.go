@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/util"
+	"log"
 )
 
 func client_handler(w http.ResponseWriter, r *http.Request){
@@ -184,7 +185,7 @@ func client_handler(w http.ResponseWriter, r *http.Request){
 						return
 				}
 			}
-
+			log.Printf("Json Client: %v", json_client)
 			chef_client.Save()
 			
 			enc := json.NewEncoder(w)

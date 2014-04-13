@@ -96,6 +96,7 @@ func New(clientname string) (*Client, util.Gerror){
 	client := &Client{
 		Name: clientname,
 		NodeName: clientname,
+		ChefType: "client",
 		JsonClass: "Chef::ApiClient",
 		Validator: false,
 		Orgname: "",
