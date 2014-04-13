@@ -1320,28 +1320,28 @@ func (cbv *CookbookVersion)ToJson(method string) map[string]interface{} {
 	/* Only send the other fields if something exists in them */
 	/* Seriously, though, why *not* send the URL for the resources back 
 	 * with PUT, but *DO* send it with everything else? */
-	if cbv.Providers != nil {
+	if cbv.Providers != nil && len(cbv.Providers) != 0 {
 		toJson["providers"] = methodize(method, cbv.Providers)
 	}
-	if cbv.Definitions != nil {
+	if cbv.Definitions != nil && len(cbv.Definitions) != 0 {
 		toJson["definitions"] = methodize(method, cbv.Definitions)
 	}
-	if cbv.Libraries != nil {
+	if cbv.Libraries != nil && len(cbv.Libraries) != 0 {
 		toJson["libraries"] = methodize(method, cbv.Libraries)
 	}
-	if cbv.Attributes != nil {
+	if cbv.Attributes != nil && len(cbv.Attributes) != 0 {
 		toJson["attributes"] = methodize(method, cbv.Attributes)
 	}
-	if cbv.Resources != nil {
+	if cbv.Resources != nil && len(cbv.Resources) != 0 {
 		toJson["resources"] = methodize(method, cbv.Resources)
 	}
-	if cbv.Templates != nil {
+	if cbv.Templates != nil && len(cbv.Templates) != 0 {
 		toJson["templates"] = methodize(method, cbv.Templates)
 	}
-	if cbv.RootFiles != nil {
+	if cbv.RootFiles != nil && len(cbv.RootFiles) != 0 {
 		toJson["root_files"] = methodize(method, cbv.RootFiles)
 	}
-	if cbv.Files != nil {
+	if cbv.Files != nil && len(cbv.Files) != 0 {
 		toJson["files"] = methodize(method, cbv.Files)
 	}
 
