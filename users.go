@@ -124,6 +124,7 @@ func user_handler(w http.ResponseWriter, r *http.Request){
 			 * same, we're renaming. Check the new name doesn't
 			 * already exist. */
 			json_user := chef_user.ToJson()
+			delete(json_user, "public_key")
 			if user_name != json_name {
 				err := chef_user.Rename(json_name)
 				if err != nil {

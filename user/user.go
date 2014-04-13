@@ -109,7 +109,7 @@ func (u *User) Delete() util.Gerror {
 		return err
 	}
 	ds := data_store.New()
-	ds.Delete("User", u.Username)
+	ds.Delete("user", u.Username)
 	return nil
 }
 
@@ -228,8 +228,12 @@ func GetList() []string {
 // client happy (be it knife, chef-pedant, etc.) NOTE: There may be a more
 // idiomatic way to do this.
 func (u *User) ToJson() map[string]interface{} {
+	toJson := make(map[string]interface{})
+	toJson["name"] = u.Name
+	toJson["admin"] = u.Admin
+	toJson["public_key"] = u.PublicKey()
 
-	return nil
+	return toJson
 }
 
 func (u *User) isLastAdmin() bool {
