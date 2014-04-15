@@ -84,11 +84,25 @@ type flatClient struct {
 
 // Creates a new actor.
 func New(clientname string) (*Client, util.Gerror){
-	ds := data_store.New()
-	if _, found := ds.Get("client", clientname); found {
-		err := util.Errorf("Client already exists")
-		err.SetStatus(http.StatusConflict)
-		return nil, err
+	if config.Config.UseMySQL {
+		_, err := data_store.CheckForOne(data_store.Dbh, "clients", clientname)
+		if err == nil {
+			gerr := util.Errorf("Client already exits")
+			gerr.SetStatus(http.StatusConflict)
+		} else {
+			if err != sql.ErrNoRows {
+				gerr := util.Errorf(err.Error())
+				gerr.SetStatus(http.StatusInternalServerError)
+				return nil, gerr
+			}
+		}
+	} else {
+		ds := data_store.New()
+		if _, found := ds.Get("client", clientname); found {
+			err := util.Errorf("Client already exists")
+			err.SetStatus(http.StatusConflict)
+			return nil, err
+		}
 	}
 	if err := validateClientName(clientname); err != nil {
 		return nil, err
@@ -107,11 +121,50 @@ func New(clientname string) (*Client, util.Gerror){
 	return client, nil
 }
 
+func (c *Client) fillClientFromSQL(row *sql.Row) error {
+	if config.Config.UseMySQL {
+		err := row.Scan(&c.Name, &c.NodeName, &c.Validator, &c.Admin, &c.Orgname, &c.pubKey, &c.Certificate)
+		if err != nil {
+			return err
+		}
+		c.ChefType = "client"
+		c.JsonClass = "Chef::ApiClient"
+	} else {
+		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillClientFromSQL cannot be run")
+		return err
+	}
+	return nil
+}
 
 // Gets an actor from the data store.
 func Get(clientname string) (*Client, error){
-	ds := data_store.New()
-	client, found := ds.Get("client", clientname)
+	var client *Client
+	var found bool
+
+	if config.Config.UseMySQL {
+		client = new(Client)
+		stmt, err := data_store.Dbh.Prepare("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o on c.org_id = o.id WHERE c.name = ?")
+		if err != nil {
+			return nil, err
+		}
+		defer stmt.Close()
+		row := stmt.QueryRow(clientname)
+		err = client.fillClientFromSQL(row)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				found = false
+			} else {
+				return nil, err
+			}
+		} else {
+			found = true
+		}
+	} else {
+		var c interface{}
+		ds := data_store.New()
+		c, found = ds.Get("client", clientname)
+		client = c.(*Client)
+	}
 	if !found{
 		err := fmt.Errorf("Client %s not found", clientname)
 		return nil, err
@@ -120,8 +173,45 @@ func Get(clientname string) (*Client, error){
 }
 
 func (c *Client) Save() error {
-	ds := data_store.New()
-	ds.Set("client", c.Name, c)
+	if config.Config.UseMySQL {
+		tx, err := data_store.Dbh.Begin()
+		var client_id int32
+		if err != nil {
+			return err
+		}
+		// check for a user with this name first. If orgs are ever
+		// implemented, it will only need to check for a user 
+		// associated with this organization
+		err = chkForUser(tx, c.Name)
+		if err != nil
+			return err
+		}
+		client_id, err = data_store.CheckForOne(tx, "clients", c.Name)
+		if err == nil {
+			_, err := tx.Exec("UPDATE clients SET name = ?, nodename = ?, validator = ?, admin = ?, public_key = ?, certificate = ?, updated_at = NOW() WHERE id = ?", c.Name, c.NodeName, c.Validator, c.Admin, c.pubKey, c.Certificate, client_id)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		} else {
+			if err != sql.ErrNoRows {
+				tx.Rollback()
+				return err
+			}
+			_, err = tx.Exec("INSERT INTO clients (name, nodename, validator, admin, public_key, certificate, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())", c.Name, c.NodeName, c.Validator, c.Admin, c.pubKey(), c.Certificate)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+		tx.Commit()
+	} else {
+		if err := chkInMemUser(c.Name); err != nil {
+			return err
+		}
+		ds := data_store.New()
+		ds.Set("client", c.Name, c)
+	}
 	indexer.IndexObj(c)
 	return nil
 }
@@ -135,8 +225,22 @@ func (c *Client) Delete() error {
 		err := fmt.Errorf("Cannot delete the last admin")
 		return err
 	}
-	ds := data_store.New()
-	ds.Delete("client", c.Name)
+
+	if config.Config.UseMySQL {
+		tx, err := data_store.Dbh.Begin()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("DELETE FROM clients WHERE name = ?", c.Name)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		tx.Commit()
+	} else {
+		ds := data_store.New()
+		ds.Delete("client", c.Name)
+	}
 	indexer.DeleteItemFromCollection("client", c.Name)
 	return nil
 }
@@ -157,12 +261,24 @@ func (c *Client) ToJson() map[string]interface{} {
 
 func (c *Client) isLastAdmin() bool {
 	if c.Admin {
-		clist := GetList()
 		numAdmins := 0
-		for _, cc := range clist {
-			c1, _ := Get(cc)
-			if c1 != nil && c1.Admin {
-				numAdmins++
+		if config.Config.UseMySQL {
+			stmt, err := data_store.Dbh.Prepare("SELECT count(*) FROM clients WHERE admin = 1")
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer stmt.Close()
+			err = stmt.QueryRow().Scan(&numAdmins)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			clist := GetList()
+			for _, cc := range clist {
+				c1, _ := Get(cc)
+				if c1 != nil && c1.Admin {
+					numAdmins++
+				}
 			}
 		}
 		if numAdmins == 1 {
@@ -175,21 +291,59 @@ func (c *Client) isLastAdmin() bool {
 // Renames the client or user. Save() must be called after this method is used.
 // Will not rename the last admin.
 func (c *Client) Rename(new_name string) util.Gerror {
-	ds := data_store.New()
 	if err := validateClientName(new_name); err != nil {
-		return err
+		return gerr
 	}
 	if c.isLastAdmin() {
 		err := util.Errorf("Cannot rename the last admin")
 		err.SetStatus(http.StatusForbidden)
 		return err
 	}
-	if _, found := ds.Get("client", new_name); found {
-		err := util.Errorf("Client %s already exists, cannot rename %s", new_name, c.Name)
-		err.SetStatus(http.StatusConflict)
-		return err
+
+	if config.Config.UseMySQL {
+		tx, err = data_store.Dbh.Begin()
+		if err != nil {
+			gerr := util.Errorf(err.Error())
+			return gerr
+		}
+		if err = chkForUser(tx, new_name); err != nil {
+			tx.Rollback()
+			gerr := util.Errorf(err.Error())
+			return gerr
+		}
+		_, err := data_store.CheckForOne(data_store.Dbh, "clients", clientname)
+		if err != sql.ErrNoRows {
+			tx.Rollback()
+			if err == nil {
+				gerr := util.Errorf("Client %s already exists, cannot rename %s", new_name, c.Name)
+				gerr.SetStatus(http.StatusConflict)
+				return gerr
+			} else {
+				gerr := util.Errorf(err.Error())
+				gerr.SetStatus(http.StatusInternalServerError)
+				return gerr
+			}
+		}
+		_, err := tx.Exec("UPDATE clients SET name = ? WHERE name = ?", new_name, c.Name)
+		if err != nil {
+			tx.Rollback()
+			gerr := util.Errorf(err.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
+		tx.Commit()
+	} else {
+		if err := chkInMemUser(new_name); err != nil {
+			return err
+		}
+		ds := data_store.New()
+		if _, found := ds.Get("client", new_name); found {
+			err := util.Errorf("Client %s already exists, cannot rename %s", new_name, c.Name)
+			err.SetStatus(http.StatusConflict)
+			return err
+		}
+		ds.Delete("client", c.Name)
 	}
-	ds.Delete("client", c.Name)
 	c.Name = new_name
 	return nil
 }
@@ -315,8 +469,33 @@ func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
 // Returns a list of actors. Clients and users are stored together, so no user
 // can have the same name as an existing client (and vice versa).
 func GetList() []string {
-	ds := data_store.New()
-	client_list := ds.GetList("client")
+	var client_list []string
+	if config.Config.UseMySQL {
+		rows, err := data_store.Dbh.QueryRow("SELECT name FROM clients")
+		if err != nil {
+			if err != sql.ErrNoRows {
+				log.Fatal(err)
+			}
+			rows.Close()
+			return client_list
+		}
+		client_list = make([]string, 0)
+		for rows.Next() {
+			var client_name string
+			err = rows.Scan(&client_name)
+			if err != nil {
+				log.Fatal(err)
+			}
+			client_list = append(client_list, client_name)
+		}
+		rows.Close()
+		if err = rows.Err(); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		ds := data_store.New()
+		client_list = ds.GetList("client")
+	}
 	return client_list
 }
 
@@ -474,4 +653,25 @@ func (c *Client) GobDecode(b []byte) error {
 	}
 
 	return nil
+}
+
+func chkForUser(handle data_store.Dbhandle, name string) error {
+	var user_id int32
+	err = handle.QueryRow("SELECT id FROM users WHERE name = ?", name).Scan(&user_id)
+	if err != sql.ErrNoRows {
+		if err == nil {
+			err = fmt.Errorf("a user with id %d named %s was found that would conflict with this client", user_id, name)
+		}
+	} else {
+		err = nil
+	}
+	return err 
+
+func chkInMemUser (name string) error {
+	var error err
+	ds := data_store.New()
+	if _, found := ds.Get("users", name); found {
+		err = fmt.Errorf("a user named %s was found that would conflict with this client", name)
+	}
+	return err
 }
