@@ -1150,6 +1150,7 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 		cbv.IsFrozen = cbv_data["frozen?"].(bool)
 	}
 	cbv.Metadata = cbv_data["metadata"].(map[string]interface{})
+	log.Printf("metadata val: %v", cbv.Metadata)
 
 	/* If we're using SQL, update this version in the DB. */
 	if config.Config.UseMySQL {

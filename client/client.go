@@ -36,6 +36,8 @@ import (
 	"net/http"
 	"encoding/gob"
 	"bytes"
+	"database/sql"
+	"log"
 )
 
 // A client and a user are very similar, with some small differences - users 
@@ -169,7 +171,7 @@ func Get(clientname string) (*Client, error){
 		err := fmt.Errorf("Client %s not found", clientname)
 		return nil, err
 	}
-	return client.(*Client), nil
+	return client, nil
 }
 
 func (c *Client) Save() error {
@@ -183,7 +185,7 @@ func (c *Client) Save() error {
 		// implemented, it will only need to check for a user 
 		// associated with this organization
 		err = chkForUser(tx, c.Name)
-		if err != nil
+		if err != nil {
 			return err
 		}
 		client_id, err = data_store.CheckForOne(tx, "clients", c.Name)
@@ -198,7 +200,7 @@ func (c *Client) Save() error {
 				tx.Rollback()
 				return err
 			}
-			_, err = tx.Exec("INSERT INTO clients (name, nodename, validator, admin, public_key, certificate, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())", c.Name, c.NodeName, c.Validator, c.Admin, c.pubKey(), c.Certificate)
+			_, err = tx.Exec("INSERT INTO clients (name, nodename, validator, admin, public_key, certificate, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())", c.Name, c.NodeName, c.Validator, c.Admin, c.pubKey, c.Certificate)
 			if err != nil {
 				tx.Rollback()
 				return err
@@ -292,7 +294,7 @@ func (c *Client) isLastAdmin() bool {
 // Will not rename the last admin.
 func (c *Client) Rename(new_name string) util.Gerror {
 	if err := validateClientName(new_name); err != nil {
-		return gerr
+		return err
 	}
 	if c.isLastAdmin() {
 		err := util.Errorf("Cannot rename the last admin")
@@ -301,7 +303,7 @@ func (c *Client) Rename(new_name string) util.Gerror {
 	}
 
 	if config.Config.UseMySQL {
-		tx, err = data_store.Dbh.Begin()
+		tx, err := data_store.Dbh.Begin()
 		if err != nil {
 			gerr := util.Errorf(err.Error())
 			return gerr
@@ -311,7 +313,7 @@ func (c *Client) Rename(new_name string) util.Gerror {
 			gerr := util.Errorf(err.Error())
 			return gerr
 		}
-		_, err := data_store.CheckForOne(data_store.Dbh, "clients", clientname)
+		_, err = data_store.CheckForOne(data_store.Dbh, "clients", new_name)
 		if err != sql.ErrNoRows {
 			tx.Rollback()
 			if err == nil {
@@ -324,7 +326,7 @@ func (c *Client) Rename(new_name string) util.Gerror {
 				return gerr
 			}
 		}
-		_, err := tx.Exec("UPDATE clients SET name = ? WHERE name = ?", new_name, c.Name)
+		_, err = tx.Exec("UPDATE clients SET name = ? WHERE name = ?", new_name, c.Name)
 		if err != nil {
 			tx.Rollback()
 			gerr := util.Errorf(err.Error())
@@ -334,7 +336,9 @@ func (c *Client) Rename(new_name string) util.Gerror {
 		tx.Commit()
 	} else {
 		if err := chkInMemUser(new_name); err != nil {
-			return err
+			gerr := util.Errorf(err.Error())
+			gerr.SetStatus(http.StatusConflict)
+			return gerr
 		}
 		ds := data_store.New()
 		if _, found := ds.Get("client", new_name); found {
@@ -471,7 +475,7 @@ func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
 func GetList() []string {
 	var client_list []string
 	if config.Config.UseMySQL {
-		rows, err := data_store.Dbh.QueryRow("SELECT name FROM clients")
+		rows, err := data_store.Dbh.Query("SELECT name FROM clients")
 		if err != nil {
 			if err != sql.ErrNoRows {
 				log.Fatal(err)
@@ -657,7 +661,7 @@ func (c *Client) GobDecode(b []byte) error {
 
 func chkForUser(handle data_store.Dbhandle, name string) error {
 	var user_id int32
-	err = handle.QueryRow("SELECT id FROM users WHERE name = ?", name).Scan(&user_id)
+	err := handle.QueryRow("SELECT id FROM users WHERE name = ?", name).Scan(&user_id)
 	if err != sql.ErrNoRows {
 		if err == nil {
 			err = fmt.Errorf("a user with id %d named %s was found that would conflict with this client", user_id, name)
@@ -666,9 +670,10 @@ func chkForUser(handle data_store.Dbhandle, name string) error {
 		err = nil
 	}
 	return err 
+}
 
 func chkInMemUser (name string) error {
-	var error err
+	var err error
 	ds := data_store.New()
 	if _, found := ds.Get("users", name); found {
 		err = fmt.Errorf("a user named %s was found that would conflict with this client", name)
