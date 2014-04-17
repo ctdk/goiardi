@@ -39,9 +39,9 @@ func client_handler(w http.ResponseWriter, r *http.Request){
 
 	switch r.Method {
 		case "DELETE":
-			chef_client, err := client.Get(client_name)
-			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			chef_client, gerr := client.Get(client_name)
+			if gerr != nil {
+				JsonErrorReport(w, r, gerr.Error(), gerr.Status())
 				return
 			}
 			if !opUser.IsAdmin() && !opUser.IsSelf(chef_client) {
@@ -51,7 +51,7 @@ func client_handler(w http.ResponseWriter, r *http.Request){
 			/* Docs were incorrect. It does want the body of the
 			 * deleted object. */
 			json_client := chef_client.ToJson()
-			err = chef_client.Delete()
+			err := chef_client.Delete()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusForbidden)
 				return
@@ -62,10 +62,10 @@ func client_handler(w http.ResponseWriter, r *http.Request){
 				return
 			}
 		case "GET":
-			chef_client, err := client.Get(client_name)
+			chef_client, gerr := client.Get(client_name)
 
-			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			if gerr != nil {
+				JsonErrorReport(w, r, gerr.Error(), gerr.Status())
 				return
 			}
 			if !opUser.IsAdmin() && !opUser.IsSelf(chef_client) {
@@ -80,7 +80,7 @@ func client_handler(w http.ResponseWriter, r *http.Request){
 			 */
 			json_client := chef_client.ToJson()
 			enc := json.NewEncoder(w)
-			if err = enc.Encode(&json_client); err != nil{
+			if err := enc.Encode(&json_client); err != nil{
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -171,8 +171,9 @@ func client_handler(w http.ResponseWriter, r *http.Request){
 				switch p := p.(type) {
 					case bool:
 						if p {
-							if json_client["private_key"], err = chef_client.GenerateKeys(); err != nil {
-								JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+							var cgerr error
+							if json_client["private_key"], cgerr = chef_client.GenerateKeys(); cgerr != nil {
+								JsonErrorReport(w, r, cgerr.Error(), http.StatusInternalServerError)
 								return
 							}
 							// make sure the json
@@ -189,7 +190,7 @@ func client_handler(w http.ResponseWriter, r *http.Request){
 			chef_client.Save()
 			
 			enc := json.NewEncoder(w)
-			if err = enc.Encode(&json_client); err != nil{
+			if err := enc.Encode(&json_client); err != nil{
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
