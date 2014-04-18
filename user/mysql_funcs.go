@@ -54,7 +54,7 @@ func getUserMySQL(name string) (*User, error) {
 }
 
 func (u *User) fillUserFromSQL(row *sql.Row) error {
-	err := row.Scan(&u.Username, &u.Name, &u.Admin, &u.pubKey, &u.passwd, &u.Salt)
+	err := row.Scan(&u.Username, &u.Name, &u.Admin, &u.pubKey, &u.Email, &u.passwd, &u.Salt)
 	if err != nil {
 		return err
 	}

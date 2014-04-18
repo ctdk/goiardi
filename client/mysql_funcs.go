@@ -40,7 +40,7 @@ func checkForClientMySQL(dbhandle data_store.Dbhandle, name string) (bool, error
 
 func getClientMySQL(name string) (*Client, error) {
 	client := new(Client)
-	stmt, err := data_store.Dbh.Prepare("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o on c.org_id = o.id WHERE c.name = ?")
+	stmt, err := data_store.Dbh.Prepare("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o on c.organization_id = o.id WHERE c.name = ?")
 	if err != nil {
 		return nil, err
 	}

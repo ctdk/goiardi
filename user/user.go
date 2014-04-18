@@ -92,6 +92,7 @@ func New(name string) (*User, util.Gerror) {
 		Username: name,
 		Name: name,
 		Admin: false,
+		Email: "",
 		pubKey: "",
 		Salt: salt,
 	}
