@@ -67,10 +67,10 @@ func (u *User) saveMySQL() error {
 	if err != nil {
 		return err
 	}
-	// check for a user with this name first. If orgs are ever
-	// implemented, it will only need to check for a user 
-	// associated with this organization
-	err = chkForUser(tx, u.Username)
+	// check for a client with this name first. If orgs are ever
+	// implemented, it will only need to check for a client
+	// in with this organization
+	err = chkForClient(tx, u.Username)
 	if err != nil {
 		return err
 	}

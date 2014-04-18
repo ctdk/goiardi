@@ -34,6 +34,7 @@ import (
 	"net/http"
 	"encoding/gob"
 	"bytes"
+	"database/sql"
 )
 
 type User struct {
@@ -58,12 +59,26 @@ type privUser struct {
 
 // Create a new API user.
 func New(name string) (*User, util.Gerror) {
-	ds := data_store.New()
-	if _, found := ds.Get("user", name); found {
+	var found bool
+	var err util.Gerror
+	if config.Config.UseMySQL {
+		var uerr error
+		found, uerr = checkForUserMySQL(data_store.Dbh, name)
+		if uerr != nil {
+			err = util.Errorf(uerr.Error())
+			err.SetStatus(http.StatusInternalServerError)
+			return nil, err
+		}
+	} else {
+		ds := data_store.New()
+		_, found = ds.Get("user", name)
+	}
+	if found {
 		err := util.Errorf("User '%s' already exists", name)
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
+
 	if err := validateUserName(name); err != nil {
 		return nil, err
 	}
@@ -85,19 +100,49 @@ func New(name string) (*User, util.Gerror) {
 
 // Gets a user.
 func Get(name string) (*User, util.Gerror){
-	ds := data_store.New()
-	user, found := ds.Get("user", name)
-	if !found {
-		err := util.Errorf("User %s not found", name)
-		return nil, err
+	var user *User
+	if config.Config.UseMySQL {
+		var err error
+		user, err = getUserMySQL(name)
+		if err != nil {
+			var gerr util.Gerror
+			if err != sql.ErrNoRows {
+				gerr = util.Errorf(err.Error())
+				gerr.SetStatus(http.StatusInternalServerError)
+			} else {
+				gerr = util.Errorf("Client %s not found", name)
+				gerr.SetStatus(http.StatusNotFound)
+			}
+			return nil, gerr
+		}
+	} else {
+		ds := data_store.New()
+		u, found := ds.Get("user", name)
+		if !found {
+			err := util.Errorf("User %s not found", name)
+			return nil, err
+		}
+		user = u.(*User)
 	}
-	return user.(*User), nil
+	return user, nil
 }
 
 // Save the user's current state.
 func (u *User) Save() util.Gerror {
-	ds := data_store.New()
-	ds.Set("user", u.Username, u)
+	if config.Config.UseMySQL {
+		err := u.saveMySQL()
+		if err != nil {
+			return nil
+		}
+	} else {
+		if err := chkInMemClient(u.Username); err != nil {
+			gerr := util.Errorf(err.Error())
+			gerr.SetStatus(http.StatusConflict)
+			return gerr
+		}
+		ds := data_store.New()
+		ds.Set("user", u.Username, u)
+	}
 	return nil
 }
 
@@ -108,15 +153,21 @@ func (u *User) Delete() util.Gerror {
 		err := util.Errorf("Cannot delete the last admin")
 		return err
 	}
-	ds := data_store.New()
-	ds.Delete("user", u.Username)
+	if config.Config.UseMySQL {
+		err := u.deleteMySQL()
+		if err != nil {
+			return nil
+		}
+	} else {
+		ds := data_store.New()
+		ds.Delete("user", u.Username)
+	}
 	return nil
 }
 
 // Renames a user. Save() must be called after this method is used. Will not 
 // rename the last administrator user. 
 func (u *User) Rename(new_name string) util.Gerror {
-	ds := data_store.New()
 	if err := validateUserName(new_name); err != nil {
 		return err
 	}
@@ -125,12 +176,24 @@ func (u *User) Rename(new_name string) util.Gerror {
 		err.SetStatus(http.StatusForbidden)
 		return err
 	}
-	if _, found := ds.Get("user", new_name); found {
-		err := util.Errorf("User %s already exists, cannot rename %s", new_name, u.Username)
-		err.SetStatus(http.StatusConflict)
-		return err
+	if config.Config.UseMySQL {
+		if err := u.renameMySQL(new_name); err != nil {
+			return err
+		}
+	} else {
+		ds := data_store.New()
+		if err := chkInMemClient(new_name); err != nil {
+			gerr := util.Errorf(err.Error())
+			gerr.SetStatus(http.StatusConflict)
+			return gerr
+		}
+		if _, found := ds.Get("user", new_name); found {
+			err := util.Errorf("User %s already exists, cannot rename %s", new_name, u.Username)
+			err.SetStatus(http.StatusConflict)
+			return err
+		}
+		ds.Delete("client", u.Username)
 	}
-	ds.Delete("client", u.Username)
 	u.Username = new_name
 	return nil
 }
@@ -219,8 +282,13 @@ func (u *User)UpdateFromJson(json_user map[string]interface{}) util.Gerror {
 
 // Returns a list of users.
 func GetList() []string {
-	ds := data_store.New()
-	user_list := ds.GetList("user")
+	var user_list []string
+	if config.Config.UseMySQL {
+		user_list = getListMySQL()
+	} else {
+		ds := data_store.New()
+		user_list = ds.GetList("user")
+	}
 	return user_list
 }
 
@@ -238,12 +306,16 @@ func (u *User) ToJson() map[string]interface{} {
 
 func (u *User) isLastAdmin() bool {
 	if u.Admin {
-		user_list := GetList()
 		numAdmins := 0
-		for _, u := range user_list {
-			u1, _ := Get(u)
-			if u1 != nil && u1.Admin {
-				numAdmins++
+		if config.Config.UseMySQL {
+			numAdmins = numAdminsMySQL()
+		} else {		
+			user_list := GetList()
+			for _, u := range user_list {
+				u1, _ := Get(u)
+				if u1 != nil && u1.Admin {
+					numAdmins++
+				}
 			}
 		}
 		if numAdmins == 1 {
