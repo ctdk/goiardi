@@ -24,7 +24,6 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/util"
-	"log"
 )
 
 func client_handler(w http.ResponseWriter, r *http.Request){
