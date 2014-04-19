@@ -952,7 +952,7 @@ func (c *Cookbook)deleteHashes(file_hashes []string) {
 		if cb == nil {
 			continue
 		}
-		for _, ver := range cb.Versions {
+		for _, ver := range cb.sortedVersions() {
 			ver_hash := ver.fileHashes()
 			for _, vh := range ver_hash {
 				for i, fh := range file_hashes {
@@ -1233,7 +1233,8 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 		var cbv_id int32
 		err = tx.QueryRow("SELECT id FROM cookbook_versions WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?", cbv.cookbook_id, maj, min, patch).Scan(&cbv_id)
 		if err == nil {
-			_, err := tx.Exec("UPDATE cookbook_versions SET frozen = ?, metadata = ?, definitions = ?, libraries = ?, attributes = ?, recipes = ?, providers = ?, resources = ?, templates = ?, root_files = ?, files = ?, updated_at = NOW() WHERE id = ?", cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb, cbv.cookbook_id)
+			log.Printf("Updating cookbook")
+			_, err := tx.Exec("UPDATE cookbook_versions SET frozen = ?, metadata = ?, definitions = ?, libraries = ?, attributes = ?, recipes = ?, providers = ?, resources = ?, templates = ?, root_files = ?, files = ?, updated_at = NOW() WHERE id = ?", cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb, cbv_id)
 			if err != nil {
 				tx.Rollback()
 				gerr := util.Errorf(err.Error())
@@ -1247,6 +1248,7 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 				gerr.SetStatus(http.StatusInternalServerError)
 				return gerr
 			}
+			log.Printf("inserting cookbook")
 			res, err := tx.Exec("INSERT INTO cookbook_versions (cookbook_id, major_ver, minor_ver, patch_ver, frozen, metadata, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())", cbv.cookbook_id, maj, min, patch, cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb)
 			if err != nil {
 				tx.Rollback()
