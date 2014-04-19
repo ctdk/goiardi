@@ -177,7 +177,11 @@ func user_handler(w http.ResponseWriter, r *http.Request){
 				}
 			}
 
-			chef_user.Save()
+			serr := chef_user.Save()
+			if serr != nil {
+				JsonErrorReport(w, r, serr.Error(), serr.Status())
+				return
+			}
 			
 			enc := json.NewEncoder(w)
 			if encerr := enc.Encode(&json_user); encerr != nil{

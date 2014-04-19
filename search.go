@@ -148,7 +148,7 @@ func search_handler(w http.ResponseWriter, r *http.Request){
 								"chef_type": r.ChefType,
 								"json_class": r.JsonClass,
 								"admin": r.Admin,
-								"public_key": r.PublicKey,
+								"public_key": r.PublicKey(),
 								"validator": r.Validator,
 							}
 							res[i] = jc

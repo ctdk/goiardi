@@ -136,6 +136,9 @@ func MapifyObject(obj interface{}) map[string]interface{} {
 	mapified := make(map[string]interface{})
 	s := reflect.ValueOf(obj).Elem()
 	for i := 0; i < s.NumField(); i++ {
+		if !s.Field(i).CanInterface() {
+			continue
+		}
 		v := s.Field(i).Interface()
 		key := s.Type().Field(i).Tag.Get("json")
 		mapified[key] = v

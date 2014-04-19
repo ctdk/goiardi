@@ -54,42 +54,54 @@ func getUserMySQL(name string) (*User, error) {
 }
 
 func (u *User) fillUserFromSQL(row *sql.Row) error {
-	err := row.Scan(&u.Username, &u.Name, &u.Admin, &u.pubKey, &u.Email, &u.passwd, &u.Salt)
+	var email sql.NullString
+	err := row.Scan(&u.Username, &u.Name, &u.Admin, &u.pubKey, &email, &u.passwd, &u.Salt)
 	if err != nil {
 		return err
+	}
+	if !email.Valid {
+		u.Email = ""
+	} else {
+		u.Email = email.String
 	}
 	return nil
 }
 
-func (u *User) saveMySQL() error {
+func (u *User) saveMySQL() util.Gerror {
 	tx, err := data_store.Dbh.Begin()
 	var user_id int32
 	if err != nil {
-		return err
+		gerr := util.Errorf(err.Error())
+		return gerr
 	}
 	// check for a client with this name first. If orgs are ever
 	// implemented, it will only need to check for a client
 	// in with this organization
 	err = chkForClient(tx, u.Username)
 	if err != nil {
-		return err
+		gerr := util.Errorf(err.Error())
+		gerr.SetStatus(http.StatusConflict)
+		return gerr
 	}
 	user_id, err = data_store.CheckForOne(tx, "users", u.Username)
 	if err == nil {
-		_, err := tx.Exec("UPDATE users SET name = ?, displayname = ?, admin = ?, public_key = ?, passwd = ?, salt = ? updated_at = NOW() WHERE id = ?", u.Username, u.Name, u.Admin, u.pubKey, u.passwd, u.Salt, user_id)
+		_, err := tx.Exec("UPDATE users SET name = ?, displayname = ?, admin = ?, public_key = ?, passwd = ?, salt = ?, updated_at = NOW() WHERE id = ?", u.Username, u.Name, u.Admin, u.pubKey, u.passwd, u.Salt, user_id)
 		if err != nil {
 			tx.Rollback()
-			return err
+			gerr := util.Errorf(err.Error())
+			return gerr
 		}
 	} else {
 		if err != sql.ErrNoRows {
 			tx.Rollback()
-			return err
+			gerr := util.Errorf(err.Error())
+			return gerr
 		}
 		_, err = tx.Exec("INSERT INTO users (name, displayname, admin, public_key, passwd, salt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())", u.Username, u.Name, u.Admin, u.pubKey, u.passwd, u.Salt)
 		if err != nil {
 			tx.Rollback()
-			return err
+			gerr := util.Errorf(err.Error())
+			return gerr
 		}
 	}
 	tx.Commit()

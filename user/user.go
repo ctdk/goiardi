@@ -133,7 +133,7 @@ func (u *User) Save() util.Gerror {
 	if config.Config.UseMySQL {
 		err := u.saveMySQL()
 		if err != nil {
-			return nil
+			return err
 		}
 	} else {
 		if err := chkInMemClient(u.Username); err != nil {
