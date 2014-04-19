@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"sort"
 	"github.com/ctdk/goiardi/actor"
+	"log"
 )
 
 func cookbook_handler(w http.ResponseWriter, r *http.Request){
@@ -186,6 +187,7 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 					/* If all versions are gone, remove the
 					 * cookbook - seems to be the desired
 					 * behavior. */
+					log.Printf("Num versions for delete %s: %d", cb.Name, cb.NumVersions())
 					if cb.NumVersions() == 0 {
 						if cerr := cb.Delete(); cerr != nil {
 							JsonErrorReport(w, r, cerr.Error(), http.StatusInternalServerError)
@@ -223,6 +225,11 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 					return
 				}
+				cbv_data, jerr := ParseObjJson(r.Body)
+				if jerr != nil {
+					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+					return
+				}
 				/* First, see if the cookbook already exists, &
 				 * if not create it. Second, see if this 
 				 * specific version of the cookbook exists. If
@@ -244,10 +251,7 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 					}
 				}
 				cbv, err := cb.GetVersion(cookbook_version)
-				cbv_data, jerr := ParseObjJson(r.Body)
-				if jerr != nil {
-					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-				}
+				
 				/* Does the cookbook_name in the URL and what's
 				 * in the body match? */
 				switch t := cbv_data["cookbook_name"].(type) {
@@ -273,6 +277,13 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 					var nerr util.Gerror
 					cbv, nerr = cb.NewVersion(cookbook_version, cbv_data)
 					if nerr != nil {
+						// If the new version failed to
+						// take, and there aren't any
+						// other versions of the cookbook
+						// it needs to be deleted.
+						if cb.NumVersions() == 0 {
+							cb.Delete()
+						}
 						JsonErrorReport(w, r, nerr.Error(), nerr.Status())
 						return
 					}

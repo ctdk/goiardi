@@ -120,7 +120,7 @@ func (c *Cookbook)NumVersions() int {
 	if config.Config.UseMySQL {
 		if c.numVersions == nil {
 			var cbv_count int
-			stmt, err := data_store.Dbh.Prepare("SELECT count(*) AS c FROM cookbook_versions cbv WHERE cbv.id = ?")
+			stmt, err := data_store.Dbh.Prepare("SELECT count(*) AS c FROM cookbook_versions cbv WHERE cbv.cookbook_id = ?")
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -236,6 +236,7 @@ func Get(name string) (*Cookbook, util.Gerror){
 }
 
 func (c *Cookbook) Save() error {
+	log.Printf("saving cookbook %s", c.Name)
 	if config.Config.UseMySQL {
 		tx, err := data_store.Dbh.Begin()
 		if err != nil {
@@ -364,6 +365,7 @@ func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
 		rows, qerr := stmt.Query(c.id)
 		if qerr != nil {
 			if qerr == sql.ErrNoRows {
+				log.Fatalf("No cookbook versions for %s found!", c.Name)
 				return sorted
 			}
 			log.Fatal(qerr)
@@ -402,6 +404,8 @@ func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
 			sorted[i] = c.Versions[s]
 		}
 	}
+	log.Printf("numversions is %d", c.NumVersions())
+	log.Printf("sorted on %s returned %d items", c.Name, len(sorted))
 	return sorted
 }
 
@@ -753,6 +757,7 @@ func (c *Cookbook)NewVersion(cb_version string, cbv_data map[string]interface{})
 	/* And, dur, add it to the versions */
 	c.Versions[cb_version] = cbv
 	
+	c.numVersions = nil
 	c.UpdateLatestVersion()
 	c.Save()
 	return cbv, nil
@@ -771,9 +776,9 @@ func (cbv *CookbookVersion)fillCookbookVersionFromSQL(row data_store.ResRow) err
 			roob []byte
 			filb []byte
 			metb []byte
-			major int32
-			minor int32
-			patch int32
+			major int64
+			minor int64
+			patch int64
 		)
 		err := row.Scan(&cbv.id, &cbv.cookbook_id, &defb, &libb, &attb, &recb, &prob, &resb, &temb, &roob, &filb, &metb, &major, &minor, &patch, &cbv.IsFrozen, &cbv.CookbookName)
 		if err != nil {
@@ -900,7 +905,7 @@ func (c *Cookbook)GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
 	return cbv, nil
 }
 
-func extractVerNums(cbVersion string) (maj, min, patch int32, err util.Gerror) {
+func extractVerNums(cbVersion string) (maj, min, patch int64, err util.Gerror) {
 	if _, err = util.ValidateAsVersion(cbVersion); err != nil {
 		return 0, 0, 0, err
 	}
@@ -911,25 +916,25 @@ func extractVerNums(cbVersion string) (maj, min, patch int32, err util.Gerror) {
 	}
 	var vt int64
 	var nerr error
-	vt, nerr = strconv.ParseInt(nums[0], 0, 32)
+	vt, nerr = strconv.ParseInt(nums[0], 0, 64)
 	if nerr != nil {
 		err = util.Errorf(nerr.Error())
 		return 0, 0, 0, err
 	}
-	maj = int32(vt)
-	vt, nerr = strconv.ParseInt(nums[1], 0, 32)
+	maj = vt
+	vt, nerr = strconv.ParseInt(nums[1], 0, 64)
 	if nerr != nil {
 		err = util.Errorf(nerr.Error())
 		return 0, 0, 0, err
 	}
-	min = int32(vt)
+	min = vt
 	if len(nums) == 3 {
-		vt, nerr = strconv.ParseInt(nums[2], 0, 32)
+		vt, nerr = strconv.ParseInt(nums[2], 0, 64)
 		if nerr != nil {
 			err = util.Errorf(nerr.Error())
 			return 0, 0, 0, err
 		}
-		patch = int32(vt)
+		patch = vt
 	} else {
 		patch = 0
 	}
@@ -1016,6 +1021,7 @@ func (c *Cookbook)DeleteVersion(cb_version string) util.Gerror {
 		}
 		tx.Commit()
 	}
+	c.numVersions = nil
 
 	delete(c.Versions, cb_version)
 	c.deleteHashes(file_hashes)
