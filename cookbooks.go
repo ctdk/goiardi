@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"sort"
 	"github.com/ctdk/goiardi/actor"
-	"log"
 )
 
 func cookbook_handler(w http.ResponseWriter, r *http.Request){
@@ -187,7 +186,6 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 					/* If all versions are gone, remove the
 					 * cookbook - seems to be the desired
 					 * behavior. */
-					log.Printf("Num versions for delete %s: %d", cb.Name, cb.NumVersions())
 					if cb.NumVersions() == 0 {
 						if cerr := cb.Delete(); cerr != nil {
 							JsonErrorReport(w, r, cerr.Error(), http.StatusInternalServerError)

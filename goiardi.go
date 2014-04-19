@@ -134,7 +134,7 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 
 	/* log the URL */
 	// TODO: set this to verbosity level 4 or so
-	log.Printf("Serving %s -- %s\n", r.URL.Path, r.Method)
+	//log.Printf("Serving %s -- %s\n", r.URL.Path, r.Method)
 
 	if r.Method != "CONNECT" { 
 		if p := cleanPath(r.URL.Path); p != r.URL.Path{

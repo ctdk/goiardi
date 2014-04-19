@@ -236,7 +236,6 @@ func Get(name string) (*Cookbook, util.Gerror){
 }
 
 func (c *Cookbook) Save() error {
-	log.Printf("saving cookbook %s", c.Name)
 	if config.Config.UseMySQL {
 		tx, err := data_store.Dbh.Begin()
 		if err != nil {
@@ -314,7 +313,6 @@ func (c *Cookbook) Delete() error {
 		ds := data_store.New()
 		ds.Delete("cookbook", c.Name)
 	}
-	log.Printf("deleted %s\n", c.Name)
 	return nil
 }
 
@@ -365,7 +363,6 @@ func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
 		rows, qerr := stmt.Query(c.id)
 		if qerr != nil {
 			if qerr == sql.ErrNoRows {
-				log.Fatalf("No cookbook versions for %s found!", c.Name)
 				return sorted
 			}
 			log.Fatal(qerr)
@@ -404,8 +401,6 @@ func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
 			sorted[i] = c.Versions[s]
 		}
 	}
-	log.Printf("numversions is %d", c.NumVersions())
-	log.Printf("sorted on %s returned %d items", c.Name, len(sorted))
 	return sorted
 }
 
@@ -1156,7 +1151,6 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 		cbv.IsFrozen = cbv_data["frozen?"].(bool)
 	}
 	cbv.Metadata = cbv_data["metadata"].(map[string]interface{})
-	log.Printf("metadata val: %v", cbv.Metadata)
 
 	/* If we're using SQL, update this version in the DB. */
 	if config.Config.UseMySQL {
@@ -1233,7 +1227,6 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 		var cbv_id int32
 		err = tx.QueryRow("SELECT id FROM cookbook_versions WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?", cbv.cookbook_id, maj, min, patch).Scan(&cbv_id)
 		if err == nil {
-			log.Printf("Updating cookbook")
 			_, err := tx.Exec("UPDATE cookbook_versions SET frozen = ?, metadata = ?, definitions = ?, libraries = ?, attributes = ?, recipes = ?, providers = ?, resources = ?, templates = ?, root_files = ?, files = ?, updated_at = NOW() WHERE id = ?", cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb, cbv_id)
 			if err != nil {
 				tx.Rollback()
@@ -1248,7 +1241,6 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 				gerr.SetStatus(http.StatusInternalServerError)
 				return gerr
 			}
-			log.Printf("inserting cookbook")
 			res, err := tx.Exec("INSERT INTO cookbook_versions (cookbook_id, major_ver, minor_ver, patch_ver, frozen, metadata, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())", cbv.cookbook_id, maj, min, patch, cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb)
 			if err != nil {
 				tx.Rollback()
