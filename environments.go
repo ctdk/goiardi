@@ -194,12 +194,12 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 						env_data["name"] = env_name
 					}
 					if err := env.UpdateFromJson(env_data); err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+						JsonErrorReport(w, r, err.Error(), err.Status())
 						return
 					}
 				}
 				if err := env.Save(); err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+					JsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
 			default:

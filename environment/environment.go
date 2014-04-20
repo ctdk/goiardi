@@ -101,7 +101,8 @@ func (e *ChefEnvironment)UpdateFromJson(json_env map[string]interface{}) util.Ge
 		err := util.Errorf("Environment name %s and %s from JSON do not match", e.Name, json_env["name"].(string))
 		return err
 	} else if e.Name == "_default" {
-		err := util.Errorf("Default environment cannot be modified.")
+		err := util.Errorf("The '_default' environment cannot be modified.")
+		err.SetStatus(http.StatusMethodNotAllowed)
 		return err
 	}
 
@@ -321,27 +322,28 @@ func defaultEnvironment() (*ChefEnvironment) {
 	}
 }
 
-func (e *ChefEnvironment) Save() error {
+func (e *ChefEnvironment) Save() util.Gerror {
 	if e.Name == "_default" {
-		err := fmt.Errorf("The '_default' environment cannot be modified.")
+		err := util.Errorf("The '_default' environment cannot be modified.")
+		err.SetStatus(http.StatusMethodNotAllowed)
 		return err
 	}
 	if config.Config.UseMySQL {
 		dab, daerr := data_store.EncodeBlob(e.Default)
 		if daerr != nil {
-			return daerr
+			return util.CastErr(daerr)
 		}
 		oab, oaerr := data_store.EncodeBlob(e.Override)
 		if oaerr != nil {
-			return oaerr
+			return util.CastErr(oaerr)
 		}
 		cvb, cverr := data_store.EncodeBlob(e.CookbookVersions)
 		if cverr != nil {
-			return cverr
+			return util.CastErr(cverr)
 		}
 		tx, err := data_store.Dbh.Begin()
 		if err != nil {
-			return err
+			return util.CastErr(err)
 		}
 		var env_id int32
 		env_id, err = data_store.CheckForOne(tx, "environments", e.Name)
@@ -349,17 +351,17 @@ func (e *ChefEnvironment) Save() error {
 			_, err := tx.Exec("UPDATE environments SET description = ?, default_attr = ?, override_attr = ?, cookbook_vers = ?, updated_at = NOW() WHERE id = ?", e.Description, dab, oab, cvb, env_id)
 			if err != nil {
 				tx.Rollback()
-				return err
+				return util.CastErr(err)
 			}
 		} else {
 			if err != sql.ErrNoRows {
 				tx.Rollback()
-				return err
+				return util.CastErr(err)
 			}
 			_, err = tx.Exec("INSERT INTO environments (name, description, default_attr, override_attr, cookbook_vers, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())", e.Name, e.Description, dab, oab, cvb)
 			if err != nil {
 				tx.Rollback()
-				return err
+				return util.CastErr(err)
 			}
 		}
 		tx.Commit()

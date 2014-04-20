@@ -64,6 +64,10 @@ func Errorf(format string, a ...interface{}) Gerror {
 	return New(fmt.Sprintf(format, a...))
 }
 
+func CastErr(err error) Gerror {
+	return Errorf(err.Error())
+}
+
 // Returns the Gerror error message.
 func (e *gerror) Error() string {
 	return e.msg
