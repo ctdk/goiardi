@@ -84,30 +84,26 @@ func (c *Cookbook) URLType() string {
 }
 
 func New(name string) (*Cookbook, util.Gerror){
+	var found bool
 	if !util.ValidateEnvName(name) {
 		err := util.Errorf("Invalid cookbook name '%s' using regex: 'Malformed cookbook name. Must only contain A-Z, a-z, 0-9, _ or -'.", name)
 		return nil, err
 	}
 	if config.Config.UseMySQL {
-		_, err := data_store.CheckForOne(data_store.Dbh, "cookbooks", name)
-		if err == nil {
-			gerr := util.Errorf("Cookbook %s already exists", name)
-			gerr.SetStatus(http.StatusConflict)
-			return nil, gerr
-		} else {
-			if err != sql.ErrNoRows {
-				gerr := util.Errorf(err.Error())
-				gerr.SetStatus(http.StatusInternalServerError)
-				return nil, gerr
-			}
-		}
+		var cerr error
+		found, cerr = data_store.CheckForOne(data_store.Dbh, "cookbooks", name)
+		if cerr != nil {
+			err := util.CastErr(cerr)
+			err.SetStatus(http.StatusInternalServerError)
+			return nil, err
+		} 
 	} else {
 		ds := data_store.New()
-		if _, found := ds.Get("cookbook", name); found {
-			err := util.Errorf("Cookbook %s already exists", name)
-			err.SetStatus(http.StatusConflict)
-			return nil, err
-		}
+		_, found := ds.Get("cookbook", name)
+	}
+	if found {
+		err := util.Errorf("Cookbook %s already exists", name)
+		err.SetStatus(http.StatusConflict)
 	}
 	cookbook := &Cookbook{
 		Name: name,
@@ -119,21 +115,7 @@ func New(name string) (*Cookbook, util.Gerror){
 func (c *Cookbook)NumVersions() int {
 	if config.Config.UseMySQL {
 		if c.numVersions == nil {
-			var cbv_count int
-			stmt, err := data_store.Dbh.Prepare("SELECT count(*) AS c FROM cookbook_versions cbv WHERE cbv.cookbook_id = ?")
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer stmt.Close()
-			err = stmt.QueryRow(c.id).Scan(&cbv_count)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					cbv_count = 0
-				} else {
-					log.Fatal(err)
-				}
-			}
-			c.numVersions = &cbv_count
+			c.numVersions = numVersionsMySQL()
 		}
 		return *c.numVersions
 	} else {
@@ -141,47 +123,9 @@ func (c *Cookbook)NumVersions() int {
 	}
 }
 
-func (c *Cookbook) fillCookbookFromSQL(row data_store.ResRow) error {
+func AllCookbooks() (cookbooks []*Cookbook) {
 	if config.Config.UseMySQL {
-		err := row.Scan(&c.id, &c.Name)
-		if err != nil {
-			return err
-		}
-	} else {
-		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillCookbookFromSQL cannot be run")
-		return err
-	}
-	return nil
-}
-
-func AllCookbooks() []*Cookbook {
-	cookbooks := make([]*Cookbook, 0)
-	if config.Config.UseMySQL {
-		stmt, err := data_store.Dbh.Prepare("SELECT id, name FROM cookbooks")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer stmt.Close()
-		rows, qerr := stmt.Query()
-		if qerr != nil {
-			if qerr == sql.ErrNoRows {
-				return cookbooks
-			}
-			log.Fatal(qerr)
-		}
-		for rows.Next() {
-			cb := new(Cookbook)
-			err = cb.fillCookbookFromSQL(rows)
-			if err != nil {
-				log.Fatal(err)
-			}
-			cb.Versions = make(map[string]*CookbookVersion)
-			cookbooks = append(cookbooks, cb)
-		}
-		rows.Close()
-		if err = rows.Err(); err != nil {
-			log.Fatal(err)
-		}
+		cookbooks = allCookbooksMySQL()
 	} else {
 		cookbook_list := GetList()
 		for _, c := range cookbook_list {
@@ -200,26 +144,18 @@ func Get(name string) (*Cookbook, util.Gerror){
 	var cookbook *Cookbook
 	var found bool
 	if config.Config.UseMySQL {
-		cookbook = new(Cookbook)
-		stmt, err := data_store.Dbh.Prepare("SELECT id, name FROM cookbooks WHERE name = ?")
-		if err != nil {
-			gerr := util.Errorf(err.Error())
-			return nil, gerr
-		}
-		defer stmt.Close()
-		
-		row := stmt.QueryRow(name)
-		err = cookbook.fillCookbookFromSQL(row)
+		var err error
+		cookbook, err = getCookbookMySQL(name)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
 			} else {
-				gerr := util.Errorf(err.Error())
-				return nil, gerr
+				gerr := util.CastErr(err)
+				gerr.SetStatus(http.StatusInternalServerError)
+				return nil, err
 			}
 		} else {
 			found = true
-			cookbook.Versions = make(map[string]*CookbookVersion)
 		}
 	} else {
 		ds := data_store.New()
@@ -237,35 +173,7 @@ func Get(name string) (*Cookbook, util.Gerror){
 
 func (c *Cookbook) Save() error {
 	if config.Config.UseMySQL {
-		tx, err := data_store.Dbh.Begin()
-		if err != nil {
-			return err
-		}
-		_, err = data_store.CheckForOne(tx, "cookbooks", c.Name)
-		if err == nil {
-			_, err = tx.Exec("UPDATE cookbooks SET name = ?, updated_at = NOW() WHERE id = ?", c.Name, c.id)
-			if err != nil {
-				tx.Rollback()
-				return err
-			}
-		} else {
-			if err != sql.ErrNoRows {
-				tx.Rollback()
-				return err
-			}
-			res, rerr := tx.Exec("INSERT INTO cookbooks (name, created_at, updated_at) VALUES (?, NOW(), NOW())", c.Name)
-			if rerr != nil {
-				tx.Rollback()
-				return rerr
-			}
-			c_id, err := res.LastInsertId()
-			c.id = int32(c_id)
-			if err != nil {
-				tx.Rollback()
-				return err
-			}
-		}
-		tx.Commit()
+		return c.saveCookbookMySQL()
 	} else {
 		ds := data_store.New()
 		ds.Set("cookbook", c.Name, c)
@@ -275,40 +183,7 @@ func (c *Cookbook) Save() error {
 
 func (c *Cookbook) Delete() error {
 	if config.Config.UseMySQL {
-		tx, err := data_store.Dbh.Begin()
-		if err != nil {
-			return err
-		}
-		/* Delete the versions first. */
-		/* First delete the hashes. This is a relatively unlikely 
-		 * scenario, but it's best to make sure to reap any straggling
-		 * versions and file hashes. */
-		fileHashes := make([]string, 0)
-		for _, cbv := range c.sortedVersions() {
-			fileHashes = append(fileHashes, cbv.fileHashes()...)
-		}
-		sort.Strings(fileHashes)
-		fileHashes = removeDupHashes(fileHashes)
-		c.deleteHashes(fileHashes)
-		
-		_, err = tx.Exec("DELETE FROM cookbook_versions WHERE cookbook_id = ?", c.id)
-		if err != nil && err != sql.ErrNoRows {
-			terr := tx.Rollback()
-			if terr != nil {
-				err = fmt.Errorf("deleting cookbook versions for %s had an error '%s', and then rolling back the transaction gave another error '%s'", c.Name, err.Error(), terr.Error())
-			}
-			return err
-		}
-		_, err = tx.Exec("DELETE FROM cookbooks WHERE id = ?", c.id)
-		if err != nil {
-			terr := tx.Rollback()
-			if terr != nil {
-				err = fmt.Errorf("deleting cookbook versions for %s had an error '%s', and then rolling back the transaction gave another error '%s'", c.Name, err.Error(), terr.Error())
-			}
-			return err
-		}
-		tx.Commit()
-		c.deleteHashes(fileHashes)
+		return c.deleteCookbookMySQL()
 	} else {
 		ds := data_store.New()
 		ds.Delete("cookbook", c.Name)
@@ -318,88 +193,35 @@ func (c *Cookbook) Delete() error {
 
 // Get a list of all cookbooks on this server.
 func GetList() []string {
-	var cb_list []string
 	if config.Config.UseMySQL {
-		cb_list = make([]string, 0)
-		rows, err := data_store.Dbh.Query("SELECT name FROM cookbooks")
-		if err != nil {
-			if err != sql.ErrNoRows {
-				log.Fatal(err)
-			}
-			rows.Close()
-			return cb_list
-		}
-		for rows.Next() {
-			var cb_name string
-			err = rows.Scan(&cb_name)
-			if err != nil {
-				rows.Close()
-				log.Fatal(err)
-			}
-			cb_list = append(cb_list, cb_name)
-		}
-		rows.Close()
-		if err = rows.Err(); err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		ds := data_store.New()
-		cb_list = ds.GetList("cookbook")
-	}
+		return getCookbookListMySQL()
+	} 
+	ds := data_store.New()
+	cb_list := ds.GetList("cookbook")
 	return cb_list
 }
 
 func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
-	var sorted []*CookbookVersion
-	
 	if config.Config.UseMySQL {
-		sorted = make([]*CookbookVersion, 0)
-		stmt, err := data_store.Dbh.Prepare("SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer stmt.Close()
-		
-		rows, qerr := stmt.Query(c.id)
-		if qerr != nil {
-			if qerr == sql.ErrNoRows {
-				return sorted
-			}
-			log.Fatal(qerr)
-		}
-		for rows.Next() {
-			cbv := new(CookbookVersion)
-			err = cbv.fillCookbookVersionFromSQL(rows)
-			if err != nil {
-				log.Fatal(err)
-			}
-			// may as well populate this while we have it
-			c.Versions[cbv.Version] = cbv
-			sorted = append(sorted, cbv)
-		}
-		rows.Close()
-		if err = rows.Err(); err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		sorted = make([]*CookbookVersion, len(c.Versions))
-		keys := make(VersionStrings, len(c.Versions))
+		return c.sortedCookbookVersionsMySQL()
+	} 
+	sorted := make([]*CookbookVersion, len(c.Versions))
+	keys := make(VersionStrings, len(c.Versions))
 
-		u := 0
-		for k, _ := range c.Versions {
-			keys[u] = k
-			u++
-		}
-		sort.Sort(sort.Reverse(keys))
+	u := 0
+	for k, _ := range c.Versions {
+		keys[u] = k
+		u++
+	}
+	sort.Sort(sort.Reverse(keys))
 
-		/* populate sorted now */
-		for i, s := range keys {
-			/* This shouldn't be able to happen, but somehow it... does? */
-			if i >= len(sorted) {
-				break
-			}
-			sorted[i] = c.Versions[s]
+	/* populate sorted now */
+	for i, s := range keys {
+		/* This shouldn't be able to happen, but somehow it... does? */
+		if i >= len(sorted) {
+			break
 		}
+		sorted[i] = c.Versions[s]
 	}
 	return sorted
 }
@@ -758,95 +580,7 @@ func (c *Cookbook)NewVersion(cb_version string, cbv_data map[string]interface{})
 	return cbv, nil
 }
 
-func (cbv *CookbookVersion)fillCookbookVersionFromSQL(row data_store.ResRow) error {
-	if config.Config.UseMySQL {
-		var (
-			defb []byte
-			libb []byte
-			attb []byte
-			recb []byte
-			prob []byte
-			resb []byte
-			temb []byte
-			roob []byte
-			filb []byte
-			metb []byte
-			major int64
-			minor int64
-			patch int64
-		)
-		err := row.Scan(&cbv.id, &cbv.cookbook_id, &defb, &libb, &attb, &recb, &prob, &resb, &temb, &roob, &filb, &metb, &major, &minor, &patch, &cbv.IsFrozen, &cbv.CookbookName)
-		if err != nil {
-			return err
-		}
-		/* Now... populate it. :-/ */
-		// These may need to accept x.y versions with only two elements
-		// instead of x.y.0 with the added default 0 patch number.
-		cbv.Version = fmt.Sprintf("%d.%d.%d", major, minor, patch)
-		cbv.Name = fmt.Sprintf("%s-%s", cbv.CookbookName, cbv.Version)
-		cbv.ChefType = "cookbook_version"
-		cbv.JsonClass = "Chef::CookbookVersion"
 
-		/* TODO: experiment some more with getting this done with
-		 * pointers. */
-		var q interface{}
-		q, err = data_store.DecodeBlob(metb, cbv.Metadata)
-		if err != nil {
-			return err
-		}
-		cbv.Metadata = q.(map[string]interface{})
-		q, err = data_store.DecodeBlob(defb, cbv.Definitions)
-		if err != nil {
-			return err
-		}
-		cbv.Definitions = q.([]map[string]interface{})
-		q, err = data_store.DecodeBlob(libb, cbv.Libraries)
-		if err != nil {
-			return err
-		}
-		cbv.Libraries = q.([]map[string]interface{})
-		q, err = data_store.DecodeBlob(attb, cbv.Attributes)
-		if err != nil {
-			return err
-		}
-		cbv.Attributes = q.([]map[string]interface{})
-		q, err = data_store.DecodeBlob(recb, cbv.Recipes)
-		if err != nil {
-			return err
-		}
-		cbv.Recipes = q.([]map[string]interface{})
-		q, err = data_store.DecodeBlob(prob, cbv.Providers)
-		if err != nil {
-			return err
-		}
-		cbv.Providers = q.([]map[string]interface{})
-		q, err = data_store.DecodeBlob(temb, cbv.Templates)
-		if err != nil {
-			return err
-		}
-		cbv.Templates = q.([]map[string]interface{})
-		q, err = data_store.DecodeBlob(resb, cbv.Resources)
-		if err != nil {
-			return err
-		}
-		cbv.Resources = q.([]map[string]interface{})
-		q, err = data_store.DecodeBlob(roob, cbv.RootFiles)
-		if err != nil {
-			return err
-		}
-		cbv.RootFiles = q.([]map[string]interface{})
-		q, err = data_store.DecodeBlob(filb, cbv.Files)
-		if err != nil {
-			return err
-		}
-		cbv.Files = q.([]map[string]interface{})
-		data_store.ChkNilArray(cbv)
-	} else {
-		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillCookbookVersionFromSQL cannot be run")
-		return err
-	}
-	return nil
-}
 
 // Get a particular version of the cookbook.
 func (c *Cookbook)GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
@@ -860,21 +594,8 @@ func (c *Cookbook)GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
 		// Ridiculously cacheable, but let's get it working first. This
 		// applies all over the place w/ the SQL bits.
 		if cbv, found = c.Versions[cbVersion]; !found {
-			cbv = new(CookbookVersion)
-			maj, min, patch, cverr := extractVerNums(cbVersion)
-			if cverr != nil {
-				return nil, cverr
-			}
-			stmt, err := data_store.Dbh.Prepare("SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?")
-			var gerr util.Gerror
-			if err != nil {
-				gerr = util.Errorf(err.Error())
-				gerr.SetStatus(http.StatusInternalServerError)
-				return nil, gerr
-			}
-			defer stmt.Close()
-			row := stmt.QueryRow(c.id, maj, min, patch)
-			err = cbv.fillCookbookVersionFromSQL(row)
+			var err error
+			cbv, err = c.getCookbookVersionMySQL(cbVersion)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					found = false

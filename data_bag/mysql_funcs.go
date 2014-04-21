@@ -60,12 +60,10 @@ func (dbi *DataBagItem) fillDBItemFromMySQL(row data_store.ResRow) error {
 	}
 	dbi.ChefType = "data_bag_item"
 	dbi.JsonClass = "Chef::DataBagItem"
-	var q interface{}
-	q, err = data_store.DecodeBlob(rawb, dbi.RawData)
+	err = data_store.DecodeBlob(rawb, &dbi.RawData)
 	if err != nil {
 		return err
 	}
-	dbi.RawData = q.(map[string]interface{})
 	data_store.ChkNilArray(dbi)
 	return nil
 }
