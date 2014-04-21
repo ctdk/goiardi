@@ -83,17 +83,19 @@ func EncodeBlob(obj interface{}) ([]byte, error) {
 }
 
 // Decode the data encoded with EncodeBlob that was stored in the database so it
-// can be loaded back into a goiardi object.
-func DecodeBlob(data []byte, obj interface{}) (interface{}, error) {
+// can be loaded back into a goiardi object. The 'obj' in the arguments *must*
+// be the address of the object receiving the blob of data (e.g.
+// util.DecodeBlob(data, &obj).
+func DecodeBlob(data []byte, obj interface{}) (error) {
 	dbuf := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(dbuf)
-	err := dec.Decode(&obj)
+	err := dec.Decode(obj)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	/* Tried to do a pointer to an interface as an argument here, but that
 	 * made the compiler pretty unhappy. */
-	return obj, nil
+	return nil
 }
 
 func CheckForOne(dbhandle Dbhandle, kind string, name string) (int32, error){
