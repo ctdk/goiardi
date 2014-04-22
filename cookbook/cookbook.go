@@ -661,13 +661,9 @@ func (c *Cookbook)deleteHashes(file_hashes []string) {
 /* And remove the unused hashes. Currently, sigh, this involes checking
 	 * every cookbook. Probably will be easier with an actual database, I
 	 * imagine. */
-	all_cookbooks := GetList()
-	for _, cbook := range all_cookbooks {
-		cb, _ := Get(cbook)
+	all_cookbooks := AllCookbooks()
+	for _, cb := range all_cookbooks {
 		/* just move on if we don't find it somehow */
-		if cb == nil {
-			continue
-		}
 		for _, ver := range cb.sortedVersions() {
 			ver_hash := ver.fileHashes()
 			for _, vh := range ver_hash {
@@ -690,20 +686,7 @@ func (c *Cookbook)deleteHashes(file_hashes []string) {
 		}
 	}
 	/* And delete whatever file hashes we still have */
-	for _, ff := range file_hashes {
-		del_file, err := filestore.Get(ff)
-		if err != nil {
-			log.Printf("Strange, we got an error trying to get %s to delete it.\n", ff)
-			log.Println(err)
-		} else {
-			_ = del_file.Delete()
-		}
-		// May be able to remove this. Check that it actually deleted
-		d, _ := filestore.Get(ff)
-		if d != nil {
-			log.Printf("Stranger and stranger, %s is still in the file store.\n", ff)
-		}
-	}
+	filestore.DeleteHashes(file_hashes)
 }
 
 // Delete a particular version of a cookbook.
