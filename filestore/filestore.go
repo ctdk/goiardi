@@ -240,11 +240,11 @@ func DeleteHashes(file_hashes []string) {
 	if config.Config.UseMySQL {
 		tx, err := data_store.Dbh.Begin()
 		if err != nil {
-			return err
+			log.Fatal(err)
 		}
-		_, err := tx.Exec("DELETE from file_checksums WHERE checksum IN (?)", file_hashes)
+		_, err = tx.Exec("DELETE from file_checksums WHERE checksum IN (?)", file_hashes)
 		if err != nil && err != sql.ErrNoRows {
-			log.Errorf("Error %s trying to delete hashes", err.Error())
+			log.Printf("Error %s trying to delete hashes", err.Error())
 			tx.Rollback()
 			return
 		} 
@@ -257,7 +257,7 @@ func DeleteHashes(file_hashes []string) {
 		tx.Commit()
 	} else {
 		for _, ff := range file_hashes {
-		del_file, err := filestore.Get(ff)
+		del_file, err := Get(ff)
 			if err != nil {
 				log.Printf("Strange, we got an error trying to get %s to delete it.\n", ff)
 				log.Println(err)
@@ -265,7 +265,7 @@ func DeleteHashes(file_hashes []string) {
 				_ = del_file.Delete()
 			}
 			// May be able to remove this. Check that it actually deleted
-			d, _ := filestore.Get(ff)
+			d, _ := Get(ff)
 			if d != nil {
 				log.Printf("Stranger and stranger, %s is still in the file store.\n", ff)
 			}
