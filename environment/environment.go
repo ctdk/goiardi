@@ -45,26 +45,22 @@ type ChefEnvironment struct {
 }
 
 func New(name string) (*ChefEnvironment, util.Gerror){
+	var found bool
 	if config.Config.UseMySQL {
-		_, err := data_store.CheckForOne(data_store.Dbh, "environments", name)
-		if err == nil {
-			gerr := util.Errorf("Environment already exists")
-			// may not want StatusConfict for some reason?
-			gerr.SetStatus(http.StatusConflict)
-			return nil, gerr
-		} else {
-			if err != sql.ErrNoRows {
-				gerr := util.Errorf(err.Error())
-				gerr.SetStatus(http.StatusInternalServerError)
-				return nil, gerr
-			}
+		var eerr error
+		found, eerr = checkForEnvironmentMySQL(data_store.Dbh, name)
+		if eerr != nil {
+			err := util.CastErr(eerr)
+			eerr.SetStatus(http.StatusInternalServerError)
+			return nil, err
 		}
 	} else {
 		ds := data_store.New()
-		if _, found := ds.Get("env", name); found || name == "_default" {
-			err := util.Errorf("Environment already exists")
-			return nil, err
-		}
+		_, found := ds.Get("env", name)
+	}
+	if found || name == "_default" {
+		err := util.Errorf("Environment already exists")
+		return nil, err
 	}
 	if !util.ValidateEnvName(name){
 		err := util.Errorf("Field 'name' invalid")
@@ -207,83 +203,41 @@ func (e *ChefEnvironment)UpdateFromJson(json_env map[string]interface{}) util.Ge
 	return nil
 }
 
-// Fill an environment in from a row returned from the SQL server. See the
-// equivalent function in node/node.go for more details.
-//
-// As there, the SQL query that made the row needs to have the same number &
-// order of columns as the one in Get(), even if the WHERE clause is different
-// or omitted.
-func (e *ChefEnvironment) fillEnvFromSQL(row *sql.Row) error {
-	if config.Config.UseMySQL {
-		var (
-			da []byte
-			oa []byte
-			cv []byte
-		)
-		err := row.Scan(&e.Name, &e.Description, &da, &oa, &cv)
-		if err != nil {
-			return err
-		}
-		e.ChefType = "environment"
-		e.JsonClass = "Chef::Environment"
-		var q interface{}
-		q, err = data_store.DecodeBlob(da, e.Default)
-		if err != nil {
-			return err
-		}
-		e.Default = q.(map[string]interface{})
-		q, err = data_store.DecodeBlob(oa, e.Override)
-		if err != nil {
-			return err
-		}
-		e.Override = q.(map[string]interface{})
-		q, err = data_store.DecodeBlob(cv, e.CookbookVersions)
-		if err != nil {
-			return err
-		}
-		e.CookbookVersions = q.(map[string]string)
-		data_store.ChkNilArray(e)
-	} else {
-		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillEnvFromSQL cannot be run")
-		return err
-	}
-	return nil
-}
-
-func Get(env_name string) (*ChefEnvironment, error){
+func Get(env_name string) (*ChefEnvironment, util.Gerror){
 	if env_name == "_default" {
 		return defaultEnvironment(), nil
 	}
 	var env *ChefEnvironment
 	var found bool
 	if config.Config.UseMySQL {
+		env, err := getEnvironmentMySQL(env_name)
+		if err != nil {
+			
+		}
 		env = new(ChefEnvironment)
 		stmt, err := data_store.Dbh.Prepare("SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments WHERE name = ?")
 		if err != nil {
-			return nil, err
-		}
-		defer stmt.Close()
-		row := stmt.QueryRow(env_name)
-		err = env.fillEnvFromSQL(row)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				found = false
+			var gerr util.Gerror
+			if err != sql.ErrNoRows {
+				gerr = util.CastErr(err)
+				gerr.SetStatus(http.StatusInternalServerError)
 			} else {
-				return nil, err
+				gerr = util.Errorf("Cannot load environment %s", env_name)
+				gerr.SetStatus(http.StatusNotFound)
 			}
-		} else {
-			found = true
+			return nil, gerr
 		}
 	} else {
 		ds := data_store.New()
-		var e interface{}
-		e, found = ds.Get("env", env_name)
+		e, found := ds.Get("env", env_name)
+		if !found {
+			err := util.Errorf("Cannot load environment %s", env_name)
+			err.SetStatus(http.StatusNotFound)
+			return nil, err
+		}
 		env = e.(*ChefEnvironment)
 	}
-	if !found {
-		err := fmt.Errorf("Cannot load environment %s", env_name)
-		return nil, err
-	}
+	
 	return env, nil
 }
 
