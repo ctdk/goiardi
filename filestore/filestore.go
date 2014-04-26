@@ -82,13 +82,8 @@ func Get(chksum string) (*FileStore, error){
 	var filestore *FileStore
 	var found bool
 	if config.Config.UseMySQL {
-		filestore = new(FileStore)
-		stmt, err := data_store.Dbh.Prepare("SELECT checksum FROM file_checksums WHERE checksum = ?")
-		if err != nil {
-			return nil, err
-		}
-		defer stmt.Close()
-		err = stmt.QueryRow(chksum).Scan(&filestore.Chksum)
+		var err error
+		filestore, err = getMySQL()
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -136,24 +131,9 @@ func Get(chksum string) (*FileStore, error){
 
 func (f *FileStore) Save() error {
 	if config.Config.UseMySQL {
-		tx, err := data_store.Dbh.Begin()
+		err := f.saveMySQL()
 		if err != nil {
 			return err
-		}
-		var chksum string
-		err = tx.QueryRow("SELECT checksum FROM file_checksums WHERE checksum = ?", f.Chksum).Scan(&chksum)
-		if err != nil { // if err is nil we're just updating the file,
-				// don't need a new row
-			if err != sql.ErrNoRows {
-				tx.Rollback()
-				return err
-			}
-			_, err = tx.Exec("INSERT INTO file_checksums (checksum) VALUES (?)", f.Chksum)
-			if err != nil {
-				tx.Rollback()
-				return err
-			}
-			tx.Commit()
 		}
 	} else {
 		ds := data_store.New()
@@ -176,19 +156,10 @@ func (f *FileStore) Save() error {
 
 func (f *FileStore) Delete() error {
 	if config.Config.UseMySQL {
-		tx, err := data_store.Dbh.Begin()
+		err := f.deleteMySQL()
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("DELETE FROM file_checksums WHERE checksum = ?", f.Chksum)
-		if err != nil {
-			terr := tx.Rollback()
-			if terr != nil {
-				err = fmt.Errorf("deleting file %s had an error '%s', and then rolling back the transaction gave another error '%s'", f.Chksum, err.Error(), terr.Error())
-			}
-			return err
-		}
-		tx.Commit()
 	} else {
 		ds := data_store.New()
 		ds.Delete("filestore", f.Chksum)
@@ -207,28 +178,7 @@ func (f *FileStore) Delete() error {
 func GetList() []string {
 	var file_list []string
 	if config.Config.UseMySQL {
-		stmt, perr := data_store.Dbh.Prepare("SELECT checksum FROM file_checksums")
-		if perr != nil {
-			if perr != sql.ErrNoRows {
-				log.Fatal(perr)
-			}
-			stmt.Close()
-			return file_list
-		}
-		rows, err := stmt.Query()
-		file_list = make([]string, 0)
-		for rows.Next() {
-			var chksum string
-			err = rows.Scan(&chksum)
-			if err != nil {
-				log.Fatal(err)
-			}
-			file_list = append(file_list, chksum)
-		}
-		rows.Close()
-		if err = rows.Err(); err != nil {
-			log.Fatal(err)
-		}
+		file_list = getListMySQL()
 	} else {
 		ds := data_store.New()
 		file_list = ds.GetList("filestore")
@@ -238,23 +188,7 @@ func GetList() []string {
 
 func DeleteHashes(file_hashes []string) {
 	if config.Config.UseMySQL {
-		tx, err := data_store.Dbh.Begin()
-		if err != nil {
-			log.Fatal(err)
-		}
-		_, err = tx.Exec("DELETE from file_checksums WHERE checksum IN (?)", file_hashes)
-		if err != nil && err != sql.ErrNoRows {
-			log.Printf("Error %s trying to delete hashes", err.Error())
-			tx.Rollback()
-			return
-		} 
-		for _, fh := range file_hashes {
-			err := os.Remove(path.Join(config.Config.LocalFstoreDir, fh))
-			if err != nil {
-				log.Println(err)
-			}
-		}
-		tx.Commit()
+		deleteHashesMySQL()
 	} else {
 		for _, ff := range file_hashes {
 		del_file, err := Get(ff)
@@ -268,6 +202,14 @@ func DeleteHashes(file_hashes []string) {
 			d, _ := Get(ff)
 			if d != nil {
 				log.Printf("Stranger and stranger, %s is still in the file store.\n", ff)
+			}
+		}
+	}
+	if config.Config.LocalFstoreDir {
+		for _, fh := range file_hashes {
+			err := os.Remove(path.Join(config.Config.LocalFstoreDir, fh))
+			if err != nil {
+				log.Println(err)
 			}
 		}
 	}
