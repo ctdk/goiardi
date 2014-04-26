@@ -91,7 +91,7 @@ func New(name string) (*Cookbook, util.Gerror){
 	}
 	if config.Config.UseMySQL {
 		var cerr error
-		found, cerr = data_store.CheckForOne(data_store.Dbh, "cookbooks", name)
+		found, cerr = checkForCookbookMySQL(data_store.Dbh, name)
 		if cerr != nil {
 			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
@@ -99,7 +99,7 @@ func New(name string) (*Cookbook, util.Gerror){
 		} 
 	} else {
 		ds := data_store.New()
-		_, found := ds.Get("cookbook", name)
+		_, found = ds.Get("cookbook", name)
 	}
 	if found {
 		err := util.Errorf("Cookbook %s already exists", name)
@@ -115,7 +115,7 @@ func New(name string) (*Cookbook, util.Gerror){
 func (c *Cookbook)NumVersions() int {
 	if config.Config.UseMySQL {
 		if c.numVersions == nil {
-			c.numVersions = numVersionsMySQL()
+			c.numVersions = c.numVersionsMySQL()
 		}
 		return *c.numVersions
 	} else {
@@ -152,7 +152,7 @@ func Get(name string) (*Cookbook, util.Gerror){
 			} else {
 				gerr := util.CastErr(err)
 				gerr.SetStatus(http.StatusInternalServerError)
-				return nil, err
+				return nil, gerr
 			}
 		} else {
 			found = true
@@ -600,7 +600,7 @@ func (c *Cookbook)GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
 				if err == sql.ErrNoRows {
 					found = false
 				} else {
-					gerr = util.Errorf(err.Error())
+					gerr := util.Errorf(err.Error())
 					gerr.SetStatus(http.StatusInternalServerError)
 					return nil, gerr
 				}
@@ -702,7 +702,7 @@ func (c *Cookbook)DeleteVersion(cb_version string) util.Gerror {
 	file_hashes := cbv.fileHashes()
 
 	if config.Config.UseMySQL {
-		err := c.deleteCookbookVersionMySQL(cb_version)
+		err := cbv.deleteCookbookVersionMySQL()
 		if err != nil {
 			return nil
 		}

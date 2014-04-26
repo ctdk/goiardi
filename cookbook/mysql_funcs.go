@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"github.com/ctdk/goiardi/util"
+	"sort"
 )
 
 func checkForCookbookMySQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
@@ -37,7 +39,7 @@ func checkForCookbookMySQL(dbhandle data_store.Dbhandle, name string) (bool, err
 	}
 }
 
-func numVersionsMySQL() *int {
+func (c *Cookbook)numVersionsMySQL() *int {
 	var cbv_count int
 	stmt, err := data_store.Dbh.Prepare("SELECT count(*) AS c FROM cookbook_versions cbv WHERE cbv.cookbook_id = ?")
 	if err != nil {
@@ -94,7 +96,7 @@ func allCookbooksMySQL() []*Cookbook {
 }
 
 func getCookbookMySQL(name string) (*Cookbook, error) {
-	cookbook = new(Cookbook)
+	cookbook := new(Cookbook)
 	stmt, err := data_store.Dbh.Prepare("SELECT id, name FROM cookbooks WHERE name = ?")
 	if err != nil {
 		return nil, err
@@ -320,7 +322,7 @@ func (cbv *CookbookVersion)fillCookbookVersionFromSQL(row data_store.ResRow) err
 }
 
 func (c *Cookbook)getCookbookVersionMySQL(cbVersion string) (*CookbookVersion, error) {
-	cbv = new(CookbookVersion)
+	cbv := new(CookbookVersion)
 	maj, min, patch, cverr := extractVerNums(cbVersion)
 	if cverr != nil {
 		return nil, cverr
@@ -339,7 +341,7 @@ func (c *Cookbook)getCookbookVersionMySQL(cbVersion string) (*CookbookVersion, e
 	return cbv, nil
 }
 
-func (c *Cookbook)deleteCookbookVersionMySQL(cb_version) util.Gerror {
+func (cbv *CookbookVersion)deleteCookbookVersionMySQL() util.Gerror {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
@@ -350,7 +352,7 @@ func (c *Cookbook)deleteCookbookVersionMySQL(cb_version) util.Gerror {
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
-			err = fmt.Errorf("deleting cookbook %s version %s had an error '%s', and then rolling back the transaction gave another error '%s'", c.Name, cbv.Version, err.Error(), terr.Error())
+			err = fmt.Errorf("deleting cookbook %s version %s had an error '%s', and then rolling back the transaction gave another error '%s'", cbv.CookbookName, cbv.Version, err.Error(), terr.Error())
 		}
 		gerr := util.Errorf(err.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
