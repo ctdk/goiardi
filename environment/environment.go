@@ -283,42 +283,10 @@ func (e *ChefEnvironment) Save() util.Gerror {
 		return err
 	}
 	if config.Config.UseMySQL {
-		dab, daerr := data_store.EncodeBlob(e.Default)
-		if daerr != nil {
-			return util.CastErr(daerr)
-		}
-		oab, oaerr := data_store.EncodeBlob(e.Override)
-		if oaerr != nil {
-			return util.CastErr(oaerr)
-		}
-		cvb, cverr := data_store.EncodeBlob(e.CookbookVersions)
-		if cverr != nil {
-			return util.CastErr(cverr)
-		}
-		tx, err := data_store.Dbh.Begin()
+		err := e.saveEnvironmentMySQL()
 		if err != nil {
-			return util.CastErr(err)
+			return err
 		}
-		var env_id int32
-		env_id, err = data_store.CheckForOne(tx, "environments", e.Name)
-		if err == nil {
-			_, err := tx.Exec("UPDATE environments SET description = ?, default_attr = ?, override_attr = ?, cookbook_vers = ?, updated_at = NOW() WHERE id = ?", e.Description, dab, oab, cvb, env_id)
-			if err != nil {
-				tx.Rollback()
-				return util.CastErr(err)
-			}
-		} else {
-			if err != sql.ErrNoRows {
-				tx.Rollback()
-				return util.CastErr(err)
-			}
-			_, err = tx.Exec("INSERT INTO environments (name, description, default_attr, override_attr, cookbook_vers, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())", e.Name, e.Description, dab, oab, cvb)
-			if err != nil {
-				tx.Rollback()
-				return util.CastErr(err)
-			}
-		}
-		tx.Commit()
 	} else {
 		ds := data_store.New()
 		ds.Set("env", e.Name, e)
@@ -333,21 +301,9 @@ func (e *ChefEnvironment) Delete() error {
 		return err
 	}
 	if config.Config.UseMySQL {
-		tx, err := data_store.Dbh.Begin()
-		if err != nil {
-			return err
+		if err := e.deleteEnvironmentMySQL(); err != nil {
+			return nil
 		}
-		/* A convenient trigger takes care of nodes that belonged
-		 * to this environment, setting them to _default. */
-		_, err = tx.Exec("DELETE FROM environments WHERE name = ?", e.Name)
-		if err != nil {
-			terr := tx.Rollback()
-			if terr != nil {
-				err = fmt.Errorf("deleting environment %s had an error '%s', and then rolling back the transaction gave another error '%s'", e.Name, err.Error(), terr.Error())
-			}
-			return err
-		}
-		tx.Commit()
 	} else {
 		ds := data_store.New()
 		ds.Delete("env", e.Name)
@@ -360,27 +316,7 @@ func (e *ChefEnvironment) Delete() error {
 func GetList() []string {
 	var env_list []string
 	if config.Config.UseMySQL {
-		env_list = make([]string, 0)
-		rows, err := data_store.Dbh.Query("SELECT name FROM environments")
-		if err != nil {
-			if err != sql.ErrNoRows {
-				log.Fatal(err)
-			}
-			rows.Close()
-			return env_list
-		}
-		for rows.Next() {
-			var env_name string
-			err = rows.Scan(&env_name)
-			if err != nil {
-				log.Fatal(err)
-			}
-			env_list = append(env_list, env_name)
-		}
-		rows.Close()
-		if err = rows.Err(); err != nil {
-			log.Fatal(err)
-		}
+		env_list = getEnvironmentList()
 	} else {
 		ds := data_store.New()
 		env_list = ds.GetList("env")
@@ -398,11 +334,7 @@ func (e *ChefEnvironment) URLType() string {
 }
 
 func (e *ChefEnvironment) cookbookList() []*cookbook.Cookbook {
-	cb_list := cookbook.GetList()
-	cookbooks := make([]*cookbook.Cookbook, len(cb_list))
-	for i, cb := range cb_list {
-		cookbooks[i], _ = cookbook.Get(cb)
-	}
+	return cookbook.AllCookbooks()
 	return cookbooks
 }
 

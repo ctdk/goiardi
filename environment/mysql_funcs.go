@@ -59,22 +59,18 @@ func (e *ChefEnvironment) fillEnvFromSQL(row *sql.Row) error {
 		}
 		e.ChefType = "environment"
 		e.JsonClass = "Chef::Environment"
-		var q interface{}
-		q, err = data_store.DecodeBlob(da, e.Default)
+		err = data_store.DecodeBlob(da, e.Default)
 		if err != nil {
 			return err
 		}
-		e.Default = q.(map[string]interface{})
-		q, err = data_store.DecodeBlob(oa, e.Override)
+		err = data_store.DecodeBlob(oa, e.Override)
 		if err != nil {
 			return err
 		}
-		e.Override = q.(map[string]interface{})
-		q, err = data_store.DecodeBlob(cv, e.CookbookVersions)
+		err = data_store.DecodeBlob(cv, e.CookbookVersions)
 		if err != nil {
 			return err
 		}
-		e.CookbookVersions = q.(map[string]string)
 		data_store.ChkNilArray(e)
 	} else {
 		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillEnvFromSQL cannot be run")
@@ -96,4 +92,88 @@ func getEnvironmentMySQL(env_name string) (*ChefEnvironment, error) {
 		return nil, err
 	}
 	return env, nil
+}
+
+func (e *ChefEnvironment) saveEnvironmentMySQL() util.Gerror {
+	dab, daerr := data_store.EncodeBlob(e.Default)
+	if daerr != nil {
+		return util.CastErr(daerr)
+	}
+	oab, oaerr := data_store.EncodeBlob(e.Override)
+	if oaerr != nil {
+		return util.CastErr(oaerr)
+	}
+	cvb, cverr := data_store.EncodeBlob(e.CookbookVersions)
+	if cverr != nil {
+		return util.CastErr(cverr)
+	}
+	tx, err := data_store.Dbh.Begin()
+	if err != nil {
+		return util.CastErr(err)
+	}
+	var env_id int32
+	env_id, err = data_store.CheckForOne(tx, "environments", e.Name)
+	if err == nil {
+		_, err := tx.Exec("UPDATE environments SET description = ?, default_attr = ?, override_attr = ?, cookbook_vers = ?, updated_at = NOW() WHERE id = ?", e.Description, dab, oab, cvb, env_id)
+		if err != nil {
+			tx.Rollback()
+			return util.CastErr(err)
+		}
+	} else {
+		if err != sql.ErrNoRows {
+			tx.Rollback()
+			return util.CastErr(err)
+		}
+		_, err = tx.Exec("INSERT INTO environments (name, description, default_attr, override_attr, cookbook_vers, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())", e.Name, e.Description, dab, oab, cvb)
+		if err != nil {
+			tx.Rollback()
+			return util.CastErr(err)
+		}
+	}
+	tx.Commit()
+	return nil
+}
+
+func (e *ChefEnvironment) deleteEnvironmentMySQL() error {
+	tx, err := data_store.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	/* A convenient trigger takes care of nodes that belonged
+	 * to this environment, setting them to _default. */
+	_, err = tx.Exec("DELETE FROM environments WHERE name = ?", e.Name)
+	if err != nil {
+		terr := tx.Rollback()
+		if terr != nil {
+			err = fmt.Errorf("deleting environment %s had an error '%s', and then rolling back the transaction gave another error '%s'", e.Name, err.Error(), terr.Error())
+		}
+		return err
+	}
+	tx.Commit()
+	return nil
+}
+
+func getEnvironmentList() []string {
+	env_list := make([]string, 0)
+	rows, err := data_store.Dbh.Query("SELECT name FROM environments")
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Fatal(err)
+		}
+		rows.Close()
+		return env_list
+	}
+	for rows.Next() {
+		var env_name string
+		err = rows.Scan(&env_name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		env_list = append(env_list, env_name)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return env_list
 }
