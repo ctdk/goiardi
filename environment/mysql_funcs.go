@@ -47,35 +47,30 @@ func checkForEnvironmentMySQL(dbhandle data_store.Dbhandle, name string) (bool, 
 // order of columns as the one in Get(), even if the WHERE clause is different
 // or omitted.
 func (e *ChefEnvironment) fillEnvFromSQL(row *sql.Row) error {
-	if config.Config.UseMySQL {
-		var (
-			da []byte
-			oa []byte
-			cv []byte
-		)
-		err := row.Scan(&e.Name, &e.Description, &da, &oa, &cv)
-		if err != nil {
-			return err
-		}
-		e.ChefType = "environment"
-		e.JsonClass = "Chef::Environment"
-		err = data_store.DecodeBlob(da, e.Default)
-		if err != nil {
-			return err
-		}
-		err = data_store.DecodeBlob(oa, e.Override)
-		if err != nil {
-			return err
-		}
-		err = data_store.DecodeBlob(cv, e.CookbookVersions)
-		if err != nil {
-			return err
-		}
-		data_store.ChkNilArray(e)
-	} else {
-		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillEnvFromSQL cannot be run")
+	var (
+		da []byte
+		oa []byte
+		cv []byte
+	)
+	err := row.Scan(&e.Name, &e.Description, &da, &oa, &cv)
+	if err != nil {
 		return err
 	}
+	e.ChefType = "environment"
+	e.JsonClass = "Chef::Environment"
+	err = data_store.DecodeBlob(da, e.Default)
+	if err != nil {
+		return err
+	}
+	err = data_store.DecodeBlob(oa, e.Override)
+	if err != nil {
+		return err
+	}
+	err = data_store.DecodeBlob(cv, e.CookbookVersions)
+	if err != nil {
+		return err
+	}
+	data_store.ChkNilArray(e)
 	return nil
 }
 
