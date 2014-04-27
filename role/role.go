@@ -45,26 +45,24 @@ type Role struct {
 }
 
 func New(name string) (*Role, util.Gerror){
+	var found bool
 	if config.Config.UseMySQL {
+		var err error
+		found, err = checkForRoleMySQL(data_store.Dbh, name)
 		_, err := data_store.CheckForOne(data_store.Dbh, "roles", name)
-		if err == nil {
-			gerr := util.Errorf("Role %s already exists", name)
-			gerr.SetStatus(http.StatusConflict)
+		if err != nil {
+			gerr := util.Errorf(err.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
 			return nil, gerr
-		} else {
-			if err != sql.ErrNoRows {
-				gerr := util.Errorf(err.Error())
-				gerr.SetStatus(http.StatusInternalServerError)
-				return nil, gerr
-			}
 		}
 	} else {
 		ds := data_store.New()
-		if _, found := ds.Get("role", name); found {
-			err := util.Errorf("Role %s already exists", name)
-			err.SetStatus(http.StatusConflict)
-			return nil, err
-		}
+		_, found := ds.Get("role", name)
+	}
+	if found {
+		err := util.Errorf("Role %s already exists", name)
+		err.SetStatus(http.StatusConflict)
+		return nil, err
 	}
 	if !util.ValidateDBagName(name){
 		err := util.Errorf("Field 'name' invalid")
@@ -186,61 +184,13 @@ func (r *Role) UpdateFromJson(json_role map[string]interface{}) util.Gerror {
 	return nil
 }
 
-func (r *Role)fillRoleFromSQL(row *sql.Row) error {
-	if config.Config.UseMySQL {
-		var (
-			rl []byte
-			er []byte
-			da []byte
-			oa []byte
-		)
-		err := row.Scan(&r.Name, &r.Description, &rl, &er, &da, &oa)
-		if err != nil {
-			return err
-		}
-		r.ChefType = "role"
-		r.JsonClass = "Chef::Role"
-		var q interface{}
-		q, err = data_store.DecodeBlob(rl, r.RunList)
-		if err != nil {
-			return err
-		}
-		r.RunList = q.([]string)
-		q, err = data_store.DecodeBlob(er, r.EnvRunLists)
-		if err != nil {
-			return err
-		}
-		r.EnvRunLists = q.(map[string][]string)
-		q, err = data_store.DecodeBlob(da, r.Default)
-		if err != nil {
-			return err
-		}
-		r.Default = q.(map[string]interface{})
-		q, err = data_store.DecodeBlob(oa, r.Override)
-		if err != nil {
-			return err
-		}
-		r.Override = q.(map[string]interface{})
-		data_store.ChkNilArray(r)
-	} else { 
-		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillRoleFromSQL cannot be run")
-		return err
-	}
-	return nil
-}
 
 func Get(role_name string) (*Role, error){
 	var role *Role
 	var found bool
 	if config.Config.UseMySQL {
-		role = new(Role)
-		stmt, err := data_store.Dbh.Prepare("SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM roles WHERE name = ?")
-		if err != nil {
-			return nil, err
-		}
-		defer stmt.Close()
-		row := stmt.QueryRow(role_name)
-		err = role.fillRoleFromSQL(row)
+		var err error
+		role, err = getMySQL(role_name)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -265,46 +215,9 @@ func Get(role_name string) (*Role, error){
 
 func (r *Role) Save() error {
 	if config.Config.UseMySQL {
-		rlb, rlerr := data_store.EncodeBlob(r.RunList)
-		if rlerr != nil {
-			return rlerr
-		}
-		erb, ererr := data_store.EncodeBlob(r.EnvRunLists)
-		if ererr != nil {
-			return ererr
-		}
-		dab, daerr := data_store.EncodeBlob(r.Default)
-		if daerr != nil {
-			return daerr
-		}
-		oab, oaerr := data_store.EncodeBlob(r.Override)
-		if oaerr != nil {
-			return oaerr
-		}
-		tx, err := data_store.Dbh.Begin()
-		var role_id int32
-		if err != nil {
+		if err := r.saveMySQL(); err != nil {
 			return nil
 		}
-		role_id, err = data_store.CheckForOne(tx, "roles", r.Name)
-		if err == nil {
-			_, err := tx.Exec("UPDATE roles SET description = ?, run_list = ?, env_run_lists = ?, default_attr = ?, override_attr = ?, updated_at = NOW() WHERE id = ?", r.Description, rlb, erb, dab, oab, role_id)
-			if err != nil {
-				tx.Rollback()
-				return err
-			}
-		} else {
-			if err != sql.ErrNoRows {
-				tx.Rollback()
-				return err
-			}
-			_, err = tx.Exec("INSERT INTO roles (name, description, run_list, env_run_lists, default_attr, override_attr, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())", r.Name, r.Description, rlb, erb, dab, oab)
-			if err != nil {
-				tx.Rollback()
-				return err
-			}
-		}
-		tx.Commit()
 	} else {
 		ds := data_store.New()
 		ds.Set("role", r.Name, r)
@@ -315,19 +228,9 @@ func (r *Role) Save() error {
 
 func (r *Role) Delete() error {
 	if config.Config.UseMySQL {
-		tx, err := data_store.Dbh.Begin()
-		if err != nil {
+		if err := r.deleteMySQL(); err != nil {
 			return err
 		}
-		_, err = tx.Exec("DELETE FROM roles WHERE name = ?", r.Name)
-		if err != nil {
-			terr := tx.Rollback()
-			if terr != nil {
-				err = fmt.Errorf("deleting role %s had an error '%s', and then rolling back the transaction gave another error '%s'", r.Name, err.Error(), terr.Error())
-			}
-			return err
-		}
-		tx.Commit()
 	} else {
 		ds := data_store.New()
 		ds.Delete("role", r.Name)
@@ -340,27 +243,7 @@ func (r *Role) Delete() error {
 func GetList() []string {
 	var role_list []string
 	if config.Config.UseMySQL {
-		rows, err := data_store.Dbh.Query("SELECT name FROM roles")
-		if err != nil {
-			rows.Close()
-			if err != sql.ErrNoRows {
-				log.Fatal(err)
-			}
-			return role_list
-		}
-		role_list = make([]string, 0)
-		for rows.Next() {
-			var role_name string
-			err = rows.Scan(&role_name)
-			if err != nil {
-				log.Fatal(err)
-			}
-			role_list = append(role_list, role_name)
-		}
-		rows.Close()
-		if err = rows.Err(); err != nil {
-			log.Fatal(err)
-		}
+		role_list = getListMySQL()
 	} else {
 		ds := data_store.New()
 		role_list = ds.GetList("role")
