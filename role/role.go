@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"net/http"
 	"database/sql"
-	"log"
 )
 
 /* Need env_run_lists?!!? */
@@ -49,7 +48,6 @@ func New(name string) (*Role, util.Gerror){
 	if config.Config.UseMySQL {
 		var err error
 		found, err = checkForRoleMySQL(data_store.Dbh, name)
-		_, err := data_store.CheckForOne(data_store.Dbh, "roles", name)
 		if err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -57,7 +55,7 @@ func New(name string) (*Role, util.Gerror){
 		}
 	} else {
 		ds := data_store.New()
-		_, found := ds.Get("role", name)
+		_, found = ds.Get("role", name)
 	}
 	if found {
 		err := util.Errorf("Role %s already exists", name)

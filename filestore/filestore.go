@@ -83,7 +83,7 @@ func Get(chksum string) (*FileStore, error){
 	var found bool
 	if config.Config.UseMySQL {
 		var err error
-		filestore, err = getMySQL()
+		filestore, err = getMySQL(chksum)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -188,7 +188,7 @@ func GetList() []string {
 
 func DeleteHashes(file_hashes []string) {
 	if config.Config.UseMySQL {
-		deleteHashesMySQL()
+		deleteHashesMySQL(file_hashes)
 	} else {
 		for _, ff := range file_hashes {
 		del_file, err := Get(ff)
@@ -205,7 +205,7 @@ func DeleteHashes(file_hashes []string) {
 			}
 		}
 	}
-	if config.Config.LocalFstoreDir {
+	if config.Config.LocalFstoreDir != "" {
 		for _, fh := range file_hashes {
 			err := os.Remove(path.Join(config.Config.LocalFstoreDir, fh))
 			if err != nil {

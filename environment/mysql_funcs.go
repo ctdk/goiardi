@@ -22,7 +22,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"net/http"
 )
 
 /* MySQL specific functions for environments */
@@ -75,7 +74,7 @@ func (e *ChefEnvironment) fillEnvFromSQL(row *sql.Row) error {
 }
 
 func getEnvironmentMySQL(env_name string) (*ChefEnvironment, error) {
-	env = new(ChefEnvironment)
+	env := new(ChefEnvironment)
 	stmt, err := data_store.Dbh.Prepare("SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments WHERE name = ?")
 	if err != nil {
 		return nil, err

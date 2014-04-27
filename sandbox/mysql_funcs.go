@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 	"github.com/ctdk/goiardi/data_store"
+	"time"
 )
 
 func (s *Sandbox)fillSandboxFromSQL(row *sql.Row) error {
@@ -30,8 +31,7 @@ func (s *Sandbox)fillSandboxFromSQL(row *sql.Row) error {
 	if err != nil {
 		return err
 	}
-	var q interface{}
-	q, err = data_store.DecodeBlob(csb, s.Checksums)
+	err = data_store.DecodeBlob(csb, s.Checksums)
 	if err != nil {
 		return err
 	}
@@ -39,12 +39,11 @@ func (s *Sandbox)fillSandboxFromSQL(row *sql.Row) error {
 	if err != nil {
 		return err
 	}
-	s.Checksums = q.([]string)
 	return nil
 }
 
 func getMySQL(sandbox_id string) (*Sandbox, error) {
-	sandbox = new(Sandbox)
+	sandbox := new(Sandbox)
 	stmt, err := data_store.Dbh.Prepare("SELECT sbox_id, creation_time, checksums, completed FROM sandboxes WHERE sbox_id = ?")
 	if err != nil {
 		return nil, err
@@ -108,6 +107,7 @@ func (s *Sandbox) deleteMySQL() error {
 }
 
 func getListMySQL() []string {
+	sandbox_list := make([]string, 0)
 	rows, err := data_store.Dbh.Query("SELECT sbox_id FROM sandboxes")
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -116,7 +116,6 @@ func getListMySQL() []string {
 		rows.Close()
 		return sandbox_list
 	}
-	sandbox_list := make([]string, 0)
 	for rows.Next() {
 		var sbox_id string
 		err = rows.Scan(&sbox_id)

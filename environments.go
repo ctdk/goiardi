@@ -212,7 +212,7 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 			return
 		}
 		if del_env {
-			err = env.Delete()
+			err := env.Delete()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return

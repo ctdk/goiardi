@@ -118,7 +118,7 @@ func Get(sandbox_id string) (*Sandbox, error){
 
 	if config.Config.UseMySQL {
 		var err error
-		sandbox, err = getMySQL()
+		sandbox, err = getMySQL(sandbox_id)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false

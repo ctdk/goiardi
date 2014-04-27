@@ -71,7 +71,7 @@ func (r *Role)fillRoleFromSQL(row *sql.Row) error {
 }
 
 func getMySQL(role_name string) (*Role, error) {
-	role = new(Role)
+	role := new(Role)
 	stmt, err := data_store.Dbh.Prepare("SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM roles WHERE name = ?")
 	if err != nil {
 		return nil, err
@@ -147,6 +147,7 @@ func (r *Role) deleteMySQL() error {
 }
 
 func getListMySQL() []string {
+	role_list := make([]string, 0)
 	rows, err := data_store.Dbh.Query("SELECT name FROM roles")
 	if err != nil {
 		rows.Close()
@@ -155,7 +156,6 @@ func getListMySQL() []string {
 		}
 		return role_list
 	}
-	role_list := make([]string, 0)
 	for rows.Next() {
 		var role_name string
 		err = rows.Scan(&role_name)

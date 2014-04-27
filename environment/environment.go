@@ -31,7 +31,6 @@ import (
 	"sort"
 	"net/http"
 	"database/sql"
-	"log"
 )
 
 type ChefEnvironment struct {
@@ -51,12 +50,12 @@ func New(name string) (*ChefEnvironment, util.Gerror){
 		found, eerr = checkForEnvironmentMySQL(data_store.Dbh, name)
 		if eerr != nil {
 			err := util.CastErr(eerr)
-			eerr.SetStatus(http.StatusInternalServerError)
+			err.SetStatus(http.StatusInternalServerError)
 			return nil, err
 		}
 	} else {
 		ds := data_store.New()
-		_, found := ds.Get("env", name)
+		_, found = ds.Get("env", name)
 	}
 	if found || name == "_default" {
 		err := util.Errorf("Environment already exists")
@@ -210,32 +209,30 @@ func Get(env_name string) (*ChefEnvironment, util.Gerror){
 	var env *ChefEnvironment
 	var found bool
 	if config.Config.UseMySQL {
-		env, err := getEnvironmentMySQL(env_name)
-		if err != nil {
-			
-		}
-		env = new(ChefEnvironment)
-		stmt, err := data_store.Dbh.Prepare("SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments WHERE name = ?")
+		var err error
+		env, err = getEnvironmentMySQL(env_name)
 		if err != nil {
 			var gerr util.Gerror
 			if err != sql.ErrNoRows {
 				gerr = util.CastErr(err)
 				gerr.SetStatus(http.StatusInternalServerError)
+				return nil, gerr
 			} else {
-				gerr = util.Errorf("Cannot load environment %s", env_name)
-				gerr.SetStatus(http.StatusNotFound)
+				found = false
 			}
-			return nil, gerr
+		} else {
+			found = true
 		}
 	} else {
 		ds := data_store.New()
-		e, found := ds.Get("env", env_name)
-		if !found {
-			err := util.Errorf("Cannot load environment %s", env_name)
-			err.SetStatus(http.StatusNotFound)
-			return nil, err
-		}
+		var e interface{}
+		e, found = ds.Get("env", env_name)
 		env = e.(*ChefEnvironment)
+	}
+	if !found {
+		err := util.Errorf("Cannot load environment %s", env_name)
+		err.SetStatus(http.StatusNotFound)
+		return nil, err
 	}
 	
 	return env, nil
@@ -335,7 +332,6 @@ func (e *ChefEnvironment) URLType() string {
 
 func (e *ChefEnvironment) cookbookList() []*cookbook.Cookbook {
 	return cookbook.AllCookbooks()
-	return cookbooks
 }
 
 // Gets a list of the cookbooks and their versions available to this 

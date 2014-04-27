@@ -93,7 +93,7 @@ func getMySQL(node_name string) (*Node, error){
 	if err != nil {
 		return nil, err
 	}
-	return client, nil
+	return node, nil
 }
 
 func (n *Node) saveMySQL() error {
@@ -175,6 +175,7 @@ func (n *Node) deleteMySQL() error {
 }
 
 func getListMySQL() []string {
+	node_list := make([]string, 0)
 	rows, err := data_store.Dbh.Query("SELECT name FROM nodes")
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -183,7 +184,6 @@ func getListMySQL() []string {
 		rows.Close()
 		return node_list
 	}
-	node_list := make([]string, 0)
 	for rows.Next() {
 		var node_name string
 		err = rows.Scan(&node_name)

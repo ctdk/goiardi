@@ -26,7 +26,6 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 	"fmt"
 	"net/http"
-	"log"
 	"database/sql"
 )
 
@@ -104,7 +103,7 @@ func Get(node_name string) (*Node, error) {
 	var found bool
 	if config.Config.UseMySQL {
 		var err error
-		node, err = getMySQL()
+		node, err = getMySQL(node_name)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false

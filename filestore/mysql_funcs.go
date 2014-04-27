@@ -23,18 +23,21 @@ import (
 	"log"
 )
 
-func getMySQL(chksum string) (*Filestore, error) {
-	filestore = new(FileStore)
+func getMySQL(chksum string) (*FileStore, error) {
+	filestore := new(FileStore)
 	stmt, err := data_store.Dbh.Prepare("SELECT checksum FROM file_checksums WHERE checksum = ?")
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(chksum).Scan(&filestore.Chksum)
-	return filestore, err
+	if err != nil {
+		return nil, err
+	}
+	return filestore, nil
 }
 
-func (f *Filestore) saveMySQL() error {
+func (f *FileStore) saveMySQL() error {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		return err
@@ -57,7 +60,7 @@ func (f *Filestore) saveMySQL() error {
 	return nil
 }
 
-func (f *Filestore) deleteMySQL() error {
+func (f *FileStore) deleteMySQL() error {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		return err
@@ -75,6 +78,7 @@ func (f *Filestore) deleteMySQL() error {
 }
 
 func getListMySQL() []string {
+	file_list := make([]string, 0)
 	stmt, perr := data_store.Dbh.Prepare("SELECT checksum FROM file_checksums")
 	if perr != nil {
 		if perr != sql.ErrNoRows {
@@ -84,7 +88,6 @@ func getListMySQL() []string {
 		return file_list
 	}
 	rows, err := stmt.Query()
-	file_list := make([]string, 0)
 	for rows.Next() {
 		var chksum string
 		err = rows.Scan(&chksum)
