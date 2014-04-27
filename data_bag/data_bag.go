@@ -114,10 +114,12 @@ func Get(db_name string) (*DataBag, util.Gerror){
 			err.SetStatus(http.StatusNotFound)
 			return nil, err
 		}
-		data_bag = d.(*DataBag)
-		for _, v := range data_bag.dataBagItems {
-			z := data_store.WalkMapForNil(v.RawData)
-			v.RawData = z.(map[string]interface{})
+		if d != nil {
+			data_bag = d.(*DataBag)
+			for _, v := range data_bag.dataBagItems {
+				z := data_store.WalkMapForNil(v.RawData)
+				v.RawData = z.(map[string]interface{})
+			}
 		}
 	}
 	return data_bag, nil

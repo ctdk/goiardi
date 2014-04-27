@@ -132,7 +132,9 @@ func Get(sandbox_id string) (*Sandbox, error){
 		ds := data_store.New()
 		var s interface{}
 		s, found = ds.Get("sandbox", sandbox_id)
-		sandbox = s.(*Sandbox)
+		if s != nil {
+			sandbox = s.(*Sandbox)
+		}
 	}
 
 	if !found {

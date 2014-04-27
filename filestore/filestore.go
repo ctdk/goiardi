@@ -97,7 +97,9 @@ func Get(chksum string) (*FileStore, error){
 		ds := data_store.New()
 		var f interface{}
 		f, found = ds.Get("filestore", chksum)
-		filestore = f.(*FileStore)
+		if f != nil {
+			filestore = f.(*FileStore)
+		}
 	}
 	if !found {
 		err := fmt.Errorf("File with checksum %s not found", chksum)

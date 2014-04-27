@@ -123,7 +123,9 @@ func Get(name string) (*User, util.Gerror){
 			err := util.Errorf("User %s not found", name)
 			return nil, err
 		}
-		user = u.(*User)
+		if u != nil {
+			user = u.(*User)
+		}
 	}
 	return user, nil
 }

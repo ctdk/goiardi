@@ -117,7 +117,9 @@ func Get(node_name string) (*Node, error) {
 		ds := data_store.New()
 		var n interface{}
 		n, found = ds.Get("node", node_name)
-		node = n.(*Node)
+		if n != nil {
+			node = n.(*Node)
+		}
 	}
 	if !found {
 		err := fmt.Errorf("node '%s' not found", node_name)

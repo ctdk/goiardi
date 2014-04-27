@@ -147,7 +147,9 @@ func Get(clientname string) (*Client, util.Gerror){
 			gerr.SetStatus(http.StatusNotFound)
 			return nil, gerr
 		}
-		client = c.(*Client)
+		if c != nil {
+			client = c.(*Client)
+		}
 	}
 	return client, nil
 }

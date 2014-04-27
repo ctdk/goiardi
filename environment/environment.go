@@ -227,7 +227,9 @@ func Get(env_name string) (*ChefEnvironment, util.Gerror){
 		ds := data_store.New()
 		var e interface{}
 		e, found = ds.Get("env", env_name)
-		env = e.(*ChefEnvironment)
+		if e != nil {
+			env = e.(*ChefEnvironment)
+		}
 	}
 	if !found {
 		err := util.Errorf("Cannot load environment %s", env_name)

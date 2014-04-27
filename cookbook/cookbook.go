@@ -161,7 +161,9 @@ func Get(name string) (*Cookbook, util.Gerror){
 		ds := data_store.New()
 		var c interface{}
 		c, found = ds.Get("cookbook", name)
-		cookbook = c.(*Cookbook)
+		if c != nil {
+			cookbook = c.(*Cookbook)
+		}
 	}
 	if !found {
 		err := util.Errorf("Cannot find a cookbook named %s", name)
