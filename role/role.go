@@ -202,7 +202,9 @@ func Get(role_name string) (*Role, error){
 		ds := data_store.New()
 		var r interface{}
 		r, found = ds.Get("role", role_name)
-		role = r.(*Role)
+		if r != nil {
+			role = r.(*Role)
+		}
 	}
 	if !found {
 		err := fmt.Errorf("Cannot load role %s", role_name)
