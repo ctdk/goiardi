@@ -110,44 +110,15 @@ func generate_sandbox_id() (string, error) {
 	return sandbox_id, nil
 }
 
-func (s *Sandbox)fillSandboxFromSQL(row *sql.Row) error {
-	if config.Config.UseMySQL {
-		var csb []byte
-		var tb []byte
-		err := row.Scan(&s.Id, &tb, &csb, &s.Completed)
-		if err != nil {
-			return err
-		}
-		var q interface{}
-		q, err = data_store.DecodeBlob(csb, s.Checksums)
-		if err != nil {
-			return err
-		}
-		s.CreationTime, err = time.Parse(data_store.MySQLTimeFormat, string(tb))
-		if err != nil {
-			return err
-		}
-		s.Checksums = q.([]string)
-	} else {
-		err := fmt.Errorf("no database configured, operating in in-memory mode -- fillSandboxFromSQL cannot be run")
-		return err
-	}
-	return nil
-}
+
 
 func Get(sandbox_id string) (*Sandbox, error){
 	var sandbox *Sandbox
 	var found bool
 
 	if config.Config.UseMySQL {
-		sandbox = new(Sandbox)
-		stmt, err := data_store.Dbh.Prepare("SELECT sbox_id, creation_time, checksums, completed FROM sandboxes WHERE sbox_id = ?")
-		if err != nil {
-			return nil, err
-		}
-		defer stmt.Close()
-		row := stmt.QueryRow(sandbox_id)
-		err = sandbox.fillSandboxFromSQL(row)
+		var err error
+		sandbox, err = getMySQL()
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -173,34 +144,9 @@ func Get(sandbox_id string) (*Sandbox, error){
 
 func (s *Sandbox) Save() error {
 	if config.Config.UseMySQL {
-		ckb, ckerr := data_store.EncodeBlob(s.Checksums)
-		if ckerr != nil {
-			return ckerr
-		}
-		tx, err := data_store.Dbh.Begin()
-		if err != nil {
+		if err := s.saveMySQL(); err != nil {
 			return err
 		}
-		var sbox_id string
-		err = tx.QueryRow("SELECT sbox_id FROM sandboxes WHERE sbox_id = ?", s.Id).Scan(&sbox_id)
-		if err == nil {
-			_, err = tx.Exec("UPDATE sandboxes SET checksums = ?, completed = ? WHERE sbox_id = ?", ckb, s.Completed, s.Id)
-				if err != nil {
-					tx.Rollback()
-					return err
-				}
-		} else {
-			if err != sql.ErrNoRows {
-				tx.Rollback()
-				return err
-			}
-			_, err = tx.Exec("INSERT INTO sandboxes (sbox_id, creation_time, checksums, completed) VALUES (?, ?, ?, ?)", s.Id, s.CreationTime.UTC().Format(data_store.MySQLTimeFormat), ckb, s.Completed)
-			if err != nil {
-				tx.Rollback()
-				return err
-			}
-		}
-		tx.Commit()
 	} else {
 		ds := data_store.New()
 		ds.Set("sandbox", s.Id, s)
@@ -210,19 +156,9 @@ func (s *Sandbox) Save() error {
 
 func (s *Sandbox) Delete() error {
 	if config.Config.UseMySQL {
-		tx, err := data_store.Dbh.Begin()
-		if err != nil {
-			return err
+		if err := s.deleteMySQL(); err != nil {
+			return nil
 		}
-		_, err = tx.Exec("DELETE FROM sandboxes WHERE sbox_id = ?", s.Id)
-		if err != nil {
-			terr := tx.Rollback()
-			if terr != nil {
-				err = fmt.Errorf("deleting sandbox %s had an error '%s', and then rolling back the transaction gave another error '%s'", s.Id, err.Error(), terr.Error())
-			}
-			return err
-		}
-		tx.Commit()
 	} else {
 		ds := data_store.New()
 		ds.Delete("sandbox", s.Id)
@@ -233,27 +169,7 @@ func (s *Sandbox) Delete() error {
 func GetList() []string {
 	var sandbox_list []string
 	if config.Config.UseMySQL {
-		rows, err := data_store.Dbh.Query("SELECT sbox_id FROM sandboxes")
-		if err != nil {
-			if err != sql.ErrNoRows {
-				log.Fatal(err)
-			}
-			rows.Close()
-			return sandbox_list
-		}
-		sandbox_list = make([]string, 0)
-		for rows.Next() {
-			var sbox_id string
-			err = rows.Scan(&sbox_id)
-			if err != nil {
-				log.Fatal(err)
-			}
-			sandbox_list = append(sandbox_list, sbox_id)
-		}
-		rows.Close()
-		if err = rows.Err(); err != nil {
-			log.Fatal(err)
-		}
+		sandbox_list = getListMySQL()
 	} else {
 		ds := data_store.New()
 		sandbox_list = ds.GetList("sandbox")
