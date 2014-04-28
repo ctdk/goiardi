@@ -37,7 +37,7 @@ import (
 // The overall data bag.
 type DataBag struct {
 	Name string
-	dataBagItems map[string]*DataBagItem
+	DataBagItems map[string]*DataBagItem
 	id int32
 }
 
@@ -84,7 +84,7 @@ func New(name string) (*DataBag, util.Gerror){
 	dbi_map := make(map[string]*DataBagItem)
 	data_bag := &DataBag{
 		Name: name,
-		dataBagItems: dbi_map,
+		DataBagItems: dbi_map,
 	}
 	indexer.CreateNewCollection(name)
 	return data_bag, nil
@@ -116,7 +116,7 @@ func Get(db_name string) (*DataBag, util.Gerror){
 		}
 		if d != nil {
 			data_bag = d.(*DataBag)
-			for _, v := range data_bag.dataBagItems {
+			for _, v := range data_bag.DataBagItems {
 				z := data_store.WalkMapForNil(v.RawData)
 				v.RawData = z.(map[string]interface{})
 			}
@@ -144,7 +144,7 @@ func (db *DataBag) Delete() error {
 	} else {
 		ds := data_store.New()
 		/* be thorough, and remove DBItems too */
-		for dbiName := range db.dataBagItems {
+		for dbiName := range db.DataBagItems {
 			db.DeleteDBItem(dbiName)
 		}
 		ds.Delete("data_bag", db.Name)
@@ -231,7 +231,7 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 			DataBagName: db.Name,
 			RawData: raw_dbag_item,
 		}
-		db.dataBagItems[dbi_id] = dbag_item
+		db.DataBagItems[dbi_id] = dbag_item
 	}
 	err := db.Save()
 	if err != nil {
@@ -259,7 +259,7 @@ func (db *DataBag) UpdateDBItem(dbi_id string, raw_dbag_item map[string]interfac
 			return nil, err
 		}
 	} else {
-		db.dataBagItems[dbi_id] = db_item
+		db.DataBagItems[dbi_id] = db_item
 	}
 	err = db.Save()
 	if err != nil {
@@ -280,7 +280,7 @@ func (db *DataBag) DeleteDBItem(db_item_name string) error {
 			return err
 		}
 	} else {
-		delete(db.dataBagItems, db_item_name)
+		delete(db.DataBagItems, db_item_name)
 	}
 	err := db.Save()
 	if err != nil {
@@ -298,7 +298,7 @@ func (db *DataBag) GetDBItem(db_item_name string) (*DataBagItem, error) {
 		}
 		return dbi, err
 	} else {
-		dbi, ok := db.dataBagItems[db_item_name]
+		dbi, ok := db.DataBagItems[db_item_name]
 		if !ok {
 			err := fmt.Errorf("data bag item %s in %s not found", db_item_name, db.Name)
 			return nil, err
@@ -311,7 +311,7 @@ func (db *DataBag) AllDBItems() (map[string]*DataBagItem, error) {
 	if config.Config.UseMySQL {
 		return db.allDBItemsMySQL()
 	} else {
-		return db.dataBagItems, nil
+		return db.DataBagItems, nil
 	}
 }
 
@@ -319,9 +319,9 @@ func (db *DataBag) ListDBItems() []string {
 	if config.Config.UseMySQL {
 		return db.listDBItemsMySQL()
 	} else {
-		dbis := make([]string, len(db.dataBagItems))
+		dbis := make([]string, len(db.DataBagItems))
 		n := 0
-		for k := range db.dataBagItems {
+		for k := range db.DataBagItems {
 			dbis[n] = k
 			n++
 		}
@@ -333,7 +333,7 @@ func (db *DataBag) NumDBItems() int {
 	if config.Config.UseMySQL {
 		return db.numDBItemsMySQL()
 	} else {
-		return len(db.dataBagItems)
+		return len(db.DataBagItems)
 	}
 }
 
