@@ -83,7 +83,7 @@ type flatClient struct {
 	Certificate string `json:"certificate"`
 }
 
-// Creates a new actor.
+// Creates a new client.
 func New(clientname string) (*Client, util.Gerror){
 	var found bool
 	var err util.Gerror
@@ -154,6 +154,8 @@ func Get(clientname string) (*Client, util.Gerror){
 	return client, nil
 }
 
+// Save the client. If a user with the same name as the client exists, returns
+// an error. Additionally, if running with MySQL it will return any DB error.
 func (c *Client) Save() error {
 	if config.Config.UseMySQL {
 		err := c.saveMySQL()
@@ -171,8 +173,8 @@ func (c *Client) Save() error {
 	return nil
 }
 
-// Deletes a client or user, but will refuse to do so if it is the last
-// adminstrator of that type.
+// Deletes a client, but will refuse to do so if it is the last client
+// that is an adminstrator.
 func (c *Client) Delete() error {
 	// Make sure this isn't the last admin or something
 	// This will be a *lot* easier with an actual database.
@@ -194,7 +196,7 @@ func (c *Client) Delete() error {
 	return nil
 }
 
-// Convert the client or user object into a JSON object, massaging it as needed
+// Convert the client object into a JSON object, massaging it as needed
 // to make chef-pedant happy.
 func (c *Client) ToJson() map[string]interface{} {
 	toJson := make(map[string]interface{})
@@ -229,7 +231,7 @@ func (c *Client) isLastAdmin() bool {
 	return false
 }
 
-// Renames the client or user. Save() must be called after this method is used.
+// Renames the client. Save() must be called after this method is used.
 // Will not rename the last admin.
 func (c *Client) Rename(new_name string) util.Gerror {
 	if err := validateClientName(new_name); err != nil {
@@ -264,7 +266,7 @@ func (c *Client) Rename(new_name string) util.Gerror {
 	return nil
 }
 
-// Build a new client/user from a json object
+// Build a new client/user from a json object.
 func NewFromJson(json_actor map[string]interface{}) (*Client, util.Gerror) {
 	actor_name, nerr := util.ValidateAsString(json_actor["name"])
 	if nerr != nil {
@@ -382,8 +384,7 @@ func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
 	return ok, err
 }
 
-// Returns a list of actors. Clients and users are stored together, so no user
-// can have the same name as an existing client (and vice versa).
+// Returns a list of clients.
 func GetList() []string {
 	var client_list []string
 	if config.Config.UseMySQL {
@@ -443,7 +444,7 @@ func (c *Client) Flatten() []string {
 /* Permission functions. Later role-based perms may be implemented, but for now
  * it's just the basic admin/validator/user perms */
 
-// Is the user an admin? If use-auth is false, this always returns true.
+// Is the client an admin? If use-auth is false, this always returns true.
 func (c *Client) IsAdmin() bool {
 	if !useAuth(){
 		return true
@@ -451,8 +452,8 @@ func (c *Client) IsAdmin() bool {
 	return c.Admin
 }
 
-// Is the user a validator client? If use-auth is false, this always returns 
-// false. Users also always return false.
+// Is the client a validator client? If use-auth is false, this always returns 
+// false. 
 func (c *Client) IsValidator() bool {
 	if !useAuth(){
 		return false
@@ -484,10 +485,12 @@ func (c *Client) IsClient() bool {
 	return true
 }
 
+// Returns the client's public key. Part of the Actor interface.
 func (c *Client) PublicKey() string {
 	return c.pubKey
 }
 
+// Set the client's public key.
 func (c *Client) SetPublicKey(pk interface{}) error {
 	switch pk := pk.(type) {
 		case string:
@@ -503,7 +506,8 @@ func (c *Client) SetPublicKey(pk interface{}) error {
 	return nil
 }
 
-// A check to see if the actor is trying to edit admin and validator attributes.
+// A check to see if the client is trying to edit admin and validator 
+// attributes.
 func (c *Client) CheckPermEdit(client_data map[string]interface{}, perm string) util.Gerror {
 	gerr := util.Errorf("You are not allowed to take this action.")
 	gerr.SetStatus(http.StatusForbidden)

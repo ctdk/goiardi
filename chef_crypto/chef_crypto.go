@@ -121,6 +121,8 @@ func HeaderDecrypt(pkPem string, data string) ([]byte, error){
 	return dec[skip:], nil
 }
 
+// There has been discussion of renaming this and submitting it along with its
+// counterpart in chef-golang to crypto/rsa.
 func decrypt(pubKey *rsa.PublicKey, data []byte) ([]byte, error) {
 	c := new(big.Int)
 	m := new(big.Int)

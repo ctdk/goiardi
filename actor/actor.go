@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-// Actors are clients or users. They serve many of the same functions, but are
-// now different kinds of objects, so Actor is now an interface rather than
-// being a distinct kind of object encompassing both.
+// Package actor implements actors, which is an interface encompassing both
+// clients or users. They serve many of the same functions and formerly were
+// implemented using the same object, but are now different types. Thus,Actor
+// is now an interface rather than being a distinct type of object encompassing
+// both.
 package actor
 
 import (

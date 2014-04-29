@@ -83,6 +83,7 @@ func (c *Cookbook) URLType() string {
 	return "cookbooks"
 }
 
+// Create a new cookbook.
 func New(name string) (*Cookbook, util.Gerror){
 	var found bool
 	if !util.ValidateEnvName(name) {
@@ -112,6 +113,7 @@ func New(name string) (*Cookbook, util.Gerror){
 	return cookbook, nil
 }
 
+// The number of versions this cookbook has.
 func (c *Cookbook)NumVersions() int {
 	if config.Config.UseMySQL {
 		if c.numVersions == nil {
@@ -123,6 +125,7 @@ func (c *Cookbook)NumVersions() int {
 	}
 }
 
+// Return all the cookbooks that have been uploaded to this server.
 func AllCookbooks() (cookbooks []*Cookbook) {
 	if config.Config.UseMySQL {
 		cookbooks = allCookbooksMySQL()
@@ -140,6 +143,7 @@ func AllCookbooks() (cookbooks []*Cookbook) {
 	return cookbooks
 }
 
+// Get a cookbook.
 func Get(name string) (*Cookbook, util.Gerror){
 	var cookbook *Cookbook
 	var found bool
@@ -173,6 +177,7 @@ func Get(name string) (*Cookbook, util.Gerror){
 	return cookbook, nil
 }
 
+// Save a cookbook to the in-memory data store or database.
 func (c *Cookbook) Save() error {
 	if config.Config.UseMySQL {
 		return c.saveCookbookMySQL()
@@ -203,6 +208,7 @@ func GetList() []string {
 	return cb_list
 }
 
+/* Returns a sorted list of all the versions of this cookbook */
 func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
 	if config.Config.UseMySQL {
 		return c.sortedCookbookVersionsMySQL()
@@ -462,8 +468,7 @@ func (c *Cookbook)infoHashBase(num_results interface{}, constraint string) map[s
 	/* Working to maintain Chef server behavior here. We need to make "all"
 	 * give all versions of the cookbook and make no value give one version,
 	 * but keep 0 as invalid input that gives zero results back. This might
-	 * be an area worth
-	 * breaking. */
+	 * be an area worth breaking. */
 	var num_versions int
 	all_versions := false
 	//var cb_hash_len int
@@ -660,7 +665,7 @@ func extractVerNums(cbVersion string) (maj, min, patch int64, err util.Gerror) {
 }
 
 func (c *Cookbook)deleteHashes(file_hashes []string) {
-/* And remove the unused hashes. Currently, sigh, this involes checking
+	/* And remove the unused hashes. Currently, sigh, this involes checking
 	 * every cookbook. Probably will be easier with an actual database, I
 	 * imagine. */
 	all_cookbooks := AllCookbooks()
