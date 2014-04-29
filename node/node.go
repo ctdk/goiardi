@@ -266,6 +266,24 @@ func GetList() []string {
 	return node_list
 }
 
+func GetFromEnv(env_name string) ([]*Node, error) {
+	if config.Config.UseMySQL {
+		return getNodesInEnvMySQL(env_name)
+	}
+	env_nodes := make([]*Node, 0)
+	node_list := GetList()
+	for _, n := range node_list {
+		chef_node, _ := Get(n)
+		if chef_node == nil {
+			continue
+		}
+		if chef_node.ChefEnvironment == env_name {
+			env_nodes = append(env_nodes, chef_node)
+		}
+	}
+	return env_nodes, nil
+}
+
 func (n *Node) GetName() string {
 	return n.Name
 }

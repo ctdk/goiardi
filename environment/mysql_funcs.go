@@ -57,15 +57,15 @@ func (e *ChefEnvironment) fillEnvFromSQL(row *sql.Row) error {
 	}
 	e.ChefType = "environment"
 	e.JsonClass = "Chef::Environment"
-	err = data_store.DecodeBlob(da, e.Default)
+	err = data_store.DecodeBlob(da, &e.Default)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(oa, e.Override)
+	err = data_store.DecodeBlob(oa, &e.Override)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(cv, e.CookbookVersions)
+	err = data_store.DecodeBlob(cv, &e.CookbookVersions)
 	if err != nil {
 		return err
 	}
@@ -89,15 +89,15 @@ func getEnvironmentMySQL(env_name string) (*ChefEnvironment, error) {
 }
 
 func (e *ChefEnvironment) saveEnvironmentMySQL() util.Gerror {
-	dab, daerr := data_store.EncodeBlob(e.Default)
+	dab, daerr := data_store.EncodeBlob(&e.Default)
 	if daerr != nil {
 		return util.CastErr(daerr)
 	}
-	oab, oaerr := data_store.EncodeBlob(e.Override)
+	oab, oaerr := data_store.EncodeBlob(&e.Override)
 	if oaerr != nil {
 		return util.CastErr(oaerr)
 	}
-	cvb, cverr := data_store.EncodeBlob(e.CookbookVersions)
+	cvb, cverr := data_store.EncodeBlob(&e.CookbookVersions)
 	if cverr != nil {
 		return util.CastErr(cverr)
 	}

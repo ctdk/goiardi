@@ -275,15 +275,13 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 			case "cookbooks":
 				env_response = env.AllCookbookHash(num_results)
 			case "nodes":
-				node_list := node.GetList()
-				for _, n := range node_list {
-					chef_node, _ := node.Get(n)
-					if chef_node == nil {
-						continue
-					}
-					if chef_node.ChefEnvironment == env_name {
-						env_response[chef_node.Name] = util.ObjURL(chef_node) 
-					}
+				node_list, err := node.GetFromEnv(env_name)
+				if err != nil {
+					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				for _, chef_node := range node_list {
+					env_response[chef_node.Name] = util.ObjURL(chef_node) 
 				}
 			case "recipes":
 				env_recipes := env.RecipeList()

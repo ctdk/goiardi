@@ -31,7 +31,7 @@ func (s *Sandbox)fillSandboxFromSQL(row *sql.Row) error {
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(csb, s.Checksums)
+	err = data_store.DecodeBlob(csb, &s.Checksums)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func getMySQL(sandbox_id string) (*Sandbox, error) {
 }
 
 func (s *Sandbox) saveMySQL() error {
-	ckb, ckerr := data_store.EncodeBlob(s.Checksums)
+	ckb, ckerr := data_store.EncodeBlob(&s.Checksums)
 	if ckerr != nil {
 		return ckerr
 	}

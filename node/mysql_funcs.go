@@ -42,7 +42,7 @@ func checkForNodeMySQL(dbhandle data_store.Dbhandle, name string) (bool, error) 
 // if it's marginally acceptable in in-memory mode.
 //
 // NB: This does require the query to look like the one in Get().
-func (n *Node) fillNodeFromSQL(row *sql.Row) error {
+func (n *Node) fillNodeFromSQL(row data_store.ResRow) error {
 	var (
 		rl []byte
 		aa []byte
@@ -56,23 +56,23 @@ func (n *Node) fillNodeFromSQL(row *sql.Row) error {
 	}
 	n.ChefType = "node"
 	n.JsonClass = "Chef::Node"
-	err = data_store.DecodeBlob(rl, n.RunList)
+	err = data_store.DecodeBlob(rl, &n.RunList)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(aa, n.Automatic)
+	err = data_store.DecodeBlob(aa, &n.Automatic)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(na, n.Normal)
+	err = data_store.DecodeBlob(na, &n.Normal)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(da, n.Default)
+	err = data_store.DecodeBlob(da, &n.Default)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(oa, n.Override)
+	err = data_store.DecodeBlob(oa, &n.Override)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (n *Node) fillNodeFromSQL(row *sql.Row) error {
 
 func getMySQL(node_name string) (*Node, error){
 	node := new(Node)
-	stmt, err := data_store.Dbh.Prepare("select n.name, e.name as chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n join environments as e on n.environment_id = e.id where n.name = ?")
+	stmt, err := data_store.Dbh.Prepare("select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n where n.name = ?")
 	if err != nil {
 		return nil, err
 	}
@@ -98,23 +98,23 @@ func getMySQL(node_name string) (*Node, error){
 
 func (n *Node) saveMySQL() error {
 	// prepare the complex structures for saving
-	rlb, rlerr := data_store.EncodeBlob(n.RunList)
+	rlb, rlerr := data_store.EncodeBlob(&n.RunList)
 	if rlerr != nil {
 		return rlerr
 	}
-	aab, aaerr := data_store.EncodeBlob(n.Automatic)
+	aab, aaerr := data_store.EncodeBlob(&n.Automatic)
 	if aaerr != nil {
 		return aaerr
 	}
-	nab, naerr := data_store.EncodeBlob(n.Normal)
+	nab, naerr := data_store.EncodeBlob(&n.Normal)
 	if naerr != nil {
 		return naerr
 	}
-	dab, daerr := data_store.EncodeBlob(n.Default)
+	dab, daerr := data_store.EncodeBlob(&n.Default)
 	if daerr != nil {
 		return daerr
 	}
-	oab, oaerr := data_store.EncodeBlob(n.Override)
+	oab, oaerr := data_store.EncodeBlob(&n.Override)
 	if oaerr != nil {
 		return oaerr
 	}
@@ -131,7 +131,7 @@ func (n *Node) saveMySQL() error {
 	if err == nil {
 		// probably want binlog_format set to MIXED or ROW for 
 		// this query
-		_, err := tx.Exec("UPDATE nodes n, environments e SET n.environment_id = e.id, n.run_list = ?, n.automatic_attr = ?, n.normal_attr = ?, n.default_attr = ?, n.override_attr = ?, n.updated_at = NOW() WHERE n.id = ? and e.name = ?", rlb, aab, nab, dab, oab, node_id, n.ChefEnvironment)
+		_, err := tx.Exec("UPDATE nodes n SET chef_environment = ?, n.run_list = ?, n.automatic_attr = ?, n.normal_attr = ?, n.default_attr = ?, n.override_attr = ?, n.updated_at = NOW() WHERE n.id = ?", n.ChefEnvironment, rlb, aab, nab, dab, oab, node_id)
 		if err != nil {
 			tx.Rollback()
 			return err
@@ -141,13 +141,7 @@ func (n *Node) saveMySQL() error {
 			tx.Rollback()
 			return err
 		}
-		var environment_id int32
-		environment_id, err = data_store.CheckForOne(tx, "environments", n.ChefEnvironment)
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
-		_, err = tx.Exec("INSERT INTO nodes (name, environment_id, run_list, automatic_attr, normal_attr, default_attr, override_attr, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())", n.Name, environment_id, rlb, aab, nab, dab, oab)
+		_, err = tx.Exec("INSERT INTO nodes (name, chef_environment, run_list, automatic_attr, normal_attr, default_attr, override_attr, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())", n.Name, n.ChefEnvironment, rlb, aab, nab, dab, oab)
 		if err != nil {
 			tx.Rollback()
 			return err
@@ -197,4 +191,34 @@ func getListMySQL() []string {
 		log.Fatal(err)
 	}
 	return node_list
+}
+
+func getNodesInEnvMySQL(env_name string) ([]*Node, error) {
+	nodes := make([]*Node, 0)
+	stmt, err := data_store.Dbh.Prepare("SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM nodes n WHERE n.chef_environment = ?")
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query(env_name)
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return nodes, nil
+		}
+		return nil, qerr
+	}
+	for rows.Next() {
+		n := new(Node)
+		err = n.fillNodeFromSQL(rows)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+		nodes = append(nodes, n)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return nodes, nil
 }

@@ -340,6 +340,8 @@ func gobRegister() {
 	gob.Register(i)
 	gob.Register(ic)
 	gob.Register(id)
+	ss := make([]string, 0)
+	gob.Register(ss)
 	ms := make(map[string]string)
 	gob.Register(ms)
 	smsi := make([]map[string]interface{},0)

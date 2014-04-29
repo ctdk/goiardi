@@ -21,6 +21,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 )
 
 func getMySQL(chksum string) (*FileStore, error) {
@@ -104,11 +105,19 @@ func getListMySQL() []string {
 }
 
 func deleteHashesMySQL(file_hashes []string) {
+	if len(file_hashes) == 0 {
+		return // nothing to do
+	}
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = tx.Exec("DELETE from file_checksums WHERE checksum IN (?)", file_hashes)
+	delete_query := "DELETE FROM file_checksums WHERE checksum IN(?" + strings.Repeat(",?", len(file_hashes) - 1) + ")"
+	del_args := make([]interface{}, len(file_hashes))
+	for i, v := range file_hashes {
+		del_args[i] = v
+	}
+	_, err = tx.Exec(delete_query, del_args...)
 	if err != nil && err != sql.ErrNoRows {
 		log.Printf("Error %s trying to delete hashes", err.Error())
 		tx.Rollback()

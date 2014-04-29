@@ -49,19 +49,19 @@ func (r *Role)fillRoleFromSQL(row *sql.Row) error {
 	}
 	r.ChefType = "role"
 	r.JsonClass = "Chef::Role"
-	err = data_store.DecodeBlob(rl, r.RunList)
+	err = data_store.DecodeBlob(rl, &r.RunList)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(er, r.EnvRunLists)
+	err = data_store.DecodeBlob(er, &r.EnvRunLists)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(da, r.Default)
+	err = data_store.DecodeBlob(da, &r.Default)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(oa, r.Override)
+	err = data_store.DecodeBlob(oa, &r.Override)
 	if err != nil {
 		return err
 	}
@@ -86,19 +86,19 @@ func getMySQL(role_name string) (*Role, error) {
 }
 
 func (r *Role)saveMySQL() error {
-	rlb, rlerr := data_store.EncodeBlob(r.RunList)
+	rlb, rlerr := data_store.EncodeBlob(&r.RunList)
 	if rlerr != nil {
 		return rlerr
 	}
-	erb, ererr := data_store.EncodeBlob(r.EnvRunLists)
+	erb, ererr := data_store.EncodeBlob(&r.EnvRunLists)
 	if ererr != nil {
 		return ererr
 	}
-	dab, daerr := data_store.EncodeBlob(r.Default)
+	dab, daerr := data_store.EncodeBlob(&r.Default)
 	if daerr != nil {
 		return daerr
 	}
-	oab, oaerr := data_store.EncodeBlob(r.Override)
+	oab, oaerr := data_store.EncodeBlob(&r.Override)
 	if oaerr != nil {
 		return oaerr
 	}

@@ -84,7 +84,7 @@ func (db *DataBag) getDBItemMySQL(db_item_name string) (*DataBagItem, error) {
 }
 
 func (db *DataBag) newDBItemMySQL(dbi_id string, raw_dbag_item map[string]interface{}) (*DataBagItem, error){
-	rawb, rawerr := data_store.EncodeBlob(raw_dbag_item)
+	rawb, rawerr := data_store.EncodeBlob(&raw_dbag_item)
 	if rawerr != nil {
 		return nil, rawerr
 	}
@@ -128,7 +128,7 @@ func (db *DataBag) newDBItemMySQL(dbi_id string, raw_dbag_item map[string]interf
 }
 
 func (dbi *DataBagItem) updateDBItemMySQL() error {
-	rawb, rawerr := data_store.EncodeBlob(dbi.RawData)
+	rawb, rawerr := data_store.EncodeBlob(&dbi.RawData)
 	if rawerr != nil {
 		return rawerr
 	}

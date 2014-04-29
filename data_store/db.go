@@ -65,7 +65,8 @@ func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	}
 }
 
-// Encode a slice or map of goiardi object data to save in the database
+// Encode a slice or map of goiardi object data to save in the database. Pass the
+// object to be encoded in like data_store.EncodeBlob(&foo.Thing).
 func EncodeBlob(obj interface{}) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	enc := gob.NewEncoder(buf)
@@ -75,7 +76,7 @@ func EncodeBlob(obj interface{}) ([]byte, error) {
 			err = fmt.Errorf("Something went wrong encoding an object for storing in the database with Gob")
 		}
 	}()
-	err = enc.Encode(&obj)
+	err = enc.Encode(obj)
 	if err != nil {
 		return nil, err
 	}
@@ -85,16 +86,15 @@ func EncodeBlob(obj interface{}) ([]byte, error) {
 // Decode the data encoded with EncodeBlob that was stored in the database so it
 // can be loaded back into a goiardi object. The 'obj' in the arguments *must*
 // be the address of the object receiving the blob of data (e.g.
-// util.DecodeBlob(data, &obj).
+// data_store.DecodeBlob(data, &obj).
 func DecodeBlob(data []byte, obj interface{}) (error) {
+	// hmmm
 	dbuf := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(dbuf)
 	err := dec.Decode(obj)
 	if err != nil {
 		return err
 	}
-	/* Tried to do a pointer to an interface as an argument here, but that
-	 * made the compiler pretty unhappy. */
 	return nil
 }
 
