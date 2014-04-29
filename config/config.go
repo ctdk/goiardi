@@ -92,7 +92,7 @@ type Options struct {
 }
 
 // The goiardi version.
-const Version = "0.4.2"
+const Version = "0.4.9999"
 // The chef version we're at least aiming for, even if it's not complete yet.
 const ChefVersion = "11.0.8"
 
