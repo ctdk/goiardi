@@ -64,6 +64,7 @@ func Errorf(format string, a ...interface{}) Gerror {
 	return New(fmt.Sprintf(format, a...))
 }
 
+// Easily cast a different kind of error to a Gerror
 func CastErr(err error) Gerror {
 	return Errorf(err.Error())
 }
