@@ -21,6 +21,9 @@
 // Package filestore provides local file uploads and downloads for cookbook
 // uploading and downloading. All access to the files is through the checksum,
 // rather than the file name.
+//
+// If config.Config.LocalFstoreDir is != "", the content of the files will be
+// stored in that directory.
 package filestore
 
 import (
@@ -188,6 +191,7 @@ func GetList() []string {
 	return file_list
 }
 
+// Delete all the checksum hashes given from the filestore.
 func DeleteHashes(file_hashes []string) {
 	if config.Config.UseMySQL {
 		deleteHashesMySQL(file_hashes)

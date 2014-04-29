@@ -43,6 +43,8 @@ type ChefEnvironment struct {
 	CookbookVersions map[string]string `json:"cookbook_versions"`
 }
 
+// Creates a new environment, returning an error if the environment already
+// exists or you try to create an environment named "_default".
 func New(name string) (*ChefEnvironment, util.Gerror){
 	var found bool
 	if config.Config.UseMySQL {
@@ -240,7 +242,7 @@ func Get(env_name string) (*ChefEnvironment, util.Gerror){
 	return env, nil
 }
 
-// Creates the default environment on startup
+// Creates the default environment on startup.
 func MakeDefaultEnvironment() {
 	var de *ChefEnvironment
 	if config.Config.UseMySQL {
@@ -275,6 +277,8 @@ func defaultEnvironment() (*ChefEnvironment) {
 	}
 }
 
+// Saves the environment. Returns an error if you try to save the "_default"
+// environment.
 func (e *ChefEnvironment) Save() util.Gerror {
 	if e.Name == "_default" {
 		err := util.Errorf("The '_default' environment cannot be modified.")
@@ -294,6 +298,8 @@ func (e *ChefEnvironment) Save() util.Gerror {
 	return nil
 }
 
+// Deletes the environment, returning an error if you try to delete the 
+// "_default" environment.
 func (e *ChefEnvironment) Delete() error {
 	if e.Name == "_default" {
 		err := fmt.Errorf("The '_default' environment cannot be modified.")
@@ -336,7 +342,7 @@ func (e *ChefEnvironment) cookbookList() []*cookbook.Cookbook {
 	return cookbook.AllCookbooks()
 }
 
-// Gets a list of the cookbooks and their versions available to this 
+// Gets a hash of the cookbooks and their versions available to this 
 // environment.
 func (e *ChefEnvironment) AllCookbookHash(num_versions interface{}) map[string]interface{} {
 	cb_hash := make(map[string]interface{})

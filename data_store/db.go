@@ -27,8 +27,10 @@ import (
 	"encoding/gob"
 )
 
+// The database handle.
 var Dbh *sql.DB
 
+// Format to use for dates and times for MySQL.
 const MySQLTimeFormat = "2006-01-02 15:04:05"
 
 // Interface for db handle types that can execute queries
@@ -39,11 +41,14 @@ type Dbhandle interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 }
 
+// Interface for rows returned by Query, or a single row returned by QueryRow.
+// Used for passing in a db handle or a transaction to a function.
 type ResRow interface {
 	Scan(dest ...interface{}) error
 }
 
 // Connect to a database with the database name and a map of connection options.
+// Currently supports MySQL.
 func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	switch strings.ToLower(dbEngine) {
 		case "mysql":
@@ -65,8 +70,8 @@ func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	}
 }
 
-// Encode a slice or map of goiardi object data to save in the database. Pass the
-// object to be encoded in like data_store.EncodeBlob(&foo.Thing).
+// Encode a slice or map of goiardi object data to save in the database. Pass 
+// the object to be encoded in like data_store.EncodeBlob(&foo.Thing).
 func EncodeBlob(obj interface{}) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	enc := gob.NewEncoder(buf)
@@ -98,6 +103,9 @@ func DecodeBlob(data []byte, obj interface{}) (error) {
 	return nil
 }
 
+// Check for one object of the given type identified by the given name. For this
+// function to work, the underlying table MUST have its primary text identifier
+// be called "name".
 func CheckForOne(dbhandle Dbhandle, kind string, name string) (int32, error){
 	var obj_id int32
 	prepStatement := fmt.Sprintf("SELECT id FROM %s WHERE name = ?", kind)
