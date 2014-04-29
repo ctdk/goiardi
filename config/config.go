@@ -158,7 +158,18 @@ func ParseConfigOptions() error {
 		Config.IndexFile = opts.IndexFile
 	}
 
-	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || (Config.DataStoreFile != "" && Config.IndexFile != "")) {
+	// Use MySQL?
+	if opts.UseMySQL {
+		Config.UseMySQL = opts.UseMySQL
+	}
+
+	if Config.DataStoreFile != "" && Config.UseMySQL {
+		err := fmt.Errorf("The MySQL and data store options may not be specified together.")
+		log.Println(err)
+		os.Exit(1)
+	}
+
+	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || Config.UseMySQL) && Config.IndexFile != "")) {
 		err := fmt.Errorf("-i and -D must either both be specified, or not specified.")
 		panic(err)
 		os.Exit(1)
@@ -181,9 +192,7 @@ func ParseConfigOptions() error {
 	}
 
 	/* Database options */
-	if opts.UseMySQL {
-		Config.UseMySQL = opts.UseMySQL
-	}
+	
 	// Don't bother setting a default mysql port if mysql isn't used
 	if Config.UseMySQL {
 		if Config.MySQL.Port == "" {
