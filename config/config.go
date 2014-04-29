@@ -211,6 +211,7 @@ func ParseConfigOptions() error {
 
 	// TODO: once db support is more mature, the dance with freezing data
 	// will become more complicated and need to be changed.
+	// NOTE TO SELF: That time has come. Leaving myself a note about that.
 
 	if !Config.FreezeData && (opts.FreezeInterval != 0 || Config.FreezeInterval != 0) {
 		log.Printf("FYI, setting the freeze data interval's not especially useful without setting the index and data files.")

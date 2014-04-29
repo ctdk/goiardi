@@ -161,6 +161,10 @@ Set `use-mysql = true` in the configuration file, or specify `--use-mysql` on
 the command line. It is an error to specify both the `-D`/`--data-file` flag and
 `--use-mysql` at the same time. TODO: Make this true
 
+At this time, the mysql connection options have to be defined in the config
+file. An example configuration is available in `etc/goiardi.conf-sample`, and is
+given below:
+
 ```
 [mysql]
 	username = "foo" # technically optional, although you probably want it
