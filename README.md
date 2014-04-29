@@ -18,7 +18,9 @@ Many go tests are present as well in different goiardi subdirectories.
 DEPENDENCIES
 ------------
 
-Goiardi currently has four dependencies: go-flags, go-cache, go-trie, and toml.
+Goiardi currently has five dependencies: go-flags, go-cache, go-trie, toml, and
+the mysql driver from go-sql-driver.
+
 To install them, run:
 
 ```
@@ -26,6 +28,7 @@ To install them, run:
    go get github.com/pmylund/go-cache
    go get github.com/ctdk/go-trie/gtrie
    go get github.com/BurntSushi/toml
+   go get github.com/go-sql-driver/mysql
 ```
 
 from your $GOROOT.
@@ -118,6 +121,11 @@ INSTALLATION
                           SSL, but is communicating with the proxy over HTTP.
        --disable-webui    If enabled, disables connections and logins to goiardi
                           over the webui interface.
+       --use-mysql        Use a MySQL database for data storage. Configure
+                          database options in the config file.
+       --local-filestore-dir= Directory to save uploaded files in. Optional when
+                          running in in-memory mode, *mandatory* for SQL
+                          mode.
 ```
 
    Options specified on the command line override options in the config file.
@@ -137,6 +145,37 @@ admin user, or using chef-webui if webui will run in front of goiardi.
 *Note:* The admin user, when created on startup, does not have a password. This
 prevents logging in to the webui with the admin user, so a password will have to
 be set for admin before doing so.
+
+### MySQL mode
+
+Goiardi can now use MySQL to store its data, instead of keeping all its data 
+in memory (and optionally freezing its data to disk for persistence).
+
+If you want to use MySQL, you (unsurprisingly) need a MySQL installation that
+goiardi can access. This document assumes that you are able to install, 
+configure, and run MySQL.
+
+<SET UP SQITCH AND DBS>
+
+Set `use-mysql = true` in the configuration file, or specify `--use-mysql` on
+the command line. It is an error to specify both the `-D`/`--data-file` flag and
+`--use-mysql` at the same time. TODO: Make this true
+
+```
+[mysql]
+	username = "foo" # technically optional, although you probably want it
+	password = "s3kr1t" # optional, if you have no password set for MySQL
+	protocol = "tcp" # optional, but set to "unix" for connecting to MySQL
+			 # through a Unix socket.
+	address = "localhost"
+	port = "3306" # optional, defaults to 3306. Not used with sockets.
+	dbname = "goiardi_test"
+	# See https://github.com/go-sql-driver/mysql#parameters for an
+	# explanation of available parameters
+	[mysql.extra_params]
+		tls = "false"
+		foo = "bar"
+```
 
 ### Tested Platforms
 
