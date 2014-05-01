@@ -175,7 +175,7 @@ func ParseConfigOptions() error {
 		os.Exit(1)
 	}
 
-	if Config.IndexFile != "" && Config.DataStoreFile != "" {
+	if Config.IndexFile != "" && (Config.DataStoreFile != "" || Config.UseMySQL) {
 		Config.FreezeData = true
 	}
 

@@ -65,14 +65,16 @@ func main(){
 	gobRegister()
 	ds := data_store.New()
 	if config.Config.FreezeData {
-		uerr := ds.Load(config.Config.DataStoreFile)
-		if uerr != nil {
-			log.Println(uerr)
-			os.Exit(1)
+		if config.Config.DataStoreFile != "" {
+			uerr := ds.Load(config.Config.DataStoreFile)
+			if uerr != nil {
+				log.Println(uerr)
+				os.Exit(1)
+			}
 		}
-		uerr = indexer.LoadIndex(config.Config.IndexFile)
-		if uerr != nil {
-			log.Println(uerr)
+		ierr := indexer.LoadIndex(config.Config.IndexFile)
+		if ierr != nil {
+			log.Println(ierr)
 			os.Exit(1)
 		}
 	}
@@ -295,9 +297,11 @@ func handleSignals() {
 			if sig == os.Interrupt || sig == syscall.SIGTERM{
 				log.Printf("cleaning up...")
 				if config.Config.FreezeData {
-					ds := data_store.New()
-					if err := ds.Save(config.Config.DataStoreFile); err != nil {
-						log.Println(err)
+					if config.Config.DataStoreFile != "" {
+						ds := data_store.New()
+						if err := ds.Save(config.Config.DataStoreFile); err != nil {
+							log.Println(err)
+						}
 					}
 					if err := indexer.SaveIndex(config.Config.IndexFile); err != nil {
 						log.Println(err)
@@ -361,13 +365,15 @@ func setSaveTicker() {
 		for _ = range ticker.C {
 			//log.Println("Automatically saving data store...")
 			if config.Config.FreezeData {
-				uerr := ds.Save(config.Config.DataStoreFile)
-				if uerr != nil {
-					log.Println(uerr)
+				if config.Config.DataStoreFile != "" {
+					uerr := ds.Save(config.Config.DataStoreFile)
+					if uerr != nil {
+						log.Println(uerr)
+					}
 				}
-				uerr = indexer.SaveIndex(config.Config.IndexFile)
-				if uerr != nil {
-					log.Println(uerr)
+				ierr := indexer.SaveIndex(config.Config.IndexFile)
+				if ierr != nil {
+					log.Println(ierr)
 				}
 			}
 		}
