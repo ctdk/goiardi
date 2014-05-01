@@ -175,6 +175,12 @@ func ParseConfigOptions() error {
 		os.Exit(1)
 	}
 
+	if Config.UseMySQL && Config.IndexFile == "" {
+		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL backend.")
+		log.Println(err)
+		os.Exit(1)
+	}
+
 	if Config.IndexFile != "" && (Config.DataStoreFile != "" || Config.UseMySQL) {
 		Config.FreezeData = true
 	}
@@ -208,10 +214,6 @@ func ParseConfigOptions() error {
 		log.Println(err)
 		os.Exit(1)
 	}
-
-	// TODO: once db support is more mature, the dance with freezing data
-	// will become more complicated and need to be changed.
-	// NOTE TO SELF: That time has come. Leaving myself a note about that.
 
 	if !Config.FreezeData && (opts.FreezeInterval != 0 || Config.FreezeInterval != 0) {
 		log.Printf("FYI, setting the freeze data interval's not especially useful without setting the index and data files.")
@@ -322,7 +324,6 @@ func ServerHostname() string {
 
 // The base URL
 func ServerBaseURL() string {
-	/* TODO: allow configuring using http vs. https */
 	var urlScheme string
 	if Config.UseSSL || Config.HttpsUrls {
 		urlScheme = "https"
