@@ -155,11 +155,27 @@ If you want to use MySQL, you (unsurprisingly) need a MySQL installation that
 goiardi can access. This document assumes that you are able to install, 
 configure, and run MySQL.
 
-<SET UP SQITCH AND DBS>
+Once the MySQL server is set up to your satisfaction, you'll need to install
+sqitch to deploy the schema, and any changes to the database schema that may come
+along later. It can be installed out of CPAN or homebrew; see "Installation" on
+http://sqitch.org for details.
+
+The sqitch MySQL tutorial at https://metacpan.org/pod/sqitchtutorial-mysql
+explains how to deploy, verify, and revert changes to the database with sqitch,
+but the basic steps to deploy the schema are:
+
+* Create goiardi's database: `mysql -u root --execute 'CREATE DATABASE goiardi'`
+* Optionally, create a separate mysql user for goiardi and give it permissions
+  on that database.
+* In sql-files/mysql-bundle, deploy the bundle: `sqitch deploy db:mysql://root@<password>/goiardi`
+
+The above values are for illustration, of course; nothing requires goiardi's
+database to be named "goiardi". Just make sure the right database is specified in
+the config file.
 
 Set `use-mysql = true` in the configuration file, or specify `--use-mysql` on
 the command line. It is an error to specify both the `-D`/`--data-file` flag and
-`--use-mysql` at the same time. TODO: Make this true
+`--use-mysql` at the same time.
 
 At this time, the mysql connection options have to be defined in the config
 file. An example configuration is available in `etc/goiardi.conf-sample`, and is
@@ -173,12 +189,11 @@ given below:
 			 # through a Unix socket.
 	address = "localhost"
 	port = "3306" # optional, defaults to 3306. Not used with sockets.
-	dbname = "goiardi_test"
+	dbname = "goiardi"
 	# See https://github.com/go-sql-driver/mysql#parameters for an
 	# explanation of available parameters
 	[mysql.extra_params]
 		tls = "false"
-		foo = "bar"
 ```
 
 ### Tested Platforms
