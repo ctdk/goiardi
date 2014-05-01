@@ -1,0 +1,18 @@
+%syntax-version=1.0.0-b2
+%project=goiardi_mysql
+%uri=http://ctdk.github.com/goiardi/mysql-support
+
+environments 2014-03-23T01:26:40Z Jeremy Bingham <jbingham@gmail.com> # Create environments table
+nodes 2014-03-23T01:29:02Z Jeremy Bingham <jbingham@gmail.com> # Create nodes table
+clients 2014-03-23T01:33:31Z Jeremy Bingham <jbingham@gmail.com> # Create clients table
+users 2014-03-23T01:35:37Z Jeremy Bingham <jbingham@gmail.com> # Create users table
+cookbooks 2014-03-23T01:39:20Z Jeremy Bingham <jbingham@gmail.com> # Create cookbooks table
+cookbook_versions 2014-03-23T01:41:15Z Jeremy Bingham <jbingham@gmail.com> # Create cookbook versions table
+data_bags 2014-03-23T01:43:55Z Jeremy Bingham <jbingham@gmail.com> # Create data_bags table
+data_bag_items 2014-03-23T01:45:12Z Jeremy Bingham <jbingham@gmail.com> # Create data bag items table
+roles 2014-03-23T01:48:11Z Jeremy Bingham <jbingham@gmail.com> # Create roles table
+sandboxes 2014-03-23T01:50:09Z Jeremy Bingham <jbingham@gmail.com> # Create sandbox table
+log_infos 2014-03-23T01:59:02Z Jeremy Bingham <jbingham@gmail.com> # Create a log info table
+organizations 2014-03-23T02:01:19Z Jeremy Bingham <jbingham@gmail.com> # Create an organizations table. Not immediately useful for anything, but future-proofing just in case.
+file_checksums 2014-03-23T02:03:13Z Jeremy Bingham <jbingham@gmail.com> # Create file checksums table, for tracking uploaded file checksums (fancy that).
+@v0.5.0 2014-05-01T05:28:20Z Jeremy Bingham <jbingham@gmail.com> # Tag v0.5.0 for release
