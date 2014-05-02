@@ -2,16 +2,18 @@ Goiardi
 =======
 
 Goiardi is an implementation of the Chef server (http://www.opscode.com) written
-in Go. It currently runs entirely in memory with the option to save and load the
-in-memory data to and from disk, and draws heavy inspiration from chef-zero.
+in Go. It can either run entirely in memory with the option to save and load the
+in-memory data and search indexes to and from disk, drawing inspiration from 
+chef-zero, or it can use MySQL as its storage backend.
 
 It is a work in progress. At the moment normal functionality as tested with 
-knife works, and chef-client runs complete successfully. It is far enough along 
-to run most chef-pendant tests successfully. It does pretty well against the
-official chef-pedant, but because goiardi handles some authentication matters a
-little differently than the official chef-server, there is also a fork of
-chef-pedant located at https://github.com/ctdk/chef-pedant that's more custom
-tailored to goiardi.
+knife works, and chef-client runs complete successfully. At this point, almost
+all chef-pendant tests successfully successfully run, with a few disagreements
+that don't impact the clients. It does pretty well against the official 
+chef-pedant, but because goiardi handles some authentication matters a little 
+differently than the official chef-server, there is also a fork of chef-pedant 
+located at https://github.com/ctdk/chef-pedant that's more custom tailored to
+goiardi.
 
 Many go tests are present as well in different goiardi subdirectories.
 
@@ -169,6 +171,10 @@ but the basic steps to deploy the schema are:
   on that database.
 * In sql-files/mysql-bundle, deploy the bundle: `sqitch deploy db:mysql://root@<password>/goiardi`
 
+If you really really don't want to install sqitch, apply each SQL patch in
+sql-files/mysql-bundle by hand in the same order they're listed in the
+sqitch.plan file.
+
 The above values are for illustration, of course; nothing requires goiardi's
 database to be named "goiardi". Just make sure the right database is specified in
 the config file.
@@ -198,8 +204,9 @@ given below:
 
 ### Tested Platforms
 
-Goiardi has been built and run with the native 6g compiler on Mac OS X (10.7 and
-10.8), Debian squeeze and wheezy, a fairly recent Arch Linux, and FreeBSD 9.2.
+Goiardi has been built and run with the native 6g compiler on Mac OS X (10.7,
+10.8, and 10.9), Debian squeeze and wheezy, a fairly recent Arch Linux, and 
+FreeBSD 9.2.
 
 Goiardi has also been built and run with gccgo (using the `-compiler gccgo`
 option with the `go` command) on Arch Linux. Building it with gccgo without 

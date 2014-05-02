@@ -8,6 +8,4 @@
 * Provide a smooth and easy installation process, possibly packages where
   appropriate.
 
-# Down the road
-* Allow using a database in addition to running in-memory
-* Config option to turn off webui logins entirely
+Also see https://github.com/ctdk/goiardi/issues?state=open

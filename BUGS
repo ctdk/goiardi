@@ -11,4 +11,8 @@
 
 * Proper logging needed.
 
+* At least after chef-pedant has run, there are extra files left over in the 
+  filestore. This does not happen when uploading, updating, and deleting
+  cookbooks, however.
+
 * Presumably more are creeping around that haven't turned up yet.
