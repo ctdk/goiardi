@@ -92,9 +92,9 @@ type Options struct {
 }
 
 // The goiardi version.
-const Version = "0.4.9999"
+const Version = "0.5.0"
 // The chef version we're at least aiming for, even if it's not complete yet.
-const ChefVersion = "11.0.8"
+const ChefVersion = "11.0.11"
 
 /* The general plan is to read the command-line options, then parse the config
  * file, fill in the config struct with those values, then apply the 
