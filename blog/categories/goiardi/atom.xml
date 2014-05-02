@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Goiardi | Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/blog/categories/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-03-19T23:21:51-07:00</updated>
+  <updated>2014-05-02T10:35:22-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,31 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Version 0.5.0 - Stürmisch Bewegt - Now With MySQL]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/05/02/goiardi-version-0-dot-5-0-sturmisch-bewegt-now-with-mysql/"/>
+    <updated>2014-05-02T10:10:55-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/05/02/goiardi-version-0-dot-5-0-sturmisch-bewegt-now-with-mysql</id>
+    <content type="html"><![CDATA[<p>Stormily agitated, a new goiardi release appears! Goiardi <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.0">version 0.5.0</a> has been released.</p>
+
+<p>Aside from a few bug fixes, this release brings MySQL support. Now, in addition to running entirely in memory, goiardi can use MySQL for storing data. The <a href="https://github.com/ctdk/goiardi/blob/master/README.md">README</a> and <a href="http://godoc.org/github.com/ctdk/goiardi">godocs</a> explain how to set that up.</p>
+
+<p>From the CHANGELOG:</p>
+
+<ul>
+<li>MySQL support added</li>
+<li>No longer redirect /environments/NAME/roles/NAME to /roles/NAME/environments/NAME</li>
+<li>Update documentation, reformat godocs</li>
+<li>Split actors apart into separate user and client types, made new Actor interface that encompasses both users and clients.</li>
+</ul>
+
+
+<p><strong>Note:</strong> This release contains one breaking change. Saved data files from previous goiardi releases will not work with 0.5.0, so if you&rsquo;re in that situation either don&rsquo;t upgrade or remove your saved index and data files before starting up. This will regenerate your admin, validator, and webui keys, and of course nuke anything you had in place before.</p>
+
+<p>Postgres support has already been requested by a few people, so that should be coming fairly soon. The <a href="https://github.com/ctdk/goiardi/issues?state=open">issues page</a> has been filled in with some enhancements that would be nice for goiardi to have. Feel free to add your own if there&rsquo;s something you&rsquo;d like to see.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Goiardi Version 0.4.2 - This Is Spinal Tap]]></title>
@@ -69,17 +94,6 @@
     <updated>2014-01-18T15:10:27-08:00</updated>
     <id>http://ctdk.github.io/goiardi/blog/2014/01/18/save-persistent-store-fix</id>
     <content type="html"><![CDATA[<p>Pushed up a change in the latest goiardi master last night that fixes an issue with saving the persistent index and data store files where, if the temp directory was not on the same partition, renaming the file after saving would cause an error. I was clued into this by a tweet in Japanese that seemed to say something about that. Ooops.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Reindexing Search Capability Added]]></title>
-    <link href="http://ctdk.github.io/goiardi/blog/2014/01/09/reindexing-search-capability-added/"/>
-    <updated>2014-01-09T23:32:11-08:00</updated>
-    <id>http://ctdk.github.io/goiardi/blog/2014/01/09/reindexing-search-capability-added</id>
-    <content type="html"><![CDATA[<p><a href="https://github.com/ctdk/goiardi/commit/7777fd82cb767007a22253c98c02e97f2f0a5bbf">As of the most recent commit</a>, goiardi can now rebuild its search index in case it accidentally got deleted or corrupted somehow.</p>
-
-<p>To rebuild, just run <code>knife index rebuild</code> (or <code>knife index rebuild -y</code> if you don&rsquo;t want to be bothered to press &ldquo;y&rdquo; to confirm that you really want to do it). You&rsquo;ll get a message from knife that &lsquo;knife index rebuild&rsquo; has been removed for Chef 11+ servers. This can be ignored; while goiardi identifies itself as a Chef 11+ server, this command will work because they&rsquo;ve kept it in for older versions of Chef.</p>
 ]]></content>
   </entry>
   
