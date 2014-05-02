@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/role"
 	"net/http"
 	"fmt"
 	"encoding/json"
@@ -315,20 +316,30 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 			JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
-
-		/* Redirect op=roles to /roles/NAME/environments/NAME. The API
-		 * docs recommend but do not require using that URL, so in the
-		 * interest of simplicity we will just redirect to it. */
-		if op == "roles" {
-			redir_url := fmt.Sprintf("/roles/%s/environments/%s", op_name, env_name)
-			http.Redirect(w, r, redir_url, http.StatusMovedPermanently)
+		env, err := environment.Get(env_name)
+		if err != nil {
+			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
-		} else if op == "cookbooks" {
-			env, err := environment.Get(env_name)
+		}
+
+		/* Biting the bullet and not redirecting this to 
+		 * /roles/NAME/environments/NAME. The behavior is exactly the
+		 * same, but it makes clients and chef-pedant somewhat unhappy
+		 * to not have this way available. */
+		if op == "roles" {
+			role, err := role.Get(op_name)
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
+			var run_list []string
+			if env_name == "_default" {
+				run_list = role.RunList
+			} else {
+				run_list = role.EnvRunLists[env_name]
+			}
+			env_response["run_list"] = run_list
+		} else if op == "cookbooks" {
 			cb, err := cookbook.Get(op_name)
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
