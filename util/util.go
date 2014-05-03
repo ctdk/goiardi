@@ -48,6 +48,7 @@ type gerror struct {
 // An error type that includes an http status code (defaults to 
 // http.BadRequest).
 type Gerror interface {
+	String() string
 	Error() string
 	Status() int
 	SetStatus(int)
@@ -71,6 +72,10 @@ func CastErr(err error) Gerror {
 
 // Returns the Gerror error message.
 func (e *gerror) Error() string {
+	return e.msg
+}
+
+func (e *gerror) String() string {
 	return e.msg
 }
 

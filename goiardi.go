@@ -22,7 +22,6 @@ package main
 import (
 	"net/http"
 	"path"
-	"log"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/user"
@@ -44,20 +43,20 @@ import (
 	"time"
 	"github.com/ctdk/goiardi/authentication"
 	"strings"
+	"git.tideland.biz/goas/logger"
 )
 
 type InterceptHandler struct {} // Doesn't need to do anything, just sit there.
 
 func main(){
 	config.ParseConfigOptions()
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	/* Here goes nothing, db... */
 	if config.Config.UseMySQL {
 		var derr error
 		data_store.Dbh, derr = data_store.ConnectDB("mysql", config.Config.MySQL)
 		if derr != nil {
-			log.Println(derr)
+			logger.Criticalf(derr.Error())
 			os.Exit(1)
 		}
 	}
@@ -68,13 +67,13 @@ func main(){
 		if config.Config.DataStoreFile != "" {
 			uerr := ds.Load(config.Config.DataStoreFile)
 			if uerr != nil {
-				log.Println(uerr)
+				logger.Criticalf(uerr.Error())
 				os.Exit(1)
 			}
 		}
 		ierr := indexer.LoadIndex(config.Config.IndexFile)
 		if ierr != nil {
-			log.Println(ierr)
+			logger.Criticalf(ierr.Error())
 			os.Exit(1)
 		}
 	}
@@ -120,7 +119,8 @@ func main(){
 		err = http.ListenAndServe(listen_addr, &InterceptHandler{})
 	}
 	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+		logger.Criticalf("ListenAndServe: %s", err.Error())
+		os.Exit(1)
 	}
 }
 
@@ -136,7 +136,7 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 
 	/* log the URL */
 	// TODO: set this to verbosity level 4 or so
-	//log.Printf("Serving %s -- %s\n", r.URL.Path, r.Method)
+	logger.Debugf("Serving %s -- %s\n", r.URL.Path, r.Method)
 
 	if r.Method != "CONNECT" { 
 		if p := cleanPath(r.URL.Path); p != r.URL.Path{
@@ -162,7 +162,7 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 		 * webui connection, it needs to fail. */
 		if config.Config.DisableWebUI {
 			w.Header().Set("Content-Type", "application/json")
-			log.Printf("Attempting to log in through webui, but webui is disabled")
+			logger.Warningf("Attempting to log in through webui, but webui is disabled")
 			JsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
 			return
 		}
@@ -171,7 +171,7 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 		 * If not, fail. */
 		if _, uherr := actor.GetReqUser(user_id); uherr != nil {
 			w.Header().Set("Content-Type", "application/json")
-			log.Printf("Attempting to use invalid user %s through X-Ops-Request-Source = web", user_id)
+			logger.Warningf("Attempting to use invalid user %s through X-Ops-Request-Source = web", user_id)
 			JsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
 			return
 		}
@@ -184,7 +184,7 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 		herr := authentication.CheckHeader(user_id, r)
 		if herr != nil {
 			w.Header().Set("Content-Type", "application/json")
-			log.Printf("Authorization failure: %s\n", herr.Error())
+			logger.Errorf("Authorization failure: %s\n", herr.Error())
 			//http.Error(w, herr.Error(), herr.Status())
 			JsonErrorReport(w, r, herr.Error(), herr.Status())
 			return
@@ -214,12 +214,14 @@ func cleanPath(p string) string {
 func createDefaultActors() {
 	if cwebui, _ := client.Get("chef-webui"); cwebui == nil {
 		if webui, nerr := client.New("chef-webui"); nerr != nil {
-			log.Fatalln(nerr)
+			logger.Criticalf(nerr.Error())
+			os.Exit(1)
 		} else {
 			webui.Admin = true
 			pem, err := webui.GenerateKeys()
 			if err != nil {
-				log.Fatalln(err)
+				logger.Criticalf(err.Error())
+				os.Exit(1)
 			}
 			if config.Config.UseAuth {
 				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, webui.Name)); ferr == nil {
@@ -227,7 +229,8 @@ func createDefaultActors() {
 					fp.WriteString(pem)
 					fp.Close()
 				} else {
-					log.Fatalln(ferr)
+					logger.Criticalf(ferr.Error())
+					os.Exit(1)
 				}
 			}
 			
@@ -237,12 +240,14 @@ func createDefaultActors() {
 
 	if cvalid, _ := client.Get("chef-validator"); cvalid == nil {
 		if validator, verr := client.New("chef-validator"); verr != nil {
-			log.Fatalln(verr)
+			logger.Criticalf(verr.Error())
+			os.Exit(1)
 		} else {
 			validator.Validator = true
 			pem, err := validator.GenerateKeys()
 			if err != nil {
-				log.Fatalln(err)
+				logger.Criticalf(err.Error())
+				os.Exit(1)
 			}
 			if config.Config.UseAuth {
 				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, validator.Name)); ferr == nil {
@@ -250,7 +255,8 @@ func createDefaultActors() {
 					fp.WriteString(pem)
 					fp.Close()
 				} else {
-					log.Fatalln(ferr)
+					logger.Criticalf(ferr.Error())
+					os.Exit(1)
 				}
 			}
 			validator.Save()
@@ -259,12 +265,14 @@ func createDefaultActors() {
 
 	if uadmin, _ := user.Get("admin"); uadmin == nil {
 		if admin, aerr := user.New("admin"); aerr != nil {
-			log.Fatalln(aerr)
+			logger.Criticalf(aerr.Error())
+			os.Exit(1)
 		} else {
 			admin.Admin = true
 			pem, err := admin.GenerateKeys()
 			if err != nil {
-				log.Fatalln(err)
+				logger.Criticalf(err.Error())
+				os.Exit(1)
 			}
 			if config.Config.UseAuth {
 				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, admin.Name)); ferr == nil {
@@ -272,7 +280,8 @@ func createDefaultActors() {
 					fp.WriteString(pem)
 					fp.Close()
 				} else {
-					log.Fatalln(ferr)
+					logger.Criticalf(ferr.Error())
+					os.Exit(1)
 				}
 			}
 			admin.Save()
@@ -295,16 +304,16 @@ func handleSignals() {
 	go func(){
 		for sig := range c {
 			if sig == os.Interrupt || sig == syscall.SIGTERM{
-				log.Printf("cleaning up...")
+				logger.Infof("cleaning up...")
 				if config.Config.FreezeData {
 					if config.Config.DataStoreFile != "" {
 						ds := data_store.New()
 						if err := ds.Save(config.Config.DataStoreFile); err != nil {
-							log.Println(err)
+							logger.Errorf(err.Error())
 						}
 					}
 					if err := indexer.SaveIndex(config.Config.IndexFile); err != nil {
-						log.Println(err)
+						logger.Errorf(err.Error())
 					}
 				}
 				if config.Config.UseMySQL {
@@ -312,7 +321,7 @@ func handleSignals() {
 				}
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
-				log.Println("Reloading configuration...")
+				logger.Infof("Reloading configuration...")
 				config.ParseConfigOptions()
 			}
 		}
@@ -363,17 +372,17 @@ func setSaveTicker() {
 	ticker := time.NewTicker(time.Second * time.Duration(config.Config.FreezeInterval))
 	go func(){
 		for _ = range ticker.C {
-			//log.Println("Automatically saving data store...")
+			logger.Infof("Automatically saving data store...")
 			if config.Config.FreezeData {
 				if config.Config.DataStoreFile != "" {
 					uerr := ds.Save(config.Config.DataStoreFile)
 					if uerr != nil {
-						log.Println(uerr)
+						logger.Errorf(uerr.Error())
 					}
 				}
 				ierr := indexer.SaveIndex(config.Config.IndexFile)
 				if ierr != nil {
-					log.Println(ierr)
+					logger.Errorf(ierr.Error())
 				}
 			}
 		}

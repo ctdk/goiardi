@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"time"
 	"path"
+	"git.tideland.biz/goas/logger"
 )
 
 /* Master struct for configuration. */
@@ -196,6 +197,16 @@ func ParseConfigOptions() error {
 		}
 		log.SetOutput(lfp)
 	}
+	if dlev := len(opts.Verbose); dlev != 0 {
+		Config.DebugLevel = dlev
+	}
+	if Config.DebugLevel == 0 {
+		Config.DebugLevel = int(logger.LevelError)
+	}
+	logger.SetLevel(logger.LogLevel(Config.DebugLevel))
+	debug_level := map[int]string { 1: "debug", 2: "info", 3: "warning", 4: "error", 5: "critical" }
+	log.Printf("Logging at %s level", debug_level[Config.DebugLevel])
+	logger.SetLogger(logger.NewGoLogger())
 
 	/* Database options */
 	
@@ -210,13 +221,12 @@ func ParseConfigOptions() error {
 		Config.LocalFstoreDir = opts.LocalFstoreDir
 	}
 	if Config.LocalFstoreDir == "" && Config.UseMySQL {
-		err := fmt.Errorf("local-filestore-dir must be set when running goiardi in SQL mode")
-		log.Println(err)
+		logger.Criticalf("local-filestore-dir must be set when running goiardi in SQL mode")
 		os.Exit(1)
 	}
 
 	if !Config.FreezeData && (opts.FreezeInterval != 0 || Config.FreezeInterval != 0) {
-		log.Printf("FYI, setting the freeze data interval's not especially useful without setting the index and data files.")
+		logger.Warningf("FYI, setting the freeze data interval's not especially useful without setting the index and data files.")
 	}
 	if opts.FreezeInterval != 0 {
 		Config.FreezeInterval = opts.FreezeInterval
@@ -266,7 +276,7 @@ func ParseConfigOptions() error {
 	}
 	if Config.UseSSL {
 		if Config.SslCert == "" || Config.SslKey == "" {
-			log.Println("SSL mode requires specifying both a certificate and a key file.")
+			logger.Criticalf("SSL mode requires specifying both a certificate and a key file.")
 			os.Exit(1)
 		}
 		/* If the SSL cert and key are not absolute files, join them
@@ -279,7 +289,7 @@ func ParseConfigOptions() error {
 		}
 	}
 
-	Config.DebugLevel = len(opts.Verbose)
+
 
 	if opts.TimeSlew != "" {
 		Config.TimeSlew = opts.TimeSlew
@@ -287,7 +297,7 @@ func ParseConfigOptions() error {
 	if Config.TimeSlew != "" {
 		d, derr := time.ParseDuration(Config.TimeSlew)
 		if derr != nil {
-			log.Println("Error parsing time-slew:", derr)
+			logger.Criticalf("Error parsing time-slew: %s", derr.Error())
 			os.Exit(1)
 		}
 		Config.TimeSlewDur = d
