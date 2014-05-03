@@ -1,11 +1,18 @@
+0.5.1 (unreleased)
+-----
+* Add log levels (from debug to critical). This makes -V/--verbose useful.
+* Add an easier option in the config file to specify log levels by name.
+* ipv6 already worked, but accidentally. Now it works in a more deliberate
+  fashion, preventing mishaps with addresses, colons, and port numbers.
+
 0.5.0
 -----
 * MySQL support added
 * No longer redirect /environments/NAME/roles/NAME to
-/roles/NAME/environments/NAME
+  /roles/NAME/environments/NAME
 * Update documentation, reformat godocs
 * Split actors apart into separate user and client types, made new Actor
-interface that encompasses both users and clients.
+  interface that encompasses both users and clients.
 
 0.4.2
 -----
