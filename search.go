@@ -31,7 +31,7 @@ import (
 	"fmt"
 	"strconv"
 	"regexp"
-	"log"
+	"git.tideland.biz/goas/logger"
 )
 
 func search_handler(w http.ResponseWriter, r *http.Request){
@@ -247,7 +247,7 @@ func reindexHandler(w http.ResponseWriter, r *http.Request){
 				i := 0
 				allDBItems, derr := dbag.AllDBItems()
 				if derr != nil {
-					log.Println(derr)
+					logger.Errorf(derr.Error())
 					continue
 				}
 				for _, k := range allDBItems {

@@ -88,7 +88,8 @@ INSTALLATION
 
 ```
    -v, --version          Print version info.
-   -V, --verbose          Show verbose debug information. (not implemented)
+   -V, --verbose          Show verbose debug information. Repeat for more
+			  verbosity.
    -c, --config=          Specify a config file to use.
    -I, --ipaddress=       Listen on a specific IP address.
    -H, --hostname=        Hostname to use for this server. Defaults to hostname

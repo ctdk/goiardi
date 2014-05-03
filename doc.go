@@ -87,7 +87,8 @@ on the command line would be ipaddress = "127.0.0.1" in the config file.
 Currently available command line and config file options:
 
    -v, --version          Print version info.
-   -V, --verbose          Show verbose debug information. (not implemented)
+   -V, --verbose          Show verbose debug information. Repeat for more
+			  verbosity.
    -c, --config=          Specify a config file to use.
    -I, --ipaddress=       Listen on a specific IP address.
    -H, --hostname=        Hostname to use for this server. Defaults to hostname

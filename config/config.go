@@ -71,7 +71,7 @@ type MySQLdb struct {
 /* Struct for command line options. */
 type Options struct {
 	Version bool `short:"v" long:"version" description:"Print version info."`
-	Verbose []bool `short:"V" long:"verbose" description:"Show verbose debug information. (not implemented)"`
+	Verbose []bool `short:"V" long:"verbose" description:"Show verbose debug information. Repeat for more verbosity."`
 	ConfFile string `short:"c" long:"config" description:"Specify a config file to use."`
 	Ipaddress string `short:"I" long:"ipaddress" description:"Listen on a specific IP address."`
 	Hostname string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel."`
@@ -172,7 +172,7 @@ func ParseConfigOptions() error {
 
 	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || Config.UseMySQL) && Config.IndexFile != "")) {
 		err := fmt.Errorf("-i and -D must either both be specified, or not specified.")
-		panic(err)
+		log.Println(err)
 		os.Exit(1)
 	}
 
@@ -200,11 +200,13 @@ func ParseConfigOptions() error {
 	if dlev := len(opts.Verbose); dlev != 0 {
 		Config.DebugLevel = dlev
 	}
-	if Config.DebugLevel == 0 {
-		Config.DebugLevel = int(logger.LevelError)
+	if Config.DebugLevel > 4 {
+		Config.DebugLevel = 4
 	}
+
+	Config.DebugLevel = int(logger.LevelCritical) - Config.DebugLevel 
 	logger.SetLevel(logger.LogLevel(Config.DebugLevel))
-	debug_level := map[int]string { 1: "debug", 2: "info", 3: "warning", 4: "error", 5: "critical" }
+	debug_level := map[int]string { 0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical" }
 	log.Printf("Logging at %s level", debug_level[Config.DebugLevel])
 	logger.SetLogger(logger.NewGoLogger())
 

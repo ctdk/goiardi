@@ -25,8 +25,8 @@ import (
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/data_bag"
 	"net/url"
-	"log"
 	"fmt"
+	"git.tideland.biz/goas/logger"
 )
 
 // Holds a parsed query and query chain to run against the index.
@@ -101,7 +101,7 @@ func (sq *SolrQuery) execute() (map[string]*indexer.IdxDoc, error) {
 			}
 			sq.docs = newRes
 		} else {
-			log.Println("Somehow we got to what should have been an impossible state with search")
+			logger.Debugf("Somehow we got to what should have been an impossible state with search")
 		}
 
 		curOp = s.Op()
@@ -191,7 +191,7 @@ func getResults(variety string, toGet []string) []indexer.Indexable {
 					if err != nil {
 						// at least log the error for
 						// now
-						log.Println(err)
+						logger.Errorf(err.Error())
 					}
 					results = append(results, dbi)
 				}

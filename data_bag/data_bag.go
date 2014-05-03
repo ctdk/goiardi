@@ -31,7 +31,7 @@ import (
 	"net/http"
 	"strings"
 	"database/sql"
-	"log"
+	"git.tideland.biz/goas/logger"
 )
 
 // The overall data bag.
@@ -204,7 +204,7 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 		d, err := db.getDBItemMySQL(dbi_id)
 		if d != nil || (err != nil && err != sql.ErrNoRows) {
 			if err != nil {
-				log.Printf("Log real SQL error in NewDBItem: %s", err.Error())
+				logger.Debugf("Log real SQL error in NewDBItem: %s", err.Error())
 			}
 			gerr := util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
 			gerr.SetStatus(http.StatusConflict)

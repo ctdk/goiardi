@@ -29,13 +29,13 @@ package filestore
 import (
 	"io"
 	"fmt"
-	"log"
 	"github.com/ctdk/goiardi/data_store"
 	"crypto/md5"
 	"github.com/ctdk/goiardi/config"
 	"database/sql"
 	"os"
 	"path"
+	"git.tideland.biz/goas/logger"
 )
 
 /* Local filestorage struct. Add fields as needed. */
@@ -199,15 +199,15 @@ func DeleteHashes(file_hashes []string) {
 		for _, ff := range file_hashes {
 		del_file, err := Get(ff)
 			if err != nil {
-				log.Printf("Strange, we got an error trying to get %s to delete it.\n", ff)
-				log.Println(err)
+				logger.Debugf("Strange, we got an error trying to get %s to delete it.\n", ff)
+				logger.Debugf(err.Error())
 			} else {
 				_ = del_file.Delete()
 			}
 			// May be able to remove this. Check that it actually deleted
 			d, _ := Get(ff)
 			if d != nil {
-				log.Printf("Stranger and stranger, %s is still in the file store.\n", ff)
+				logger.Debugf("Stranger and stranger, %s is still in the file store.\n", ff)
 			}
 		}
 	}
@@ -215,7 +215,7 @@ func DeleteHashes(file_hashes []string) {
 		for _, fh := range file_hashes {
 			err := os.Remove(path.Join(config.Config.LocalFstoreDir, fh))
 			if err != nil {
-				log.Println(err)
+				logger.Errorf(err.Error())
 			}
 		}
 	}

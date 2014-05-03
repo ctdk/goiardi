@@ -29,7 +29,7 @@ import (
 	"strings"
 	"strconv"
 	"sort"
-	"log"
+	"git.tideland.biz/goas/logger"
 	"net/http"
 	"regexp"
 	"database/sql"
@@ -134,7 +134,7 @@ func AllCookbooks() (cookbooks []*Cookbook) {
 		for _, c := range cookbook_list {
 			cb, err := Get(c)
 			if err != nil {
-				log.Printf("Curious. Cookbook %s was in the cookbook list, but wasn't found when fetched. Continuing.", c)
+				logger.Debugf("Curious. Cookbook %s was in the cookbook list, but wasn't found when fetched. Continuing.", c)
 				continue
 			}
 			cookbooks = append(cookbooks, cb)
@@ -493,7 +493,7 @@ func (c *Cookbook)infoHashBase(num_results interface{}, constraint string) map[s
 			constraint_version = traints[1]
 			constraint_op = traints[0]
 		} else {
-			log.Printf("Constraint '%s' for cookbook %s was badly formed -- bailing.\n", constraint, c.Name)
+			logger.Warningf("Constraint '%s' for cookbook %s was badly formed -- bailing.\n", constraint, c.Name)
 			return nil
 		}
 	}
@@ -540,7 +540,7 @@ func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion{
 		constraint_version = traints[1]
 		constraint_op = traints[0]
 	} else {
-		log.Printf("Constraint '%s' for cookbook %s (in LatestConstrained) was malformed. Bailing.\n", constraint, c.Name)
+		logger.Warningf("Constraint '%s' for cookbook %s (in LatestConstrained) was malformed. Bailing.\n", constraint, c.Name)
 		return nil
 	}
 	for _, cv := range c.sortedVersions(){

@@ -30,9 +30,9 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"io"
-	"log"
 	"time"
 	"database/sql"
+	"git.tideland.biz/goas/logger"
 )
 
 /* The structure of the sandbox responses is... inconsistent. */
@@ -71,9 +71,8 @@ func New(checksum_hash map[string]interface{}) (*Sandbox, error){
 			return nil, err 
 		}
 		if s, _ := Get(sandbox_id); s != nil {
-			err = fmt.Errorf("Collision! Somehow %s already existed as a sandbox id on attempt %d. Trying again.", sandbox_id, i)
+			logger.Infof("Collision! Somehow %s already existed as a sandbox id on attempt %d. Trying again.", sandbox_id, i)
 			sandbox_id = ""
-			log.Println(err)
 		}
 	}
 

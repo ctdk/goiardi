@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"git.tideland.biz/goas/logger"
 )
 
 func getMySQL(chksum string) (*FileStore, error) {
@@ -119,7 +120,7 @@ func deleteHashesMySQL(file_hashes []string) {
 	}
 	_, err = tx.Exec(delete_query, del_args...)
 	if err != nil && err != sql.ErrNoRows {
-		log.Printf("Error %s trying to delete hashes", err.Error())
+		logger.Debugf("Error %s trying to delete hashes", err.Error())
 		tx.Rollback()
 		return
 	} 

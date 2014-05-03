@@ -21,7 +21,7 @@ package indexer
 
 import (
 	"github.com/ctdk/go-trie/gtrie"
-	"log"
+	"git.tideland.biz/goas/logger"
 	"sync"
 	"strings"
 	"sort"
@@ -252,13 +252,12 @@ func (idoc *IdxDoc) update(object Indexable) {
 	 * big values. :-/ */
 	defer func() {
 		if e:= recover(); e != nil {
-			log.Println("There was a problem creating the trie.")
-			log.Println(e)
+			logger.Errorf("There was a problem creating the trie: %s", fmt.Sprintln(e))
 		}
 	}()
 	trie, err := gtrie.Create(flattened)
 	if err != nil {
-		log.Println(err)
+		logger.Errorf(err.Error())
 	} else {
 		idoc.trie = trie
 		idoc.docText = flatText

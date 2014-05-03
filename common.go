@@ -22,7 +22,7 @@ import (
 	"io"
 	"encoding/json"
 	"net/http"
-	"log"
+	"git.tideland.biz/goas/logger"
 	"strings"
 	"fmt"
 )
@@ -83,12 +83,12 @@ func SplitPath(path string) (split_path []string){
 }
 
 func JsonErrorReport(w http.ResponseWriter, r *http.Request, error_str string, status int){
-	log.Println(error_str)
+	logger.Infof(error_str)
 	json_error := map[string][]string{ "error": []string{ error_str } }
 	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
 	if err:= enc.Encode(&json_error); err != nil {
-		log.Println(err)
+		logger.Errorf(err.Error())
 	}
 	return
 }
