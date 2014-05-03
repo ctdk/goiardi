@@ -29,6 +29,7 @@ import (
 	"time"
 	"path"
 	"git.tideland.biz/goas/logger"
+	"strings"
 )
 
 /* Master struct for configuration. */
@@ -40,6 +41,7 @@ type Conf struct {
 	IndexFile string `toml:"index-file"`
 	DataStoreFile string `toml:"data-file"`
 	DebugLevel int `toml:"debug-level"`
+	LogLevel string `toml:"log-level"`
 	FreezeInterval int `toml:"freeze-interval"`
 	FreezeData bool `toml:"freeze-data"`
 	LogFile string `toml:"log-file"`
@@ -56,6 +58,7 @@ type Conf struct {
 	MySQL MySQLdb `toml:"mysql"`
 	LocalFstoreDir string `toml:"local-filestore-dir"`
 }
+var LogLevelNames = map[string]int{ "debug": 4, "info": 3, "warning": 2, "error": 1, "critical": 0 }
 
 // MySQL connection options
 type MySQLdb struct {
@@ -199,6 +202,11 @@ func ParseConfigOptions() error {
 	}
 	if dlev := len(opts.Verbose); dlev != 0 {
 		Config.DebugLevel = dlev
+	}
+	if Config.LogLevel != "" {
+		if lev, ok := LogLevelNames[strings.ToLower(Config.LogLevel)]; ok && Config.DebugLevel == 0 {
+			Config.DebugLevel = lev
+		} 
 	}
 	if Config.DebugLevel > 4 {
 		Config.DebugLevel = 4
