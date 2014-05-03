@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"fmt"
 	"time"
+	"reflect"
 )
 
 type LogInfo {
@@ -37,3 +38,61 @@ type LogInfo {
 	ExtendedInfo string
 	id int
 }
+
+// Write an event of the action type, performed by the given actor, against the
+// given object.
+func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
+	var actor_type string
+	if doer.IsUser() {
+		actor_type = "user"
+	} else {
+		actor_type = "client"
+	}
+	le := new(LogInfo)
+	le.Actor = doer
+	le.ActorType = actor_type
+	le.Object = obj
+	le.ObjectType = reflect.TypeOf(obj).Name()
+	ext_info, err := data_store.EncodeToJSON(obj)
+	if err != nil {
+		return err
+	}
+	le.ExtendedInfo = ext_info
+
+	if config.Config.UseMySQL {
+		return le.writeEventMySQL()
+	} else {
+		return le.writeEventInMem()
+	}
+}
+
+func (le *LogInfo)writeEventInMem() error {
+	ds := data_store.New()
+	return ds.SetLogInfo(le)
+}
+
+func Get(id int) (*LogInfo, error) {
+	var le *LogInfo
+
+	if config.Config.UseMySQL {
+		var err error
+		le, err = getLogEventMySQL(id)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				err = fmt.Errorf("Couldn't find log event with id %d", id)
+			}
+			return nil, err
+		}
+	} else {
+		ds := data_store.New()
+		c, err := ds.GetLogInfo(id)
+		if err != nil {
+			return nil, err
+		}
+		if c != nil {
+			le = c.(*LogInfo)
+		}
+	}
+	return le, nil
+}
+

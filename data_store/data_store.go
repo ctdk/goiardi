@@ -133,6 +133,49 @@ func (ds *DataStore) GetList(key_type string) []string{
 	return j
 }
 
+// Set a log_info in the data store. Unlike most of these objects, log infos
+// are stored and retrieved by id, since they have no useful names.
+func (ds *DataStore) SetLogInfo(obj interface{}) error {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	arr, _ := Get("log_info", "log_infos")
+	if arr == nil {
+		arr = make([]interface{}, 0)
+	}
+	arr = append(arr, obj)
+	Set("log_info", "log_infos", arr)
+	return nil
+}
+
+// Get a log_info by id.
+func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
+	ds.m.RLock()
+	defer ds.m.RUnlock()
+	arr, _ := Get("log_info", "log_infos")
+	if arr == nil {
+		err := fmt.Errorf("No log events stored")
+		return nil, err
+	}
+	if len(arr) < id {
+		err := fmt.Errorf("id out of range")
+		return nil, err
+	}
+	item, ok := arr[id]
+	if !ok {
+		err := fmt.Errorf("Log info with id %d not found", id)
+		return nil, err
+	}
+	return item, nil
+}
+
+// Get all the log infos stored away
+func (ds *DataStore) GetLogInfoList() []interface{} {
+	ds.m.RLock()
+	defer ds.m.RUnlock()
+	arr, _ := Get("log_info", "log_infos")
+	return arr
+}
+
 // Freeze and save the data store to disk.
 func (ds *DataStore) Save(dsFile string) error {
 	if dsFile == "" {

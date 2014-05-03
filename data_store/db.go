@@ -70,6 +70,23 @@ func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	}
 }
 
+// Encode an object to a JSON string.
+func EncodeToJSON(obj interface) (string, error) {
+	buf := new(bytes.Buffer)
+	enc := json.NewEncoder(buf)
+	var err error
+	defer func() {
+		if x := recover(); x != nil {
+			err = fmt.Errorf("Something went wrong with encoding an object to a JSON string for storing.")
+		}
+	}()
+	err = enc.Encode(obj)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
 // Encode a slice or map of goiardi object data to save in the database. Pass 
 // the object to be encoded in like data_store.EncodeBlob(&foo.Thing).
 func EncodeBlob(obj interface{}) ([]byte, error) {
