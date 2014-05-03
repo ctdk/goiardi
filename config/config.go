@@ -28,6 +28,8 @@ import (
 	"fmt"
 	"time"
 	"path"
+	"net"
+	"strconv"
 )
 
 /* Master struct for configuration. */
@@ -308,18 +310,17 @@ func ParseConfigOptions() error {
 
 // The address and port goiardi is configured to listen on.
 func ListenAddr() string {
-	listen_addr := fmt.Sprintf("%s:%d", Config.Ipaddress, Config.Port)
+	listen_addr := net.JoinHostPort(Config.Ipaddress, strconv.Itoa(Config.Port))
 	return listen_addr
 }
 
 // The hostname and port goiardi is configured to use.
 func ServerHostname() string {
-	var portStr string
 	if !(Config.Port == 80 || Config.Port == 443) {
-		portStr = fmt.Sprintf(":%d", Config.Port)
+		return net.JoinHostPort(Config.Hostname, strconv.Itoa(Config.Port))
+	} else {
+		return Config.Hostname
 	}
-	hostname := fmt.Sprintf("%s%s", Config.Hostname, portStr)
-	return hostname
 }
 
 // The base URL
