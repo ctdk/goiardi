@@ -58,7 +58,7 @@ func TestLogEvent(t *testing.T) {
 	if le.ActorType != "client" {
 		t.Errorf("wrong actor type, got %s", le.ActorType)
 	}
-	if le.Object != obj  {
+	if le.ObjectName != obj.GetName()  {
 		t.Errorf("wrong object")
 	}
 	var tdef time.Time
@@ -67,5 +67,22 @@ func TestLogEvent(t *testing.T) {
 	}
 	if le.ExtendedInfo == "" {
 		t.Errorf("extended info did not get logged")
+	}
+	ds.DeleteLogInfo(1)
+	arr5 := ds.GetLogInfoList()
+	if len(arr5) != 0 {
+		t.Errorf("Doesn't look like the logged event got deleted")
+	}
+	for i := 0; i < 10; i++ {
+		LogEvent(doer, obj, "modify")
+	}
+	arr6 := ds.GetLogInfoList()
+	if len(arr6) != 10 {
+		t.Errorf("Something went wrong with creating 10 events")
+	}
+	ds.PurgeLogInfoBefore(5)
+	arr7 := ds.GetLogInfoList()
+	if len(arr7) != 5 {
+		t.Errorf("Should have been 5 events after purging, got %d", len(arr7))
 	}
 }
