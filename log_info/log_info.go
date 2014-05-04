@@ -55,7 +55,7 @@ func LogEvent(doer actor.Actor, obj interface{}, action string) error {
 	le.Actor = doer
 	le.ActorType = actor_type
 	le.Object = obj
-	le.ObjectType = reflect.TypeOf(obj).Name()
+	le.ObjectType = reflect.TypeOf(obj).String()
 	le.Time = time.Now()
 	ext_info, err := data_store.EncodeToJSON(obj)
 	if err != nil {
