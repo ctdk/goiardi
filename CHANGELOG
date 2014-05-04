@@ -4,6 +4,7 @@
 * Add an easier option in the config file to specify log levels by name.
 * ipv6 already worked, but accidentally. Now it works in a more deliberate
   fashion, preventing mishaps with addresses, colons, and port numbers.
+* Authentication protocol version 1.1 now supported.
 
 0.5.0
 -----

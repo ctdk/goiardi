@@ -71,6 +71,7 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 	// use algorithms other than sha1 for hashing the body, or using a 
 	// different version of the header signing algorithm.
 	xopssign := r.Header.Get("x-ops-sign")
+	var apiVer string
 	if xopssign == "" {
 		gerr := util.Errorf("missing X-Ops-Sign header")
 		return gerr
@@ -78,7 +79,7 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 		re := regexp.MustCompile(`version=(\d+\.\d+)`)
 		shaRe := regexp.MustCompile(`algorithm=(\w+)`)
 		if verChk := re.FindStringSubmatch(xopssign); verChk != nil {
-			apiVer := verChk[1]
+			apiVer = verChk[1]
 			if apiVer != "1.0" && apiVer != "1.1" {
 				gerr := util.Errorf("Bad version number '%s' in X-Ops-Header", apiVer)
 				return gerr
@@ -112,7 +113,7 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 	if sherr != nil {
 		return sherr
 	}
-	headToCheck := assembleHeaderToCheck(r, chkHash)
+	headToCheck := assembleHeaderToCheck(r, chkHash, apiVer)
 
 	decHead, berr := chef_crypto.HeaderDecrypt(user.PublicKey(), signedHeaders)
 
@@ -201,11 +202,14 @@ func checkTimeStamp(timestamp string, slew time.Duration) (bool, util.Gerror) {
 	return true, nil
 }
 
-func assembleHeaderToCheck(r *http.Request, cHash string) string {
+func assembleHeaderToCheck(r *http.Request, cHash string, apiVer string) string {
 	method := r.Method
 	hashPath := hashStr(path.Clean(r.URL.Path))
 	timestamp := r.Header.Get("x-ops-timestamp")
 	user_id := r.Header.Get("x-ops-userid")
+	if apiVer == "1.1" {
+		user_id = hashStr(user_id)
+	}
 
 	headStr := fmt.Sprintf("Method:%s\nHashed Path:%s\nX-Ops-Content-Hash:%s\nX-Ops-Timestamp:%s\nX-Ops-UserId:%s", method, hashPath, cHash, timestamp, user_id)
 	return headStr
