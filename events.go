@@ -39,7 +39,7 @@ func event_list_handler(w http.ResponseWriter, r *http.Request){
 	
 	// Look for offset and limit parameters
 	r.ParseForm()
-	var offset, limit int
+	var offset, limit, purge_from int
 	if o, found := r.Form["offset"]; found {
 		if len(o) < 0 {
 			JsonErrorReport(w, r, "invalid offsets", http.StatusBadRequest)
@@ -76,7 +76,23 @@ func event_list_handler(w http.ResponseWriter, r *http.Request){
 			return
 		}
 	}
-	
+
+	if p, found := r.Form["purge"]; found {
+		if len(p) < 0 {
+			JsonErrorReport(w, r, "invalid purge id", http.StatusBadRequest)
+			return
+		}
+		var err error
+		purge_from, err = strconv.Atoi(p[0])
+		if err != nil {
+			JsonErrorReport(w, r, "invalid purge from converstion to int", http.StatusBadRequest)
+			return
+		}
+		if purge_from < 0 {
+			JsonErrorReport(w, r, "invalid negative purge_from value", http.StatusBadRequest)
+			return
+		}
+	}
 	
 	switch r.Method {
 		case "GET":
@@ -97,6 +113,22 @@ func event_list_handler(w http.ResponseWriter, r *http.Request){
 				le_url := fmt.Sprintf("/events/%d", v.Id)
 				le_resp[i]["url"] = util.CustomURL(le_url)
 			}
+			enc := json.NewEncoder(w)
+			if err := enc.Encode(&le_resp); err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		case "DELETE":
+			if !opUser.IsAdmin() {
+				JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
+				return
+			}
+			purged, err := log_info.PurgeLogInfos(purge_from)
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			}
+			le_resp := make(map[string]string)
+			le_resp["purged"] = fmt.Sprintf("Purged %d logged events", purged)
 			enc := json.NewEncoder(w)
 			if err := enc.Encode(&le_resp); err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -138,9 +170,29 @@ func event_handler(w http.ResponseWriter, r *http.Request){
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-
+		case "DELETE":
+			if !opUser.IsAdmin() {
+				JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
+				return
+			}
+			le, err := log_info.Get(event_id)
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+				return
+			}
+			err = le.Delete()
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			enc := json.NewEncoder(w)
+			if err = enc.Encode(&le); err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		default:
 			JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 			return
 	}
+	return
 }

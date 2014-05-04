@@ -103,6 +103,25 @@ func Get(id int) (*LogInfo, error) {
 	return le, nil
 }
 
+func (le *LogInfo)Delete() error {
+	if config.Config.UseMySQL {
+		return nil
+	} else {
+		ds := data_store.New()
+		ds.DeleteLogInfo(le.Id)
+	}
+	return nil
+}
+
+func PurgeLogInfos(id int) (int, error) {
+	if config.Config.UseMySQL {
+		return 0, nil
+	} else {
+		ds := data_store.New()
+		return ds.PurgeLogInfoBefore(id)
+	}
+}
+
 
 // Get a slice of the logged events. May be called with an offset and limit, but
 // it is not required.
