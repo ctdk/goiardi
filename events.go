@@ -37,13 +37,59 @@ func event_list_handler(w http.ResponseWriter, r *http.Request){
 		return
 	}
 	
+	// Look for offset and limit parameters
+	r.ParseForm()
+	var offset, limit int
+	if o, found := r.Form["offset"]; found {
+		if len(o) < 0 {
+			JsonErrorReport(w, r, "invalid offsets", http.StatusBadRequest)
+			return
+		}
+		var err error
+		offset, err = strconv.Atoi(o[0])
+		if err != nil {
+			JsonErrorReport(w, r, "invalid offset converstion to int", http.StatusBadRequest)
+			return
+		}
+		if offset < 0 {
+			JsonErrorReport(w, r, "invalid negative offset value", http.StatusBadRequest)
+			return
+		}
+	} else {
+		offset = 0
+	}
+	var limit_found bool
+	if l, found := r.Form["limit"]; found {
+		limit_found = true
+		if len(l) < 0 {
+			JsonErrorReport(w, r, "invalid limit", http.StatusBadRequest)
+			return
+		}
+		var err error
+		limit, err = strconv.Atoi(l[0])
+		if err != nil {
+			JsonErrorReport(w, r, "invalid limit converstion to int", http.StatusBadRequest)
+			return
+		}
+		if limit < 0 {
+			JsonErrorReport(w, r, "invalid negative limit value", http.StatusBadRequest)
+			return
+		}
+	}
+	
+	
 	switch r.Method {
 		case "GET":
 			if !opUser.IsAdmin() {
 				JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 				return
 			}
-			le_list := log_info.GetLogInfos()
+			var le_list []*log_info.LogInfo
+			if limit_found {
+				le_list = log_info.GetLogInfos(offset, limit)
+			} else {
+				le_list = log_info.GetLogInfos(offset)
+			}
 			le_resp := make([]map[string]interface{}, len(le_list))
 			for i, v := range le_list {
 				le_resp[i] = make(map[string]interface{})
