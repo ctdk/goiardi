@@ -36,7 +36,7 @@ func TestLogEvent(t *testing.T) {
 	if len(arr) != 1 {
 		t.Errorf("Too many (or not enough) log events: %d found", len(arr))
 	}
-	le := arr[0].(*LogInfo)
+	le := arr[1].(*LogInfo)
 	if le.Action != "create" {
 		t.Errorf("Wrong action")
 	}

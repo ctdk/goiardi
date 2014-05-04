@@ -370,6 +370,8 @@ func gobRegister() {
 	gob.Register(uu)
 	li := new(log_info.LogInfo)
 	gob.Register(li)
+	mis := map[int]interface{}{}
+	gob.Register(mis)
 }
 
 func setSaveTicker() {

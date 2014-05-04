@@ -27,6 +27,7 @@ import (
 	"time"
 	"reflect"
 	"database/sql"
+	"sort"
 )
 
 type LogInfo struct {
@@ -111,9 +112,15 @@ func GetLogInfos() []*LogInfo {
 		ds := data_store.New()
 		arr := ds.GetLogInfoList()
 		lis := make([]*LogInfo, len(arr))
+		var keys []int
+		for k := range arr {
+			keys = append(keys, k)
+		}
+		sort.Sort(sort.Reverse(sort.IntSlice(keys)))
 		n := 0
-		for i, k := range arr {
-			if k != nil {
+		for _, i := range keys {
+			k, ok := arr[i]
+			if ok {
 				item := k.(*LogInfo)
 				item.Id = i
 				lis[n] = item
@@ -123,12 +130,6 @@ func GetLogInfos() []*LogInfo {
 		if len(lis) == 0 {
 			return lis
 		}
-		reversed := make([]*LogInfo, len(lis))
-		n = 0
-		for j := len(reversed) - 1; j >= 0; j-- {
-			reversed[n] = lis[j]
-			n++
-		}
-		return reversed
+		return lis
 	}
 }
