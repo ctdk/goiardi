@@ -23,12 +23,14 @@ import (
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/util"
 	"fmt"
 	"time"
 	"reflect"
+	"database/sql"
 )
 
-type LogInfo {
+type LogInfo struct {
 	Actor actor.Actor
 	ActorType string
 	Time time.Time
@@ -49,10 +51,12 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 		actor_type = "client"
 	}
 	le := new(LogInfo)
+	le.Action = action
 	le.Actor = doer
 	le.ActorType = actor_type
 	le.Object = obj
 	le.ObjectType = reflect.TypeOf(obj).Name()
+	le.Time = time.Now()
 	ext_info, err := data_store.EncodeToJSON(obj)
 	if err != nil {
 		return err

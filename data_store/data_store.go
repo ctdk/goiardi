@@ -138,12 +138,14 @@ func (ds *DataStore) GetList(key_type string) []string{
 func (ds *DataStore) SetLogInfo(obj interface{}) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	arr, _ := Get("log_info", "log_infos")
-	if arr == nil {
-		arr = make([]interface{}, 0)
+	ds_key := ds.make_key("log_info", "log_infos")
+	a, _ := ds.dsc.Get(ds_key)
+	if a == nil {
+		a = make([]interface{}, 0)
 	}
+	arr := a.([]interface{})
 	arr = append(arr, obj)
-	Set("log_info", "log_infos", arr)
+	ds.dsc.Set(ds_key, arr, -1)
 	return nil
 }
 
@@ -151,17 +153,19 @@ func (ds *DataStore) SetLogInfo(obj interface{}) error {
 func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	arr, _ := Get("log_info", "log_infos")
-	if arr == nil {
+	ds_key := ds.make_key("log_info", "log_infos")
+	a, _ := ds.dsc.Get(ds_key)
+	if a == nil {
 		err := fmt.Errorf("No log events stored")
 		return nil, err
 	}
+	arr := a.([]interface{})
 	if len(arr) < id {
 		err := fmt.Errorf("id out of range")
 		return nil, err
 	}
-	item, ok := arr[id]
-	if !ok {
+	item := arr[id]
+	if item == nil {
 		err := fmt.Errorf("Log info with id %d not found", id)
 		return nil, err
 	}
@@ -172,7 +176,12 @@ func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 func (ds *DataStore) GetLogInfoList() []interface{} {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	arr, _ := Get("log_info", "log_infos")
+	ds_key := ds.make_key("log_info", "log_infos")
+	a, _ := ds.dsc.Get(ds_key)
+	if a == nil {
+		return nil
+	}
+	arr := a.([]interface{})
 	return arr
 }
 

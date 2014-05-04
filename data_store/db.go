@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"bytes"
 	"encoding/gob"
+	"encoding/json"
 )
 
 // The database handle.
@@ -71,7 +72,7 @@ func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 }
 
 // Encode an object to a JSON string.
-func EncodeToJSON(obj interface) (string, error) {
+func EncodeToJSON(obj interface{}) (string, error) {
 	buf := new(bytes.Buffer)
 	enc := json.NewEncoder(buf)
 	var err error
