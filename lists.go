@@ -109,6 +109,10 @@ func node_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return nil
 			}
+			if lerr := log_info.LogEvent(opUser, chef_node, "create"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				return nil
+			}
 			node_response["uri"] = util.ObjURL(chef_node)
 			w.WriteHeader(http.StatusCreated)
 		default:
@@ -300,6 +304,10 @@ func user_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			user_response["public_key"] = chef_user.PublicKey()
 			
 			chef_user.Save()
+			if lerr := log_info.LogEvent(opUser, chef_user, "create"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				return nil
+			}
 			user_response["uri"] = util.ObjURL(chef_user)
 			w.WriteHeader(http.StatusCreated)
 		default:
@@ -356,6 +364,10 @@ func role_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			err := chef_role.Save()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return nil
+			}
+			if lerr := log_info.LogEvent(opUser, chef_role, "create"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return nil
 			}
 			role_response["uri"] = util.ObjURL(chef_role)

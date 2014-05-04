@@ -23,7 +23,6 @@ import (
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/util"
 	"fmt"
 	"time"
 	"reflect"
@@ -36,14 +35,14 @@ type LogInfo struct {
 	Time time.Time
 	Action string
 	ObjectType string
-	Object util.GoiardiObj
+	Object interface{}
 	ExtendedInfo string
 	Id int
 }
 
 // Write an event of the action type, performed by the given actor, against the
 // given object.
-func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
+func LogEvent(doer actor.Actor, obj interface{}, action string) error {
 	var actor_type string
 	if doer.IsUser() {
 		actor_type = "user"

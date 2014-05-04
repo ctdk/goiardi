@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"sort"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/log_info"
 )
 
 func cookbook_handler(w http.ResponseWriter, r *http.Request){
@@ -183,6 +184,10 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 						JsonErrorReport(w, r, err.Error(), err.Status())
 						return
 					}
+					if lerr := log_info.LogEvent(opUser, cb_ver, "delete"); lerr != nil {
+						JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+						return
+					}
 					/* If all versions are gone, remove the
 					 * cookbook - seems to be the desired
 					 * behavior. */
@@ -241,10 +246,14 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 						return
 					}
 					/* save it so we get the id with mysql
-					 * for createing versions & such */
+					 * for creating versions & such */
 					serr := cb.Save()
 					if serr != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+						JsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
+						return
+					}
+					if lerr := log_info.LogEvent(opUser, cb, "create"); lerr != nil {
+						JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 						return
 					}
 				}
@@ -285,6 +294,10 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 						JsonErrorReport(w, r, nerr.Error(), nerr.Status())
 						return
 					}
+					if lerr := log_info.LogEvent(opUser, cbv, "create"); lerr != nil {
+						JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+						return
+					}
 					w.WriteHeader(http.StatusCreated)
 				} else {
 					err := cbv.UpdateVersion(cbv_data, force)
@@ -297,6 +310,10 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request){
 							JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 							return
 						}
+					}
+					if lerr := log_info.LogEvent(opUser, cbv, "modify"); lerr != nil {
+						JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+						return
 					}
 				}
 				/* API docs are wrong. The docs claim that this
