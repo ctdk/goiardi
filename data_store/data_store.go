@@ -160,7 +160,7 @@ func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 		return nil, err
 	}
 	arr := a.([]interface{})
-	if len(arr) < id {
+	if len(arr) <= id {
 		err := fmt.Errorf("id out of range")
 		return nil, err
 	}

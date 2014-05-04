@@ -117,6 +117,9 @@ func GetLogInfos() []*LogInfo {
 				lis[i].Id = i
 			}
 		}
+		if len(lis) == 0 {
+			return lis
+		}
 		reversed := make([]*LogInfo, len(lis))
 		n := 0
 		for j := len(reversed) - 1; j >= 0; j-- {
