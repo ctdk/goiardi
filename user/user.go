@@ -44,7 +44,7 @@ type User struct {
 	Admin bool `json:"admin"`
 	pubKey string `json:"public_key"`
 	passwd string
-	Salt []byte
+	salt []byte
 }
 
 type privUser struct {
@@ -94,7 +94,7 @@ func New(name string) (*User, util.Gerror) {
 		Admin: false,
 		Email: "",
 		pubKey: "",
-		Salt: salt,
+		salt: salt,
 	}
 	return user, nil
 }
@@ -427,7 +427,7 @@ func (u *User) SetPasswd(password string) util.Gerror {
 	}
 	/* If those validations pass, set the password */
 	var perr error
-	u.passwd, perr = chef_crypto.HashPasswd(password, u.Salt)
+	u.passwd, perr = chef_crypto.HashPasswd(password, u.salt)
 	if perr != nil {
 		err := util.Errorf(perr.Error())
 		return err
@@ -437,7 +437,7 @@ func (u *User) SetPasswd(password string) util.Gerror {
 
 // Check the provided password to see if it matches the stored password hash.
 func (u *User) CheckPasswd(password string) util.Gerror {
-	h, perr := chef_crypto.HashPasswd(password, u.Salt) 
+	h, perr := chef_crypto.HashPasswd(password, u.salt) 
 	if perr != nil {
 		err := util.Errorf(perr.Error())
 		return err
@@ -467,7 +467,7 @@ func (u *User) URLType() string {
 }
 
 func (u *User) export() *privUser {
-	return &privUser{ Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.Salt }
+	return &privUser{ Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt }
 }
 
 func (u *User) GobEncode() ([]byte, error) {

@@ -38,7 +38,7 @@ type LogInfo struct {
 	ObjectType string
 	Object util.GoiardiObj
 	ExtendedInfo string
-	id int
+	Id int
 }
 
 // Write an event of the action type, performed by the given actor, against the
@@ -95,8 +95,34 @@ func Get(id int) (*LogInfo, error) {
 		}
 		if c != nil {
 			le = c.(*LogInfo)
+			le.Id = id
 		}
 	}
 	return le, nil
 }
 
+
+// Get a slice of the logged events. TODO: be able to request limits, offset,
+// sorting.
+func GetLogInfos() []*LogInfo {
+	if config.Config.UseMySQL {
+		return nil
+	} else {
+		ds := data_store.New()
+		arr := ds.GetLogInfoList()
+		lis := make([]*LogInfo, len(arr))
+		for i, k := range arr {
+			if k != nil {
+				lis[i] = k.(*LogInfo)
+				lis[i].Id = i
+			}
+		}
+		reversed := make([]*LogInfo, len(lis))
+		n := 0
+		for j := len(reversed) - 1; j >= 0; j-- {
+			reversed[n] = lis[j]
+			n++
+		}
+		return reversed
+	}
+}

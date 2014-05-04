@@ -35,6 +35,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
+	"github.com/ctdk/goiardi/log_info"
 	"fmt"
 	"os"
 	"os/signal"
@@ -107,8 +108,8 @@ func main(){
 	http.HandleFunc("/users", list_handler)
 	http.HandleFunc("/users/", user_handler)
 	http.HandleFunc("/file_store/", file_store_handler)
-	http.HandleFunc("/log_infos",log_info_list_handler)
-	http.HandleFunc("/log_infos/", log_info_handler)
+	http.HandleFunc("/events", event_list_handler)
+	http.HandleFunc("/events/", event_handler)
 
 	/* TODO: figure out how to handle the root & not found pages */
 	http.HandleFunc("/", root_handler)
@@ -367,6 +368,8 @@ func gobRegister() {
 	gob.Register(cc)
 	uu := new(user.User)
 	gob.Register(uu)
+	li := new(log_info.LogInfo)
+	gob.Register(li)
 }
 
 func setSaveTicker() {

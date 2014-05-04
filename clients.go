@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/log_info"
 )
 
 func client_handler(w http.ResponseWriter, r *http.Request){
@@ -53,6 +54,10 @@ func client_handler(w http.ResponseWriter, r *http.Request){
 			err := chef_client.Delete()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusForbidden)
+				return
+			}
+			if lerr := log_info.LogEvent(opUser, chef_client, "delete"); lerr != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			enc := json.NewEncoder(w)
@@ -135,6 +140,10 @@ func client_handler(w http.ResponseWriter, r *http.Request){
 			 * already exist. */
 			json_client := chef_client.ToJson()
 			if client_name != json_name {
+				if lerr := log_info.LogEvent(opUser, chef_client, "modify"); lerr != nil {
+					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+					return
+				}
 				err := chef_client.Rename(json_name)
 				if err != nil {
 					JsonErrorReport(w, r, err.Error(), err.Status())
@@ -186,6 +195,10 @@ func client_handler(w http.ResponseWriter, r *http.Request){
 				}
 			}
 			chef_client.Save()
+			if lerr := log_info.LogEvent(opUser, chef_client, "modify"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				return
+			}
 			
 			enc := json.NewEncoder(w)
 			if err := enc.Encode(&json_client); err != nil{

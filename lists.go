@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/log_info"
 )
 
 func list_handler(w http.ResponseWriter, r *http.Request){
@@ -201,6 +202,10 @@ func client_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			client_response["public_key"] = chef_client.PublicKey()
 			
 			chef_client.Save()
+			if lerr := log_info.LogEvent(opUser, chef_client, "create"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				return nil
+			}
 			client_response["uri"] = util.ObjURL(chef_client)
 			w.WriteHeader(http.StatusCreated)
 		default:

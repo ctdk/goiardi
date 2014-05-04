@@ -55,7 +55,7 @@ func getUserMySQL(name string) (*User, error) {
 
 func (u *User) fillUserFromSQL(row *sql.Row) error {
 	var email sql.NullString
-	err := row.Scan(&u.Username, &u.Name, &u.Admin, &u.pubKey, &email, &u.passwd, &u.Salt)
+	err := row.Scan(&u.Username, &u.Name, &u.Admin, &u.pubKey, &email, &u.passwd, &u.salt)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func (u *User) saveMySQL() util.Gerror {
 	}
 	user_id, err = data_store.CheckForOne(tx, "users", u.Username)
 	if err == nil {
-		_, err := tx.Exec("UPDATE users SET name = ?, displayname = ?, admin = ?, public_key = ?, passwd = ?, salt = ?, updated_at = NOW() WHERE id = ?", u.Username, u.Name, u.Admin, u.pubKey, u.passwd, u.Salt, user_id)
+		_, err := tx.Exec("UPDATE users SET name = ?, displayname = ?, admin = ?, public_key = ?, passwd = ?, salt = ?, updated_at = NOW() WHERE id = ?", u.Username, u.Name, u.Admin, u.pubKey, u.passwd, u.salt, user_id)
 		if err != nil {
 			tx.Rollback()
 			gerr := util.Errorf(err.Error())
@@ -97,7 +97,7 @@ func (u *User) saveMySQL() util.Gerror {
 			gerr := util.Errorf(err.Error())
 			return gerr
 		}
-		_, err = tx.Exec("INSERT INTO users (name, displayname, admin, public_key, passwd, salt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())", u.Username, u.Name, u.Admin, u.pubKey, u.passwd, u.Salt)
+		_, err = tx.Exec("INSERT INTO users (name, displayname, admin, public_key, passwd, salt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())", u.Username, u.Name, u.Admin, u.pubKey, u.passwd, u.salt)
 		if err != nil {
 			tx.Rollback()
 			gerr := util.Errorf(err.Error())
