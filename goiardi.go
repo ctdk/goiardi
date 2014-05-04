@@ -372,6 +372,10 @@ func gobRegister() {
 	gob.Register(li)
 	mis := map[int]interface{}{}
 	gob.Register(mis)
+	cbv := new(cookbook.CookbookVersion)
+	gob.Register(cbv)
+	dbi := new(data_bag.DataBagItem)
+	gob.Register(dbi)
 }
 
 func setSaveTicker() {

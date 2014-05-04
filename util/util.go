@@ -1,4 +1,4 @@
-/* Utililty functions and methods. Should probably absorbe what's in "common.go"
+/* Utility functions and methods. Should probably absorbe what's in "common.go"
  * right now. */
 
 /*

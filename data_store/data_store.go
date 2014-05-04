@@ -150,6 +150,39 @@ func (ds *DataStore) SetLogInfo(obj interface{}) error {
 	return nil
 }
 
+func (ds *DataStore) DeleteLogInfo(id int) error {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	ds_key := ds.make_key("log_info", "log_infos")
+	a, _ := ds.dsc.Get(ds_key)
+	if a == nil {
+		a = make(map[int]interface{})
+	}
+	arr := a.(map[int]interface{})
+	delete(arr, id)
+	ds.dsc.Set(ds_key, arr, -1)
+	return nil
+}
+
+func (ds *DataStore) PurgeLogInfoBefore(id int) error {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	ds_key := ds.make_key("log_info", "log_infos")
+	a, _ := ds.dsc.Get(ds_key)
+	if a == nil {
+		a = make(map[int]interface{})
+	}
+	arr := a.(map[int]interface{})
+	new_logs := make(map[int]interface{})
+	for k, v := range arr {
+		if k > id {
+			new_logs[k] = v
+		}
+	}
+	ds.dsc.Set(ds_key, new_logs, -1)
+	return nil
+}
+
 func getNextId(lis map[int]interface{}) int {
 	if len(lis) == 0 {
 		return 1
