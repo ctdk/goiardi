@@ -74,6 +74,7 @@ func (le *LogInfo)writeEventInMem() error {
 	return ds.SetLogInfo(le)
 }
 
+// Get a particular event by its id.
 func Get(id int) (*LogInfo, error) {
 	var le *LogInfo
 
@@ -110,17 +111,20 @@ func GetLogInfos() []*LogInfo {
 		ds := data_store.New()
 		arr := ds.GetLogInfoList()
 		lis := make([]*LogInfo, len(arr))
+		n := 0
 		for i, k := range arr {
 			if k != nil {
-				lis[i] = k.(*LogInfo)
-				lis[i].Id = i
+				item := k.(*LogInfo)
+				item.Id = i
+				lis[n] = item
+				n++
 			}
 		}
 		if len(lis) == 0 {
 			return lis
 		}
 		reversed := make([]*LogInfo, len(lis))
-		n := 0
+		n = 0
 		for j := len(reversed) - 1; j >= 0; j-- {
 			reversed[n] = lis[j]
 			n++

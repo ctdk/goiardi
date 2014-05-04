@@ -141,12 +141,25 @@ func (ds *DataStore) SetLogInfo(obj interface{}) error {
 	ds_key := ds.make_key("log_info", "log_infos")
 	a, _ := ds.dsc.Get(ds_key)
 	if a == nil {
-		a = make([]interface{}, 0)
+		a = make(map[int]interface{})
 	}
-	arr := a.([]interface{})
-	arr = append(arr, obj)
+	arr := a.(map[int]interface{})
+	next_id := getNextId(arr)
+	arr[next_id] = obj
 	ds.dsc.Set(ds_key, arr, -1)
 	return nil
+}
+
+func getNextId(lis map[int]interface{}) int {
+	if len(lis) == 0 {
+		return 1
+	}
+	var keys []int
+	for k := range lis {
+		keys = append(keys, k)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
+	return keys[0] + 1
 }
 
 // Get a log_info by id.
@@ -159,11 +172,7 @@ func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 		err := fmt.Errorf("No log events stored")
 		return nil, err
 	}
-	arr := a.([]interface{})
-	if len(arr) <= id {
-		err := fmt.Errorf("id out of range")
-		return nil, err
-	}
+	arr := a.(map[int]interface{})
 	item := arr[id]
 	if item == nil {
 		err := fmt.Errorf("Log info with id %d not found", id)
@@ -172,8 +181,8 @@ func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 	return item, nil
 }
 
-// Get all the log infos stored away
-func (ds *DataStore) GetLogInfoList() []interface{} {
+// Get all the log infos currently stored 
+func (ds *DataStore) GetLogInfoList() map[int]interface{} {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
 	ds_key := ds.make_key("log_info", "log_infos")
@@ -181,7 +190,7 @@ func (ds *DataStore) GetLogInfoList() []interface{} {
 	if a == nil {
 		return nil
 	}
-	arr := a.([]interface{})
+	arr := a.(map[int]interface{})
 	return arr
 }
 
