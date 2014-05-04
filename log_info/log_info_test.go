@@ -34,7 +34,7 @@ func TestLogEvent(t *testing.T) {
 	ds := data_store.New()
 	arr := ds.GetLogInfoList()
 	if len(arr) != 1 {
-		t.Errorf("Too many log events")
+		t.Errorf("Too many (or not enough) log events: %d found", len(arr))
 	}
 	le := arr[0].(*LogInfo)
 	if le.Action != "create" {
