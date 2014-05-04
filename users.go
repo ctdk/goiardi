@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/log_info"
 )
 
 func user_handler(w http.ResponseWriter, r *http.Request){
@@ -53,6 +54,10 @@ func user_handler(w http.ResponseWriter, r *http.Request){
 			err = chef_user.Delete()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusForbidden)
+				return
+			}
+			if lerr := log_info.LogEvent(opUser, chef_user, "delete"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
 			enc := json.NewEncoder(w)
@@ -180,6 +185,10 @@ func user_handler(w http.ResponseWriter, r *http.Request){
 			serr := chef_user.Save()
 			if serr != nil {
 				JsonErrorReport(w, r, serr.Error(), serr.Status())
+				return
+			}
+			if lerr := log_info.LogEvent(opUser, chef_user, "modify"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
 			
