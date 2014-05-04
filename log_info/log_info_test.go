@@ -36,6 +36,18 @@ func TestLogEvent(t *testing.T) {
 	if len(arr) != 1 {
 		t.Errorf("Too many (or not enough) log events: %d found", len(arr))
 	}
+	arr2 := GetLogInfos(0,1)
+	if len(arr2) != 1 {
+		t.Errorf("Something went wrong with variadic args with GetLogInfoList")
+	}
+	arr3 := GetLogInfos()
+	if len(arr3) != 1 {
+		t.Errorf("Something went wrong with variadic args with no arguments with GetLogInfoList")
+	}
+	arr4 := GetLogInfos(0)
+	if len(arr4) != 1 {
+		t.Errorf("Something went wrong with variadic args with one argument with GetLogInfoList")
+	}
 	le := arr[1].(*LogInfo)
 	if le.Action != "create" {
 		t.Errorf("Wrong action")

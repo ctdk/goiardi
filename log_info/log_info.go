@@ -103,9 +103,18 @@ func Get(id int) (*LogInfo, error) {
 }
 
 
-// Get a slice of the logged events. TODO: be able to request limits, offset,
-// sorting.
-func GetLogInfos() []*LogInfo {
+// Get a slice of the logged events. May be called with an offset and limit, but
+// it is not required.
+func GetLogInfos(limits ...int) []*LogInfo {
+	var offset, limit int
+	if len(limits) > 0 {
+		offset = limits[0]
+		if len(limits) > 1 {
+			limit = limits[1]
+		}
+	} else {
+		offset = 0
+	}
 	if config.Config.UseMySQL {
 		return nil
 	} else {
@@ -130,6 +139,14 @@ func GetLogInfos() []*LogInfo {
 		if len(lis) == 0 {
 			return lis
 		}
-		return lis
+		if len(limits) > 1 {
+			limit = offset + limit
+			if limit > len(lis) {
+				limit = len(lis)
+			}
+		} else {
+			limit = len(lis)
+		}
+		return lis[offset:limit]
 	}
 }
