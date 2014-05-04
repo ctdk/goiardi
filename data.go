@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/data_bag"
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/log_info"
 )
 
 func data_handler(w http.ResponseWriter, r *http.Request){
@@ -88,6 +89,10 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 				serr := chef_dbag.Save()
 				if serr != nil {
 					JsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
+					return
+				}
+				if lerr := log_info.LogEvent(opUser, chef_dbag, "create"); lerr != nil {
+					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
 				db_response["uri"] = util.ObjURL(chef_dbag)
@@ -156,11 +161,19 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 						return
 					}
+					if lerr := log_info.LogEvent(opUser, chef_dbag, "delete"); lerr != nil {
+						JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+						return
+					}
 				case "POST":
 					raw_data := data_bag.RawDataBagJson(r.Body)
 					dbitem, nerr := chef_dbag.NewDBItem(raw_data)
 					if nerr != nil {
 						JsonErrorReport(w, r, nerr.Error(), nerr.Status())
+						return
+					}
+					if lerr := log_info.LogEvent(opUser, dbitem, "create"); lerr != nil {
+						JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 						return
 					}
 					
@@ -221,6 +234,10 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 						return
 					}
+					if lerr := log_info.LogEvent(opUser, dbi, "delete"); lerr != nil {
+						JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+						return
+					}
 					return
 				case "PUT":
 					raw_data := data_bag.RawDataBagJson(r.Body)
@@ -239,6 +256,10 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 					dbitem, err := chef_dbag.UpdateDBItem(db_item_name, raw_data)
 					if err != nil {
 						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+						return
+					}
+					if lerr := log_info.LogEvent(opUser, dbitem, "modify"); lerr != nil {
+						JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 						return
 					}
 					/* Another weird data bag item response
