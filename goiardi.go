@@ -107,6 +107,8 @@ func main(){
 	http.HandleFunc("/users", list_handler)
 	http.HandleFunc("/users/", user_handler)
 	http.HandleFunc("/file_store/", file_store_handler)
+	http.HandleFunc("/log_infos",log_info_list_handler)
+	http.HandleFunc("/log_infos/", log_info_handler)
 
 	/* TODO: figure out how to handle the root & not found pages */
 	http.HandleFunc("/", root_handler)
