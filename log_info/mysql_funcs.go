@@ -16,10 +16,47 @@
 
 package log_info
 
+import (
+	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/actor"
+	"database/sql"
+)
+
 func (le *LogInfo)writeEventMySQL() error {
+	tx, err := data_store.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	actor_id, err := data_store.CheckForOne(tx, le.ActorType, le.Actor.GetName())
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	_, err := tx.Exec("INSERT INTO log_infos (actor_id, actor_type, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?)", actor_id, le.ActorType, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
 	return nil
 }
 
 func getLogEventMySQL(id int) (*LogInfo, error) {
-	return nil, nil
+	
+}
+
+func fillLogEventFromMySQL(row data_store.ResRow) error {
+
+}
+
+func (le *LogInfo)deleteMySQL() error {
+
+}
+
+func purgeMySQL(id int) (int, error) {
+
+}
+
+func getLogInfoListMySQL(limits ...int) []*LogInfo {
+
 }

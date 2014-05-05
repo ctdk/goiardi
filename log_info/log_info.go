@@ -33,14 +33,15 @@ import (
 )
 
 type LogInfo struct {
-	Actor actor.Actor
-	ActorType string
-	Time time.Time
-	Action string
-	ObjectType string
-	ObjectName string
-	ExtendedInfo string
-	Id int
+	Actor actor.Actor `json:"actor"`
+	ActorType string `json:"actor_type"`
+	Time time.Time `json:"time"`
+	Action string `json:"action"`
+	ObjectType string `json:"object_type"`
+	ObjectName string `json:"object_name"`
+	ExtendedInfo string `json:"extended_info"`
+	Id int `json:"id"`
+	actor_id int
 }
 
 // Write an event of the action type, performed by the given actor, against the
@@ -112,7 +113,7 @@ func Get(id int) (*LogInfo, error) {
 
 func (le *LogInfo)Delete() error {
 	if config.Config.UseMySQL {
-		return nil
+		return le.deleteMySQL()
 	} else {
 		ds := data_store.New()
 		ds.DeleteLogInfo(le.Id)
@@ -122,7 +123,7 @@ func (le *LogInfo)Delete() error {
 
 func PurgeLogInfos(id int) (int, error) {
 	if config.Config.UseMySQL {
-		return 0, nil
+		return purgeMySQL(id)
 	} else {
 		ds := data_store.New()
 		return ds.PurgeLogInfoBefore(id)
@@ -133,18 +134,18 @@ func PurgeLogInfos(id int) (int, error) {
 // Get a slice of the logged events. May be called with an offset and limit, but
 // it is not required.
 func GetLogInfos(limits ...int) []*LogInfo {
-	var offset, limit int
-	if len(limits) > 0 {
-		offset = limits[0]
-		if len(limits) > 1 {
-			limit = limits[1]
-		}
-	} else {
-		offset = 0
-	}
 	if config.Config.UseMySQL {
-		return nil
+		return getLogInfoListMySQL(limits...)
 	} else {
+		var offset, limit int
+		if len(limits) > 0 {
+			offset = limits[0]
+			if len(limits) > 1 {
+				limit = limits[1]
+			}
+		} else {
+			offset = 0
+		}
 		ds := data_store.New()
 		arr := ds.GetLogInfoList()
 		lis := make([]*LogInfo, len(arr))
