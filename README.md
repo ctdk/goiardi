@@ -129,6 +129,7 @@ INSTALLATION
        --local-filestore-dir= Directory to save uploaded files in. Optional when
                           running in in-memory mode, *mandatory* for SQL
                           mode.
+       --log-events       Log changes to chef objects.
 ```
 
    Options specified on the command line override options in the config file.
@@ -177,8 +178,8 @@ sql-files/mysql-bundle by hand in the same order they're listed in the
 sqitch.plan file.
 
 The above values are for illustration, of course; nothing requires goiardi's
-database to be named "goiardi". Just make sure the right database is specified in
-the config file.
+database to be named "goiardi". Just make sure the right database is specified 
+in the config file.
 
 Set `use-mysql = true` in the configuration file, or specify `--use-mysql` on
 the command line. It is an error to specify both the `-D`/`--data-file` flag and
@@ -201,6 +202,54 @@ given below:
 	# explanation of available parameters
 	[mysql.extra_params]
 		tls = "false"
+```
+
+### Event Logging
+
+Goiardi has optional event logging. When enabled with the `--log-events` command
+line option, or with the `"log-events"` option in the config file, changes to
+clients, users, cookbooks, data bags, environments, nodes, and roles will be
+tracked. The event log can be viewed through the /events API endpoint.
+
+The event API endpoints work as follows:
+
+> `GET /events` - optionally taking `offset` and `limit` query parameters.
+>
+> List the logged events, starting with the most recent. Use the `offset` and
+> `limit` query parameters to view smaller chunks of the event log at one time.
+
+> `DELETE /events?purge=1234` - purge logged events older than the given id from
+> the event log.
+
+> `GET /events/1234` - get a single logged event with the given id.
+
+> `DELETE /events/1234` - delete a single logged event from the event log.
+
+A user or client must be an administrator account to use the `/events` endpoint.
+
+The data returned from the event log should look something like this:
+
+```
+[
+  {
+    "event": {
+      "Actor": {
+        "username": "admin",
+        "name": "admin",
+        "email": "",
+        "admin": true
+      },
+      "ActorType": "user",
+      "Time": "2014-05-04T21:56:09.770856195-07:00",
+      "Action": "create",
+      "ObjectType": "*node.Node",
+      "ObjectName": "mook",
+      "ExtendedInfo": "{\"name\":\"mook\",\"chef_environment\":\"_default\",\"run_list\":[],\"json_class\":\"Chef::Node\",\"chef_type\":\"node\",\"automatic\":{},\"normal\":{},\"default\":{},\"override\":{}}\n",
+      "Id": 1
+    },
+    "url": "http://terqa.local:4545/events/1"
+  }
+]
 ```
 
 ### Tested Platforms
