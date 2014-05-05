@@ -59,6 +59,7 @@ type Conf struct {
 	UseMySQL bool `toml:"use-mysql"`
 	MySQL MySQLdb `toml:"mysql"`
 	LocalFstoreDir string `toml:"local-filestore-dir"`
+	LogEvents bool `toml:"log-events"`
 }
 var LogLevelNames = map[string]int{ "debug": 4, "info": 3, "warning": 2, "error": 1, "critical": 0 }
 
@@ -95,6 +96,7 @@ type Options struct {
 	DisableWebUI bool `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface."`
 	UseMySQL bool `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file."`
 	LocalFstoreDir string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* for SQL mode."`
+	LogEvents bool `long:"log-events" description:"Log changes to chef objects."`
 }
 
 // The goiardi version.
@@ -323,6 +325,10 @@ func ParseConfigOptions() error {
 
 	if opts.DisableWebUI {
 		Config.DisableWebUI = opts.DisableWebUI
+	}
+
+	if opts.LogEvents {
+		Config.LogEvents = opts.LogEvents
 	}
 
 	return nil

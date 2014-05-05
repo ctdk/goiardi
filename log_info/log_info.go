@@ -29,6 +29,7 @@ import (
 	"reflect"
 	"database/sql"
 	"sort"
+	"git.tideland.biz/goas/logger"
 )
 
 type LogInfo struct {
@@ -45,6 +46,12 @@ type LogInfo struct {
 // Write an event of the action type, performed by the given actor, against the
 // given object.
 func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
+	if !config.Config.LogEvents {
+		logger.Debugf("Not logging this event")
+		return nil
+	} else {
+		logger.Debugf("Logging event")
+	}
 	var actor_type string
 	if doer.IsUser() {
 		actor_type = "user"
