@@ -33,7 +33,8 @@ import (
 )
 
 type LogInfo struct {
-	Actor actor.Actor `json:"actor"`
+	Actor actor.Actor `json:"-"`
+	ActorInfo string `json:"actor_info"`
 	ActorType string `json:"actor_type"`
 	Time time.Time `json:"time"`
 	Action string `json:"action"`
@@ -41,7 +42,6 @@ type LogInfo struct {
 	ObjectName string `json:"object_name"`
 	ExtendedInfo string `json:"extended_info"`
 	Id int `json:"id"`
-	actor_id int
 }
 
 // Write an event of the action type, performed by the given actor, against the
@@ -71,6 +71,11 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 		return err
 	}
 	le.ExtendedInfo = ext_info
+	actor_info, err := data_store.EncodeToJSON(doer)
+	if err != nil {
+		return err
+	}
+	le.ActorInfo = actor_info
 
 	if config.Config.UseMySQL {
 		return le.writeEventMySQL()
@@ -121,7 +126,7 @@ func (le *LogInfo)Delete() error {
 	return nil
 }
 
-func PurgeLogInfos(id int) (int, error) {
+func PurgeLogInfos(id int) (int64, error) {
 	if config.Config.UseMySQL {
 		return purgeMySQL(id)
 	} else {

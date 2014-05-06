@@ -164,7 +164,7 @@ func (ds *DataStore) DeleteLogInfo(id int) error {
 	return nil
 }
 
-func (ds *DataStore) PurgeLogInfoBefore(id int) (int, error) {
+func (ds *DataStore) PurgeLogInfoBefore(id int) (int64, error) {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	ds_key := ds.make_key("log_info", "log_infos")
@@ -174,7 +174,7 @@ func (ds *DataStore) PurgeLogInfoBefore(id int) (int, error) {
 	}
 	arr := a.(map[int]interface{})
 	new_logs := make(map[int]interface{})
-	purged := 0
+	var purged int64 = 0
 	for k, v := range arr {
 		if k > id {
 			new_logs[k] = v

@@ -21,10 +21,12 @@ import (
 	"testing"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/config"
 	"time"
 )
 
 func TestLogEvent(t *testing.T) {
+	config.Config.LogEvents = true
 	doer, _ := client.New("doer")
 	obj, _ := client.New("obj")
 	err := LogEvent(doer, obj, "create")

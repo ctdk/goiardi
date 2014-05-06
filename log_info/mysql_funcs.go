@@ -18,8 +18,9 @@ package log_info
 
 import (
 	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/actor"
 	"database/sql"
+	"time"
+	"log"
 )
 
 func (le *LogInfo)writeEventMySQL() error {
@@ -32,7 +33,7 @@ func (le *LogInfo)writeEventMySQL() error {
 		tx.Rollback()
 		return err
 	}
-	_, err := tx.Exec("INSERT INTO log_infos (actor_id, actor_type, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?)", actor_id, le.ActorType, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+	_, err = tx.Exec("INSERT INTO log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?)", actor_id, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -42,21 +43,98 @@ func (le *LogInfo)writeEventMySQL() error {
 }
 
 func getLogEventMySQL(id int) (*LogInfo, error) {
-	
+	le := new(LogInfo)
+	stmt, err := data_store.Dbh.Prepare("SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos WHERE id = ?")
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	row := stmt.QueryRow(id)
+	err = le.fillLogEventFromMySQL(row)
+	if err != nil {
+		return nil, err
+	}
+	// conveniently, le.Actor does not seem to need to be populated after
+	// it's been saved.
+	return le, nil
 }
 
-func fillLogEventFromMySQL(row data_store.ResRow) error {
-
+func (le *LogInfo)fillLogEventFromMySQL(row data_store.ResRow) error {
+	var tb []byte
+	err := row.Scan(&le.Id, &le.ActorType, &le.ActorInfo, &tb, &le.Action, &le.ObjectType, &le.ObjectName, &le.ExtendedInfo)
+	if err != nil {
+		return err
+	}
+	le.Time, err = time.Parse(data_store.MySQLTimeFormat, string(tb))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (le *LogInfo)deleteMySQL() error {
-
+	tx, err := data_store.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("DELETE FROM log_infos WHERE id = ?", le.Id)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+	return nil
 }
 
-func purgeMySQL(id int) (int, error) {
-
+func purgeMySQL(id int) (int64, error) {
+	tx, err := data_store.Dbh.Begin()
+	if err != nil {
+		return 0, err
+	}
+	res, err := tx.Exec("DELETE FROM log_infos WHERE id <= ?", id)
+	if err != nil {
+		tx.Rollback()
+		return 0, err
+	}
+	rows_affected, _ := res.RowsAffected()
+	tx.Commit()
+	return rows_affected, nil
 }
 
 func getLogInfoListMySQL(limits ...int) []*LogInfo {
-
+	var offset int
+	var limit int64 = (1 << 63) - 1
+	if len(limits) > 0 {
+		offset = limits[0]
+		if len(limits) > 1 {
+			limit = int64(limits[1])
+		}
+	} else {
+		offset = 0
+	}
+	logged_events := make([]*LogInfo, 0)
+	stmt, err := data_store.Dbh.Prepare("SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos LIMIT ?, ?")
+	if err != nil {
+		log.Fatal(err)
+	}
+	rows, qerr := stmt.Query(limit, offset)
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return logged_events
+		}
+		log.Fatal(qerr)
+	}
+	for rows.Next() {
+		le := new(LogInfo)
+		err = le.fillLogEventFromMySQL(rows)
+		if err != nil {
+			log.Fatal(err)
+		}
+		logged_events = append(logged_events, le)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return logged_events
 }
