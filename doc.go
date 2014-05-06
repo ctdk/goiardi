@@ -224,26 +224,16 @@ A user or client must be an administrator account to use the `/events` endpoint.
 
 The data returned by an event should look something like this:
 
-	[
-	  {
-	    "event": {
-	      "Actor": {
-		"username": "admin",
-		"name": "admin",
-		"email": "",
-		"admin": true
-	      },
-	      "ActorType": "user",
-	      "Time": "2014-05-04T21:56:09.770856195-07:00",
-	      "Action": "create",
-	      "ObjectType": "*node.Node",
-	      "ObjectName": "moo",
-	      "ExtendedInfo": "{\"name\":\"moo\",\"chef_environment\":\"_default\",\"run_list\":[],\"json_class\":\"Chef::Node\",\"chef_type\":\"node\",\"automatic\":{},\"normal\":{},\"default\":{},\"override\":{}}\n",
-	      "Id": 1
-	    },
-	    "url": "http://yodawg.local:4545/events/1"
-	  }
-	]
+	{
+	  "actor_info": "{\"username\":\"admin\",\"name\":\"admin\",\"email\":\"\",\"admin\":true}\n",
+	  "actor_type": "user",
+	  "time": "2014-05-06T07:40:12Z",
+	  "action": "delete",
+	  "object_type": "*client.Client",
+	  "object_name": "pedant_testclient_1399361999-483981000-42305",
+	  "extended_info": "{\"name\":\"pedant_testclient_1399361999-483981000-42305\",\"node_name\":\"pedant_testclient_1399361999-483981000-42305\",\"json_class\":\"Chef::ApiClient\",\"chef_type\":\"client\",\"validator\":false,\"orgname\":\"default\",\"admin\":true,\"certificate\":\"\"}\n",
+	  "id": 22
+	}
 
 Tested Platforms
 
