@@ -4,6 +4,8 @@
 * Add an easier option in the config file to specify log levels by name.
 * ipv6 already worked, but accidentally. Now it works in a more deliberate
   fashion, preventing mishaps with addresses, colons, and port numbers.
+* Add an event log to log changes to objects like nodes, clients, etc. See the
+  README or godocs for details.
 
 0.5.0
 -----
