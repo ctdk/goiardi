@@ -21,6 +21,7 @@ import (
 	"database/sql"
 	"time"
 	"log"
+	"fmt"
 )
 
 func (le *LogInfo)writeEventMySQL() error {
@@ -28,12 +29,13 @@ func (le *LogInfo)writeEventMySQL() error {
 	if err != nil {
 		return err
 	}
-	actor_id, err := data_store.CheckForOne(tx, le.ActorType, le.Actor.GetName())
+	type_table := fmt.Sprintf("%ss", le.ActorType)
+	actor_id, err := data_store.CheckForOne(tx, type_table, le.Actor.GetName())
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
-	_, err = tx.Exec("INSERT INTO log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?)", actor_id, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+	_, err = tx.Exec("INSERT INTO log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", actor_id, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -111,13 +113,14 @@ func getLogInfoListMySQL(limits ...int) []*LogInfo {
 		}
 	} else {
 		offset = 0
-	}
+	} 
 	logged_events := make([]*LogInfo, 0)
 	stmt, err := data_store.Dbh.Prepare("SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos LIMIT ?, ?")
 	if err != nil {
 		log.Fatal(err)
 	}
-	rows, qerr := stmt.Query(limit, offset)
+	defer stmt.Close()
+	rows, qerr := stmt.Query(offset, limit)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return logged_events

@@ -128,10 +128,11 @@ func CheckForOne(dbhandle Dbhandle, kind string, name string) (int32, error){
 	var obj_id int32
 	prepStatement := fmt.Sprintf("SELECT id FROM %s WHERE name = ?", kind)
 	stmt, err := dbhandle.Prepare(prepStatement)
-	defer stmt.Close()
 	if err != nil {
 		return 0, err
 	}
+	defer stmt.Close()
+	
 	err = stmt.QueryRow(name).Scan(&obj_id)
 	return obj_id, err
 }
