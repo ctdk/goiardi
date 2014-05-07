@@ -51,15 +51,19 @@ func client_handler(w http.ResponseWriter, r *http.Request){
 			/* Docs were incorrect. It does want the body of the
 			 * deleted object. */
 			json_client := chef_client.ToJson()
+
+			/* Log the delete event before deleting the client, in
+			 * case the client is deleting itself. */
+			if lerr := log_info.LogEvent(opUser, chef_client, "delete"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				return
+			}
 			err := chef_client.Delete()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusForbidden)
 				return
 			}
-			if lerr := log_info.LogEvent(opUser, chef_client, "delete"); lerr != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				return
-			}
+			
 			enc := json.NewEncoder(w)
 			if err = enc.Encode(&json_client); err != nil{
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)

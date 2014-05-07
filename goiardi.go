@@ -383,14 +383,15 @@ func setSaveTicker() {
 	ticker := time.NewTicker(time.Second * time.Duration(config.Config.FreezeInterval))
 	go func(){
 		for _ = range ticker.C {
-			logger.Infof("Automatically saving data store...")
 			if config.Config.FreezeData {
 				if config.Config.DataStoreFile != "" {
+					logger.Infof("Automatically saving data store...")
 					uerr := ds.Save(config.Config.DataStoreFile)
 					if uerr != nil {
 						logger.Errorf(uerr.Error())
 					}
 				}
+				logger.Infof("Automatically saving index...")
 				ierr := indexer.SaveIndex(config.Config.IndexFile)
 				if ierr != nil {
 					logger.Errorf(ierr.Error())
