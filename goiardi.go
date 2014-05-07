@@ -110,6 +110,7 @@ func main(){
 	http.HandleFunc("/file_store/", file_store_handler)
 	http.HandleFunc("/events", event_list_handler)
 	http.HandleFunc("/events/", event_handler)
+	http.HandleFunc("/reports/", report_handler)
 
 	/* TODO: figure out how to handle the root & not found pages */
 	http.HandleFunc("/", root_handler)
