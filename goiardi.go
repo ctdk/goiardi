@@ -79,6 +79,7 @@ func main(){
 		}
 	}
 	setSaveTicker()
+	setLogEventPurgeTicker()
 
 	/* Create default clients and users. Currently chef-validator,
 	 * chef-webui, and admin. */
@@ -379,11 +380,11 @@ func gobRegister() {
 }
 
 func setSaveTicker() {
-	ds := data_store.New()
-	ticker := time.NewTicker(time.Second * time.Duration(config.Config.FreezeInterval))
-	go func(){
-		for _ = range ticker.C {
-			if config.Config.FreezeData {
+	if config.Config.FreezeData {
+		ds := data_store.New()
+		ticker := time.NewTicker(time.Second * time.Duration(config.Config.FreezeInterval))
+		go func(){
+			for _ = range ticker.C {
 				if config.Config.DataStoreFile != "" {
 					logger.Infof("Automatically saving data store...")
 					uerr := ds.Save(config.Config.DataStoreFile)
@@ -397,6 +398,24 @@ func setSaveTicker() {
 					logger.Errorf(ierr.Error())
 				}
 			}
-		}
-	}()
+		}()
+	}
+}
+
+func setLogEventPurgeTicker() {
+	if config.Config.LogEventKeep != 0 {
+		ticker := time.NewTicker(time.Second * time.Duration(60))
+		go func() {
+			for _ = range ticker.C {
+				les := log_info.GetLogInfos(0, 1)
+				if len(les) != 0 {
+					p, err := log_info.PurgeLogInfos(les[0].Id - config.Config.LogEventKeep)
+					if err != nil {
+						logger.Errorf(err.Error())
+					}
+					logger.Debugf("Purged %d events automatically", p)
+				}
+			}
+		}()
+	}
 }
