@@ -5,6 +5,8 @@
 * ipv6 already worked, but accidentally. Now it works in a more deliberate
   fashion, preventing mishaps with addresses, colons, and port numbers.
 * Authentication protocol version 1.1 now supported.
+* Remove a sort on run lists that was there for some reason. I have no idea
+  what it was put there for, but it was wrong.
 
 0.5.0
 -----
