@@ -130,6 +130,9 @@ INSTALLATION
                           running in in-memory mode, *mandatory* for SQL
                           mode.
        --log-events       Log changes to chef objects.
+   -K, --log-event-keep=  Number of events to keep in the event log. If set,
+                          the event log will be checked periodically and
+                          pruned to this number of entries.
 ```
 
    Options specified on the command line override options in the config file.
@@ -210,6 +213,9 @@ Goiardi has optional event logging. When enabled with the `--log-events` command
 line option, or with the `"log-events"` option in the config file, changes to
 clients, users, cookbooks, data bags, environments, nodes, and roles will be
 tracked. The event log can be viewed through the /events API endpoint.
+
+If the `-K`/`--log-event-keep` option is set, then once a minute the event log
+will be automatically purged, leaving that many events in the log. This is particularly recommended when using the event log in in-memory mode.
 
 The event API endpoints work as follows:
 
