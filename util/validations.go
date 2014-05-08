@@ -19,7 +19,6 @@ package util
 import (
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
 	"strconv"
 	"github.com/ctdk/goiardi/filestore"
@@ -359,8 +358,6 @@ func ValidateRunList(rl interface{}) ([]string, Gerror) {
 				z++
 			}
 
-			// TODO: needs a more accurate sort
-			sort.Strings(rl)
 			return rl, nil
 		case nil:
 			/* separate to do more validations above */
