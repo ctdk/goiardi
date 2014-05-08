@@ -19,7 +19,12 @@ http://docs.opscode.com/reporting.html for details. */
 package report
 
 import (
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/data_store"
 	"time"
+	"net/http"
+	"database/sql"
 )
 
 type Report struct {
@@ -33,4 +38,122 @@ type Report struct {
 	Data map[string]interface{} `json:"data"` // I think this is right
 	nodeName string
 	organizationId int
+}
+
+type privReport struct {
+	RunId *string
+	StartTime *time.Time
+	EndTime *time.Time
+	TotalResCount *int
+	Status *string 
+	RunList *[]string
+	Resources *[]map[string]interface{}
+	Data *map[string]interface{}
+	NodeName *string
+	OrganizationId *int
+}
+
+func New(runId string, nodeName string) (*Report, util.Gerror) {
+	var found
+	if config.Config.UseMySQL {
+
+	} else {
+		ds := data_store.New()
+		_, found = ds.Get("report", runId)
+	}
+	if found {
+		err = util.Errorf("Report already exists")
+		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
+	report := &Report{
+		RunId: runId,
+		nodeName: nodeName
+	}
+	return report, nil
+}
+
+func Get(runId string) (*Report, util.Gerror) {
+	var report *Report
+	if config.Config.UseMySQL {
+
+	} else {
+		ds := data_store.New()
+		r, found := ds.Get("report", runId)
+		if !found {
+			err := util.Errorf("Report %s not found", runId)
+			err.SetStatus(http.StatusNotFound)
+			return nil, err
+		}
+		if c != nil {
+			report = r.(*Report)
+		}
+	}
+	return report, nil
+}
+
+func (r *Report)Save() error {
+	if config.Config.UseMySQL {
+
+	} else {
+		ds := data_store.New()
+		ds.Set("report", r.RunId, r)
+	}
+	return nil
+}
+
+func (r *Report)Delete() error {
+	if config.Config.UseMySQL {
+
+	} else {
+		ds := data_store.New()
+		ds.Delete("report", r.RunId)
+	}
+	return nil
+}
+
+func (r *Report)NewFromJson(json_report map[string]interface{}) (*Report, error) {
+
+}
+
+func (r *Report)UpdateFromJson(json_report map[string]interface{}) error {
+
+}
+
+func GetList() []string {
+
+}
+
+func GetReportList() []*Report {
+
+}
+
+func GetNodeList(n *node.Node) []*Report {
+
+}
+
+func (r *Report) export() *privReport {
+	return &privReport{ RunId: &r.RunId, StartTime: &r.StartTime, EndTime: &r.EndTime, TotalResCount: &r.TotalResCount, Status: &r.Status, Resources: &r.Resources, Data: &r.Data, NodeName: &r.nodeName, OrganizationId: &r.organizationId }
+}
+
+func (r *Report) GobEncode() ([]byte, error) {
+	prv := r.export()
+	buf := new(bytes.Buffer)
+	decoder := gob.NewEncoder(buf)
+	if err := decoder.Encode(prv); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (r *Report) GobDecode(b []byte) error {
+	prv := r.export()
+	buf := bytes.NewReader(b)
+	encoder := gob.NewDecoder(buf)
+	err := encoder.Decode(prv)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
