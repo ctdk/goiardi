@@ -25,6 +25,7 @@ import (
 	"time"
 	"net/http"
 	"database/sql"
+	"github.com/codeskyblue/go-uuid"
 )
 
 type Report struct {
@@ -112,24 +113,77 @@ func (r *Report)Delete() error {
 	return nil
 }
 
-func (r *Report)NewFromJson(json_report map[string]interface{}) (*Report, error) {
-
+func NewFromJson(json_report map[string]interface{}) (*Report, util.Gerror) {
+	rid, ok := json_report["run_id"].(string)
+	if !ok {
+		err := util.Errorf("invalid run id")
+		err.SetStatus(http.StatusBadRequest)
+		return nil, err
+	}
+	if u := uuid.Parse(rid); u == nil {
+		err := util.Errorf("run id was not a valid uuid")
+		err.SetStatus(http.StatusBadRequest)
+		return nil, err
+	}
+	report, err := New(rid)
+	if err != nil {
+		return nil, err
+	}
+	err = report.UpdateFromJson(json_report)
+	if err != nil {
+		return nil, err
+	}
+	return report, nil
 }
 
-func (r *Report)UpdateFromJson(json_report map[string]interface{}) error {
+func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
 
 }
 
 func GetList() []string {
+	var report_list []string
+	if config.Config.UseMySQL {
 
+	} else {
+		ds := data_store.New()
+		report_list = ds.GetList("report")
+	}
+	return report_list
 }
 
 func GetReportList() []*Report {
-
+	if config.Config.UseMySQL {
+		return nil
+	} else {
+		reports := make([]*Report, 0)
+		report_list := GetList()
+		for _, r := range report_list {
+			rp, _ := Get(r)
+			if rp != nil {
+				reports = append(reports, rp)
+			}
+		}
+		return reports
+	}
 }
 
 func GetNodeList(n *node.Node) []*Report {
-
+	if config.Config.UseMySQL {
+		return nil
+	} else {
+		// Really really not the most efficient way, but deliberately
+		// not doing it in a better manner for now. If reporting
+		// performance becomes a concern, SQL mode is probably a better
+		// choice
+		reports := GetReportList()
+		node_report_list := make([]*Report, 0)
+		for _, r := range reports {
+			if n.Name == r.nodeName {
+				node_report_list = append(node_report_list, r)
+			}
+		}
+		return node_report_list
+	}
 }
 
 func (r *Report) export() *privReport {
