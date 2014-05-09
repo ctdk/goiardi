@@ -347,18 +347,16 @@ func ValidateRunList(rl interface{}) ([]string, Gerror) {
 			}
 
 			/* Remove dupes */
-			rl_hash := make(map[string]string, len(rl))
+			result := []string{}
+			found := map[string]bool{}
 			for _, u := range rl {
-				rl_hash[u] = u
-			}
-			rl = make([]string, len(rl_hash))
-			z := 0
-			for k, _ := range rl_hash {
-				rl[z] = k
-				z++
+				if _, ok := found[u]; !ok {
+					result = append(result, u)
+					found[u] = true
+				}
 			}
 
-			return rl, nil
+			return result, nil
 		case nil:
 			/* separate to do more validations above */
 			nil_rl := make([]string, 0)
