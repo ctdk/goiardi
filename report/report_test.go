@@ -15,3 +15,19 @@
  */
 
 package report
+
+import (
+	"testing"
+)
+
+func TestReportCreation(t *testing.T){
+
+}
+
+func TestReportUpdating(t *testing.T){
+
+}
+
+func TestReportListing(t *testing.T){
+
+}
