@@ -22,11 +22,17 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/node"
+	"bytes"
+	"encoding/gob"
 	"time"
 	"net/http"
-	"database/sql"
+	"strconv"
+	//"database/sql"
 	"github.com/codeskyblue/go-uuid"
 )
+
+const ReportTimeFormat = "2006-01-02 15:04:05 -0700"
 
 type Report struct {
 	RunId string `json:"run_id"`
@@ -55,7 +61,7 @@ type privReport struct {
 }
 
 func New(runId string, nodeName string) (*Report, util.Gerror) {
-	var found
+	var found bool
 	if config.Config.UseMySQL {
 
 	} else {
@@ -63,13 +69,18 @@ func New(runId string, nodeName string) (*Report, util.Gerror) {
 		_, found = ds.Get("report", runId)
 	}
 	if found {
-		err = util.Errorf("Report already exists")
+		err := util.Errorf("Report already exists")
 		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
+	if u := uuid.Parse(runId); u == nil {
+		err := util.Errorf("run id was not a valid uuid")
+		err.SetStatus(http.StatusBadRequest)
 		return nil, err
 	}
 	report := &Report{
 		RunId: runId,
-		nodeName: nodeName
+		nodeName: nodeName,
 	}
 	return report, nil
 }
@@ -86,7 +97,7 @@ func Get(runId string) (*Report, util.Gerror) {
 			err.SetStatus(http.StatusNotFound)
 			return nil, err
 		}
-		if c != nil {
+		if r != nil {
 			report = r.(*Report)
 		}
 	}
@@ -113,23 +124,39 @@ func (r *Report)Delete() error {
 	return nil
 }
 
-func NewFromJson(json_report map[string]interface{}) (*Report, util.Gerror) {
+func NewFromJson(node_name string, json_report map[string]interface{}) (*Report, util.Gerror) {
 	rid, ok := json_report["run_id"].(string)
 	if !ok {
 		err := util.Errorf("invalid run id")
 		err.SetStatus(http.StatusBadRequest)
 		return nil, err
 	}
-	if u := uuid.Parse(rid); u == nil {
-		err := util.Errorf("run id was not a valid uuid")
-		err.SetStatus(http.StatusBadRequest)
+
+	if action, ok := json_report["action"].(string); ok {
+		if action != "start" {
+			err := util.Errorf("invalid action %s", action)
+			return nil, err
+		}
+	} else {
+		err := util.Errorf("invalid action")
 		return nil, err
 	}
-	report, err := New(rid)
+	stime, ok := json_report["start_time"].(string)
+	if !ok {
+		err := util.Errorf("invalid start time")
+		return nil, err
+	}
+	start_time, terr := time.Parse(ReportTimeFormat, stime)
+	if terr != nil {
+		err := util.CastErr(terr)
+		return nil, err
+	}
+	
+	report, err := New(rid, node_name)
 	if err != nil {
 		return nil, err
 	}
-	err = report.UpdateFromJson(json_report)
+	report.StartTime = start_time
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +164,68 @@ func NewFromJson(json_report map[string]interface{}) (*Report, util.Gerror) {
 }
 
 func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
+	if action, ok := json_report["action"].(string); ok {
+		if action != "end" {
+			err := util.Errorf("invalid action %s", action)
+			return err
+		}
+	} else {
+		err := util.Errorf("invalid action")
+		return err
+	}
+	etime, ok := json_report["end_time"].(string)
+	if !ok {
+		err := util.Errorf("invalid end time")
+		return err
+	}
+	end_time, terr := time.Parse(ReportTimeFormat, etime)
+	if terr != nil {
+		err := util.CastErr(terr)
+		return err
+	}
+	t, ok := json_report["total_res_count"].(string)
+	if !ok {
+		err := util.Errorf("invalid total_res_count")
+		return err
+	}
+	trc, err := strconv.Atoi(t)
+	if err != nil {
+		err := util.Errorf("Error converting %v to int: %s", t, err.Error())
+		return err
+	}
+	status, ok := json_report["status"].(string)
+	if ok {
+		if status != "success" && status != "failure" {
+			err := util.Errorf("invalid status %s", status)
+			return err
+		}
+	} else {
+		err := util.Errorf("invalid status")
+		return err
+	}
+	run_list, ok := json_report["run_list"].([]string)
+	if !ok {
+		err := util.Errorf("invalid run_list")
+		return err
+	}
+	resources, ok := json_report["resources"].([]map[string]interface{})
+	if !ok {
+		err := util.Errorf("invalid resources")
+		return err
+	}
+	data, ok := json_report["data"].(map[string]interface{})
+	if !ok {
+		err := util.Errorf("invalid data")
+		return err
+	}
 
+	r.EndTime = end_time
+	r.TotalResCount = trc
+	r.Status = status
+	r.RunList = run_list
+	r.Resources = resources
+	r.Data = data
+	return nil
 }
 
 func GetList() []string {
