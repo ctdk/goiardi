@@ -45,6 +45,7 @@ import (
 	"github.com/ctdk/goiardi/authentication"
 	"strings"
 	"git.tideland.biz/goas/logger"
+	"compress/gzip"
 )
 
 type InterceptHandler struct {} // Doesn't need to do anything, just sit there.
@@ -193,6 +194,18 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 			JsonErrorReport(w, r, herr.Error(), herr.Status())
 			return
 		}
+	}
+
+	// Experimental: decompress gzipped requests
+	if r.Header.Get("Content-Encoding") == "gzip" {
+		reader, err := gzip.NewReader(r.Body)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			logger.Errorf("Failure decompressing gzipped request body: %s\n", err.Error())
+			JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			return
+		}
+		r.Body = reader
 	}
 
 	http.DefaultServeMux.ServeHTTP(w, r)
