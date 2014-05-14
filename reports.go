@@ -29,34 +29,68 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	log.Printf("URL: %s", r.URL.Path)
 	log.Printf("encoding %s", r.Header.Get("Content-Encoding"))
-	if r.Method == "POST" {
-		//json_req, err := ParseObjJson(r.Body)
-		var reader io.ReadCloser
-		switch r.Header.Get("Content-Encoding") {
-			case "gzip":
-				var err error
-				reader, err = gzip.NewReader(r.Body)
+
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
+	path_array := SplitPath(r.URL.Path)
+	path_array_len := len(path_array)
+	report_response := make(map[string]interface{})
+
+	switch r.Method {
+		case "GET":
+			// Making an informed guess that admin rights are needed
+			// to see the node run reports
+			if !opUser.IsAdmin() {
+				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				return
+			}
+		case "POST":
+			json_report, jerr := ParseObjJson(r.Body)
+			if jerr != nil {
+				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return
+			}
+			if path_array_len < 4 || path_array_len > 5 {
+				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+				return
+			}
+			nodeName := path_array[2]
+			if path_array_len == 4 {
+				rep, err := report.NewFromJson(nodeName, json_report)
 				if err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+					JsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-			default:
-				reader = r.Body
-		} 
-		var buf bytes.Buffer
-		_, err := buf.ReadFrom(reader)
-		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				// what's the expected response?
+				err = rep.Save()
+			} else {
+				run_id := path_array[4]
+				err := report.Get(run_id)
+				if err != nil {
+					JsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				err = report.UpdateFromJson(json_report)
+				if err != nil {
+					JsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				err = report.Save()
+				if err != nil {
+					JsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				// .... and?
+			} 
+		default:
+			JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 			return
-		}
-		log.Printf("body of request")
-		//log.Printf("%+v", json_req)
-		s := buf.Bytes()
-		log.Printf("%s", string(s))
-		log.Printf("%v", s)
 	}
-	report_response := make(map[string]string)
-	report_response["msg"] = "ok then"
+
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&report_response); err != nil {
 		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)

@@ -22,7 +22,6 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/node"
 	"bytes"
 	"encoding/gob"
 	"time"
@@ -63,7 +62,13 @@ type privReport struct {
 func New(runId string, nodeName string) (*Report, util.Gerror) {
 	var found bool
 	if config.Config.UseMySQL {
-
+		var err error
+		found, err = checkForReportMySQL(data_store.Dbh, runId)
+		if err != nil {
+			gerr := util.CastErr(err)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return nil, gerr
+		}
 	} else {
 		ds := data_store.New()
 		_, found = ds.Get("report", runId)
@@ -87,26 +92,40 @@ func New(runId string, nodeName string) (*Report, util.Gerror) {
 
 func Get(runId string) (*Report, util.Gerror) {
 	var report *Report
+	var found bool
 	if config.Config.UseMySQL {
-
+		var err error
+		report, err = getReportMySQL(runId)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				found = false
+			} else {
+				gerr := util.CastErr(err)
+				gerr.SetStatus(http.StatusInternalServerError)
+				return nil, gerr
+			}
+		} else {
+			found = true 
+		}
 	} else {
 		ds := data_store.New()
-		r, found := ds.Get("report", runId)
-		if !found {
-			err := util.Errorf("Report %s not found", runId)
-			err.SetStatus(http.StatusNotFound)
-			return nil, err
-		}
+		var r interface{}
+		r, found = ds.Get("report", runId)
 		if r != nil {
 			report = r.(*Report)
 		}
+	}
+	if !found {
+		err := util.Errorf("Report %s not found", runId)
+		err.SetStatus(http.StatusNotFound)
+		return nil, err
 	}
 	return report, nil
 }
 
 func (r *Report)Save() error {
 	if config.Config.UseMySQL {
-
+		return r.saveMySQL()
 	} else {
 		ds := data_store.New()
 		ds.Set("report", r.RunId, r)
@@ -116,7 +135,7 @@ func (r *Report)Save() error {
 
 func (r *Report)Delete() error {
 	if config.Config.UseMySQL {
-
+		return r.deleteMySQL()
 	} else {
 		ds := data_store.New()
 		ds.Delete("report", r.RunId)
@@ -255,7 +274,7 @@ func GetReportList() []*Report {
 	}
 }
 
-func GetNodeList(n *node.Node) []*Report {
+func GetNodeList(nodeName string) []*Report {
 	if config.Config.UseMySQL {
 		return nil
 	} else {
@@ -266,7 +285,7 @@ func GetNodeList(n *node.Node) []*Report {
 		reports := GetReportList()
 		node_report_list := make([]*Report, 0)
 		for _, r := range reports {
-			if n.Name == r.nodeName {
+			if nodeName == r.nodeName {
 				node_report_list = append(node_report_list, r)
 			}
 		}
