@@ -30,15 +30,25 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("URL: %s", r.URL.Path)
 	log.Printf("encoding %s", r.Header.Get("Content-Encoding"))
 
+	protocol_version := r.Header.Get("X-Ops-Reporting-Protocol-Version")
+	// someday there may be other protocol versions
+	if protocol_version != "0.1.0" {
+		JsonErrorReport(w, r, "Unsupported reporting protocol version", http.StatusNotFound)
+		return
+	}
+
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 
+	// TODO: some params for time ranges exist and need to be handled
+	// properly
+
 	path_array := SplitPath(r.URL.Path)
 	path_array_len := len(path_array)
-	report_response := make(map[string]interface{})
+	var report_response interface{}
 
 	switch r.Method {
 		case "GET":
@@ -46,6 +56,32 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 			// to see the node run reports
 			if !opUser.IsAdmin() {
 				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				return
+			}
+			if path_array_len < 3 || path_array_len > 4 {
+				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+				return
+			}
+			op := path_array[1]
+			if op == "nodes" && path_array_len == 4 {
+				nodeName := path_array[2]
+				runs := report.GetNodeList(nodeName)
+				// try sending it back as just an array
+				report_response = runs
+			} else if op == "org" {
+				if runId, ok := path_array[3]; ok {
+					run, err := report.Get(runId)
+					if err != nil {
+						JsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
+					report_response = run
+				} else {
+					runs := report.GetReportList()
+					report_response = runs
+				}
+			} else {
+				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
 			}
 		case "POST":
@@ -67,24 +103,26 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 				}
 				// what's the expected response?
 				err = rep.Save()
+				report_response = rep
 			} else {
 				run_id := path_array[4]
-				err := report.Get(run_id)
+				rep, err := report.Get(run_id)
 				if err != nil {
 					JsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-				err = report.UpdateFromJson(json_report)
+				err = rep.UpdateFromJson(json_report)
 				if err != nil {
 					JsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-				err = report.Save()
+				err = rep.Save()
 				if err != nil {
 					JsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
 				// .... and?
+				report_response = rep
 			} 
 		default:
 			JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
