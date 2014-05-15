@@ -54,7 +54,7 @@ func getReportMySQL(runId string) (*Report, error) {
 
 }
 
-func (r *Report)saveMySQL() err {
+func (r *Report)saveMySQL() error {
 
 }
 

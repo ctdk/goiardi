@@ -20,9 +20,8 @@ import (
 	"log"
 	"net/http"
 	"encoding/json"
-	"bytes"
-	"compress/gzip"
-	"io"
+	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/report"
 )
 
 func report_handler(w http.ResponseWriter, r *http.Request) {

@@ -260,7 +260,7 @@ func GetList() []string {
 
 func GetReportList() []*Report {
 	if config.Config.UseMySQL {
-		return nil
+		return getReportListMySQL()
 	} else {
 		reports := make([]*Report, 0)
 		report_list := GetList()
@@ -276,7 +276,7 @@ func GetReportList() []*Report {
 
 func GetNodeList(nodeName string) []*Report {
 	if config.Config.UseMySQL {
-		return nil
+		return getNodeListMySQL()
 	} else {
 		// Really really not the most efficient way, but deliberately
 		// not doing it in a better manner for now. If reporting
