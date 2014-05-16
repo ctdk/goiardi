@@ -47,11 +47,27 @@ func checkForReportMySQL(dbhandle data_store.Dbhandle, runId string) (bool, erro
 }
 
 func (r *Report)fillReportFromMySQL(row data_store.ResRow) error{
-
+	var rl, res, dat, st, et []byte
+	err := row.Scan(&r.RunId, &st, &et, &r.TotalResCount, &r.Status, &rl, &res, &dat, &r.nodeName)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func getReportMySQL(runId string) (*Report, error) {
-
+	r := new(Report)
+	stmt, err := data_store.Dbh.Prepare("SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name WHERE run_id = ?")
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	row := stmt.QueryRow(runId)
+	err = r.fillReportFromMySQL(row)
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
 }
 
 func (r *Report)saveMySQL() error {
