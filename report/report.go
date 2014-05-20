@@ -27,7 +27,7 @@ import (
 	"time"
 	"net/http"
 	"strconv"
-	//"database/sql"
+	"database/sql"
 	"github.com/codeskyblue/go-uuid"
 )
 
@@ -258,7 +258,7 @@ func GetList() []string {
 	return report_list
 }
 
-func GetReportList() []*Report {
+func GetReportList() ([]*Report, error) {
 	if config.Config.UseMySQL {
 		return getReportListMySQL()
 	} else {
@@ -270,26 +270,26 @@ func GetReportList() []*Report {
 				reports = append(reports, rp)
 			}
 		}
-		return reports
+		return reports, nil
 	}
 }
 
-func GetNodeList(nodeName string) []*Report {
+func GetNodeList(nodeName string) ([]*Report, error) {
 	if config.Config.UseMySQL {
-		return getNodeListMySQL()
+		return getNodeListMySQL(nodeName)
 	} else {
 		// Really really not the most efficient way, but deliberately
 		// not doing it in a better manner for now. If reporting
 		// performance becomes a concern, SQL mode is probably a better
 		// choice
-		reports := GetReportList()
+		reports, _ := GetReportList()
 		node_report_list := make([]*Report, 0)
 		for _, r := range reports {
 			if nodeName == r.nodeName {
 				node_report_list = append(node_report_list, r)
 			}
 		}
-		return node_report_list
+		return node_report_list, nil
 	}
 }
 

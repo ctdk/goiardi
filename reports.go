@@ -64,11 +64,16 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 			op := path_array[1]
 			if op == "nodes" && path_array_len == 4 {
 				nodeName := path_array[2]
-				runs := report.GetNodeList(nodeName)
+				runs, nerr := report.GetNodeList(nodeName)
+				if nerr != nil {
+					JsonErrorReport(w, r, nerr.Error(), http.StatusInternalServerError)
+					return
+				}
 				// try sending it back as just an array
 				report_response = runs
 			} else if op == "org" {
-				if runId, ok := path_array[3]; ok {
+				if path_array_len == 4 {
+					runId := path_array[3]
 					run, err := report.Get(runId)
 					if err != nil {
 						JsonErrorReport(w, r, err.Error(), err.Status())
@@ -76,7 +81,11 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 					}
 					report_response = run
 				} else {
-					runs := report.GetReportList()
+					runs, rerr := report.GetReportList()
+					if rerr != nil {
+						JsonErrorReport(w, r, rerr.Error(), http.StatusInternalServerError)
+						return
+					}
 					report_response = runs
 				}
 			} else {
@@ -101,7 +110,11 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				// what's the expected response?
-				err = rep.Save()
+				serr := rep.Save()
+				if serr != nil {
+					JsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
+					return
+				}
 				report_response = rep
 			} else {
 				run_id := path_array[4]
@@ -115,9 +128,9 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 					JsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-				err = rep.Save()
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), err.Status())
+				serr := rep.Save()
+				if serr != nil {
+					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
 				// .... and?

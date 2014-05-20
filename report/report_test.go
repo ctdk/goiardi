@@ -75,7 +75,10 @@ func TestReportListing(t *testing.T){
 		r, _ := New(u, n.Name)
 		r.Save()
 	}
-	ns := GetNodeList(n)
+	ns, nerr := GetNodeList(n.Name)
+	if nerr != nil {
+		t.Errorf(nerr.Error())
+	}
 	if len(ns) != 2 {
 		t.Errorf("expected 2 items from node 'node2', got %d", len(ns))
 	}
