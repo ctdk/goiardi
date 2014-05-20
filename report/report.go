@@ -15,7 +15,7 @@
  */
 
 /* Package report implements reporting on client runs and node changes. See 
-http://docs.opscode.com/reporting.html for details. */
+http://docs.opscode.com/reporting.html for details. CURRENTLY EXPERIMENTAL. */
 package report
 
 import (
@@ -31,6 +31,8 @@ import (
 	"github.com/codeskyblue/go-uuid"
 )
 
+// The format for reporting start and end times in JSON. Of course, subtly
+// different from MySQL's time format, but only subtly.
 const ReportTimeFormat = "2006-01-02 15:04:05 -0700"
 
 type Report struct {
