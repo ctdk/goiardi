@@ -41,10 +41,10 @@ type Report struct {
 	EndTime time.Time `json:"end_time"`
 	TotalResCount int `json:"total_res_count"`
 	Status string `json:"status"`
-	RunList []string `json:"run_list"`
+	RunList string `json:"run_list"`
 	Resources []map[string]interface{} `json:"resources"`
 	Data map[string]interface{} `json:"data"` // I think this is right
-	nodeName string
+	NodeName string
 	organizationId int
 }
 
@@ -54,7 +54,7 @@ type privReport struct {
 	EndTime *time.Time
 	TotalResCount *int
 	Status *string 
-	RunList *[]string
+	RunList *string
 	Resources *[]map[string]interface{}
 	Data *map[string]interface{}
 	NodeName *string
@@ -87,7 +87,7 @@ func New(runId string, nodeName string) (*Report, util.Gerror) {
 	}
 	report := &Report{
 		RunId: runId,
-		nodeName: nodeName,
+		NodeName: nodeName,
 	}
 	return report, nil
 }
@@ -177,6 +177,7 @@ func NewFromJson(node_name string, json_report map[string]interface{}) (*Report,
 	if err != nil {
 		return nil, err
 	}
+	report.Action = action
 	report.StartTime = start_time
 	if err != nil {
 		return nil, err
@@ -224,7 +225,7 @@ func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
 		err := util.Errorf("invalid status")
 		return err
 	}
-	run_list, ok := json_report["run_list"].([]string)
+	run_list, ok := json_report["run_list"].(string)
 	if !ok {
 		err := util.Errorf("invalid run_list")
 		return err
@@ -287,7 +288,7 @@ func GetNodeList(nodeName string) ([]*Report, error) {
 		reports, _ := GetReportList()
 		node_report_list := make([]*Report, 0)
 		for _, r := range reports {
-			if nodeName == r.nodeName {
+			if nodeName == r.NodeName {
 				node_report_list = append(node_report_list, r)
 			}
 		}
@@ -296,7 +297,7 @@ func GetNodeList(nodeName string) ([]*Report, error) {
 }
 
 func (r *Report) export() *privReport {
-	return &privReport{ RunId: &r.RunId, StartTime: &r.StartTime, EndTime: &r.EndTime, TotalResCount: &r.TotalResCount, Status: &r.Status, Resources: &r.Resources, Data: &r.Data, NodeName: &r.nodeName, OrganizationId: &r.organizationId }
+	return &privReport{ RunId: &r.RunId, StartTime: &r.StartTime, EndTime: &r.EndTime, TotalResCount: &r.TotalResCount, Status: &r.Status, Resources: &r.Resources, Data: &r.Data, NodeName: &r.NodeName, OrganizationId: &r.organizationId }
 }
 
 func (r *Report) GobEncode() ([]byte, error) {

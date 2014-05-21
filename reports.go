@@ -93,12 +93,17 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		case "POST":
-			json_report, jerr := ParseObjJson(r.Body)
-			if jerr != nil {
+			// Can't use the usual ParseObjJson function here, since
+			// the reporting "run_list" type is a string rather
+			// than []interface{}.
+			json_report := make(map[string]interface{})
+			dec := json.NewDecoder(r.Body)
+			if jerr := dec.Decode(&json_report); jerr != nil {
 				log.Println("bad json! %s", jerr.Error())
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 				return
 			}
+
 			if path_array_len < 4 || path_array_len > 5 {
 				log.Println("Bad path!")
 				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)

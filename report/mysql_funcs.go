@@ -47,12 +47,9 @@ func checkForReportMySQL(dbhandle data_store.Dbhandle, runId string) (bool, erro
 }
 
 func (r *Report)fillReportFromMySQL(row data_store.ResRow) error{
-	var rl, res, dat, st, et []byte
-	err := row.Scan(&r.RunId, &st, &et, &r.TotalResCount, &r.Status, &rl, &res, &dat, &r.nodeName)
+	var res, dat, st, et []byte
+	err := row.Scan(&r.RunId, &st, &et, &r.TotalResCount, &r.Status, &r.RunList, &res, &dat, &r.NodeName)
 	if err != nil {
-		return err
-	}
-	if err = data_store.DecodeBlob(rl, &r.RunList); err != nil {
 		return err
 	}
 	if err = data_store.DecodeBlob(res, &r.Resources); err != nil {
@@ -86,10 +83,6 @@ func getReportMySQL(runId string) (*Report, error) {
 }
 
 func (r *Report)saveMySQL() error {
-	rl, rlerr := data_store.EncodeBlob(&r.RunList)
-	if rlerr != nil {
-		return rlerr
-	}
 	res, reserr := data_store.EncodeBlob(&r.Resources)
 	if reserr != nil {
 		return reserr
@@ -108,7 +101,7 @@ func (r *Report)saveMySQL() error {
 	// leverage more of each database's capabilities. Thus, here we shall
 	// do the very MySQL-specific INSERT ... ON DUPLICATE KEY UPDATE
 	// syntax.
-	_, err = tx.Exec("INSERT INTO reports (run_id, node_name, start_time, end_time, total_res_count, status, run_list, resources, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE reports SET start_time = ?, end_time = ?, total_res_count = ?, status = ?, run_list = ?, resources = ?, data = ?, updated_at = NOW() WHERE run_id = ?", r.RunId, r.nodeName, r.StartTime, r.EndTime, r.TotalResCount, r.Status, rl, res, dat, r.StartTime, r.EndTime, r.TotalResCount, r.Status, rl, res, dat, r.RunId)
+	_, err = tx.Exec("INSERT INTO reports (run_id, node_name, start_time, end_time, total_res_count, status, run_list, resources, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE reports SET start_time = ?, end_time = ?, total_res_count = ?, status = ?, run_list = ?, resources = ?, data = ?, updated_at = NOW() WHERE run_id = ?", r.RunId, r.NodeName, r.StartTime, r.EndTime, r.TotalResCount, r.Status, r.RunList, res, dat, r.StartTime, r.EndTime, r.TotalResCount, r.Status, r.RunList, res, dat, r.RunId)
 	if err != nil {
 		tx.Rollback()
 		return err
