@@ -42,9 +42,9 @@ type Report struct {
 	TotalResCount int `json:"total_res_count"`
 	Status string `json:"status"`
 	RunList string `json:"run_list"`
-	Resources []map[string]interface{} `json:"resources"`
+	Resources []interface{} `json:"resources"`
 	Data map[string]interface{} `json:"data"` // I think this is right
-	NodeName string
+	NodeName string `json:"node_name"`
 	organizationId int
 }
 
@@ -55,7 +55,7 @@ type privReport struct {
 	TotalResCount *int
 	Status *string 
 	RunList *string
-	Resources *[]map[string]interface{}
+	Resources *[]interface{}
 	Data *map[string]interface{}
 	NodeName *string
 	OrganizationId *int
@@ -177,7 +177,6 @@ func NewFromJson(node_name string, json_report map[string]interface{}) (*Report,
 	if err != nil {
 		return nil, err
 	}
-	report.Action = action
 	report.StartTime = start_time
 	if err != nil {
 		return nil, err
@@ -195,24 +194,24 @@ func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
 		err := util.Errorf("invalid action")
 		return err
 	}
-	etime, ok := json_report["end_time"].(string)
+	_, ok := json_report["end_time"].(string)
 	if !ok {
 		err := util.Errorf("invalid end time")
 		return err
 	}
-	end_time, terr := time.Parse(ReportTimeFormat, etime)
+	end_time, terr := time.Parse(ReportTimeFormat, json_report["end_time"].(string))
 	if terr != nil {
 		err := util.CastErr(terr)
 		return err
 	}
-	t, ok := json_report["total_res_count"].(string)
+	_, ok = json_report["total_res_count"].(string)
 	if !ok {
 		err := util.Errorf("invalid total_res_count")
 		return err
 	}
-	trc, err := strconv.Atoi(t)
+	trc, err := strconv.Atoi(json_report["total_res_count"].(string))
 	if err != nil {
-		err := util.Errorf("Error converting %v to int: %s", t, err.Error())
+		err := util.Errorf("Error converting %v to int: %s", json_report["total_res_count"], err.Error())
 		return err
 	}
 	status, ok := json_report["status"].(string)
@@ -225,17 +224,17 @@ func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
 		err := util.Errorf("invalid status")
 		return err
 	}
-	run_list, ok := json_report["run_list"].(string)
+	_, ok = json_report["run_list"].(string)
 	if !ok {
 		err := util.Errorf("invalid run_list")
 		return err
 	}
-	resources, ok := json_report["resources"].([]map[string]interface{})
+	_, ok = json_report["resources"].([]interface{})
 	if !ok {
-		err := util.Errorf("invalid resources")
+		err := util.Errorf("invalid resources %T", json_report["resources"])
 		return err
 	}
-	data, ok := json_report["data"].(map[string]interface{})
+	_, ok = json_report["data"].(map[string]interface{})
 	if !ok {
 		err := util.Errorf("invalid data")
 		return err
@@ -243,10 +242,10 @@ func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
 
 	r.EndTime = end_time
 	r.TotalResCount = trc
-	r.Status = status
-	r.RunList = run_list
-	r.Resources = resources
-	r.Data = data
+	r.Status = json_report["status"].(string)
+	r.RunList = json_report["run_list"].(string)
+	r.Resources = json_report["resources"].([]interface{})
+	r.Data = json_report["data"].(map[string]interface{})
 	return nil
 }
 

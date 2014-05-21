@@ -79,7 +79,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 						JsonErrorReport(w, r, err.Error(), err.Status())
 						return
 					}
-					report_response["run"] = run
+					report_response["run_detail"] = run
 				} else {
 					runs, rerr := report.GetReportList()
 					if rerr != nil {
@@ -104,6 +104,8 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			log.Printf("Json for report: %+v", json_report)
+
 			if path_array_len < 4 || path_array_len > 5 {
 				log.Println("Bad path!")
 				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
@@ -126,6 +128,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				run_id := path_array[4]
 				rep, err := report.Get(run_id)
+				log.Printf("rep before: %v", rep)
 				if err != nil {
 					JsonErrorReport(w, r, err.Error(), err.Status())
 					return
@@ -136,6 +139,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				serr := rep.Save()
+				log.Printf("rep after: %v", rep)
 				if serr != nil {
 					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
