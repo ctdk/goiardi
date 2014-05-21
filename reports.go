@@ -29,12 +29,12 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("URL: %s", r.URL.Path)
 	log.Printf("encoding %s", r.Header.Get("Content-Encoding"))
 
-	protocol_version := r.Header.Get("X-Ops-Reporting-Protocol-Version")
+	// protocol_version := r.Header.Get("X-Ops-Reporting-Protocol-Version")
 	// someday there may be other protocol versions
-	if protocol_version != "0.1.0" {
+	/* if protocol_version != "0.1.0" {
 		JsonErrorReport(w, r, "Unsupported reporting protocol version", http.StatusNotFound)
 		return
-	}
+	} */
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
@@ -47,7 +47,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 
 	path_array := SplitPath(r.URL.Path)
 	path_array_len := len(path_array)
-	var report_response interface{}
+	report_response := make(map[string]interface{})
 
 	switch r.Method {
 		case "GET":
@@ -70,7 +70,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				// try sending it back as just an array
-				report_response = runs
+				report_response["run_history"] = runs
 			} else if op == "org" {
 				if path_array_len == 4 {
 					runId := path_array[3]
@@ -79,14 +79,14 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 						JsonErrorReport(w, r, err.Error(), err.Status())
 						return
 					}
-					report_response = run
+					report_response["run"] = run
 				} else {
 					runs, rerr := report.GetReportList()
 					if rerr != nil {
 						JsonErrorReport(w, r, rerr.Error(), http.StatusInternalServerError)
 						return
 					}
-					report_response = runs
+					report_response["run_history"] = runs
 				}
 			} else {
 				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
@@ -95,10 +95,12 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 		case "POST":
 			json_report, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
+				log.Println("bad json! %s", jerr.Error())
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 				return
 			}
 			if path_array_len < 4 || path_array_len > 5 {
+				log.Println("Bad path!")
 				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
 			}
@@ -115,7 +117,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 					JsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
 					return
 				}
-				report_response = rep
+				report_response["run_detail"] = rep
 			} else {
 				run_id := path_array[4]
 				rep, err := report.Get(run_id)
@@ -134,7 +136,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				// .... and?
-				report_response = rep
+				report_response["run_detail"] = rep
 			} 
 		default:
 			JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
