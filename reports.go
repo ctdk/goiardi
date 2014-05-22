@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/report"
+	"github.com/ctdk/goiardi/util"
 )
 
 func report_handler(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +70,6 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 					JsonErrorReport(w, r, nerr.Error(), http.StatusInternalServerError)
 					return
 				}
-				// try sending it back as just an array
 				report_response["run_history"] = runs
 			} else if op == "org" {
 				if path_array_len == 4 {
@@ -79,7 +79,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 						JsonErrorReport(w, r, err.Error(), err.Status())
 						return
 					}
-					report_response["run_detail"] = run
+					report_response = format_run_show(run)
 				} else {
 					runs, rerr := report.GetReportList()
 					if rerr != nil {
@@ -156,4 +156,16 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 	if err := enc.Encode(&report_response); err != nil {
 		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+// This function is subject to change, depending on what the client actually
+// expects. This may not be entirely correct.
+func format_run_show(run *report.Report) map[string]interface{} {
+	report_map := util.MapifyObject(run)
+	resources := report_map["resources"]
+	delete(report_map, "resources")
+	report_fmt := make(map[string]interface{})
+	report_fmt["run_detail"] = report_map
+	report_fmt["resources"] = resources
+	return report_fmt
 }

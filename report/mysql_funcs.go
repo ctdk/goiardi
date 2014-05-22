@@ -69,7 +69,7 @@ func (r *Report)fillReportFromMySQL(row data_store.ResRow) error{
 
 func getReportMySQL(runId string) (*Report, error) {
 	r := new(Report)
-	stmt, err := data_store.Dbh.Prepare("SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name WHERE run_id = ?")
+	stmt, err := data_store.Dbh.Prepare("SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE run_id = ?")
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (r *Report)saveMySQL() error {
 	// leverage more of each database's capabilities. Thus, here we shall
 	// do the very MySQL-specific INSERT ... ON DUPLICATE KEY UPDATE
 	// syntax.
-	_, err = tx.Exec("INSERT INTO reports (run_id, node_name, start_time, end_time, total_res_count, status, run_list, resources, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE reports SET start_time = ?, end_time = ?, total_res_count = ?, status = ?, run_list = ?, resources = ?, data = ?, updated_at = NOW() WHERE run_id = ?", r.RunId, r.NodeName, r.StartTime, r.EndTime, r.TotalResCount, r.Status, r.RunList, res, dat, r.StartTime, r.EndTime, r.TotalResCount, r.Status, r.RunList, res, dat, r.RunId)
+	_, err = tx.Exec("INSERT INTO reports (run_id, node_name, start_time, end_time, total_res_count, status, run_list, resources, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE start_time = ?, end_time = ?, total_res_count = ?, status = ?, run_list = ?, resources = ?, data = ?, updated_at = NOW()", r.RunId, r.NodeName, r.StartTime, r.EndTime, r.TotalResCount, r.Status, r.RunList, res, dat, r.StartTime, r.EndTime, r.TotalResCount, r.Status, r.RunList, res, dat)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -154,7 +154,7 @@ func getListMySQL() []string {
 
 func getReportListMySQL() ([]*Report, error) {
 	reports := make([]*Report, 0)
-	stmt, err := data_store.Dbh.Prepare("SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name")
+	stmt, err := data_store.Dbh.Prepare("SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports")
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func getReportListMySQL() ([]*Report, error) {
 
 func getNodeListMySQL(nodeName string) ([]*Report, error) {
 	reports := make([]*Report, 0)
-	stmt, err := data_store.Dbh.Prepare("SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name WHERE node_name = ?")
+	stmt, err := data_store.Dbh.Prepare("SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE node_name = ?")
 	if err != nil {
 		return nil, err
 	}
