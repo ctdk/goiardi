@@ -16,3 +16,6 @@ log_infos 2014-03-23T01:59:02Z Jeremy Bingham <jbingham@gmail.com> # Create a lo
 organizations 2014-03-23T02:01:19Z Jeremy Bingham <jbingham@gmail.com> # Create an organizations table. Not immediately useful for anything, but future-proofing just in case.
 file_checksums 2014-03-23T02:03:13Z Jeremy Bingham <jbingham@gmail.com> # Create file checksums table, for tracking uploaded file checksums (fancy that).
 @v0.5.0 2014-05-01T05:28:20Z Jeremy Bingham <jbingham@gmail.com> # Tag v0.5.0 for release
+log_infos [log_infos@v0.5.0] 2014-05-05T05:52:17Z Jeremy Bingham <jbingham@gmail.com># Change log_infos to store the objects name, rather than its id. Makes life a little simpler, especially if the object has been deleted.
+reports 2014-05-07T01:11:10Z Jeremy Bingham <jbingham@gmail.com> # Create reports table
+@v0.5.1 2014-05-26T18:25:17Z Jeremy Bingham <jbingham@gmail.com> # v0.5.1 release
