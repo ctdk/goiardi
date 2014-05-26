@@ -9,6 +9,7 @@
   what it was put there for, but it was wrong.
 * Add an event log to log changes to objects like nodes, clients, etc. See the
   README or godocs for details.
+* Add support for reporting (http://docs.opscode.com/reporting.html)
 
 0.5.0
 -----
