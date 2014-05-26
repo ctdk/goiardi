@@ -115,7 +115,7 @@ func getLogInfoListMySQL(limits ...int) []*LogInfo {
 		offset = 0
 	} 
 	logged_events := make([]*LogInfo, 0)
-	stmt, err := data_store.Dbh.Prepare("SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos LIMIT ?, ?")
+	stmt, err := data_store.Dbh.Prepare("SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos ORDER BY id DESC LIMIT ?, ?")
 	if err != nil {
 		log.Fatal(err)
 	}
