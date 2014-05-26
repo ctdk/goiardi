@@ -22,6 +22,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"fmt"
 	"log"
+	"time"
 )
 
 func checkForReportMySQL(dbhandle data_store.Dbhandle, runId string) (bool, error) {
@@ -154,14 +155,14 @@ func getListMySQL() []string {
 	return reportList
 }
 
-func getReportListMySQL() ([]*Report, error) {
+func getReportListMySQL(from, until time.Time, retrows int) ([]*Report, error) {
 	reports := make([]*Report, 0)
-	stmt, err := data_store.Dbh.Prepare("SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports")
+	stmt, err := data_store.Dbh.Prepare("SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE start_time >= ? AND start_time <= ? LIMIT ?")
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	rows, rerr := stmt.Query()
+	rows, rerr := stmt.Query(from, until, retrows)
 	if rerr != nil {
 		if rerr == sql.ErrNoRows {
 			return reports, nil
@@ -184,14 +185,14 @@ func getReportListMySQL() ([]*Report, error) {
 	return reports, nil
 }
 
-func getNodeListMySQL(nodeName string) ([]*Report, error) {
+func getNodeListMySQL(nodeName string, from, until time.Time, retrows int) ([]*Report, error) {
 	reports := make([]*Report, 0)
-	stmt, err := data_store.Dbh.Prepare("SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE node_name = ?")
+	stmt, err := data_store.Dbh.Prepare("SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE node_name = ? AND start_time >= ? AND start_time <= ? LIMIT ?")
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	rows, rerr := stmt.Query(nodeName)
+	rows, rerr := stmt.Query(nodeName, from, until, retrows)
 	if rerr != nil {
 		if rerr == sql.ErrNoRows {
 			return reports, nil

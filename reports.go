@@ -17,25 +17,25 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/util"
+	"strconv"
+	"time"
+	"fmt"
 )
 
 func report_handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	log.Printf("URL: %s", r.URL.Path)
-	log.Printf("encoding %s", r.Header.Get("Content-Encoding"))
 
-	// protocol_version := r.Header.Get("X-Ops-Reporting-Protocol-Version")
+	protocol_version := r.Header.Get("X-Ops-Reporting-Protocol-Version")
 	// someday there may be other protocol versions
-	/* if protocol_version != "0.1.0" {
+	if protocol_version != "0.1.0" {
 		JsonErrorReport(w, r, "Unsupported reporting protocol version", http.StatusNotFound)
 		return
-	} */
+	}
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
@@ -54,6 +54,61 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 		case "GET":
 			// Making an informed guess that admin rights are needed
 			// to see the node run reports
+			var rows int
+			var from, until time.Time
+			r.ParseForm()
+			if fr, found := r.Form["rows"]; found {
+				if len(fr) < 0 {
+					JsonErrorReport(w, r, "invalid rows", http.StatusBadRequest)
+					return
+				}
+				var err error
+				rows, err = strconv.Atoi(fr[0])
+				if err != nil {
+					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+					return
+				}
+			} else {
+				// default is 10
+				rows = 10 
+			}
+			if ff, found := r.Form["from"]; found {
+				if len(ff) < 0 {
+					JsonErrorReport(w, r, "invalid from", http.StatusBadRequest)
+					return
+				}
+				fromUnix, err := strconv.ParseInt(ff[0], 10, 64)
+				if err != nil {
+					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+					return
+				}
+				from = time.Unix(fromUnix, 0)
+			} else {
+				from = time.Now().Add(-(time.Duration(24 * 90) * time.Hour))
+			}
+			if fu, found := r.Form["until"]; found {
+				if len(fu) < 0 {
+					JsonErrorReport(w, r, "invalid until", http.StatusBadRequest)
+					return
+				}
+				untilUnix, err := strconv.ParseInt(fu[0], 10, 64)
+				if err != nil {
+					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+					return
+				}
+				until = time.Unix(untilUnix, 0)
+			} else {
+				until = time.Now()
+			}
+
+			// If the end time is more than 90 days ahead of the
+			// start time, give an error
+			if from.Truncate(time.Hour).Sub(until.Truncate(time.Hour)) >= (time.Duration(24 * 90) * time.Hour) {
+				msg := fmt.Sprintf("End time %s is too far ahead of start time %s (max 90 days)", until.String(), from.String())
+				JsonErrorReport(w, r, msg, http.StatusNotAcceptable)
+				return
+			}
+
 			if !opUser.IsAdmin() {
 				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
@@ -65,7 +120,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 			op := path_array[1]
 			if op == "nodes" && path_array_len == 4 {
 				nodeName := path_array[2]
-				runs, nerr := report.GetNodeList(nodeName)
+				runs, nerr := report.GetNodeList(nodeName, from, until, rows)
 				if nerr != nil {
 					JsonErrorReport(w, r, nerr.Error(), http.StatusInternalServerError)
 					return
@@ -81,7 +136,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 					}
 					report_response = format_run_show(run)
 				} else {
-					runs, rerr := report.GetReportList()
+					runs, rerr := report.GetReportList(from, until, rows)
 					if rerr != nil {
 						JsonErrorReport(w, r, rerr.Error(), http.StatusInternalServerError)
 						return
@@ -99,15 +154,11 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 			json_report := make(map[string]interface{})
 			dec := json.NewDecoder(r.Body)
 			if jerr := dec.Decode(&json_report); jerr != nil {
-				log.Println("bad json! %s", jerr.Error())
 				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 				return
 			}
 
-			log.Printf("Json for report: %+v", json_report)
-
 			if path_array_len < 4 || path_array_len > 5 {
-				log.Println("Bad path!")
 				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
 			}
@@ -128,7 +179,6 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				run_id := path_array[4]
 				rep, err := report.Get(run_id)
-				log.Printf("rep before: %v", rep)
 				if err != nil {
 					JsonErrorReport(w, r, err.Error(), err.Status())
 					return
@@ -139,7 +189,6 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				serr := rep.Save()
-				log.Printf("rep after: %v", rep)
 				if serr != nil {
 					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
