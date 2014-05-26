@@ -1,4 +1,4 @@
-0.5.1 (unreleased)
+0.5.1
 -----
 * Add log levels (from debug to critical). This makes -V/--verbose useful.
 * Add an easier option in the config file to specify log levels by name.
