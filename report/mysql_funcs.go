@@ -19,6 +19,7 @@ package report
 import (
 	"github.com/ctdk/goiardi/data_store"
 	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
 	"fmt"
 	"log"
 	"time"
@@ -48,6 +49,7 @@ func checkForReportMySQL(dbhandle data_store.Dbhandle, runId string) (bool, erro
 
 func (r *Report)fillReportFromMySQL(row data_store.ResRow) error{
 	var res, dat, st, et []byte
+	var st, et mysql.NullTime
 	err := row.Scan(&r.RunId, &st, &et, &r.TotalResCount, &r.Status, &r.RunList, &res, &dat, &r.NodeName)
 	if err != nil {
 		return err
@@ -58,12 +60,13 @@ func (r *Report)fillReportFromMySQL(row data_store.ResRow) error{
 	if err = data_store.DecodeBlob(dat, &r.Data); err != nil {
 		return err
 	}
-	if r.StartTime, err = time.Parse(data_store.MySQLTimeFormat, string(st)); err != nil {
-		return err
+	if st.Valid {
+		r.StartTime = st.Time
+	} 
+	if et.Valid {
+		r.EndTime = et.Time
 	}
-	if r.EndTime, err = time.Parse(data_store.MySQLTimeFormat, string(et)); err != nil {
-		return err
-	}
+
 	return nil
 }
 

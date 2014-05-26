@@ -88,6 +88,7 @@ func New(runId string, nodeName string) (*Report, util.Gerror) {
 	report := &Report{
 		RunId: runId,
 		NodeName: nodeName,
+		Status: "started",
 	}
 	return report, nil
 }
