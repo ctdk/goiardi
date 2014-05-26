@@ -20,8 +20,8 @@ Many go tests are present as well in different goiardi subdirectories.
 DEPENDENCIES
 ------------
 
-Goiardi currently has five dependencies: go-flags, go-cache, go-trie, toml, and
-the mysql driver from go-sql-driver.
+Goiardi currently has seven dependencies: go-flags, go-cache, go-trie, toml, the 
+mysql driver from go-sql-driver, logger, and go-uuid.
 
 To install them, run:
 
@@ -31,6 +31,8 @@ To install them, run:
    go get github.com/ctdk/go-trie/gtrie
    go get github.com/BurntSushi/toml
    go get github.com/go-sql-driver/mysql
+   go get git.tideland.biz/goas/logger
+   go get github.com/codeskyblue/go-uuid
 ```
 
 from your $GOROOT.
@@ -149,9 +151,19 @@ user, are not present, it will create new keys in the --conf-root directory. Use
 them as you would normally for validating clients, performing tasks with the
 admin user, or using chef-webui if webui will run in front of goiardi.
 
+In auth mode, goiardi supports both versions 1.0 and 1.1 of the Chef
+authentication protocol.
+
 *Note:* The admin user, when created on startup, does not have a password. This
 prevents logging in to the webui with the admin user, so a password will have to
 be set for admin before doing so.
+
+### Log levels
+
+Log levels can be set in goiardi with either the `log-level` option in the
+configuration file, or with one to four -V flags on the command line. Log level
+options are "debug", "info", "warning", "error", and "critical". More -V on the
+command line means more spewing into the log.
 
 ### MySQL mode
 
@@ -247,6 +259,16 @@ The data returned from the event log should look something like this:
   "id": 22
 }
 ```
+
+### Reporting
+
+Goiardi now supports, on an experimental basis, Chef's reporting facilities.
+Nothing needs to be enabled in goiardi to use this, but changes are required with
+the client. See http://docs.opscode.com/reporting.html for details on how to
+enable reporting and how to use it.
+
+As this is an experimental feature, it may not work entirely correctly. Bug
+reports are appreciated.
 
 ### Tested Platforms
 
