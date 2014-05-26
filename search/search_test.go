@@ -21,7 +21,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/environment"
-	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/data_bag"
 	"fmt"
 )
@@ -41,10 +41,10 @@ var env1 *environment.ChefEnvironment
 var env2 *environment.ChefEnvironment
 var env3 *environment.ChefEnvironment
 var env4 *environment.ChefEnvironment
-var client1 *actor.Actor
-var client2 *actor.Actor
-var client3 *actor.Actor
-var client4 *actor.Actor
+var client1 *client.Client
+var client2 *client.Client
+var client3 *client.Client
+var client4 *client.Client
 var dbag1 *data_bag.DataBag
 var dbag2 *data_bag.DataBag
 var dbag3 *data_bag.DataBag
@@ -55,7 +55,7 @@ func makeSearchItems() int{
 	nodes := make([]*node.Node, 4)
 	roles := make([]*role.Role, 4)
 	envs := make([]*environment.ChefEnvironment, 4)
-	clients := make([]*actor.Actor, 4)
+	clients := make([]*client.Client, 4)
 	dbags := make([]*data_bag.DataBag, 4)
 
 	for i := 0; i < 4; i++ {
@@ -65,7 +65,7 @@ func makeSearchItems() int{
 		roles[i].Save()
 		envs[i], _ = environment.New(fmt.Sprintf("env%d",i))
 		envs[i].Save()
-		clients[i], _ = actor.New(fmt.Sprintf("client%d",i), "client")
+		clients[i], _ = client.New(fmt.Sprintf("client%d",i))
 		clients[i].Save()
 		dbags[i], _ = data_bag.New(fmt.Sprintf("data_bag%d",i))
 		dbags[i].Save()
@@ -154,7 +154,7 @@ func TestSearchEnvAll(t *testing.T){
 
 func TestSearchClient(t *testing.T){
 	c, _ := Search("client", "name:client1")
-	if c[0].(*actor.Actor).Name != "client1" {
+	if c[0].(*client.Client).Name != "client1" {
 		t.Errorf("nothing returned from search")
 	}
 }
