@@ -187,6 +187,9 @@ but the basic steps to deploy the schema are:
 
 * In sql-files/mysql-bundle, deploy the bundle: `sqitch deploy db:mysql://root[:<password>]@/goiardi`
 
+To update an existing database deployed by sqitch, run the `sqitch deploy`
+command above again.
+
 If you really really don't want to install sqitch, apply each SQL patch in
 sql-files/mysql-bundle by hand in the same order they're listed in the
 sqitch.plan file.
