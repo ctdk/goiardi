@@ -62,9 +62,12 @@ https-urls = false
 disable-webui = false
 
 # Log events. Keep track of changes to chef objects by logging events that
-# change them. In SQL mode, changes are in the log_infos table; in in-memory
-# mode, they're accessible through the /events endpoint.
+# change them. They are accessible through the /events endpoint.
 log-events = true
+
+# How many log events to keep. If set, will periodically purge logged events to
+# keep the number of events stored to this number.
+#log-event-keep = 1000
 
 # MySQL options. If "use-mysql" is true on the command line or in the
 # configuration file, connect to mysql with the options in [mysql]. All of the
