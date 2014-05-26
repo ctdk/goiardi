@@ -20,6 +20,7 @@ import (
 	"testing"
 	"fmt"
 	"github.com/ctdk/goiardi/node"
+	"time"
 )
 
 func TestReportCreation(t *testing.T){
@@ -43,8 +44,8 @@ func TestReportUpdating(t *testing.T){
 	create := map[string]interface{}{"action":"start","run_id":"12b8be8d-a2ef-4fc6-88b3-4c18103b88df","start_time":"2014-05-10 01:05:42 +0000"}
 	//update := map[string]interface{}{"action":"end","resources":[],"status":"success","run_list":[],"total_res_count":"0","data":{},"start_time":"2014-05-10 01:05:42 +0000","end_time":"2014-05-10 01:05:42 +0000"}
 	update := map[string]interface{}{"action":"end", "status":"success", "start_time":"2014-05-10 01:05:42 +0000","end_time":"2014-05-10 01:05:42 +0000", "total_res_count":"0"  }
-	update["resources"] = make([]map[string]interface{},0)
-	update["run_list"] = make([]string, 0)
+	update["resources"] = make([]interface{},0)
+	update["run_list"] = "[]"
 	update["data"] = make(map[string]interface{})
 	r, err := NewFromJson("node", create)
 	if err != nil {
@@ -62,6 +63,7 @@ func TestReportListing(t *testing.T){
 	for i := 0; i < 3; i++ {
 		u := fmt.Sprintf(uuid, i)
 		r, _ := New(u, "node")
+		r.StartTime = time.Now()
 		r.Save()
 	}
 	rs := GetList()
@@ -73,9 +75,12 @@ func TestReportListing(t *testing.T){
 	for i := 4; i < 6; i++ {
 		u := fmt.Sprintf(uuid, i)
 		r, _ := New(u, n.Name)
+		r.StartTime = time.Now()
 		r.Save()
 	}
-	ns, nerr := GetNodeList(n.Name)
+	from := time.Now().Add(-(time.Duration(24 * 90) * time.Hour))
+	until := time.Now()
+	ns, nerr := GetNodeList(n.Name, from, until, 100)
 	if nerr != nil {
 		t.Errorf(nerr.Error())
 	}

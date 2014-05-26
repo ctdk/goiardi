@@ -185,7 +185,7 @@ but the basic steps to deploy the schema are:
 
 * Optionally, create a separate mysql user for goiardi and give it permissions on that database.
 
-* In sql-files/mysql-bundle, deploy the bundle: `sqitch deploy db:mysql://root@<password>/goiardi`
+* In sql-files/mysql-bundle, deploy the bundle: `sqitch deploy db:mysql://root[:<password>]@/goiardi`
 
 If you really really don't want to install sqitch, apply each SQL patch in
 sql-files/mysql-bundle by hand in the same order they're listed in the
