@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/role"
+	"github.com/ctdk/goiardi/log_info"
 	"net/http"
 	"fmt"
 	"encoding/json"
@@ -105,6 +106,10 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 				}
 				if err := chef_env.Save(); err != nil {
 					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+					return
+				}
+				if lerr := log_info.LogEvent(opUser, chef_env, "create"); lerr != nil {
+					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
 				env_response["uri"] = util.ObjURL(chef_env)
@@ -203,6 +208,10 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 					JsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
+				if lerr := log_info.LogEvent(opUser, env, "modify"); lerr != nil {
+					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+					return
+				}
 			default:
 				JsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 				return
@@ -216,6 +225,10 @@ func environment_handler(w http.ResponseWriter, r *http.Request){
 			err := env.Delete()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if lerr := log_info.LogEvent(opUser, env, "delete"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
 		}

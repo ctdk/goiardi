@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/log_info"
 )
 
 func list_handler(w http.ResponseWriter, r *http.Request){
@@ -106,6 +107,10 @@ func node_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			err := chef_node.Save()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return nil
+			}
+			if lerr := log_info.LogEvent(opUser, chef_node, "create"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return nil
 			}
 			node_response["uri"] = util.ObjURL(chef_node)
@@ -201,6 +206,10 @@ func client_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			client_response["public_key"] = chef_client.PublicKey()
 			
 			chef_client.Save()
+			if lerr := log_info.LogEvent(opUser, chef_client, "create"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				return nil
+			}
 			client_response["uri"] = util.ObjURL(chef_client)
 			w.WriteHeader(http.StatusCreated)
 		default:
@@ -295,6 +304,10 @@ func user_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			user_response["public_key"] = chef_user.PublicKey()
 			
 			chef_user.Save()
+			if lerr := log_info.LogEvent(opUser, chef_user, "create"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				return nil
+			}
 			user_response["uri"] = util.ObjURL(chef_user)
 			w.WriteHeader(http.StatusCreated)
 		default:
@@ -351,6 +364,10 @@ func role_handling(w http.ResponseWriter, r *http.Request) map[string]string {
 			err := chef_role.Save()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return nil
+			}
+			if lerr := log_info.LogEvent(opUser, chef_role, "create"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return nil
 			}
 			role_response["uri"] = util.ObjURL(chef_role)

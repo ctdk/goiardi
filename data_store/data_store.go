@@ -133,6 +133,103 @@ func (ds *DataStore) GetList(key_type string) []string{
 	return j
 }
 
+// Set a log_info in the data store. Unlike most of these objects, log infos
+// are stored and retrieved by id, since they have no useful names.
+func (ds *DataStore) SetLogInfo(obj interface{}) error {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	ds_key := ds.make_key("log_info", "log_infos")
+	a, _ := ds.dsc.Get(ds_key)
+	if a == nil {
+		a = make(map[int]interface{})
+	}
+	arr := a.(map[int]interface{})
+	next_id := getNextId(arr)
+	arr[next_id] = obj
+	ds.dsc.Set(ds_key, arr, -1)
+	return nil
+}
+
+func (ds *DataStore) DeleteLogInfo(id int) error {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	ds_key := ds.make_key("log_info", "log_infos")
+	a, _ := ds.dsc.Get(ds_key)
+	if a == nil {
+		a = make(map[int]interface{})
+	}
+	arr := a.(map[int]interface{})
+	delete(arr, id)
+	ds.dsc.Set(ds_key, arr, -1)
+	return nil
+}
+
+func (ds *DataStore) PurgeLogInfoBefore(id int) (int64, error) {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	ds_key := ds.make_key("log_info", "log_infos")
+	a, _ := ds.dsc.Get(ds_key)
+	if a == nil {
+		a = make(map[int]interface{})
+	}
+	arr := a.(map[int]interface{})
+	new_logs := make(map[int]interface{})
+	var purged int64 = 0
+	for k, v := range arr {
+		if k > id {
+			new_logs[k] = v
+		} else {
+			purged++
+		}
+	}
+	ds.dsc.Set(ds_key, new_logs, -1)
+	return purged, nil
+}
+
+func getNextId(lis map[int]interface{}) int {
+	if len(lis) == 0 {
+		return 1
+	}
+	var keys []int
+	for k := range lis {
+		keys = append(keys, k)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
+	return keys[0] + 1
+}
+
+// Get a log_info by id.
+func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
+	ds.m.RLock()
+	defer ds.m.RUnlock()
+	ds_key := ds.make_key("log_info", "log_infos")
+	a, _ := ds.dsc.Get(ds_key)
+	if a == nil {
+		err := fmt.Errorf("No log events stored")
+		return nil, err
+	}
+	arr := a.(map[int]interface{})
+	item := arr[id]
+	if item == nil {
+		err := fmt.Errorf("Log info with id %d not found", id)
+		return nil, err
+	}
+	return item, nil
+}
+
+// Get all the log infos currently stored 
+func (ds *DataStore) GetLogInfoList() map[int]interface{} {
+	ds.m.RLock()
+	defer ds.m.RUnlock()
+	ds_key := ds.make_key("log_info", "log_infos")
+	a, _ := ds.dsc.Get(ds_key)
+	if a == nil {
+		return nil
+	}
+	arr := a.(map[int]interface{})
+	return arr
+}
+
 // Freeze and save the data store to disk.
 func (ds *DataStore) Save(dsFile string) error {
 	if dsFile == "" {

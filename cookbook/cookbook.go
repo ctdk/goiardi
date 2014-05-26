@@ -83,6 +83,14 @@ func (c *Cookbook) URLType() string {
 	return "cookbooks"
 }
 
+func (c *CookbookVersion) GetName() string {
+	return c.Name
+}
+
+func (c *CookbookVersion) URLType() string {
+	return "cookbooks"
+}
+
 // Create a new cookbook.
 func New(name string) (*Cookbook, util.Gerror){
 	var found bool

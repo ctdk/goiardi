@@ -35,6 +35,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
+	"github.com/ctdk/goiardi/log_info"
 	"fmt"
 	"os"
 	"os/signal"
@@ -78,6 +79,7 @@ func main(){
 		}
 	}
 	setSaveTicker()
+	setLogEventPurgeTicker()
 
 	/* Create default clients and users. Currently chef-validator,
 	 * chef-webui, and admin. */
@@ -107,6 +109,8 @@ func main(){
 	http.HandleFunc("/users", list_handler)
 	http.HandleFunc("/users/", user_handler)
 	http.HandleFunc("/file_store/", file_store_handler)
+	http.HandleFunc("/events", event_list_handler)
+	http.HandleFunc("/events/", event_handler)
 
 	/* TODO: figure out how to handle the root & not found pages */
 	http.HandleFunc("/", root_handler)
@@ -365,26 +369,53 @@ func gobRegister() {
 	gob.Register(cc)
 	uu := new(user.User)
 	gob.Register(uu)
+	li := new(log_info.LogInfo)
+	gob.Register(li)
+	mis := map[int]interface{}{}
+	gob.Register(mis)
+	cbv := new(cookbook.CookbookVersion)
+	gob.Register(cbv)
+	dbi := new(data_bag.DataBagItem)
+	gob.Register(dbi)
 }
 
 func setSaveTicker() {
-	ds := data_store.New()
-	ticker := time.NewTicker(time.Second * time.Duration(config.Config.FreezeInterval))
-	go func(){
-		for _ = range ticker.C {
-			logger.Infof("Automatically saving data store...")
-			if config.Config.FreezeData {
+	if config.Config.FreezeData {
+		ds := data_store.New()
+		ticker := time.NewTicker(time.Second * time.Duration(config.Config.FreezeInterval))
+		go func(){
+			for _ = range ticker.C {
 				if config.Config.DataStoreFile != "" {
+					logger.Infof("Automatically saving data store...")
 					uerr := ds.Save(config.Config.DataStoreFile)
 					if uerr != nil {
 						logger.Errorf(uerr.Error())
 					}
 				}
+				logger.Infof("Automatically saving index...")
 				ierr := indexer.SaveIndex(config.Config.IndexFile)
 				if ierr != nil {
 					logger.Errorf(ierr.Error())
 				}
 			}
-		}
-	}()
+		}()
+	}
+}
+
+func setLogEventPurgeTicker() {
+	if config.Config.LogEventKeep != 0 {
+		ticker := time.NewTicker(time.Second * time.Duration(60))
+		go func() {
+			for _ = range ticker.C {
+				les := log_info.GetLogInfos(0, 1)
+				if len(les) != 0 {
+					p, err := log_info.PurgeLogInfos(les[0].Id - config.Config.LogEventKeep)
+					if err != nil {
+						logger.Errorf(err.Error())
+					}
+					logger.Debugf("Purged %d events automatically", p)
+				}
+			}
+		}()
+	}
 }

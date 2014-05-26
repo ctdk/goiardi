@@ -7,6 +7,8 @@
 * Authentication protocol version 1.1 now supported.
 * Remove a sort on run lists that was there for some reason. I have no idea
   what it was put there for, but it was wrong.
+* Add an event log to log changes to objects like nodes, clients, etc. See the
+  README or godocs for details.
 
 0.5.0
 -----

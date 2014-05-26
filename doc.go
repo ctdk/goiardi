@@ -128,6 +128,10 @@ Currently available command line and config file options:
        --local-filestore-dir= Directory to save uploaded files in. Optional when
                           running in in-memory mode, *mandatory* for SQL
                           mode.
+       --log-events       Log changes to chef objects.
+   -K, --log-event-keep=  Number of events to keep in the event log. If set,
+                          the event log will be checked periodically and
+                          pruned to this number of entries.
 
    Options specified on the command line override options in the config file.
 
@@ -199,6 +203,43 @@ given below:
 		# explanation of available parameters
 		[mysql.extra_params]
 			tls = "false"
+
+Event Logging
+
+Goiardi has optional event logging. When enabled with the `--log-events` command
+line option, or with the `"log-events"` option in the config file, changes to
+clients, users, cookbooks, data bags, environments, nodes, and roles will be
+tracked. The event log can be viewed through the /events API endpoint.
+
+If the `-K`/`--log-event-keep` option is set, then once a minute the event log
+will be automatically purged, leaving that many events in the log. This is particularly recommended when using the event log in in-memory mode.
+
+The event API endpoints work as follows:
+
+	`GET /events` - optionally taking `offset` and `limit` query parameters.
+	List the logged events, starting with the most recent. Use the `offset` and 
+	`limit` query parameters to view smaller chunks of the event log at one time.
+
+	`DELETE /events?purge=1234` - purge logged events older than the given id from the event log.
+
+	`GET /events/1234` - get a single logged event with the given id.
+
+	`DELETE /events/1234` - delete a single logged event from the event log.
+
+A user or client must be an administrator account to use the `/events` endpoint.
+
+The data returned by an event should look something like this:
+
+	{
+	  "actor_info": "{\"username\":\"admin\",\"name\":\"admin\",\"email\":\"\",\"admin\":true}\n",
+	  "actor_type": "user",
+	  "time": "2014-05-06T07:40:12Z",
+	  "action": "delete",
+	  "object_type": "*client.Client",
+	  "object_name": "pedant_testclient_1399361999-483981000-42305",
+	  "extended_info": "{\"name\":\"pedant_testclient_1399361999-483981000-42305\",\"node_name\":\"pedant_testclient_1399361999-483981000-42305\",\"json_class\":\"Chef::ApiClient\",\"chef_type\":\"client\",\"validator\":false,\"orgname\":\"default\",\"admin\":true,\"certificate\":\"\"}\n",
+	  "id": 22
+	}
 
 Tested Platforms
 

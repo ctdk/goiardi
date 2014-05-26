@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/log_info"
 )
 
 func role_handler(w http.ResponseWriter, r *http.Request){
@@ -68,6 +69,10 @@ func role_handler(w http.ResponseWriter, r *http.Request){
 						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 						return
 					}
+					if lerr := log_info.LogEvent(opUser, chef_role, "delete"); lerr != nil {
+						JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+						return
+					}
 				}
 			case "PUT":
 				if !opUser.IsAdmin() {
@@ -104,6 +109,10 @@ func role_handler(w http.ResponseWriter, r *http.Request){
 				err = chef_role.Save()
 				if err != nil {
 					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				if lerr := log_info.LogEvent(opUser, chef_role, "modify"); lerr != nil {
+					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
 				enc := json.NewEncoder(w)

@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/log_info"
 )
 
 func node_handler(w http.ResponseWriter, r *http.Request){
@@ -59,6 +60,10 @@ func node_handler(w http.ResponseWriter, r *http.Request){
 				err = chef_node.Delete()
 				if err != nil {
 					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				if lerr := log_info.LogEvent(opUser, chef_node, "delete"); lerr != nil {
+					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
 			}
@@ -104,6 +109,10 @@ func node_handler(w http.ResponseWriter, r *http.Request){
 			err = chef_node.Save()
 			if err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if lerr := log_info.LogEvent(opUser, chef_node, "modify"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
 			enc := json.NewEncoder(w)

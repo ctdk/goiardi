@@ -173,6 +173,14 @@ func (db *DataBag) URLType() string {
 	return "data"
 }
 
+func (db *DataBagItem) GetName() string {
+	return db.DocId()
+}
+
+func (db *DataBagItem) URLType() string {
+	return "data"
+}
+
 /* Data bag item functions and methods */
 
 /* To do: Idle test; see if changes to the returned data bag item are reflected
