@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: Goiardi - Goiardi</title>
+  <title>Goiardi Version 0.5.1 - Rodan Overhead - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="Category: goiardi">
+  <meta name="description" content="The sky darkens. Blotting out the sun, Rodan appears to destroy beloved landmarks and stomp on small models of tanks. Goiardi version 0.5.1 has been &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardiblog/categories/goiardi">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -82,151 +82,121 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: Goiardi</h1>
+    
+      <h1 class="entry-title">Goiardi Version 0.5.1 - Rodan Overhead</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-26T11:04:04-07:00" pubdate data-updated="true">May 26<span>th</span>, 2014</time>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p>The sky darkens. Blotting out the sun, Rodan appears to destroy beloved landmarks and stomp on small models of tanks. Goiardi <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.1">version 0.5.1</a> has been released.</p>
 
-  
-  <h2>2014</h2>
+<p>This is an incremental release, made up of bug fixes and relatively minor new features. The most interesting new features are <a href="https://github.com/ctdk/goiardi/tree/cc9aeb1766be7515458dcc6ad6e5260201b0e837#event-logging">event logging</a> and <a href="https://github.com/ctdk/goiardi/tree/cc9aeb1766be7515458dcc6ad6e5260201b0e837#reporting">reporting</a>, although the log level changes are also nice.</p>
 
-<article>
-  
-<h1><a href="/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/">Goiardi Version 0.5.1 - Rodan Overhead</a></h1>
-<time datetime="2014-05-26T11:04:04-07:00" pubdate><span class='month'>May</span> <span class='day'>26</span> <span class='year'>2014</span></time>
+<p>From the CHANGELOG:</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/event-logging/'>event logging</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/logging/'>logging</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a>, <a class='category' href='/goiardi/blog/categories/reporting/'>reporting</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/goiardi/blog/2014/05/02/goiardi-version-0-dot-5-0-sturmisch-bewegt-now-with-mysql/">Goiardi Version 0.5.0 - Stürmisch Bewegt - Now With MySQL</a></h1>
-<time datetime="2014-05-02T10:10:55-07:00" pubdate><span class='month'>May</span> <span class='day'>02</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/mysql/'>mysql</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a></span>
-</footer>
+<ul>
+<li>Add log levels (from debug to critical). This makes -V/&mdash;verbose useful.</li>
+<li>Add an easier option in the config file to specify log levels by name.</li>
+<li>ipv6 already worked, but accidentally. Now it works in a more deliberate
+fashion, preventing mishaps with addresses, colons, and port numbers.</li>
+<li>Authentication protocol version 1.1 now supported.</li>
+<li>Remove a sort on run lists that was there for some reason. I have no idea
+what it was put there for, but it was wrong.</li>
+<li>Add an event log to log changes to objects like nodes, clients, etc. See the
+README or godocs for details.</li>
+<li>Add support for reporting (<a href="http://docs.opscode.com/reporting.html"><a href="http://docs.opscode.com/reporting.html">http://docs.opscode.com/reporting.html</a></a>)</li>
+</ul>
 
 
-</article>
+<p>This release should not break old save files, if you&rsquo;re using that. If you&rsquo;re using MySQL, you&rsquo;ll need to deploy the sqitch changes.</p>
 
+<p>The next big things to start working on are the long promised Postgres support, and etcd/serf/consul etc. integration. Groupcache has also been asked for and looks like a worthwhile thing to pick up. As always, the <a href="https://github.com/ctdk/goiardi/issues?state=open">issues page</a> is a good place to look at what&rsquo;s being worked on.</p>
 
-
-<article>
-  
-<h1><a href="/goiardi/blog/2014/03/19/goiardi-version-0-dot-4-2-this-is-spinal-tap/">Goiardi Version 0.4.2 - This Is Spinal Tap</a></h1>
-<time datetime="2014-03-19T23:04:46-07:00" pubdate><span class='month'>Mar</span> <span class='day'>19</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/bugfix-releases/'>bugfix releases</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release/">Goiardi Version 0.4.1 Release</a></h1>
-<time datetime="2014-03-16T14:32:27-07:00" pubdate><span class='month'>Mar</span> <span class='day'>16</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/bugfix-releases/'>bugfix releases</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released/">Version 0.3.3 of Goiardi Released</a></h1>
-<time datetime="2014-02-16T11:46:49-08:00" pubdate><span class='month'>Feb</span> <span class='day'>16</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/goiardi/blog/2014/01/18/save-persistent-store-fix/">Save Persistent Store Fix</a></h1>
-<time datetime="2014-01-18T15:10:27-08:00" pubdate><span class='month'>Jan</span> <span class='day'>18</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/persistence/'>persistence</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/goiardi/blog/2014/01/09/reindexing-search-capability-added/">Reindexing Search Capability Added</a></h1>
-<time datetime="2014-01-09T23:32:11-08:00" pubdate><span class='month'>Jan</span> <span class='day'>09</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/new-feature/'>new feature</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/goiardi/blog/2014/01/06/version-0-dot-3-0-of-goiardi-released/">Version 0.3.0 of Goiardi Released</a></h1>
-<time datetime="2014-01-06T21:09:00-08:00" pubdate><span class='month'>Jan</span> <span class='day'>06</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/chef/'>chef</a>, <a class='category' href='/goiardi/blog/categories/go/'>go</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/golang/'>golang</a></span>
-</footer>
-
-
-</article>
-
-
-
-  
-  <h2>2013</h2>
-
-<article>
-  
-<h1><a href="/goiardi/blog/2013/12/31/introducing-goiardi/">Introducing Goiardi</a></h1>
-<time datetime="2013-12-31T12:32:00-08:00" pubdate><span class='month'>Dec</span> <span class='day'>31</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/chef/'>chef</a>, <a class='category' href='/goiardi/blog/categories/go/'>go</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/golang/'>golang</a></span>
-</footer>
-
-
-</article>
-
+<p>Goiardi is also starting to grow beyond using chef-pedant for most of its testing; it&rsquo;s about time to start more native golang tests for goiardi and not use chef-pedant for the main tests. It should always work with chef-pedant, of course, but goiardi&rsquo;s starting to get more features that chef-pedant doesn&rsquo;t check.</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Jeremy Bingham</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-26T11:04:04-07:00" pubdate data-updated="true">May 26<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/goiardi/blog/categories/event-logging/'>event logging</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/logging/'>logging</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a>, <a class='category' href='/goiardi/blog/categories/reporting/'>reporting</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+  
+<a href='https://alpha.app.net/intent/post/?text=App.net%20social%20buttons%20are%20here' class='adn-button' target='_blank' data-type='share' data-width='121' data-height='20' data-text='' >Share on App.net</a>
+<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='//d2zh9g63fcvyrq.cloudfront.net/adn.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'adn-button-js'));</script>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/goiardi/blog/2014/05/02/goiardi-version-0-dot-5-0-sturmisch-bewegt-now-with-mysql/" title="Previous Post: Goiardi Version 0.5.0 - Stürmisch bewegt - now with MySQL">&laquo; Goiardi Version 0.5.0 - Stürmisch bewegt - now with MySQL</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -300,7 +270,10 @@
       var disqus_shortname = 'goiardi';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/';
+        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

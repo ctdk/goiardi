@@ -133,11 +133,12 @@
   
     <section>
   <h1>About Goiardi</h1>
-  <p><a href="https://github.com/ctdk/goiardi">Goiardi</a> is an implementation of <a href="http://www.getchef.com/chef/">the Chef server</a> written in <a href="http://golang.org">Go</a>. It runs in memory (with optional persistence on disk), is self-contained, and runs on a number of different platforms.</p>
+  <p><a href="https://github.com/ctdk/goiardi">Goiardi</a> is an implementation of <a href="http://www.getchef.com/chef/">the Chef server</a> written in <a href="http://golang.org">Go</a>. It runs in memory (with optional persistence on disk) or can use MySQL as a backend, is self-contained, and runs on a number of different platforms.</p>
 </section>
 <section>
   <h1>Additional Resources</h1>
    <ul>
+    <li><a href="https://github.com/ctdk/goiardi-schema">goiardi-schema</a>: The SQL schema, managed with sqitch, for goiardi.</li>
     <li><a href="https://github.com/marpaia/chef-golang">chef-golang</a>: A golang chef client library.</li>
     <li><a href="http://docs.opscode.com/">docs.opscode.com</a>: The official Chef documentation. The chef client programs are, of course, needed to do much of anything with goiardi.</li>
     <li><a href="https://github.com/opscode/chef-zero">chef-zero</a>: Another in-memory chef server.</li>
@@ -148,6 +149,10 @@
 <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/">Goiardi Version 0.5.1 - Rodan Overhead</a>
+      </li>
     
       <li class="post">
         <a href="/goiardi/blog/2014/05/02/goiardi-version-0-dot-5-0-sturmisch-bewegt-now-with-mysql/">Goiardi Version 0.5.0 - Stürmisch Bewegt - Now With MySQL</a>
@@ -163,10 +168,6 @@
     
       <li class="post">
         <a href="/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/">Version 0.4.0 of Goiardi Released. Now, With Authentication!</a>
-      </li>
-    
-      <li class="post">
-        <a href="/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/">Meanwhile, in the Auth Branch...</a>
       </li>
     
   </ul>

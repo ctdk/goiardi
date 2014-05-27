@@ -9,7 +9,7 @@
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="Stormily agitated, a new goiardi release appears! Goiardi version 0.5.0 has been released. Aside from a few bug fixes, this release brings MySQL &hellip;">
+  <meta name="description" content="The sky darkens. Blotting out the sun, Rodan appears to destroy beloved landmarks and stomp on small models of tanks. Goiardi version 0.5.1 has been &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,66 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/">Goiardi Version 0.5.1 - Rodan Overhead</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-26T11:04:04-07:00" pubdate data-updated="true">May 26<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>The sky darkens. Blotting out the sun, Rodan appears to destroy beloved landmarks and stomp on small models of tanks. Goiardi <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.1">version 0.5.1</a> has been released.</p>
+
+<p>This is an incremental release, made up of bug fixes and relatively minor new features. The most interesting new features are <a href="https://github.com/ctdk/goiardi/tree/cc9aeb1766be7515458dcc6ad6e5260201b0e837#event-logging">event logging</a> and <a href="https://github.com/ctdk/goiardi/tree/cc9aeb1766be7515458dcc6ad6e5260201b0e837#reporting">reporting</a>, although the log level changes are also nice.</p>
+
+<p>From the CHANGELOG:</p>
+
+<ul>
+<li>Add log levels (from debug to critical). This makes -V/&mdash;verbose useful.</li>
+<li>Add an easier option in the config file to specify log levels by name.</li>
+<li>ipv6 already worked, but accidentally. Now it works in a more deliberate
+fashion, preventing mishaps with addresses, colons, and port numbers.</li>
+<li>Authentication protocol version 1.1 now supported.</li>
+<li>Remove a sort on run lists that was there for some reason. I have no idea
+what it was put there for, but it was wrong.</li>
+<li>Add an event log to log changes to objects like nodes, clients, etc. See the
+README or godocs for details.</li>
+<li>Add support for reporting (<a href="http://docs.opscode.com/reporting.html"><a href="http://docs.opscode.com/reporting.html">http://docs.opscode.com/reporting.html</a></a>)</li>
+</ul>
+
+
+<p>This release should not break old save files, if you&rsquo;re using that. If you&rsquo;re using MySQL, you&rsquo;ll need to deploy the sqitch changes.</p>
+
+<p>The next big things to start working on are the long promised Postgres support, and etcd/serf/consul etc. integration. Groupcache has also been asked for and looks like a worthwhile thing to pick up. As always, the <a href="https://github.com/ctdk/goiardi/issues?state=open">issues page</a> is a good place to look at what&rsquo;s being worked on.</p>
+
+<p>Goiardi is also starting to grow beyond using chef-pedant for most of its testing; it&rsquo;s about time to start more native golang tests for goiardi and not use chef-pedant for the main tests. It should always work with chef-pedant, of course, but goiardi&rsquo;s starting to get more features that chef-pedant doesn&rsquo;t check.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -465,56 +525,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/goiardi/blog/2014/01/06/version-0-dot-3-0-of-goiardi-released/">Version 0.3.0 of Goiardi Released</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-01-06T21:09:00-08:00" pubdate data-updated="true">Jan 6<span>th</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><em>Originally posted on <a href="http://time.to.pullthepl.ug/blog/2014/1/6/version-0-dot-3-0-of-goiardi-released/">time.to.pullthepl.ug</a>.</em></p>
-
-<p>I am pleased to announce another <a href="https://github.com/ctdk/goiardi">goiardi</a> (a <a href="http://getchef.com/chef/">Chef</a> server written in go) release.</p>
-
-<p><a href="https://github.com/ctdk/goiardi/releases/tag/v0.3.0">Version 0.3.0 of goiardi</a> adds the ability to save the in-memory data store and the search index to disk, rather than losing everything everytime the server restarts. If the options are set, goiardi will save when it receives a SIGTERM or SIGINT signal, as well as save in the background periodically. The interval defaults to five minutes, but can be specified as an option as well. In the interest of safety and data integrity, goiardi will first save to a temporary file before renaming it to the save file name.</p>
-
-<p>Of course, goiardi will also still happily run entirely in memory as before.</p>
-
-<p><strong>NB:</strong> Bear in mind that even if the data has been saved to disk goiardi still keeps the data store and search index in memory while it&rsquo;s running. This could cause problems if you try to shove too much data into it. I expect most use cases would have no problems (famous last words), but the appropriate caution is warranted.</p>
-
-<p>It still does no authentication or permission checking, and while it does its best to avoid data corruption and data loss it is not a real database and should not be relied on as such. It may be useful for situations where you do not want or need a full real Chef server, but could use persistent data which you don&rsquo;t get with chef-zero.</p>
-
-<p>Next tasks coming up: provide a way to reindex the data, improve existing docs as needed and write more, make actual go tests, fork chef-pedant and make a &ldquo;goiardi&rdquo; mode to simplify testing against chef-pedant.</p>
-
-<p>Anyway, that&rsquo;s what this release has. Have fun with it if you&rsquo;re so inclined, and thank you if you do.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/goiardi/blog/page/2/">&larr; Older</a>
@@ -527,11 +537,12 @@
   
     <section>
   <h1>About Goiardi</h1>
-  <p><a href="https://github.com/ctdk/goiardi">Goiardi</a> is an implementation of <a href="http://www.getchef.com/chef/">the Chef server</a> written in <a href="http://golang.org">Go</a>. It runs in memory (with optional persistence on disk), is self-contained, and runs on a number of different platforms.</p>
+  <p><a href="https://github.com/ctdk/goiardi">Goiardi</a> is an implementation of <a href="http://www.getchef.com/chef/">the Chef server</a> written in <a href="http://golang.org">Go</a>. It runs in memory (with optional persistence on disk) or can use MySQL as a backend, is self-contained, and runs on a number of different platforms.</p>
 </section>
 <section>
   <h1>Additional Resources</h1>
    <ul>
+    <li><a href="https://github.com/ctdk/goiardi-schema">goiardi-schema</a>: The SQL schema, managed with sqitch, for goiardi.</li>
     <li><a href="https://github.com/marpaia/chef-golang">chef-golang</a>: A golang chef client library.</li>
     <li><a href="http://docs.opscode.com/">docs.opscode.com</a>: The official Chef documentation. The chef client programs are, of course, needed to do much of anything with goiardi.</li>
     <li><a href="https://github.com/opscode/chef-zero">chef-zero</a>: Another in-memory chef server.</li>
@@ -542,6 +553,10 @@
 <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/">Goiardi Version 0.5.1 - Rodan Overhead</a>
+      </li>
     
       <li class="post">
         <a href="/goiardi/blog/2014/05/02/goiardi-version-0-dot-5-0-sturmisch-bewegt-now-with-mysql/">Goiardi Version 0.5.0 - Stürmisch Bewegt - Now With MySQL</a>
@@ -557,10 +572,6 @@
     
       <li class="post">
         <a href="/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/">Version 0.4.0 of Goiardi Released. Now, With Authentication!</a>
-      </li>
-    
-      <li class="post">
-        <a href="/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/">Meanwhile, in the Auth Branch&#8230;</a>
       </li>
     
   </ul>

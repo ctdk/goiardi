@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Releases | Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/blog/categories/releases/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-05-02T10:35:22-07:00</updated>
+  <updated>2014-05-26T23:34:02-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,39 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Version 0.5.1 - Rodan Overhead]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/"/>
+    <updated>2014-05-26T11:04:04-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead</id>
+    <content type="html"><![CDATA[<p>The sky darkens. Blotting out the sun, Rodan appears to destroy beloved landmarks and stomp on small models of tanks. Goiardi <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.1">version 0.5.1</a> has been released.</p>
+
+<p>This is an incremental release, made up of bug fixes and relatively minor new features. The most interesting new features are <a href="https://github.com/ctdk/goiardi/tree/cc9aeb1766be7515458dcc6ad6e5260201b0e837#event-logging">event logging</a> and <a href="https://github.com/ctdk/goiardi/tree/cc9aeb1766be7515458dcc6ad6e5260201b0e837#reporting">reporting</a>, although the log level changes are also nice.</p>
+
+<p>From the CHANGELOG:</p>
+
+<ul>
+<li>Add log levels (from debug to critical). This makes -V/&mdash;verbose useful.</li>
+<li>Add an easier option in the config file to specify log levels by name.</li>
+<li>ipv6 already worked, but accidentally. Now it works in a more deliberate
+fashion, preventing mishaps with addresses, colons, and port numbers.</li>
+<li>Authentication protocol version 1.1 now supported.</li>
+<li>Remove a sort on run lists that was there for some reason. I have no idea
+what it was put there for, but it was wrong.</li>
+<li>Add an event log to log changes to objects like nodes, clients, etc. See the
+README or godocs for details.</li>
+<li>Add support for reporting (<a href="http://docs.opscode.com/reporting.html"><a href="http://docs.opscode.com/reporting.html">http://docs.opscode.com/reporting.html</a></a>)</li>
+</ul>
+
+
+<p>This release should not break old save files, if you&rsquo;re using that. If you&rsquo;re using MySQL, you&rsquo;ll need to deploy the sqitch changes.</p>
+
+<p>The next big things to start working on are the long promised Postgres support, and etcd/serf/consul etc. integration. Groupcache has also been asked for and looks like a worthwhile thing to pick up. As always, the <a href="https://github.com/ctdk/goiardi/issues?state=open">issues page</a> is a good place to look at what&rsquo;s being worked on.</p>
+
+<p>Goiardi is also starting to grow beyond using chef-pedant for most of its testing; it&rsquo;s about time to start more native golang tests for goiardi and not use chef-pedant for the main tests. It should always work with chef-pedant, of course, but goiardi&rsquo;s starting to get more features that chef-pedant doesn&rsquo;t check.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Goiardi Version 0.5.0 - Stürmisch Bewegt - Now With MySQL]]></title>
@@ -89,21 +122,6 @@
 <p>SSL is pretty straightforward, and also explained in the README. You&rsquo;ll need to <a href="http://stackoverflow.com/questions/10175812/how-to-build-a-self-signed-certificate-with-openssl">generate a certificate/key pair</a> for it to work, but that isn&rsquo;t too hard. This does assume that you&rsquo;d use a self-signed certificate for this; if you&rsquo;re going to use a real cert I assume you know what you&rsquo;re doing (and am a little surprised, to be honest).</p>
 
 <p>That&rsquo;s it for this release. The next major goiardi task coming up, barring any unexpected changes, is allowing it to use a database for the backend. This will be optional, of course; I plan on supporting the in-memory, no-auth mode a la chef-zero for goiardi indefinitely. Further out, there may be a smoother installation process, and someday even perhaps goiardi-specific features.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Version 0.3.3 of Goiardi Released]]></title>
-    <link href="http://ctdk.github.io/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released/"/>
-    <updated>2014-02-16T11:46:49-08:00</updated>
-    <id>http://ctdk.github.io/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released</id>
-    <content type="html"><![CDATA[<p>I am pleased to announce another goiardi release.</p>
-
-<p>This release, <a href="https://github.com/ctdk/goiardi/releases/tag/v0.3.3">version 0.3.3 of goiardi</a>, doesn&rsquo;t add much in the way of new functionality. The data store and indexer have been tweaked slightly, and go tests have been added for some of the goiardi components. The go test coverage isn&rsquo;t complete, and most goiardi testing is handled with chef-pedant, but these golang tests will be handy for testing internal functionality that could break, yet not show up in the chef-pedant testing.</p>
-
-<p>While there isn&rsquo;t much in this release, I decided to make one here because it&rsquo;s a good place to make one before starting to tackle authentication. Enjoy.</p>
-
-<p><strong>Update:</strong> It&rsquo;s a little embarrassing, but there was a problem merging branches, and a necessary change got backed out or overlooked, so version 0.3.1 has been superseded by version 0.3.3. On the off chance anyone got the previous version, I apologize.</p>
 ]]></content>
   </entry>
   
