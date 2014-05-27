@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-/* Package log_info tracks changes to objects when they're saved, noting the
-actor performing the action, what kind of action it was, the time of the change,
-the type of object and its id, and a dump of the object's state. */
+/* Package log_info tracks changes to objects when they're saved, noting the actor performing the action, what kind of action it was, the time of the change, the type of object and its id, and a dump of the object's state. */
 package log_info
 
 import (
@@ -136,8 +134,9 @@ func PurgeLogInfos(id int) (int64, error) {
 }
 
 
-// Get a slice of the logged events. May be called with an offset and limit, but
-// it is not required.
+// Get a slice of the logged events. May be called with an offset and limit, 
+// (in that order) but that is not required. The offset can be specified without
+// a limit, but a limit requires an offset (which can be 0).
 func GetLogInfos(limits ...int) []*LogInfo {
 	if config.Config.UseMySQL {
 		return getLogInfoListMySQL(limits...)
