@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-/* Package report implements reporting on client runs and node changes. See 
-http://docs.opscode.com/reporting.html for details. CURRENTLY EXPERIMENTAL. */
+/* Package report implements reporting on client runs and node changes. See http://docs.opscode.com/reporting.html for details. CURRENTLY EXPERIMENTAL. */
 package report
 
 import (
