@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Event Log | Goiardi]]></title>
+  <link href="http://ctdk.github.io/goiardi/blog/categories/event-log/atom.xml" rel="self"/>
+  <link href="http://ctdk.github.io/goiardi/"/>
+  <updated>2014-05-28T20:25:03-07:00</updated>
+  <id>http://ctdk.github.io/goiardi/</id>
+  <author>
+    <name><![CDATA[Jeremy Bingham]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Knife Plugin for the Goiardi Event Log]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log/"/>
+    <updated>2014-05-28T20:16:32-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log</id>
+    <content type="html"><![CDATA[<p>There&rsquo;s now a knife plugin to use with goiardi&rsquo;s new event logging capabilities: <a href="https://github.com/ctdk/knife-goiardi-event-log">knife-goiardi-event-log</a>.</p>
+
+<p>Usage info from the README:</p>
+
+<p>There are four goiardi event log commands: <code>knife goiardi gel list</code>, <code>knife goiardi gel show</code>, <code>knife goiardi gel delete</code> and <code>knife goiardi gel purge</code>.</p>
+
+<p><code>knife goiardi gel list</code> returns a list of logged events. A limit may be specified with <code>--limit</code>; the default limit is 15. An offset may also be specified; the default offset is 0.</p>
+
+<p><code>knife goiardi gel show [id]</code> gives a detailed listing of a particular event log item.</p>
+
+<p><code>knife goiardi gel delete [id]</code> deletes the given event, and prints out a detailed display of the deleted event.</p>
+
+<p><code>knife goiardi gel purge [id]</code> purges all event log items with an id less than the given id. After purging the events, it displays the number of events that were purged.</p>
+
+<hr />
+
+<p>Being able to list events of a certain kind of action, type of object, time range, etc. would be nice and are on the roadmap for this plugin. Adding that capability depends on changes to goairdi before that can happen though. This plugin makes use of all the current event log functionality however.</p>
+]]></content>
+  </entry>
+  
+</feed>

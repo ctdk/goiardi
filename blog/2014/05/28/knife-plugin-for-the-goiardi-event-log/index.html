@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: Releases - Goiardi</title>
+  <title>Knife Plugin for the Goiardi Event Log - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="Category: releases">
+  <meta name="description" content="There&rsquo;s now a knife plugin to use with goiardi&rsquo;s new event logging capabilities: knife-goiardi-event-log. Usage info from the README: &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardiblog/categories/releases">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -82,106 +82,113 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: Releases</h1>
+    
+      <h1 class="entry-title">Knife Plugin for the Goiardi Event Log</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-28T20:16:32-07:00" pubdate data-updated="true">May 28<span>th</span>, 2014</time>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p>There&rsquo;s now a knife plugin to use with goiardi&rsquo;s new event logging capabilities: <a href="https://github.com/ctdk/knife-goiardi-event-log">knife-goiardi-event-log</a>.</p>
 
-  
-  <h2>2014</h2>
+<p>Usage info from the README:</p>
 
-<article>
-  
-<h1><a href="/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/">Goiardi Version 0.5.1 - Rodan Overhead</a></h1>
-<time datetime="2014-05-26T11:04:04-07:00" pubdate><span class='month'>May</span> <span class='day'>26</span> <span class='year'>2014</span></time>
+<p>There are four goiardi event log commands: <code>knife goiardi gel list</code>, <code>knife goiardi gel show</code>, <code>knife goiardi gel delete</code> and <code>knife goiardi gel purge</code>.</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/event-logging/'>event logging</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/logging/'>logging</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a>, <a class='category' href='/goiardi/blog/categories/reporting/'>reporting</a></span>
-</footer>
+<p><code>knife goiardi gel list</code> returns a list of logged events. A limit may be specified with <code>--limit</code>; the default limit is 15. An offset may also be specified; the default offset is 0.</p>
 
+<p><code>knife goiardi gel show [id]</code> gives a detailed listing of a particular event log item.</p>
 
-</article>
+<p><code>knife goiardi gel delete [id]</code> deletes the given event, and prints out a detailed display of the deleted event.</p>
 
+<p><code>knife goiardi gel purge [id]</code> purges all event log items with an id less than the given id. After purging the events, it displays the number of events that were purged.</p>
 
+<hr />
 
-<article>
-  
-<h1><a href="/goiardi/blog/2014/05/02/goiardi-version-0-dot-5-0-sturmisch-bewegt-now-with-mysql/">Goiardi Version 0.5.0 - Stürmisch Bewegt - Now With MySQL</a></h1>
-<time datetime="2014-05-02T10:10:55-07:00" pubdate><span class='month'>May</span> <span class='day'>02</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/mysql/'>mysql</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/goiardi/blog/2014/03/19/goiardi-version-0-dot-4-2-this-is-spinal-tap/">Goiardi Version 0.4.2 - This Is Spinal Tap</a></h1>
-<time datetime="2014-03-19T23:04:46-07:00" pubdate><span class='month'>Mar</span> <span class='day'>19</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/bugfix-releases/'>bugfix releases</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release/">Goiardi Version 0.4.1 Release</a></h1>
-<time datetime="2014-03-16T14:32:27-07:00" pubdate><span class='month'>Mar</span> <span class='day'>16</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/bugfix-releases/'>bugfix releases</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/">Version 0.4.0 of Goiardi Released. Now, With Authentication!</a></h1>
-<time datetime="2014-03-16T10:28:50-07:00" pubdate><span class='month'>Mar</span> <span class='day'>16</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/authentication/'>authentication</a>, <a class='category' href='/goiardi/blog/categories/goairdi/'>goairdi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released/">Version 0.3.3 of Goiardi Released</a></h1>
-<time datetime="2014-02-16T11:46:49-08:00" pubdate><span class='month'>Feb</span> <span class='day'>16</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a></span>
-</footer>
-
-
-</article>
-
+<p>Being able to list events of a certain kind of action, type of object, time range, etc. would be nice and are on the roadmap for this plugin. Adding that capability depends on changes to goairdi before that can happen though. This plugin makes use of all the current event log functionality however.</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Jeremy Bingham</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-28T20:16:32-07:00" pubdate data-updated="true">May 28<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/goiardi/blog/categories/event-log/'>event log</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/knife/'>knife</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+  
+<a href='https://alpha.app.net/intent/post/?text=App.net%20social%20buttons%20are%20here' class='adn-button' target='_blank' data-type='share' data-width='121' data-height='20' data-text='' >Share on App.net</a>
+<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='//d2zh9g63fcvyrq.cloudfront.net/adn.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'adn-button-js'));</script>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/" title="Previous Post: Goiardi Version 0.5.1 - Rodan Overhead">&laquo; Goiardi Version 0.5.1 - Rodan Overhead</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -255,7 +262,10 @@
       var disqus_shortname = 'goiardi';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log/';
+        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

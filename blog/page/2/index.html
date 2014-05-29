@@ -9,7 +9,7 @@
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="Originally posted on time.to.pullthepl.ug. I am pleased to announce another goiardi (a Chef server written in go) release. Version 0.3.0 of goiardi &hellip;">
+  <meta name="description" content="As of the most recent commit, goiardi can now rebuild its search index in case it accidentally got deleted or corrupted somehow. To rebuild, just run &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,44 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/goiardi/blog/2014/01/09/reindexing-search-capability-added/">Reindexing Search Capability Added</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-01-09T23:32:11-08:00" pubdate data-updated="true">Jan 9<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="https://github.com/ctdk/goiardi/commit/7777fd82cb767007a22253c98c02e97f2f0a5bbf">As of the most recent commit</a>, goiardi can now rebuild its search index in case it accidentally got deleted or corrupted somehow.</p>
+
+<p>To rebuild, just run <code>knife index rebuild</code> (or <code>knife index rebuild -y</code> if you don&rsquo;t want to be bothered to press &ldquo;y&rdquo; to confirm that you really want to do it). You&rsquo;ll get a message from knife that &lsquo;knife index rebuild&rsquo; has been removed for Chef 11+ servers. This can be ignored; while goiardi identifies itself as a Chef 11+ server, this command will work because they&rsquo;ve kept it in for older versions of Chef.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -226,6 +264,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log/">Knife Plugin for the Goiardi Event Log</a>
+      </li>
+    
+      <li class="post">
         <a href="/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/">Goiardi Version 0.5.1 - Rodan Overhead</a>
       </li>
     
@@ -239,10 +281,6 @@
     
       <li class="post">
         <a href="/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release/">Goiardi Version 0.4.1 Release</a>
-      </li>
-    
-      <li class="post">
-        <a href="/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/">Version 0.4.0 of Goiardi Released. Now, With Authentication!</a>
       </li>
     
   </ul>

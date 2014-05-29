@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Goiardi | Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/blog/categories/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-05-26T23:34:02-07:00</updated>
+  <updated>2014-05-28T20:25:03-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,31 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Knife Plugin for the Goiardi Event Log]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log/"/>
+    <updated>2014-05-28T20:16:32-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log</id>
+    <content type="html"><![CDATA[<p>There&rsquo;s now a knife plugin to use with goiardi&rsquo;s new event logging capabilities: <a href="https://github.com/ctdk/knife-goiardi-event-log">knife-goiardi-event-log</a>.</p>
+
+<p>Usage info from the README:</p>
+
+<p>There are four goiardi event log commands: <code>knife goiardi gel list</code>, <code>knife goiardi gel show</code>, <code>knife goiardi gel delete</code> and <code>knife goiardi gel purge</code>.</p>
+
+<p><code>knife goiardi gel list</code> returns a list of logged events. A limit may be specified with <code>--limit</code>; the default limit is 15. An offset may also be specified; the default offset is 0.</p>
+
+<p><code>knife goiardi gel show [id]</code> gives a detailed listing of a particular event log item.</p>
+
+<p><code>knife goiardi gel delete [id]</code> deletes the given event, and prints out a detailed display of the deleted event.</p>
+
+<p><code>knife goiardi gel purge [id]</code> purges all event log items with an id less than the given id. After purging the events, it displays the number of events that were purged.</p>
+
+<hr />
+
+<p>Being able to list events of a certain kind of action, type of object, time range, etc. would be nice and are on the roadmap for this plugin. Adding that capability depends on changes to goairdi before that can happen though. This plugin makes use of all the current event log functionality however.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Goiardi Version 0.5.1 - Rodan Overhead]]></title>
@@ -103,21 +128,6 @@ README or godocs for details.</li>
     <content type="html"><![CDATA[<p>Hot on the heels of the 0.4.0 release comes <a href="https://github.com/ctdk/goiardi/releases/tag/v0.4.1">goiardi version 0.4.1</a>. This release adds a <tt>&mdash;disable-webui</tt> option to disable using chef-webui with goiardi, fixes a bug with parsing configuration file options and rearranges how some of the config struct items are set, fixes a typo in the sample config file, and makes some small documentation tweaks.</p>
 
 <p>Other than that, all the changes announced in the <a href="http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/">0.4.0 release announcement</a> and previous releases remain relevant.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Version 0.3.3 of Goiardi Released]]></title>
-    <link href="http://ctdk.github.io/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released/"/>
-    <updated>2014-02-16T11:46:49-08:00</updated>
-    <id>http://ctdk.github.io/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released</id>
-    <content type="html"><![CDATA[<p>I am pleased to announce another goiardi release.</p>
-
-<p>This release, <a href="https://github.com/ctdk/goiardi/releases/tag/v0.3.3">version 0.3.3 of goiardi</a>, doesn&rsquo;t add much in the way of new functionality. The data store and indexer have been tweaked slightly, and go tests have been added for some of the goiardi components. The go test coverage isn&rsquo;t complete, and most goiardi testing is handled with chef-pedant, but these golang tests will be handy for testing internal functionality that could break, yet not show up in the chef-pedant testing.</p>
-
-<p>While there isn&rsquo;t much in this release, I decided to make one here because it&rsquo;s a good place to make one before starting to tackle authentication. Enjoy.</p>
-
-<p><strong>Update:</strong> It&rsquo;s a little embarrassing, but there was a problem merging branches, and a necessary change got backed out or overlooked, so version 0.3.1 has been superseded by version 0.3.3. On the off chance anyone got the previous version, I apologize.</p>
 ]]></content>
   </entry>
   
