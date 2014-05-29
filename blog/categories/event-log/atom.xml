@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Event Log | Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/blog/categories/event-log/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-05-28T20:25:03-07:00</updated>
+  <updated>2014-05-28T20:30:17-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -18,7 +18,7 @@
     <link href="http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log/"/>
     <updated>2014-05-28T20:16:32-07:00</updated>
     <id>http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log</id>
-    <content type="html"><![CDATA[<p>There&rsquo;s now a knife plugin to use with goiardi&rsquo;s new event logging capabilities: <a href="https://github.com/ctdk/knife-goiardi-event-log">knife-goiardi-event-log</a>.</p>
+    <content type="html"><![CDATA[<p>There&rsquo;s now a knife plugin to use with goiardi&rsquo;s new event logging capabilities: <a href="https://github.com/ctdk/knife-goiardi-event-log">knife-goiardi-event-log 0.1.1</a>.</p>
 
 <p>Usage info from the README:</p>
 
