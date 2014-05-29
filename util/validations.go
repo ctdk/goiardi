@@ -430,15 +430,11 @@ func validateRecipeName(name string) bool {
 		name = h[0]
 		version := h[1]
 		valid_ver := regexp.MustCompile(`^\d+\.\d+(\.\d+)?$`)
-		if !valid_ver.MatchString(version){
+		if !valid_ver.MatchString(version) {
 			return false
 		}
 	}
-	/* If we get this far, just do a final check on the name */
-	final_chk := regexp.MustCompile(`^[\w-]+(::[\w-]+)?$`)
-	n := final_chk.MatchString(name)
-
-	return n
+	return true
 }
 
 // Check that client/user json is not trying to set admin and validator at the
