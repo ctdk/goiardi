@@ -25,19 +25,6 @@ import (
 	"net/http"
 )
 
-func checkForClientMySQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
-	_, err := data_store.CheckForOne(dbhandle, "clients", name)
-	if err == nil {
-		return true, nil
-	} else {
-		if err != sql.ErrNoRows {
-			return false, err
-		} else {
-			return false, nil
-		}
-	}
-}
-
 func getClientMySQL(name string) (*Client, error) {
 	client := new(Client)
 	stmt, err := data_store.Dbh.Prepare("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o on c.organization_id = o.id WHERE c.name = ?")
@@ -51,16 +38,6 @@ func getClientMySQL(name string) (*Client, error) {
 		return nil, err
 	}
 	return client, nil
-}
-
-func (c *Client) fillClientFromSQL(row *sql.Row) error {
-	err := row.Scan(&c.Name, &c.NodeName, &c.Validator, &c.Admin, &c.Orgname, &c.pubKey, &c.Certificate)
-	if err != nil {
-		return err
-	}
-	c.ChefType = "client"
-	c.JsonClass = "Chef::ApiClient"
-	return nil
 }
 
 func (c *Client) saveMySQL() error {

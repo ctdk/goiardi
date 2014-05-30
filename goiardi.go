@@ -54,9 +54,13 @@ func main(){
 	config.ParseConfigOptions()
 
 	/* Here goes nothing, db... */
-	if config.Config.UseMySQL {
+	if config.Config.UseMySQL || config.Config.UsePostgreSQL {
 		var derr error
-		data_store.Dbh, derr = data_store.ConnectDB("mysql", config.Config.MySQL)
+		if config.Config.UseMySQL {
+			data_store.Dbh, derr = data_store.ConnectDB("mysql", config.Config.MySQL)
+		} else if config.Config.UsePostgreSQL {
+			data_store.Dbh, derr = data_store.ConnectDB("postgres", config.Config.PostgreSQL)
+		}
 		if derr != nil {
 			logger.Criticalf(derr.Error())
 			os.Exit(1)
