@@ -58,6 +58,8 @@ type Conf struct {
 	DisableWebUI bool `toml:"disable-webui"`
 	UseMySQL bool `toml:"use-mysql"`
 	MySQL MySQLdb `toml:"mysql"`
+	UsePostgreSQL bool `toml:"use-postgresql"`
+	PostgreSQL PostgreSQLdb `toml:"postgresql"`
 	LocalFstoreDir string `toml:"local-filestore-dir"`
 	LogEvents bool `toml:"log-events"`
 	LogEventKeep int `toml:"log-event-keep"`
@@ -78,6 +80,16 @@ type MySQLdb struct {
 	Port string
 	Dbname string
 	ExtraParams map[string]string `toml:"extra_params"`
+}
+
+// Postgres connection options
+type PostgreSQLdb struct {
+	Username string
+	Password string
+	Host string
+	Port string
+	Dbname string
+	SSLMode string
 }
 
 /* Struct for command line options. */
@@ -101,6 +113,7 @@ type Options struct {
 	HttpsUrls bool `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP."`
 	DisableWebUI bool `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface."`
 	UseMySQL bool `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file."`
+	UsePostgreSQL bool `long:"use-postgresql" description:"Use a PostgreSQL database for data storage. Configure database options in the config file."`
 	LocalFstoreDir string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* for SQL mode."`
 	LogEvents bool `long:"log-events" description:"Log changes to chef objects."`
 	LogEventKeep int `short:"K" long:"log-event-keep" description:"Number of events to keep in the event log. If set, the event log will be checked periodically and pruned to this number of entries."`
@@ -195,25 +208,36 @@ func ParseConfigOptions() error {
 		Config.UseMySQL = opts.UseMySQL
 	}
 
-	if Config.DataStoreFile != "" && Config.UseMySQL {
-		err := fmt.Errorf("The MySQL and data store options may not be specified together.")
+	// Use Postgres?
+	if opts.UsePostgreSQL {
+		Config.UsePostgreSQL = opts.UsePostgreSQL
+	}
+
+	if Config.UseMySQL && Config.UsePostgreSQL {
+		err := fmt.Errorf("The MySQL and Postgres options cannot be used together.")
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || Config.UseMySQL) && Config.IndexFile != "")) {
+	if Config.DataStoreFile != "" && (Config.UseMySQL || Config.UsePostgreSQL) {
+		err := fmt.Errorf("The MySQL or Postgres and data store options may not be specified together.")
+		log.Println(err)
+		os.Exit(1)
+	}
+
+	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || (Config.UseMySQL || Config.UsePostgreSQL)) && Config.IndexFile != "")) {
 		err := fmt.Errorf("-i and -D must either both be specified, or not specified.")
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	if Config.UseMySQL && Config.IndexFile == "" {
-		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL backend.")
+	if (Config.UseMySQL || Config.UsePostgreSQL) && Config.IndexFile == "" {
+		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend.")
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	if Config.IndexFile != "" && (Config.DataStoreFile != "" || Config.UseMySQL) {
+	if Config.IndexFile != "" && (Config.DataStoreFile != "" || (Config.UseMySQL || Config.UsePostgreSQL)) {
 		Config.FreezeData = true
 	}
 
@@ -255,10 +279,17 @@ func ParseConfigOptions() error {
 		}
 	}
 
+	// set default Postgres options
+	if Config.UsePostgreSQL {
+		if Config.PostgreSQL.Port == "" {
+			Config.PostgreSQL.Port = "5432"
+		}
+	}
+
 	if opts.LocalFstoreDir != "" {
 		Config.LocalFstoreDir = opts.LocalFstoreDir
 	}
-	if Config.LocalFstoreDir == "" && Config.UseMySQL {
+	if Config.LocalFstoreDir == "" && (Config.UseMySQL || Config.UsePostgreSQL) {
 		logger.Criticalf("local-filestore-dir must be set when running goiardi in SQL mode")
 		os.Exit(1)
 	}

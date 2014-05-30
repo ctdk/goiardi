@@ -19,8 +19,10 @@
 package data_store
 
 import (
+	"github.com/ctdk/goiardi/config"
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 	"strings"
 	"fmt"
 	"bytes"
@@ -52,8 +54,17 @@ type ResRow interface {
 // Currently supports MySQL.
 func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	switch strings.ToLower(dbEngine) {
-		case "mysql":
-			connectStr, cerr := formatMysqlConStr(params)
+		case "mysql", "postgres":
+			var connectStr string
+			var cerr error
+			switch strings.ToLower(dbEngine) {
+				case "mysql":
+					connectStr, cerr = formatMysqlConStr(params)
+				case "postgres":
+					// no error needed at this step with
+					// postgres
+					connectStr = formatPostgresqlConStr(params)
+			}
 			if cerr != nil {
 				return nil, cerr
 			}
@@ -126,7 +137,12 @@ func DecodeBlob(data []byte, obj interface{}) (error) {
 // be called "name".
 func CheckForOne(dbhandle Dbhandle, kind string, name string) (int32, error){
 	var obj_id int32
-	prepStatement := fmt.Sprintf("SELECT id FROM %s WHERE name = ?", kind)
+	var prepStatement string
+	if config.Config.UseMySQL {
+		prepStatement = fmt.Sprintf("SELECT id FROM %s WHERE name = ?", kind)
+	} else if config.Config.UsePostgreSQL{
+		prepStatement = fmt.Sprintf("SELECT id FROM goiardi.%s WHERE name = $1", kind)
+	}
 	stmt, err := dbhandle.Prepare(prepStatement)
 	if err != nil {
 		return 0, err

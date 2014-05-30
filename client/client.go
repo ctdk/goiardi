@@ -89,7 +89,7 @@ func New(clientname string) (*Client, util.Gerror){
 	var err util.Gerror
 	if config.Config.UseMySQL {
 		var cerr error
-		found, cerr = checkForClientMySQL(data_store.Dbh, clientname)
+		found, cerr = checkForClientSQL(data_store.Dbh, clientname)
 		if cerr != nil {
 			err := util.Errorf(err.Error())
 			err.SetStatus(http.StatusInternalServerError)
