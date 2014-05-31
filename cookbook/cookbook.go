@@ -98,9 +98,9 @@ func New(name string) (*Cookbook, util.Gerror){
 		err := util.Errorf("Invalid cookbook name '%s' using regex: 'Malformed cookbook name. Must only contain A-Z, a-z, 0-9, _ or -'.", name)
 		return nil, err
 	}
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForCookbookMySQL(data_store.Dbh, name)
+		found, cerr = checkForCookbookSQL(data_store.Dbh, name)
 		if cerr != nil {
 			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
@@ -123,9 +123,9 @@ func New(name string) (*Cookbook, util.Gerror){
 
 // The number of versions this cookbook has.
 func (c *Cookbook)NumVersions() int {
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		if c.numVersions == nil {
-			c.numVersions = c.numVersionsMySQL()
+			c.numVersions = c.numVersionsSQL()
 		}
 		return *c.numVersions
 	} else {
@@ -135,8 +135,8 @@ func (c *Cookbook)NumVersions() int {
 
 // Return all the cookbooks that have been uploaded to this server.
 func AllCookbooks() (cookbooks []*Cookbook) {
-	if config.Config.UseMySQL {
-		cookbooks = allCookbooksMySQL()
+	if config.UsingDB() {
+		cookbooks = allCookbooksSQL()
 	} else {
 		cookbook_list := GetList()
 		for _, c := range cookbook_list {
@@ -155,9 +155,9 @@ func AllCookbooks() (cookbooks []*Cookbook) {
 func Get(name string) (*Cookbook, util.Gerror){
 	var cookbook *Cookbook
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		cookbook, err = getCookbookMySQL(name)
+		cookbook, err = getCookbookSQL(name)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -189,6 +189,8 @@ func Get(name string) (*Cookbook, util.Gerror){
 func (c *Cookbook) Save() error {
 	if config.Config.UseMySQL {
 		return c.saveCookbookMySQL()
+	} else if config.Config.UsePostgreSQL {
+		return c.saveCookbookPostgreSQL()
 	} else {
 		ds := data_store.New()
 		ds.Set("cookbook", c.Name, c)
@@ -197,8 +199,8 @@ func (c *Cookbook) Save() error {
 }
 
 func (c *Cookbook) Delete() error {
-	if config.Config.UseMySQL {
-		return c.deleteCookbookMySQL()
+	if config.UsingDB() {
+		return c.deleteCookbookSQL()
 	} else {
 		ds := data_store.New()
 		ds.Delete("cookbook", c.Name)
@@ -208,8 +210,8 @@ func (c *Cookbook) Delete() error {
 
 // Get a list of all cookbooks on this server.
 func GetList() []string {
-	if config.Config.UseMySQL {
-		return getCookbookListMySQL()
+	if config.UsingDB() {
+		return getCookbookListSQL()
 	} 
 	ds := data_store.New()
 	cb_list := ds.GetList("cookbook")
@@ -218,8 +220,8 @@ func GetList() []string {
 
 /* Returns a sorted list of all the versions of this cookbook */
 func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
-	if config.Config.UseMySQL {
-		return c.sortedCookbookVersionsMySQL()
+	if config.UsingDB() {
+		return c.sortedCookbookVersionsSQL()
 	} 
 	sorted := make([]*CookbookVersion, len(c.Versions))
 	keys := make(VersionStrings, len(c.Versions))
@@ -605,12 +607,12 @@ func (c *Cookbook)GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
 	var cbv *CookbookVersion
 	var found bool
 
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		// Ridiculously cacheable, but let's get it working first. This
 		// applies all over the place w/ the SQL bits.
 		if cbv, found = c.Versions[cbVersion]; !found {
 			var err error
-			cbv, err = c.getCookbookVersionMySQL(cbVersion)
+			cbv, err = c.getCookbookVersionSQL(cbVersion)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					found = false
@@ -716,8 +718,8 @@ func (c *Cookbook)DeleteVersion(cb_version string) util.Gerror {
 
 	file_hashes := cbv.fileHashes()
 
-	if config.Config.UseMySQL {
-		err := cbv.deleteCookbookVersionMySQL()
+	if config.UsingDB() {
+		err := cbv.deleteCookbookVersionSQL()
 		if err != nil {
 			return nil
 		}
@@ -859,8 +861,8 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 	cbv.Metadata = cbv_data["metadata"].(map[string]interface{})
 
 	/* If we're using SQL, update this version in the DB. */
-	if config.Config.UseMySQL {
-		if err := cbv.updateCookbookVersionMySQL(); err != nil {
+	if config.UsingDB() {
+		if err := cbv.updateCookbookVersionSQL(); err != nil {
 			return err
 		}
 	}
