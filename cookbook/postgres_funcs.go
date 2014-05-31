@@ -39,14 +39,14 @@ func (c *Cookbook)saveCookbookPostgreSQL() error {
 	return nil
 }
 
-func (cbv *CookbookVersion) updateCookbookVersionPostgreSQL(defb, libb, attb, recb, prob, resb, temb, roob, flib, metb []byte, maj, min, patch int64) util.Gerror {
+func (cbv *CookbookVersion) updateCookbookVersionPostgreSQL(defb, libb, attb, recb, prob, resb, temb, roob, filb, metb []byte, maj, min, patch int64) util.Gerror {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	err = tx.QueryRow("SELECT goiardi.merge_cookbook_versions($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)", defb, libb, attb, recb, prob, resb, temb, roob, flib, metb, maj, min, patch).Scan(&cbv.id)
+	err = tx.QueryRow("SELECT goiardi.merge_cookbook_versions($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", cbv.cookbook_id, cbv.IsFrozen, defb, libb, attb, recb, prob, resb, temb, roob, filb, metb, maj, min, patch).Scan(&cbv.id)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)
