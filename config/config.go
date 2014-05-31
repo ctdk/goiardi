@@ -397,3 +397,8 @@ func ServerBaseURL() string {
 	url := fmt.Sprintf("%s://%s", urlScheme, ServerHostname())
 	return url
 }
+
+// Return true if we're using any db engine.
+func UsingDB() bool {
+	return Config.UseMySQL || Config.UsePostgreSQL
+}

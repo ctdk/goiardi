@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package client
+package user
+
+// Postgres specific functions for users
 
 import (
 	"github.com/ctdk/goiardi/data_store"
@@ -25,28 +27,30 @@ import (
 	"strings"
 )
 
-func getClientPostgreSQL(name string) (*Client, error) {
-	client := new(Client)
-	stmt, err := data_store.Dbh.Prepare("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE c.name = $1")
+var defaultOrgId int = 1
+
+func getUserPostgreSQL(name string) (*User, error) {
+	user := new(User)
+	stmt, err := data_store.Dbh.Prepare("select name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users WHERE name = $1")
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 	row := stmt.QueryRow(name)
-	err = client.fillClientFromSQL(row)
+	err = user.fillUserFromSQL(row)
 	if err != nil {
 		return nil, err
 	}
-	return client, nil
+	return user, nil
 }
 
-func (c *Client) savePostgreSQL() util.Gerror {
+func (u *User) savePostgreSQL() util.Gerror {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		gerr := util.CastErr(err)
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_clients($1, $2, $3, $4, $5, $6)", c.Name, c.NodeName, c.Validator, c.Admin, c.pubKey, c.Certificate);
+	_, err = tx.Exec("SELECT goiardi.merge_users($1, $2, $3, $4, $5, $6, $7, $8)", u.Username, u.Name, u.Email, u.Admin, u.pubKey, u.passwd, u.salt, defaultOrgId)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)
@@ -59,12 +63,12 @@ func (c *Client) savePostgreSQL() util.Gerror {
 	return nil
 }
 
-func (c *Client) deletePostgreSQL() error {
+func (u *User) deletePostgreSQL() error {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("DELETE FROM goiardi.clients WHERE name = $1", c.Name)
+	_, err = tx.Exec("DELETE FROM goiardi.users WHERE name = $1", u.Username)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -73,17 +77,17 @@ func (c *Client) deletePostgreSQL() error {
 	return nil
 }
 
-func (c *Client) renamePostgreSQL(new_name string) util.Gerror {
+func (u *User) renamePostgreSQL(new_name string) util.Gerror {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.rename_client($1, $2)", c.Name, new_name)
+	_, err = tx.Exec("SELECT goiardi.rename_user($1, $2, $3)", u.Username, new_name, defaultOrgId)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())
-		if strings.HasPrefix(err.Error(), "a user with") || strings.Contains(err.Error(), "already exists, cannot rename") {
+		if strings.HasPrefix(err.Error(), "a client  with") || strings.Contains(err.Error(), "already exists, cannot rename") {
 			gerr.SetStatus(http.StatusConflict)
 		} else {
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -96,7 +100,7 @@ func (c *Client) renamePostgreSQL(new_name string) util.Gerror {
 
 func numAdminsPostgreSQL() int {
 	var numAdmins int
-	stmt, err := data_store.Dbh.Prepare("SELECT count(*) FROM goiardi.clients WHERE admin = TRUE")
+	stmt, err := data_store.Dbh.Prepare("SELECT count(*) FROM goiardi.users WHERE admin = TRUE")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -109,27 +113,27 @@ func numAdminsPostgreSQL() int {
 }
 
 func getListPostgreSQL() []string {
-	var client_list []string
-	rows, err := data_store.Dbh.Query("SELECT name FROM goiardi.clients")
+	var user_list []string
+	rows, err := data_store.Dbh.Query("SELECT name FROM goiardi.users")
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
 		}
 		rows.Close()
-		return client_list
+		return user_list
 	}
-	client_list = make([]string, 0)
+	user_list = make([]string, 0)
 	for rows.Next() {
-		var client_name string
-		err = rows.Scan(&client_name)
+		var user_name string
+		err = rows.Scan(&user_name)
 		if err != nil {
 			log.Fatal(err)
 		}
-		client_list = append(client_list, client_name)
+		user_list = append(user_list, user_name)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
-	return client_list
+	return user_list
 }

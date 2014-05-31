@@ -306,7 +306,10 @@ func createDefaultActors() {
 					os.Exit(1)
 				}
 			}
-			admin.Save()
+			if aerr := admin.Save(); aerr != nil {
+				logger.Criticalf(aerr.Error())
+				os.Exit(1)
+			}
 		}
 	}
 
