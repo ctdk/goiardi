@@ -87,7 +87,7 @@ type flatClient struct {
 func New(clientname string) (*Client, util.Gerror){
 	var found bool
 	var err util.Gerror
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var cerr error
 		found, cerr = checkForClientSQL(data_store.Dbh, clientname)
 		if cerr != nil {
@@ -126,8 +126,12 @@ func Get(clientname string) (*Client, util.Gerror){
 	var client *Client
 	var err error
 
-	if config.Config.UseMySQL {
-		client, err = getClientMySQL(clientname)
+	if config.UsingDB() {
+		if config.Config.UseMySQL {
+			client, err = getClientMySQL(clientname)
+		} else if config.Config.UsePostgreSQL {
+			client, err = getClientPostgreSQL(clientname)
+		}
 		if err != nil {
 			var gerr util.Gerror
 			if err != sql.ErrNoRows {
@@ -157,8 +161,13 @@ func Get(clientname string) (*Client, util.Gerror){
 // Save the client. If a user with the same name as the client exists, returns
 // an error. Additionally, if running with MySQL it will return any DB error.
 func (c *Client) Save() error {
-	if config.Config.UseMySQL {
-		err := c.saveMySQL()
+	if config.UsingDB() {
+		var err error
+		if config.Config.UseMySQL {
+			err = c.saveMySQL()
+		} else if config.Config.UsePostgreSQL {
+			err = c.savePostgreSQL()
+		}
 		if err != nil {
 			return err
 		}
@@ -183,8 +192,13 @@ func (c *Client) Delete() error {
 		return err
 	}
 
-	if config.Config.UseMySQL {
-		err := c.deleteMySQL()
+	if config.UsingDB() {
+		var err error
+		if config.Config.UseMySQL {
+			err = c.deleteMySQL()
+		} else if config.Config.UsePostgreSQL {
+			err = c.deletePostgreSQL()
+		}
 		if err != nil {
 			return err
 		}
@@ -215,6 +229,8 @@ func (c *Client) isLastAdmin() bool {
 		numAdmins := 0
 		if config.Config.UseMySQL {
 			numAdmins = numAdminsMySQL()
+		} else if config.Config.UsePostgreSQL {
+			numAdmins = numAdminsPostgreSQL()
 		} else {
 			clist := GetList()
 			for _, cc := range clist {
@@ -243,8 +259,13 @@ func (c *Client) Rename(new_name string) util.Gerror {
 		return err
 	}
 
-	if config.Config.UseMySQL {
-		err := c.renameMySQL(new_name)
+	if config.UsingDB() {
+		var err util.Gerror
+		if config.Config.UseMySQL {
+			err = c.renameMySQL(new_name)
+		} else if config.Config.UsePostgreSQL {
+			err = c.renamePostgreSQL(new_name)
+		}
 		if err != nil {
 			return err
 		}
@@ -389,6 +410,8 @@ func GetList() []string {
 	var client_list []string
 	if config.Config.UseMySQL {
 		client_list = getListMySQL()
+	} else if config.Config.UsePostgreSQL {
+		client_list = getListPostgreSQL()
 	} else {
 		ds := data_store.New()
 		client_list = ds.GetList("client")

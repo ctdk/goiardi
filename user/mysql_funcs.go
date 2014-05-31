@@ -25,19 +25,6 @@ import (
 	"net/http"
 )
 
-func checkForUserMySQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
-	_, err := data_store.CheckForOne(dbhandle, "users", name)
-	if err == nil {
-		return true, nil
-	} else {
-		if err != sql.ErrNoRows {
-			return false, err
-		} else {
-			return false, nil
-		}
-	}
-}
-
 func getUserMySQL(name string) (*User, error) {
 	user := new(User)
 	stmt, err := data_store.Dbh.Prepare("select name, displayname, admin, public_key, email, passwd, salt FROM users WHERE name = ?")
@@ -53,23 +40,8 @@ func getUserMySQL(name string) (*User, error) {
 	return user, nil
 }
 
-func (u *User) fillUserFromSQL(row data_store.ResRow) error {
-	var email sql.NullString
-	err := row.Scan(&u.Username, &u.Name, &u.Admin, &u.pubKey, &email, &u.passwd, &u.salt)
-	if err != nil {
-		return err
-	}
-	if !email.Valid {
-		u.Email = ""
-	} else {
-		u.Email = email.String
-	}
-	return nil
-}
-
 func (u *User) saveMySQL() util.Gerror {
 	tx, err := data_store.Dbh.Begin()
-	var user_id int32
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		return gerr
@@ -83,26 +55,11 @@ func (u *User) saveMySQL() util.Gerror {
 		gerr.SetStatus(http.StatusConflict)
 		return gerr
 	}
-	user_id, err = data_store.CheckForOne(tx, "users", u.Username)
-	if err == nil {
-		_, err := tx.Exec("UPDATE users SET name = ?, displayname = ?, admin = ?, public_key = ?, passwd = ?, salt = ?, updated_at = NOW() WHERE id = ?", u.Username, u.Name, u.Admin, u.pubKey, u.passwd, u.salt, user_id)
-		if err != nil {
-			tx.Rollback()
-			gerr := util.Errorf(err.Error())
-			return gerr
-		}
-	} else {
-		if err != sql.ErrNoRows {
-			tx.Rollback()
-			gerr := util.Errorf(err.Error())
-			return gerr
-		}
-		_, err = tx.Exec("INSERT INTO users (name, displayname, admin, public_key, passwd, salt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())", u.Username, u.Name, u.Admin, u.pubKey, u.passwd, u.salt)
-		if err != nil {
-			tx.Rollback()
-			gerr := util.Errorf(err.Error())
-			return gerr
-		}
+	_, err = tx.Exec("INSERT INTO users (name, displayname, admin, public_key, passwd, salt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE name = ?, displayname = ?, admin = ?, public_key = ?, passwd = ?, salt = ?, updated_at = NOW()", u.Username, u.Name, u.Admin, u.pubKey, u.passwd, u.salt, u.Username, u.Name, u.Admin, u.pubKey, u.passwd, u.salt);
+	if err != nil {
+		tx.Rollback()
+		gerr := util.CastErr(err)
+		return gerr
 	}
 	tx.Commit()
 	return nil
@@ -133,7 +90,7 @@ func (u *User) renameMySQL(new_name string) util.Gerror {
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	found, err := checkForUserMySQL(data_store.Dbh, new_name)
+	found, err := checkForUserSQL(data_store.Dbh, new_name)
 	if found || err != nil {
 		tx.Rollback()
 		if found && err == nil {

@@ -42,7 +42,6 @@ func getClientMySQL(name string) (*Client, error) {
 
 func (c *Client) saveMySQL() error {
 	tx, err := data_store.Dbh.Begin()
-	var client_id int32
 	if err != nil {
 		return err
 	}
@@ -53,24 +52,13 @@ func (c *Client) saveMySQL() error {
 	if err != nil {
 		return err
 	}
-	client_id, err = data_store.CheckForOne(tx, "clients", c.Name)
-	if err == nil {
-		_, err := tx.Exec("UPDATE clients SET name = ?, nodename = ?, validator = ?, admin = ?, public_key = ?, certificate = ?, updated_at = NOW() WHERE id = ?", c.Name, c.NodeName, c.Validator, c.Admin, c.pubKey, c.Certificate, client_id)
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
-	} else {
-		if err != sql.ErrNoRows {
-			tx.Rollback()
-			return err
-		}
-		_, err = tx.Exec("INSERT INTO clients (name, nodename, validator, admin, public_key, certificate, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())", c.Name, c.NodeName, c.Validator, c.Admin, c.pubKey, c.Certificate)
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
+
+	_, err = tx.Exec("INSERT INTO clients (name, nodename, validator, admin, public_key, certificate, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE name = ?, nodename = ?, validator = ?, admin = ?, public_key = ?, certificate = ?, updated_at = NOW()", c.Name, c.NodeName, c.Validator, c.Admin, c.pubKey, c.Certificate, c.Name, c.NodeName, c.Validator, c.Admin, c.pubKey, c.Certificate)
+	if err != nil {
+		tx.Rollback()
+		return err
 	}
+
 	tx.Commit()
 	return nil
 }
@@ -100,7 +88,7 @@ func (c *Client) renameMySQL(new_name string) util.Gerror {
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	found, err := checkForClientMySQL(data_store.Dbh, new_name)
+	found, err := checkForClientSQL(data_store.Dbh, new_name)
 	if found || err != nil {
 		tx.Rollback()
 		if found && err == nil {

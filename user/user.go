@@ -61,9 +61,9 @@ type privUser struct {
 func New(name string) (*User, util.Gerror) {
 	var found bool
 	var err util.Gerror
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var uerr error
-		found, uerr = checkForUserMySQL(data_store.Dbh, name)
+		found, uerr = checkForUserSQL(data_store.Dbh, name)
 		if uerr != nil {
 			err = util.Errorf(uerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
@@ -102,9 +102,13 @@ func New(name string) (*User, util.Gerror) {
 // Gets a user.
 func Get(name string) (*User, util.Gerror){
 	var user *User
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		user, err = getUserMySQL(name)
+		if config.Config.UseMySQL {
+			user, err = getUserMySQL(name)
+		} else if config.Config.UsePostgreSQL {
+			user, err = getUserPostgreSQL(name) 
+		}
 		if err != nil {
 			var gerr util.Gerror
 			if err != sql.ErrNoRows {
@@ -132,8 +136,13 @@ func Get(name string) (*User, util.Gerror){
 
 // Save the user's current state.
 func (u *User) Save() util.Gerror {
-	if config.Config.UseMySQL {
-		err := u.saveMySQL()
+	if config.UsingDB() {
+		var err util.Gerror
+		if config.Config.UseMySQL {
+			err = u.saveMySQL()
+		} else {
+			err = u.savePostgreSQL()
+		}
 		if err != nil {
 			return err
 		}
@@ -156,10 +165,16 @@ func (u *User) Delete() util.Gerror {
 		err := util.Errorf("Cannot delete the last admin")
 		return err
 	}
-	if config.Config.UseMySQL {
-		err := u.deleteMySQL()
+	if config.UsingDB() {
+		var err error
+		if config.Config.UseMySQL {
+			err = u.deleteMySQL()
+		} else {
+			err = u.deletePostgreSQL()
+		}
 		if err != nil {
-			return nil
+			gerr := util.CastErr(err)
+			return gerr
 		}
 	} else {
 		ds := data_store.New()
@@ -179,9 +194,15 @@ func (u *User) Rename(new_name string) util.Gerror {
 		err.SetStatus(http.StatusForbidden)
 		return err
 	}
-	if config.Config.UseMySQL {
-		if err := u.renameMySQL(new_name); err != nil {
-			return err
+	if config.UsingDB() {
+		if config.Config.UseMySQL {
+			if err := u.renameMySQL(new_name); err != nil {
+				return err
+			}
+		} else if config.Config.UsePostgreSQL {
+			if err := u.renamePostgreSQL(new_name); err != nil {
+				return err
+			}
 		}
 	} else {
 		ds := data_store.New()
@@ -299,6 +320,8 @@ func GetList() []string {
 	var user_list []string
 	if config.Config.UseMySQL {
 		user_list = getListMySQL()
+	} else if config.Config.UsePostgreSQL {
+		user_list = getListPostgreSQL()
 	} else {
 		ds := data_store.New()
 		user_list = ds.GetList("user")
@@ -323,6 +346,8 @@ func (u *User) isLastAdmin() bool {
 		numAdmins := 0
 		if config.Config.UseMySQL {
 			numAdmins = numAdminsMySQL()
+		} else if config.Config.UsePostgreSQL {
+			numAdmins = numAdminsPostgreSQL()
 		} else {		
 			user_list := GetList()
 			for _, u := range user_list {
