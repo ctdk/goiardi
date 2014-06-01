@@ -31,13 +31,13 @@ import (
 
 func (c *Cookbook)numVersionsSQL() *int {
 	var cbv_count int
-	var stmt *sql.Stmt
-	var err error
+	var sqlStatement string
 	if config.Config.UseMySQL {
-		stmt, err = data_store.Dbh.Prepare("SELECT count(*) AS c FROM cookbook_versions cbv WHERE cbv.cookbook_id = ?")
+		sqlStatement = "SELECT count(*) AS c FROM cookbook_versions cbv WHERE cbv.cookbook_id = ?"
 	} else if config.Config.UsePostgreSQL {
-		stmt, err = data_store.Dbh.Prepare("SELECT count(*) AS c FROM goiardi.cookbook_versions cbv WHERE cbv.cookbook_id = $1")
+		sqlStatement = "SELECT count(*) AS c FROM goiardi.cookbook_versions cbv WHERE cbv.cookbook_id = $1"
 	}
+	stmt, err := data_store.Dbh.Prepare(sqlStatement)
 
 	if err != nil {
 		log.Fatal(err)
