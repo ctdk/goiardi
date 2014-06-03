@@ -399,3 +399,22 @@ func (e *ChefEnvironment) Flatten() []string {
 	indexified := util.Indexify(flatten)
 	return indexified
 }
+
+// Return all environments on this server.
+func AllEnvironments() []*Environment {
+	environments := make([]*Environment)
+	if config.Config.UseMySQL {
+		environments = allEnvironmentsSQL()
+	} else {
+		env_list := GetList()
+		for _, e := range env_list {
+			en, err := Get(e)
+			if err != nil {
+				logger.Debugf("Curious. Environment %s was in the environment list, but wasn't found when fetched. Continuing.", e)
+				continue
+			}
+			environments = append(environments, en)
+		}
+	}
+	return environments
+}

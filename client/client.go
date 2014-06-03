@@ -554,3 +554,22 @@ func (c *Client) GobDecode(b []byte) error {
 
 	return nil
 }
+
+// Return all the clients on this server.
+func AllClients() ([]*Client) {
+	clients := make([]*Client, 0)
+	if config.Config.UseMySQL {
+		clients = allClientsSQL()
+	} else {
+		client_list = GetList()
+		for _, c := range client_list {
+			cl, err := Get(c)
+			if err != nil {
+				logger.Debugf("Client %s was in the list of clients, but wasn't found when fetched. Continuing.", c)
+				continue
+			}
+			clients = append(clients, cl)
+		} 
+	}
+	return clients
+}

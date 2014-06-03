@@ -208,3 +208,32 @@ func getListMySQL() []string {
 	}
 	return client_list
 }
+
+func allClientsSQL() []*Client {
+	clients := make([]*Client, 0)
+	stmt, err := data_store.Dbh.Prepare("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o on c.organization_id = o.id")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return clients
+		}
+		log.Fatal(qerr)
+	}
+	for rows.Next() {
+		cl := new(Client)
+		err = cl.fillClientFromSQL(rows)
+		if err != nil {
+			log.Fatal(err)
+		}
+		clients = append(clients, cb)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return clients
+}
