@@ -171,3 +171,32 @@ func getEnvironmentList() []string {
 	}
 	return env_list
 }
+
+func allEnvironmentsSQL() []*Environment {
+	environments = make([]*Environment, 0)
+	stmt, err := data_store.Dbh.Prepare("SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return environments
+		}
+		log.Fatal(qerr)
+	}
+	for rows.Next() {
+		env := new(Client)
+		err = env.fillEnvFromSQL(rows)
+		if err != nil {
+			log.Fatal(err)
+		}
+		environments = append(environments, env)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return environments
+}

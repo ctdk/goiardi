@@ -220,3 +220,21 @@ func DeleteHashes(file_hashes []string) {
 		}
 	}
 }
+
+func AllFilestores() []*FileStore {
+	filestores := make([]*FileStore, 0)
+	if config.Config.UseMySQL {
+		filestores = allFilestoresSQL()
+	} else {
+		file_list := GetList()
+		for _, f := range file_list {
+			fl, err := Get(f)
+			if err != nil {
+				logger.Debugf("File checksum %s was in the list of files, but wasn't found when fetched. Continuing.", f)
+				continue
+			}
+			filestores = append(filestores, fl)
+		}
+	}
+	return filestores
+}

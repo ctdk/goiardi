@@ -307,3 +307,8 @@ func (n *Node) Flatten() []string {
 	indexified := util.Indexify(flatten)
 	return indexified
 }
+
+// Return all the nodes on the server
+func AllNodes() []*Node {
+
+}

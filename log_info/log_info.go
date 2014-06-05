@@ -182,3 +182,7 @@ func GetLogInfos(limits ...int) []*LogInfo {
 		return lis[offset:limit]
 	}
 }
+
+func AllLogInfos() []*LogInfo {
+	return GetLogInfos()
+}

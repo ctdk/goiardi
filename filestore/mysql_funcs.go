@@ -127,3 +127,32 @@ func deleteHashesMySQL(file_hashes []string) {
 	tx.Commit()
 	return 
 }
+
+func allFilestoresSQL() []*FileStore {
+	filestores := make([]*FileStore, 0)
+	stmt, err := data_store.Dbh.Prepare("SELECT checksum FROM file_checksums")
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	rows, qerr = stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return filestores
+		}
+		log.Fatal(qerr)
+	}
+	for rows.Next() {
+		fl := new(FileStore)
+		err = rows.Scan(&fl.Chksum)
+		if err != nil {
+			log.Fatal(err)
+		}
+		filestores = append(filestores, fl)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return filestores
+}
