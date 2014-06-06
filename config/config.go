@@ -61,6 +61,9 @@ type Conf struct {
 	LocalFstoreDir string `toml:"local-filestore-dir"`
 	LogEvents bool `toml:"log-events"`
 	LogEventKeep int `toml:"log-event-keep"`
+	DoExport bool
+	DoImport bool
+	ImpExFile string
 }
 var LogLevelNames = map[string]int{ "debug": 4, "info": 3, "warning": 2, "error": 1, "critical": 0 }
 
@@ -99,6 +102,8 @@ type Options struct {
 	LocalFstoreDir string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* for SQL mode."`
 	LogEvents bool `long:"log-events" description:"Log changes to chef objects."`
 	LogEventKeep int `short:"K" long:"log-event-keep" description:"Number of events to keep in the event log. If set, the event log will be checked periodically and pruned to this number of entries."`
+	Export string `short:"x" long:"export" description:"Export all server data to the given file, exiting afterwards. Should be used with caution. Cannot be used at the same time as -m/--import."`
+	Import string `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Removes all existing data. Cannot be used at the same time as -x/--export. NOT IMPLEMENTED."`
 }
 
 // The goiardi version.
@@ -146,6 +151,19 @@ func ParseConfigOptions() error {
 		}
 		Config.ConfFile = opts.ConfFile
 		Config.FreezeData = false
+	}
+
+	if opts.Export != "" && opts.Import != "" {
+		log.Println("Cannot use -x/--export and -m/--import flags together.")
+		os.Exit(1)
+	}
+
+	if opts.Export != "" {
+		Config.DoExport = true
+		Config.ImpExFile = opts.Export
+	} else if opts.Import != "" {
+		Config.DoImport = true
+		Config.ImpExFile = opts.Import
 	}
 	
 	if opts.Hostname != "" {

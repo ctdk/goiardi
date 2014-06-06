@@ -87,6 +87,18 @@ func main(){
 	createDefaultActors()
 	handleSignals()
 
+	/* handle import/export */
+	if config.Config.DoExport {
+		fmt.Printf("Exporting data to %s....\n", config.Config.ImpExFile)
+		err := exportAll(config.Config.ImpExFile)
+		if err != nil {
+			logger.Criticalf("Something went wrong during the export: %s", err.Error())
+			os.Exit(1)
+		}
+		fmt.Println("All done!")
+		os.Exit(0)
+	}
+
 	/* Register the various handlers, found in their own source files. */
 	http.HandleFunc("/authenticate_user", authenticate_user_handler)
 	http.HandleFunc("/clients", list_handler)
