@@ -214,3 +214,33 @@ func getNodeListMySQL(nodeName string, from, until time.Time, retrows int) ([]*R
 	}
 	return reports, nil
 }
+
+func getReportsSQL() []*Report {
+	reports := make([]*Report, 0)
+	stmt, err := data_store.Dbh.Prepare("SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	rows, rerr := stmt.Query()
+	if rerr != nil {
+		if rerr == sql.ErrNoRows {
+			return reports
+		}
+		log.Fatal(rerr)
+	}
+	for rows.Next() {
+		r := new(Report)
+		err = r.fillReportFromMySQL(rows)
+		if err != nil {
+			rows.Close()
+			log.Fatal(err)
+		}
+		reports = append(reports, r)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return reports
+}

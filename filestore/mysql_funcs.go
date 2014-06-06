@@ -132,10 +132,10 @@ func allFilestoresSQL() []*FileStore {
 	filestores := make([]*FileStore, 0)
 	stmt, err := data_store.Dbh.Prepare("SELECT checksum FROM file_checksums")
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 	defer stmt.Close()
-	rows, qerr = stmt.Query()
+	rows, qerr := stmt.Query()
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return filestores

@@ -414,7 +414,7 @@ func (dbi *DataBagItem) Flatten() []string {
 
 // Return all data bags on this server, and all their items. 
 func AllDataBags() ([]*DataBag) {
-	data_bags := make([]*DataBag)
+	data_bags := make([]*DataBag, 0)
 	if config.Config.UseMySQL {
 		data_bags = allDataBagsSQL()
 	} else {
@@ -422,7 +422,6 @@ func AllDataBags() ([]*DataBag) {
 		for _, d := range dbag_list {
 			db, err := Get(d)
 			if err != nil {
-				logger.Debugf("Curious. Data bag %s was in the cookbook list, but wasn't found when fetched. Continuing.", d)
 				continue
 			}
 			data_bags = append(data_bags, db)

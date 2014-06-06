@@ -491,3 +491,21 @@ func (u *User) GobDecode(b []byte) error {
 
 	return nil
 }
+
+// Return all the users on this server.
+func AllUsers() ([]*User) {
+	users := make([]*User, 0)
+	if config.Config.UseMySQL {
+		users = allUsersSQL()
+	} else {
+		user_list := GetList()
+		for _, u := range user_list {
+			us, err := Get(u)
+			if err != nil {
+				continue
+			}
+			users = append(users, us)
+		} 
+	}
+	return users
+}

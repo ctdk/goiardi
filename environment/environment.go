@@ -401,8 +401,8 @@ func (e *ChefEnvironment) Flatten() []string {
 }
 
 // Return all environments on this server.
-func AllEnvironments() []*Environment {
-	environments := make([]*Environment)
+func AllEnvironments() []*ChefEnvironment {
+	environments := make([]*ChefEnvironment, 0)
 	if config.Config.UseMySQL {
 		environments = allEnvironmentsSQL()
 	} else {
@@ -410,7 +410,6 @@ func AllEnvironments() []*Environment {
 		for _, e := range env_list {
 			en, err := Get(e)
 			if err != nil {
-				logger.Debugf("Curious. Environment %s was in the environment list, but wasn't found when fetched. Continuing.", e)
 				continue
 			}
 			environments = append(environments, en)

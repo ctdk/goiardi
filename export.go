@@ -17,7 +17,7 @@
 package main
 
 import (
-	"github.com/ctdk/goiardi/config"
+	//"github.com/ctdk/goiardi/config"
 	"encoding/json"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"
@@ -34,7 +34,7 @@ import (
 	"time"
 )
 
-type ExportData {
+type ExportData struct {
 	MajorVersion int
 	MinorVersion int
 	CreatedTime time.Time
@@ -54,7 +54,7 @@ func Export(fileName string) error {
 	exportedData.Data["clients"] = client.AllClients()
 	exportedData.Data["cookbooks"] = cookbook.AllCookbooks()
 	exportedData.Data["data_bag"] = data_bag.AllDataBags()
-	exportedData.Data["environment] = environment.AllEnvironments()
+	exportedData.Data["environment"] = environment.AllEnvironments()
 	exportedData.Data["filestore"] = filestore.AllFilestores()
 	exportedData.Data["log_info"] = log_info.AllLogInfos()
 	exportedData.Data["node"] = node.AllNodes()

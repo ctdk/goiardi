@@ -272,3 +272,21 @@ func (r *Role) Flatten() []string {
 	indexified := util.Indexify(flatten)
 	return indexified
 }
+
+// Return all the roles on the server
+func AllRoles() []*Role {
+	roles := make([]*Role, 0)
+	if config.Config.UseMySQL {
+		roles = allRolesSQL()
+	} else {
+		role_list := GetList()
+		for _, r := range role_list {
+			ro, err := Get(r)
+			if err != nil {
+				continue
+			}
+			roles = append(roles, ro)
+		}
+	}
+	return roles
+}

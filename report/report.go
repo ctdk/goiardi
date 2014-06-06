@@ -252,7 +252,7 @@ func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
 func GetList() []string {
 	var report_list []string
 	if config.Config.UseMySQL {
-
+		report_list = getListMySQL()
 	} else {
 		ds := data_store.New()
 		report_list = ds.GetList("report")
@@ -328,4 +328,20 @@ func (r *Report) GobDecode(b []byte) error {
 	}
 
 	return nil
+}
+
+func AllReports() []*Report {
+	if config.Config.UseMySQL {
+		return getReportsSQL()
+	} else {
+		reports := make([]*Report, 0)
+		report_list := GetList()
+		for _, r := range report_list {
+			rp, _ := Get(r)
+			if rp != nil {
+				reports = append(reports, rp)
+			}
+		}
+		return reports
+	}
 }

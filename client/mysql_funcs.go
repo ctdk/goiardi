@@ -53,7 +53,7 @@ func getClientMySQL(name string) (*Client, error) {
 	return client, nil
 }
 
-func (c *Client) fillClientFromSQL(row *sql.Row) error {
+func (c *Client) fillClientFromSQL(row data_store.ResRow) error {
 	err := row.Scan(&c.Name, &c.NodeName, &c.Validator, &c.Admin, &c.Orgname, &c.pubKey, &c.Certificate)
 	if err != nil {
 		return err
@@ -229,7 +229,7 @@ func allClientsSQL() []*Client {
 		if err != nil {
 			log.Fatal(err)
 		}
-		clients = append(clients, cb)
+		clients = append(clients, cl)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {

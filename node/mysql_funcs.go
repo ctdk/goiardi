@@ -222,3 +222,32 @@ func getNodesInEnvMySQL(env_name string) ([]*Node, error) {
 	}
 	return nodes, nil
 }
+
+func allNodesSQL() []*Node {
+	nodes := make([]*Node, 0)
+	stmt, err := data_store.Dbh.Prepare("select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return nodes
+		}
+		log.Fatal(qerr)
+	}
+	for rows.Next() {
+		no := new(Node)
+		err = no.fillNodeFromSQL(rows)
+		if err != nil {
+			log.Fatal(err)
+		}
+		nodes = append(nodes, no)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return nodes
+}

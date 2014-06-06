@@ -45,7 +45,7 @@ func checkForEnvironmentMySQL(dbhandle data_store.Dbhandle, name string) (bool, 
 // As there, the SQL query that made the row needs to have the same number &
 // order of columns as the one in Get(), even if the WHERE clause is different
 // or omitted.
-func (e *ChefEnvironment) fillEnvFromSQL(row *sql.Row) error {
+func (e *ChefEnvironment) fillEnvFromSQL(row data_store.ResRow) error {
 	var (
 		da []byte
 		oa []byte
@@ -172,8 +172,8 @@ func getEnvironmentList() []string {
 	return env_list
 }
 
-func allEnvironmentsSQL() []*Environment {
-	environments = make([]*Environment, 0)
+func allEnvironmentsSQL() []*ChefEnvironment {
+	environments := make([]*ChefEnvironment, 0)
 	stmt, err := data_store.Dbh.Prepare("SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments")
 	if err != nil {
 		log.Fatal(err)
@@ -187,7 +187,7 @@ func allEnvironmentsSQL() []*Environment {
 		log.Fatal(qerr)
 	}
 	for rows.Next() {
-		env := new(Client)
+		env := new(ChefEnvironment)
 		err = env.fillEnvFromSQL(rows)
 		if err != nil {
 			log.Fatal(err)

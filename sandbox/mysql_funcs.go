@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-func (s *Sandbox)fillSandboxFromSQL(row *sql.Row) error {
+func (s *Sandbox)fillSandboxFromSQL(row data_store.ResRow) error {
 	var csb []byte
 	var tb []byte
 	err := row.Scan(&s.Id, &tb, &csb, &s.Completed)
@@ -129,4 +129,33 @@ func getListMySQL() []string {
 		log.Fatal(err)
 	}
 	return sandbox_list
+}
+
+func allSandboxesSQL() []*Sandbox {
+	sandboxes := make([]*Sandbox, 0)
+	stmt, err := data_store.Dbh.Prepare("")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return sandboxes
+		}
+		log.Fatal(qerr)
+	}
+	for rows.Next() {
+		sb := new(Sandbox)
+		err = sb.fillSandboxFromSQL(rows)
+		if err != nil {
+			log.Fatal(err)
+		}
+		sandboxes = append(sandboxes, sb)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return sandboxes
 }

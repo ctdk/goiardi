@@ -36,7 +36,7 @@ func checkForRoleMySQL(dbhandle data_store.Dbhandle, name string) (bool, error) 
 	}
 }
 
-func (r *Role)fillRoleFromSQL(row *sql.Row) error {
+func (r *Role)fillRoleFromSQL(row data_store.ResRow) error {
 	var (
 		rl []byte
 		er []byte
@@ -169,4 +169,33 @@ func getListMySQL() []string {
 		log.Fatal(err)
 	}
 	return role_list
+}
+
+func allRolesSQL() []*Role {
+	roles := make([]*Role, 0)
+	stmt, err := data_store.Dbh.Prepare("SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM roles")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return roles
+		}
+		log.Fatal(qerr)
+	}
+	for rows.Next() {
+		ro := new(Role)
+		err = ro.fillRoleFromSQL(rows)
+		if err != nil {
+			log.Fatal(err)
+		}
+		roles = append(roles, ro)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return roles
 }

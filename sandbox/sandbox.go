@@ -217,3 +217,21 @@ func (s *Sandbox) GetName() string {
 func (s *Sandbox) URLType() string {
 	return "sandboxes"
 }
+
+// Return all sandboxes on the server.
+func AllSandboxes() ([]*Sandbox) {
+	sandboxes := make([]*Sandbox, 0)
+	if config.Config.UseMySQL {
+		sandboxes = allSandboxesSQL()
+	} else {
+		sandbox_list := GetList()
+		for _, s := range sandbox_list {
+			sb, err := Get(s)
+			if err != nil {
+				continue
+			}
+			sandboxes = append(sandboxes, sb)
+		} 
+	}
+	return sandboxes
+}

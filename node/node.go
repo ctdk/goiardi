@@ -310,5 +310,18 @@ func (n *Node) Flatten() []string {
 
 // Return all the nodes on the server
 func AllNodes() []*Node {
-
+	nodes := make([]*Node, 0)
+	if config.Config.UseMySQL {
+		nodes = allNodesSQL()
+	} else {
+		node_list := GetList()
+		for _, n := range node_list {
+			no, err := Get(n)
+			if err != nil {
+				continue
+			}
+			nodes = append(nodes, no)
+		}
+	}
+	return nodes
 }
