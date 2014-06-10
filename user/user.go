@@ -53,7 +53,7 @@ type privUser struct {
 	Email *string `json:"email"`
 	Admin *bool `json:"admin"`
 	PublicKey *string `json:"public_key"`
-	Passwd *string `json:"public_key"`
+	Passwd *string `json:"passwd"`
 	Salt *[]byte `json:"salt"`
 }
 
@@ -508,4 +508,14 @@ func AllUsers() ([]*User) {
 		} 
 	}
 	return users
+}
+
+// Return all users, in a fashion suitable for exporing
+func ExportAllUsers() []interface{} {
+	users := AllUsers()
+	export := make([]interface{}, len(users))
+	for i, u := range users {
+		export[i] = u.export()
+	}
+	return export
 }

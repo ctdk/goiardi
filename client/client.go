@@ -572,3 +572,13 @@ func AllClients() ([]*Client) {
 	}
 	return clients
 }
+
+// Return all clients in a fashion suitable for exporting.
+func ExportAllClients() []interface{} {
+	clients := AllClients()
+	export := make([]interface{}, len(clients))
+	for i, c := range clients {
+		export[i] = c.export()
+	}
+	return export
+}
