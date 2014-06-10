@@ -17,7 +17,6 @@
 package main
 
 import (
-	//"github.com/ctdk/goiardi/config"
 	"encoding/json"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"

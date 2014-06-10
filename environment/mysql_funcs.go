@@ -174,7 +174,7 @@ func getEnvironmentList() []string {
 
 func allEnvironmentsSQL() []*ChefEnvironment {
 	environments := make([]*ChefEnvironment, 0)
-	stmt, err := data_store.Dbh.Prepare("SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments")
+	stmt, err := data_store.Dbh.Prepare("SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments WHERE name != '_default'")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -133,7 +133,7 @@ func getListMySQL() []string {
 
 func allSandboxesSQL() []*Sandbox {
 	sandboxes := make([]*Sandbox, 0)
-	stmt, err := data_store.Dbh.Prepare("")
+	stmt, err := data_store.Dbh.Prepare("SELECT sbox_id, creation_time, checksums, completed FROM sandboxes")
 	if err != nil {
 		log.Fatal(err)
 	}
