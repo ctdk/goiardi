@@ -97,6 +97,15 @@ func main(){
 		}
 		fmt.Println("All done!")
 		os.Exit(0)
+	} else if config.Config.DoImport {
+		fmt.Printf("Importing data from %s....\n", config.Config.ImpExFile)
+		err := importAll(config.Config.ImpExFile)
+		if err != nil {
+			logger.Criticalf("Something went wrong during the import: %s", err.Error())
+			os.Exit(1)
+		}
+		fmt.Println("All done.")
+		os.Exit(0)
 	}
 
 	/* Register the various handlers, found in their own source files. */
