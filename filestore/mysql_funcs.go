@@ -148,6 +148,9 @@ func allFilestoresSQL() []*FileStore {
 		if err != nil {
 			log.Fatal(err)
 		}
+		if err = fl.loadData(); err != nil {
+			log.Fatal(err)
+		}
 		filestores = append(filestores, fl)
 	}
 	rows.Close()

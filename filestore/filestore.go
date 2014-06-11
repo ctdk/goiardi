@@ -109,29 +109,36 @@ func Get(chksum string) (*FileStore, error){
 		return nil, err
 	}
 	if config.Config.LocalFstoreDir != "" {
-		/* File data is stored on disk */
-		chkPath := path.Join(config.Config.LocalFstoreDir, chksum)
-		
-		fp, err := os.Open(chkPath)
-		if err != nil {
+		if err := filestore.loadData(); err != nil {
 			return nil, err
 		}
-		defer fp.Close()
-		stat, sterr := fp.Stat()
-		if sterr != nil {
-			return nil, sterr
-		}
-		fdata := make([]byte, stat.Size())
-		n, fperr := fp.Read(fdata)
-		if fperr != nil {
-			return nil, fperr
-		} else if int64(n) != stat.Size() {
-			err = fmt.Errorf("only %d bytes were read from the expected %d", n, stat.Size())
-			return nil, err
-		}
-		filestore.Data = &fdata
 	}
 	return filestore, nil
+}
+
+func (f *FileStore) loadData() error {
+	/* If this is called, file data is stored on disk */
+	chkPath := path.Join(config.Config.LocalFstoreDir, f.Chksum)
+	
+	fp, err := os.Open(chkPath)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+	stat, sterr := fp.Stat()
+	if sterr != nil {
+		return sterr
+	}
+	fdata := make([]byte, stat.Size())
+	n, fperr := fp.Read(fdata)
+	if fperr != nil {
+		return fperr
+	} else if int64(n) != stat.Size() {
+		err = fmt.Errorf("only %d bytes were read from the expected %d", n, stat.Size())
+		return err
+	}
+	f.Data = &fdata
+	return nil
 }
 
 func (f *FileStore) Save() error {
