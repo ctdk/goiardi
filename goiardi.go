@@ -82,11 +82,6 @@ func main(){
 	setSaveTicker()
 	setLogEventPurgeTicker()
 
-	/* Create default clients and users. Currently chef-validator,
-	 * chef-webui, and admin. */
-	createDefaultActors()
-	handleSignals()
-
 	/* handle import/export */
 	if config.Config.DoExport {
 		fmt.Printf("Exporting data to %s....\n", config.Config.ImpExFile)
@@ -104,9 +99,28 @@ func main(){
 			logger.Criticalf("Something went wrong during the import: %s", err.Error())
 			os.Exit(1)
 		}
+		if config.Config.FreezeData {
+			if config.Config.DataStoreFile != "" {
+				ds := data_store.New()
+				if err := ds.Save(config.Config.DataStoreFile); err != nil {
+					logger.Errorf(err.Error())
+				}
+			}
+			if err := indexer.SaveIndex(config.Config.IndexFile); err != nil {
+				logger.Errorf(err.Error())
+			}
+		}
+		if config.Config.UseMySQL {
+			data_store.Dbh.Close()
+		}
 		fmt.Println("All done.")
 		os.Exit(0)
 	}
+
+	/* Create default clients and users. Currently chef-validator,
+	 * chef-webui, and admin. */
+	createDefaultActors()
+	handleSignals()
 
 	/* Register the various handlers, found in their own source files. */
 	http.HandleFunc("/authenticate_user", authenticate_user_handler)

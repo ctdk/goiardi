@@ -54,8 +54,8 @@ func exportAll(fileName string) error {
 	exportedData := &ExportData{ MajorVersion: ExportMajorVersion, MinorVersion: ExportMinorVersion, CreatedTime: time.Now() }
 	exportedData.Data = make(map[string][]interface{})
 	// ... and march through everything.
-	exportedData.Data["clients"] = client.ExportAllClients()
-	exportedData.Data["cookbooks"] = exportTransformSlice(cookbook.AllCookbooks())
+	exportedData.Data["client"] = client.ExportAllClients()
+	exportedData.Data["cookbook"] = exportTransformSlice(cookbook.AllCookbooks())
 	exportedData.Data["data_bag"] = exportTransformSlice(data_bag.AllDataBags())
 	exportedData.Data["environment"] = exportTransformSlice(environment.AllEnvironments())
 	exportedData.Data["filestore"] = exportTransformSlice(filestore.AllFilestores())

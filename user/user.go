@@ -53,7 +53,7 @@ type privUser struct {
 	Email *string `json:"email"`
 	Admin *bool `json:"admin"`
 	PublicKey *string `json:"public_key"`
-	Passwd *string `json:"passwd"`
+	Passwd *string `json:"password"`
 	Salt *[]byte `json:"salt"`
 }
 
@@ -237,7 +237,7 @@ func (u *User)UpdateFromJson(json_user map[string]interface{}) util.Gerror {
 
 	/* Validations. */
 	/* Invalid top level elements */
-	valid_elements := []string{ "username", "name", "org_name", "public_key", "private_key", "admin", "password" }
+	valid_elements := []string{ "username", "name", "org_name", "public_key", "private_key", "admin", "password", "email", "salt" }
 	ValidElem:
 	for k, _ := range json_user {
 		for _, i := range valid_elements {
