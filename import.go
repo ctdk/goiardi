@@ -22,8 +22,8 @@ import (
 	"bytes"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"
-	// "github.com/ctdk/goiardi/data_bag"
-	// "github.com/ctdk/goiardi/environment"
+	"github.com/ctdk/goiardi/data_bag"
+	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/filestore"
 	// "github.com/ctdk/goiardi/log_info"
 	// "github.com/ctdk/goiardi/node"
@@ -113,9 +113,40 @@ func importAll(fileName string) error {
 						return cbverr
 					}
 				}
-				gerr = cb.Save()
+			}
+		}
+
+		// load data bags
+		for _, v := range exportedData.Data["data_bag"] {
+			if dbag, err := data_bag.New(v.(map[string]interface{})["Name"].(string)); err != nil {
+				return err
+			} else {
+				gerr := dbag.Save()
 				if gerr != nil {
 					return gerr
+				}
+				for _, dbag_data := range v.(map[string]interface{})["DataBagItems"].(map[string]interface{}) {
+					_, dbierr := dbag.NewDBItem(dbag_data.(map[string]interface{}))
+					if dbierr != nil {
+						return dbierr
+					}
+				}
+				gerr = dbag.Save()
+				if gerr != nil {
+					return gerr
+				}
+			}
+		}
+		// load environments
+		for _, v := range exportedData.Data["environment"] {
+			if v.(map[string]interface{})["name"].(string) != "_default" {
+				if e, err := environment.NewFromJson(v.(map[string]interface{})); err != nil {
+					return err
+				} else {
+					gerr := e.Save()
+					if gerr != nil {
+						return gerr
+					}
 				}
 			}
 		}
