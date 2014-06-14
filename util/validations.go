@@ -362,7 +362,7 @@ func ValidateRunList(rl interface{}) ([]string, Gerror) {
 			nil_rl := make([]string, 0)
 			return nil_rl, nil
 		default:
-			err := Errorf("Not a proper runlist []string")
+			err := Errorf("Not a proper runlist []string - %T %v", rl, rl)
 			return nil, err
 	}
 }

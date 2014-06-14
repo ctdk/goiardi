@@ -26,14 +26,14 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/filestore"
 	// "github.com/ctdk/goiardi/log_info"
-	// "github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/node"
 	// "github.com/ctdk/goiardi/report"
-	// "github.com/ctdk/goiardi/role" 
-	// "github.com/ctdk/goiardi/sandbox"
+	"github.com/ctdk/goiardi/role" 
+	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/user" 
 	"os"
 	"io/ioutil"
-	//"time"
+	"time"
 	"fmt"
 	"git.tideland.biz/goas/logger"
 )
@@ -82,7 +82,6 @@ func importAll(fileName string) error {
 
 		// load filestore
 		for _, v := range exportedData.Data["filestore"] {
-			logger.Infof("checksum: %s, data: %s", v.(map[string]interface{})["Chksum"], v.(map[string]interface{})["Data"])
 			file_data, err := base64.StdEncoding.DecodeString(v.(map[string]interface{})["Data"].(string))
 			if err != nil {
 				return err
@@ -108,7 +107,11 @@ func importAll(fileName string) error {
 					return gerr
 				}
 				for ver, cbv_data := range v.(map[string]interface{})["Versions"].(map[string]interface{}) {
-					_, cbverr := cb.NewVersion(ver, cbv_data.(map[string]interface{}))
+					cbv_data, cerr := checkAttrs(cbv_data.(map[string]interface{}))
+					if cerr != nil {
+						return cerr
+					}
+					_, cbverr := cb.NewVersion(ver, cbv_data)
 					if cbverr != nil {
 						return cbverr
 					}
@@ -139,8 +142,12 @@ func importAll(fileName string) error {
 		}
 		// load environments
 		for _, v := range exportedData.Data["environment"] {
-			if v.(map[string]interface{})["name"].(string) != "_default" {
-				if e, err := environment.NewFromJson(v.(map[string]interface{})); err != nil {
+			env_data, cerr := checkAttrs(v.(map[string]interface{}))
+			if cerr != nil {
+				return nil
+			}
+			if env_data["name"].(string) != "_default" {
+				if e, err := environment.NewFromJson(env_data); err != nil {
 					return err
 				} else {
 					gerr := e.Save()
@@ -150,6 +157,59 @@ func importAll(fileName string) error {
 				}
 			}
 		}
+
+		// load nodes
+		for _, v := range exportedData.Data["node"] {
+			node_data, cerr := checkAttrs(v.(map[string]interface{}))
+			if cerr != nil {
+				return nil
+			}
+			if n, err := node.NewFromJson(node_data); err != nil {
+				return err
+			} else {
+				gerr := n.Save()
+				if gerr != nil {
+					return gerr
+				}
+			}
+		}
+
+		// load roles
+		for _, v := range exportedData.Data["role"] {
+			role_data, cerr := checkAttrs(v.(map[string]interface{}))
+			if cerr != nil {
+				return nil
+			}
+			if r, err := role.NewFromJson(role_data); err != nil {
+				return err
+			} else {
+				gerr := r.Save()
+				if gerr != nil {
+					return gerr
+				}
+			}
+		}
+
+		// load sandboxes
+		for _, v := range exportedData.Data["sandbox"] {
+			sbid, _ := v.(map[string]interface{})["Id"].(string)
+			sbts, _ := v.(map[string]interface{})["CreationTime"].(string)
+			sbcomplete, _ := v.(map[string]interface{})["Completed"].(bool)
+			sbck, _ := v.(map[string]interface{})["Checksums"].([]interface{})
+			sbTime, err := time.Parse(time.RFC3339, sbts)
+			if err != nil {
+				return err
+			}
+			sbChecksums := make([]string, len(sbck))
+			for i, c := range sbck {
+				sbChecksums[i] = c.(string)
+			}
+			sbox := &sandbox.Sandbox{ Id: sbid, CreationTime: sbTime, Completed: sbcomplete, Checksums: sbChecksums }
+			if err = sbox.Save(); err != nil {
+				return err
+			}
+		}
+
 
 	} else {
 		err := fmt.Errorf("goiardi export data version %d.%d is not supported by this version of goiardi", exportedData.MajorVersion, exportedData.MinorVersion)

@@ -34,7 +34,10 @@ func ParseObjJson(data io.ReadCloser) (map[string]interface{}, error){
 	if err := dec.Decode(&obj_data); err != nil {
 		return nil, err
 	}
+	return checkAttrs(obj_data)
+}
 
+func checkAttrs(obj_data map[string]interface{}) (map[string]interface{}, error) {
 	/* If this kind of object comes with a run_list, process it */
 	if _, ok := obj_data["run_list"]; ok {
 		if rl, err := chkRunList(obj_data["run_list"]); err != nil {
