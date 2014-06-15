@@ -82,6 +82,29 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 	}
 }
 
+// Import a log info event from an export dump.
+func Import(logData map[string]interface{}) error {
+	le := new(LogInfo)
+	le.Action = logData["action"].(string)
+	le.ActorType = logData["actor_type"].(string)
+	le.ActorInfo = logData["actor_info"].(string)
+	le.ObjectType = logData["object_type"].(string)
+	le.ObjectName = logData["object_name"].(string)
+	le.ExtendedInfo = logData["extended_info"].(string)
+	le.Id = logData["id"].(int)
+	t, err := time.Parse(time.RFC3339, logData["time"].(string))
+	if err != nil {
+		return nil
+	}
+	le.Time = t
+
+	if config.Config.UseMySQL {
+		return le.importEventSQL()
+	} else {
+		return le.writeEventInMem()
+	}
+}
+
 func (le *LogInfo)writeEventInMem() error {
 	ds := data_store.New()
 	return ds.SetLogInfo(le)

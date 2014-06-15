@@ -25,9 +25,9 @@ import (
 	"github.com/ctdk/goiardi/data_bag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/filestore"
-	// "github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/log_info"
 	"github.com/ctdk/goiardi/node"
-	// "github.com/ctdk/goiardi/report"
+	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role" 
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/user" 
@@ -210,6 +210,25 @@ func importAll(fileName string) error {
 			}
 		}
 
+		// load log_infos
+		for _, v := range exportedData.Data["log_info"] {
+			if err := log_info.Import(v.(map[string]interface{})); err != nil {
+				return err
+			}
+		}
+
+		// load reports
+		for _, v := range exportedData.Data["client"] {
+			nodeName := v.(map[string]interface{})["node_name"].(string)
+			if r, err := report.NewFromJson(nodeName, v.(map[string]interface{})); err != nil {
+				return err
+			} else {
+				gerr := r.Save()
+				if gerr != nil {
+					return gerr
+				}
+			}
+		}
 
 	} else {
 		err := fmt.Errorf("goiardi export data version %d.%d is not supported by this version of goiardi", exportedData.MajorVersion, exportedData.MinorVersion)

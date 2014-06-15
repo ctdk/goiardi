@@ -22,6 +22,9 @@ import (
 	"time"
 	"log"
 	"fmt"
+	"bytes"
+	"io/ioutil"
+	"encoding/json"
 )
 
 func (le *LogInfo)writeEventMySQL() error {
@@ -35,13 +38,50 @@ func (le *LogInfo)writeEventMySQL() error {
 		tx.Rollback()
 		return err
 	}
-	_, err = tx.Exec("INSERT INTO log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", actor_id, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+	err = le.actualWriteEventSQL(tx, actor_id)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 	tx.Commit()
 	return nil
+}
+
+func (le *LogInfo)importEventSQL() error {
+	tx, err := data_store.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	type_table := fmt.Sprintf("%ss", le.ActorType)
+
+	aiBuf := bytes.NewBuffer([]byte(le.ActorInfo))
+	aiRC := ioutil.NopCloser(aiBuf)
+	doer := make(map[string]interface{})
+
+	dec := json.NewDecoder(aiRC)
+	if err = dec.Decode(&doer); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	actorId, err := data_store.CheckForOne(tx, type_table, doer["name"].(string))
+	if err != nil {
+		actorId = -1
+	}
+	err = le.actualWriteEventSQL(tx, actorId)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+	return nil
+}
+
+// This has been broken out to a separate function to simplify importing data
+// from json export dumps.
+func (le *LogInfo)actualWriteEventSQL(tx data_store.Dbhandle, actorId int32) error {
+	_, err := tx.Exec("INSERT INTO log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", actorId, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+	return err
 }
 
 func getLogEventMySQL(id int) (*LogInfo, error) {
