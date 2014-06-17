@@ -36,6 +36,7 @@ import (
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/report"
 	"fmt"
 	"os"
 	"os/signal"
@@ -426,6 +427,8 @@ func gobRegister() {
 	gob.Register(cbv)
 	dbi := new(data_bag.DataBagItem)
 	gob.Register(dbi)
+	rp := new(report.Report)
+	gob.Register(rp)
 }
 
 func setSaveTicker() {

@@ -135,7 +135,7 @@ func (ds *DataStore) GetList(key_type string) []string{
 
 // Set a log_info in the data store. Unlike most of these objects, log infos
 // are stored and retrieved by id, since they have no useful names.
-func (ds *DataStore) SetLogInfo(obj interface{}) error {
+func (ds *DataStore) SetLogInfo(obj interface{}, log_id ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	ds_key := ds.make_key("log_info", "log_infos")
@@ -144,7 +144,12 @@ func (ds *DataStore) SetLogInfo(obj interface{}) error {
 		a = make(map[int]interface{})
 	}
 	arr := a.(map[int]interface{})
-	next_id := getNextId(arr)
+	var next_id int
+	if log_id != nil {
+		next_id = log_id[0]
+	} else {
+		next_id = getNextId(arr)
+	}
 	arr[next_id] = obj
 	ds.dsc.Set(ds_key, arr, -1)
 	return nil

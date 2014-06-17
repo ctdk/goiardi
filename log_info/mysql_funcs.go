@@ -80,7 +80,15 @@ func (le *LogInfo)importEventSQL() error {
 // This has been broken out to a separate function to simplify importing data
 // from json export dumps.
 func (le *LogInfo)actualWriteEventSQL(tx data_store.Dbhandle, actorId int32) error {
-	_, err := tx.Exec("INSERT INTO log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", actorId, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+	var err error
+	if le.Id == 0 {
+		sqlStmt := "INSERT INTO log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+		_, err = tx.Exec(sqlStmt, actorId, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+	} else {
+		sqlStmt := "INSERT INTO log_infos (id, actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		_, err = tx.Exec(sqlStmt, le.Id, actorId, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+	}
+	_, err = tx.Exec("INSERT INTO log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", actorId, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
 	return err
 }
 

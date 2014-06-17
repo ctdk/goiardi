@@ -91,7 +91,7 @@ func Import(logData map[string]interface{}) error {
 	le.ObjectType = logData["object_type"].(string)
 	le.ObjectName = logData["object_name"].(string)
 	le.ExtendedInfo = logData["extended_info"].(string)
-	le.Id = logData["id"].(int)
+	le.Id = int(logData["id"].(float64))
 	t, err := time.Parse(time.RFC3339, logData["time"].(string))
 	if err != nil {
 		return nil
@@ -101,13 +101,18 @@ func Import(logData map[string]interface{}) error {
 	if config.Config.UseMySQL {
 		return le.importEventSQL()
 	} else {
-		return le.writeEventInMem()
+		return le.importEventInMem()
 	}
 }
 
 func (le *LogInfo)writeEventInMem() error {
 	ds := data_store.New()
 	return ds.SetLogInfo(le)
+}
+
+func (le *LogInfo)importEventInMem() error {
+	ds := data_store.New()
+	return ds.SetLogInfo(le, le.Id)
 }
 
 // Get a particular event by its id.

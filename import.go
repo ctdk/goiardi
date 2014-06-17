@@ -54,9 +54,9 @@ func importAll(fileName string) error {
 
 	if exportedData.MajorVersion == 1 && exportedData.MinorVersion == 0 {
 		logger.Infof("Importing data, version %d.%d created on %s", exportedData.MajorVersion, exportedData.MinorVersion, exportedData.CreatedTime)
-		// so what do we have?
-		// logger.Infof("dump\n%v", exportedData)
+
 		// load clients
+		logger.Infof("Loading clients")
 		for _, v := range exportedData.Data["client"] {
 			if c, err := client.NewFromJson(v.(map[string]interface{})); err != nil {
 				return err
@@ -69,6 +69,7 @@ func importAll(fileName string) error {
 		}
 
 		// load users
+		logger.Infof("Loading users")
 		for _, v := range exportedData.Data["user"] {
 			if u, err := user.NewFromJson(v.(map[string]interface{})); err != nil {
 				return err
@@ -81,6 +82,7 @@ func importAll(fileName string) error {
 		}
 
 		// load filestore
+		logger.Infof("Loading filestore")
 		for _, v := range exportedData.Data["filestore"] {
 			file_data, err := base64.StdEncoding.DecodeString(v.(map[string]interface{})["Data"].(string))
 			if err != nil {
@@ -98,6 +100,7 @@ func importAll(fileName string) error {
 		}
 
 		// load cookbooks
+		logger.Infof("Loading cookbooks")
 		for _, v := range exportedData.Data["cookbook"] {
 			if cb, err := cookbook.New(v.(map[string]interface{})["Name"].(string)); err != nil {
 				return err
@@ -120,6 +123,7 @@ func importAll(fileName string) error {
 		}
 
 		// load data bags
+		logger.Infof("Loading data bags")
 		for _, v := range exportedData.Data["data_bag"] {
 			if dbag, err := data_bag.New(v.(map[string]interface{})["Name"].(string)); err != nil {
 				return err
@@ -129,7 +133,7 @@ func importAll(fileName string) error {
 					return gerr
 				}
 				for _, dbag_data := range v.(map[string]interface{})["DataBagItems"].(map[string]interface{}) {
-					_, dbierr := dbag.NewDBItem(dbag_data.(map[string]interface{}))
+					_, dbierr := dbag.NewDBItem(dbag_data.(map[string]interface{})["raw_data"].(map[string]interface{}))
 					if dbierr != nil {
 						return dbierr
 					}
@@ -141,6 +145,7 @@ func importAll(fileName string) error {
 			}
 		}
 		// load environments
+		logger.Infof("Loading environments")
 		for _, v := range exportedData.Data["environment"] {
 			env_data, cerr := checkAttrs(v.(map[string]interface{}))
 			if cerr != nil {
@@ -159,6 +164,7 @@ func importAll(fileName string) error {
 		}
 
 		// load nodes
+		logger.Infof("Loading nodes")
 		for _, v := range exportedData.Data["node"] {
 			node_data, cerr := checkAttrs(v.(map[string]interface{}))
 			if cerr != nil {
@@ -175,6 +181,7 @@ func importAll(fileName string) error {
 		}
 
 		// load roles
+		logger.Infof("Loading roles")
 		for _, v := range exportedData.Data["role"] {
 			role_data, cerr := checkAttrs(v.(map[string]interface{}))
 			if cerr != nil {
@@ -191,6 +198,7 @@ func importAll(fileName string) error {
 		}
 
 		// load sandboxes
+		logger.Infof("Loading sandboxes")
 		for _, v := range exportedData.Data["sandbox"] {
 			sbid, _ := v.(map[string]interface{})["Id"].(string)
 			sbts, _ := v.(map[string]interface{})["CreationTime"].(string)
@@ -211,6 +219,7 @@ func importAll(fileName string) error {
 		}
 
 		// load log_infos
+		logger.Infof("Loading log_info")
 		for _, v := range exportedData.Data["log_info"] {
 			if err := log_info.Import(v.(map[string]interface{})); err != nil {
 				return err
@@ -218,8 +227,24 @@ func importAll(fileName string) error {
 		}
 
 		// load reports
-		for _, v := range exportedData.Data["client"] {
+		logger.Infof("Loading reports")
+		for _, v := range exportedData.Data["report"] {
 			nodeName := v.(map[string]interface{})["node_name"].(string)
+			v.(map[string]interface{})["action"] = "start"
+			if st, ok := v.(map[string]interface{})["start_time"].(string); ok {
+				t, err := time.Parse(time.RFC3339, st)
+				if err != nil {
+					return err
+				}
+				 v.(map[string]interface{})["start_time"] = t.Format(report.ReportTimeFormat)
+			}
+			if et, ok := v.(map[string]interface{})["end_time"].(string); ok {
+				t, err := time.Parse(time.RFC3339, et)
+				if err != nil {
+					return err
+				}
+				 v.(map[string]interface{})["end_time"] = t.Format(report.ReportTimeFormat)
+			}
 			if r, err := report.NewFromJson(nodeName, v.(map[string]interface{})); err != nil {
 				return err
 			} else {
@@ -227,7 +252,17 @@ func importAll(fileName string) error {
 				if gerr != nil {
 					return gerr
 				}
+				v.(map[string]interface{})["action"] = "end"
+				if err := r.UpdateFromJson(v.(map[string]interface{})); err != nil {
+					return err
+				} else {
+					gerr := r.Save()
+					if gerr != nil {
+						return gerr
+					}
+				}
 			}
+			
 		}
 
 	} else {

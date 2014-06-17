@@ -204,15 +204,22 @@ func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
 		err := util.CastErr(terr)
 		return err
 	}
-	_, ok = json_report["total_res_count"].(string)
-	if !ok {
-		err := util.Errorf("invalid total_res_count")
-		return err
-	}
-	trc, err := strconv.Atoi(json_report["total_res_count"].(string))
-	if err != nil {
-		err := util.Errorf("Error converting %v to int: %s", json_report["total_res_count"], err.Error())
-		return err
+	var trc int
+	switch t := json_report["total_res_count"].(type) {
+		case string:
+			var err error
+			trc, err = strconv.Atoi(t)
+			if err != nil {
+				err := util.Errorf("Error converting %v to int: %s", json_report["total_res_count"], err.Error())
+				return err
+			}
+		case float64:
+			trc = int(t)
+		case int:
+			trc = t
+		default:
+			err := util.Errorf("invalid total_res_count %T", t)
+			return err
 	}
 	status, ok := json_report["status"].(string)
 	if ok {

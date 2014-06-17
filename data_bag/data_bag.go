@@ -200,7 +200,7 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 				dbi_id = t
 			}
 		default:
-			err := util.Errorf("Field 'id' missing")
+			err := util.Errorf("Field 'id' missing xxx %T", t)
 			return nil, err
 	}
 	if err := validateDataBagName(dbi_id, true); err != nil {
