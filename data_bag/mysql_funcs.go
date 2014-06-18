@@ -358,6 +358,7 @@ func allDataBagsSQL() []*DataBag {
 		if err != nil {
 			log.Fatal(err)
 		}
+		dbags = append(dbags, data_bag)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {

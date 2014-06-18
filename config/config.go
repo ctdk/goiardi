@@ -103,7 +103,7 @@ type Options struct {
 	LogEvents bool `long:"log-events" description:"Log changes to chef objects."`
 	LogEventKeep int `short:"K" long:"log-event-keep" description:"Number of events to keep in the event log. If set, the event log will be checked periodically and pruned to this number of entries."`
 	Export string `short:"x" long:"export" description:"Export all server data to the given file, exiting afterwards. Should be used with caution. Cannot be used at the same time as -m/--import."`
-	Import string `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Removes all existing data. Cannot be used at the same time as -x/--export. NOT IMPLEMENTED."`
+	Import string `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Cannot be used at the same time as -x/--export."`
 }
 
 // The goiardi version.

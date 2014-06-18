@@ -137,6 +137,10 @@ func (c *Cookbook)NumVersions() int {
 func AllCookbooks() (cookbooks []*Cookbook) {
 	if config.Config.UseMySQL {
 		cookbooks = allCookbooksMySQL()
+		for _, c := range cookbooks {
+			// populate the versions hash
+			c.sortedVersions()
+		}
 	} else {
 		cookbook_list := GetList()
 		for _, c := range cookbook_list {

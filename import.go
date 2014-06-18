@@ -61,6 +61,7 @@ func importAll(fileName string) error {
 			if c, err := client.NewFromJson(v.(map[string]interface{})); err != nil {
 				return err
 			} else {
+				c.SetPublicKey(v.(map[string]interface{})["public_key"])
 				gerr := c.Save()
 				if gerr != nil {
 					return gerr
@@ -71,9 +72,13 @@ func importAll(fileName string) error {
 		// load users
 		logger.Infof("Loading users")
 		for _, v := range exportedData.Data["user"] {
+			pwhash, _ := v.(map[string]interface{})["password"].(string)
+			v.(map[string]interface{})["password"] = ""
 			if u, err := user.NewFromJson(v.(map[string]interface{})); err != nil {
 				return err
 			} else {
+				u.SetPasswdHash(pwhash)
+				u.SetPublicKey(v.(map[string]interface{})["public_key"])
 				gerr := u.Save()
 				if gerr != nil {
 					return gerr

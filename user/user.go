@@ -257,9 +257,11 @@ func (u *User)UpdateFromJson(json_user map[string]interface{}) util.Gerror {
 		if verr != nil {
 			return verr
 		}
-		verr = u.SetPasswd(passwd.(string))
-		if verr != nil {
-			return verr
+		if passwd != "" {
+			verr = u.SetPasswd(passwd.(string))
+			if verr != nil {
+				return verr
+			}
 		}
 	} 
 
@@ -281,6 +283,15 @@ func (u *User)UpdateFromJson(json_user map[string]interface{}) util.Gerror {
 	}
 
 	return nil
+}
+
+// Utility function to directly set a password hash. Only especially useful when
+// importing user data with the -m/--import flags, since it's still hashed with
+// the user's salt.
+func (u *User) SetPasswdHash(pwhash string) {
+	if pwhash != "" {
+		u.passwd = pwhash
+	}
 }
 
 // Returns a list of users.
