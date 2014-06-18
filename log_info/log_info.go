@@ -211,6 +211,8 @@ func GetLogInfos(limits ...int) []*LogInfo {
 	}
 }
 
+// Return a list of all logged events in the database. Provides a wrapper around
+// GetLogInfos() for consistency with the other object types for exporting data.
 func AllLogInfos() []*LogInfo {
 	return GetLogInfos()
 }

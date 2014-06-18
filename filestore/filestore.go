@@ -228,6 +228,7 @@ func DeleteHashes(file_hashes []string) {
 	}
 }
 
+// All file checksums and their contents, for exporting.
 func AllFilestores() []*FileStore {
 	filestores := make([]*FileStore, 0)
 	if config.Config.UseMySQL {

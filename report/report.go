@@ -337,6 +337,7 @@ func (r *Report) GobDecode(b []byte) error {
 	return nil
 }
 
+// Return all run reports currently on the server for export.
 func AllReports() []*Report {
 	if config.Config.UseMySQL {
 		return getReportsSQL()
