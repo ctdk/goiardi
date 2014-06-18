@@ -30,12 +30,12 @@ import (
 func report_handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	//protocol_version := r.Header.Get("X-Ops-Reporting-Protocol-Version")
+	protocol_version := r.Header.Get("X-Ops-Reporting-Protocol-Version")
 	// someday there may be other protocol versions
-	/* if protocol_version != "0.1.0" {
+	if protocol_version != "0.1.0" {
 		JsonErrorReport(w, r, "Unsupported reporting protocol version", http.StatusNotFound)
 		return
-	} */
+	}
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
