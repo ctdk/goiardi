@@ -1,3 +1,7 @@
+0.5.2
+-----
+* Add import/export of goiardi data through a JSON dump.
+
 0.5.1
 -----
 * Add log levels (from debug to critical). This makes -V/--verbose useful.
