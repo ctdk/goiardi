@@ -71,8 +71,14 @@
         <lastmod>2014-05-28T20:27:21-07:00</lastmod>
     </url>
     <url>
+        <loc>
+            http://ctdk.github.io/goiardi/blog/2014/06/19/goiardi-version-0-dot-5-2-block-of-dirt/
+        </loc>
+        <lastmod>2014-06-19T13:12:24-07:00</lastmod>
+    </url>
+    <url>
         <loc>http://ctdk.github.io/goiardi/blog/archives/</loc>
-        <lastmod>2014-05-28T20:27:21-07:00</lastmod>
+        <lastmod>2014-06-19T13:12:24-07:00</lastmod>
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/docs/</loc>
@@ -80,7 +86,7 @@
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/</loc>
-        <lastmod>2014-05-28T20:27:21-07:00</lastmod>
+        <lastmod>2014-06-19T13:12:24-07:00</lastmod>
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/robots.txt</loc>
