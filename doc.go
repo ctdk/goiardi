@@ -140,6 +140,10 @@ Currently available command line and config file options:
    -m, --import=          Import data from the given file, exiting
                           afterwards. Cannot be used at the same time as 
                           -x/--export.
+   -Q, --obj-max-size=    Maximum object size in bytes for the file store.
+                          Default 10485760 bytes (10MB).
+   -j, --json-req-max-size= Maximum size for a JSON request from the client.
+                          Per chef-pedant, default is 1000000.
 
    Options specified on the command line override options in the config file.
 
