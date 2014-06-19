@@ -1,6 +1,8 @@
-0.5.2
+0.5.2 (unreleased)
 -----
 * Add import/export of goiardi data through a JSON dump.
+* Add configuration options to specify the max sizes for objects uploaded to
+  the filestore and for JSON requests from the client.
 
 0.5.1
 -----

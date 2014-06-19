@@ -9,8 +9,6 @@
   better. Those tests tend to focus on internals that chef-pedant wouldn't
   exercise very well.
 
-* Proper logging needed.
-
 * At least after chef-pedant has run, there are extra files left over in the 
   filestore. This does not happen when uploading, updating, and deleting
   cookbooks, however.
