@@ -64,6 +64,8 @@ type Conf struct {
 	DoExport bool
 	DoImport bool
 	ImpExFile string
+	ObjMaxSize int64
+	JsonReqMaxSize int64
 }
 var LogLevelNames = map[string]int{ "debug": 4, "info": 3, "warning": 2, "error": 1, "critical": 0 }
 
@@ -104,6 +106,8 @@ type Options struct {
 	LogEventKeep int `short:"K" long:"log-event-keep" description:"Number of events to keep in the event log. If set, the event log will be checked periodically and pruned to this number of entries."`
 	Export string `short:"x" long:"export" description:"Export all server data to the given file, exiting afterwards. Should be used with caution. Cannot be used at the same time as -m/--import."`
 	Import string `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Cannot be used at the same time as -x/--export."`
+	ObjMaxSize int64 `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)."`
+	JsonReqMaxSize int64 `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000."`
 }
 
 // The goiardi version.
@@ -353,6 +357,20 @@ func ParseConfigOptions() error {
 
 	if opts.LogEventKeep != 0 {
 		Config.LogEventKeep = opts.LogEventKeep
+	}
+
+	// Set max sizes for objects and json requests.
+	if opts.ObjMaxSize != 0 {
+		Config.ObjMaxSize = opts.ObjMaxSize
+	}
+	if opts.JsonReqMaxSize != 0 {
+		Config.JsonReqMaxSize = opts.JsonReqMaxSize
+	}
+	if Config.ObjMaxSize == 0 {
+		Config.ObjMaxSize = 10485760
+	}
+	if Config.JsonReqMaxSize == 0 {
+		Config.JsonReqMaxSize = 1000000
 	}
 
 	return nil

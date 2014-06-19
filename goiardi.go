@@ -187,8 +187,11 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 	}
 
 	/* Make configurable, I guess, but Chef wants it to be 1000000 */
-	if r.ContentLength > 1000000 {
+	if !strings.HasPrefix(r.URL.Path, "/file_store") && r.ContentLength > config.Config.JsonReqMaxSize {
 		http.Error(w, "Content-length too long!", http.StatusRequestEntityTooLarge)
+		return
+	} else if r.ContentLength > config.Config.ObjMaxSize {
+		http.Error(w, "Content-length waaaaaay too long!", http.StatusRequestEntityTooLarge)
 		return
 	}
 
