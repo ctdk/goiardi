@@ -1,4 +1,4 @@
-0.5.2 (unreleased)
+0.5.2
 -----
 * Add import/export of goiardi data through a JSON dump.
 * Add configuration options to specify the max sizes for objects uploaded to
