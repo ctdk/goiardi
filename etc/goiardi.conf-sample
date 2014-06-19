@@ -69,6 +69,12 @@ log-events = true
 # keep the number of events stored to this number.
 #log-event-keep = 1000
 
+# Maximum object size in bytes for the file store. Default 10485760 bytes (10MB).
+#obj-max-size = 10485760
+
+# Maximum size for a JSON request from the client. Default is 1000000.
+#json-req-max-size = 1000000
+
 # MySQL options. If "use-mysql" is true on the command line or in the
 # configuration file, connect to mysql with the options in [mysql]. All of the
 # MySQL options must be strings.

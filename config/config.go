@@ -64,8 +64,8 @@ type Conf struct {
 	DoExport bool
 	DoImport bool
 	ImpExFile string
-	ObjMaxSize int64
-	JsonReqMaxSize int64
+	ObjMaxSize int64 `toml:"obj-max-size"`
+	JsonReqMaxSize int64 `toml:"json-req-max-size"`
 }
 var LogLevelNames = map[string]int{ "debug": 4, "info": 3, "warning": 2, "error": 1, "critical": 0 }
 
