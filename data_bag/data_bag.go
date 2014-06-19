@@ -31,7 +31,7 @@ import (
 	"net/http"
 	"strings"
 	"database/sql"
-	"git.tideland.biz/goas/logger"
+	"github.com/tideland/goas/v2/logger"
 )
 
 // The overall data bag.

@@ -32,7 +32,7 @@ import (
 	"io"
 	"time"
 	"database/sql"
-	"git.tideland.biz/goas/logger"
+	"github.com/tideland/goas/v2/logger"
 )
 
 /* The structure of the sandbox responses is... inconsistent. */

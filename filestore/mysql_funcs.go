@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"git.tideland.biz/goas/logger"
+	"github.com/tideland/goas/v2/logger"
 )
 
 func getMySQL(chksum string) (*FileStore, error) {

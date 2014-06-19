@@ -27,7 +27,7 @@ import (
 	"reflect"
 	"database/sql"
 	"sort"
-	"git.tideland.biz/goas/logger"
+	"github.com/tideland/goas/v2/logger"
 )
 
 type LogInfo struct {

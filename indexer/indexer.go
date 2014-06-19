@@ -21,7 +21,7 @@ package indexer
 
 import (
 	"github.com/ctdk/go-trie/gtrie"
-	"git.tideland.biz/goas/logger"
+	"github.com/tideland/goas/v2/logger"
 	"sync"
 	"strings"
 	"sort"

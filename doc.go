@@ -41,10 +41,10 @@ To install them, run:
    go get github.com/ctdk/go-trie/gtrie
    go get github.com/BurntSushi/toml
    go get github.com/go-sql-driver/mysql
-   go get git.tideland.biz/goas/logger
+   go get github.com/tideland/goas/v2/logger
    go get github.com/codeskyblue/go-uuid
 
-from your $GOROOT.
+from your $GOROOT, or just use the -t flag when you go get goiardi.
 
 If you would like to modify the search grammar, you'll need the 'peg' package.
 To install that, run
@@ -63,9 +63,9 @@ go 1.2 to compile all the dependencies.
 2. Make sure your $GOROOT and PATH are set up correctly per the Go installation
 instructions.
 
-3. Download goairdi
+3. Download goairdi and its dependencies.
 
-   go get github.com/ctdk/goiardi
+   go get -t github.com/ctdk/goiardi
 
 4. Run tests, if desired. Several goiardi subdirectories have go tests, and
 chef-pedant can and should be used for testing goiardi as well.
