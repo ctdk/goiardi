@@ -95,15 +95,6 @@ func chkForUser(handle data_store.Dbhandle, name string) error {
 	return err 
 }
 
-func chkInMemUser (name string) error {
-	var err error
-	ds := data_store.New()
-	if _, found := ds.Get("users", name); found {
-		err = fmt.Errorf("a user named %s was found that would conflict with this client", name)
-	}
-	return err
-}
-
 func allClientsSQL() []*Client {
 	clients := make([]*Client, 0)
 	stmt, err := data_store.Dbh.Prepare("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o on c.organization_id = o.id")
