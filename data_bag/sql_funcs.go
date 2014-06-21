@@ -313,7 +313,13 @@ func getListSQL() []string {
 
 func allDataBagsSQL() []*DataBag {
 	dbags := make([]*DataBag, 0)
-	stmt, err := data_store.Dbh.Prepare("SELECT id, name FROM data_bags")
+	var sqlStatement string
+	if config.Config.UseMySQL {
+		sqlStatement = "SELECT id, name FROM data_bags"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "SELECT id, name FROM goiardi.data_bags"
+	}
+	stmt, err := data_store.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}

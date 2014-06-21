@@ -139,7 +139,14 @@ func getListSQL() []string {
 
 func allClientsSQL() []*Client {
 	clients := make([]*Client, 0)
-	stmt, err := data_store.Dbh.Prepare("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o on c.organization_id = o.id")
+	var sqlStatement string
+	if config.Config.UseMySQL {
+		sqlStatement = "SELECT c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o ON c.organization_id = o.id"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "SELECT c.name, nodename, validator, admin, o.name, public_key, certificate FROM goiardi.clients c JOIN goiardi.organizations o ON c.organization_id = o.id"
+	}
+
+	stmt, err := data_store.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}

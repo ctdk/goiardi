@@ -421,7 +421,7 @@ func (dbi *DataBagItem) Flatten() []string {
 // Return all data bags on this server, and all their items. 
 func AllDataBags() ([]*DataBag) {
 	data_bags := make([]*DataBag, 0)
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		data_bags = allDataBagsSQL()
 	} else {
 		dbag_list := GetList()

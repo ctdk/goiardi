@@ -518,7 +518,7 @@ func (u *User) GobDecode(b []byte) error {
 // Return all the users on this server.
 func AllUsers() ([]*User) {
 	users := make([]*User, 0)
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		users = allUsersSQL()
 	} else {
 		user_list := GetList()

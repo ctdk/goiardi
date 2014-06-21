@@ -72,23 +72,12 @@ func (db *DataBag) saveMySQL() error {
 	if err != nil {
 		return err
 	}
-	found, ferr := checkForDataBagSQL(tx, db.Name)
-	if ferr != nil {
+	res, rerr := tx.Exec("INSERT INTO data_bags (name, created_at, updated_at) VALUES (?, NOW(), NOW()) ON DUPLICATE KEY UPDATE updated_now = NOW()", db.Name)
+	if rerr != nil {
 		tx.Rollback()
-		return ferr
-	} else if found {
-		_, err = tx.Exec("UPDATE data_bags SET updated_at = NOW() WHERE id = ?", db.id)
-		
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
-	} else {
-		res, rerr := tx.Exec("INSERT INTO data_bags (name, created_at, updated_at) VALUES (?, NOW(), NOW())", db.Name)
-		if rerr != nil {
-			tx.Rollback()
-			return rerr
-		}
+		return rerr
+	}
+	if db.id == 0 {
 		db_id, err := res.LastInsertId()
 		db.id = int32(db_id)
 		if err != nil {
@@ -96,6 +85,7 @@ func (db *DataBag) saveMySQL() error {
 			return err
 		}
 	}
+
 	tx.Commit()
 	return nil
 }

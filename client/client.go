@@ -568,7 +568,7 @@ func (c *Client) GobDecode(b []byte) error {
 // Return all the clients on this server.
 func AllClients() ([]*Client) {
 	clients := make([]*Client, 0)
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		clients = allClientsSQL()
 	} else {
 		client_list := GetList()

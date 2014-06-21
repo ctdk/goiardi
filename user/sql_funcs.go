@@ -143,7 +143,14 @@ func getListSQL() []string {
 
 func allUsersSQL() []*User {
 	users := make([]*User, 0)
-	stmt, err := data_store.Dbh.Prepare("select name, displayname, admin, public_key, email, passwd, salt FROM users")
+	var sqlStatement string
+	if config.Config.UseMySQL {
+		sqlStatement = "SELECT name, displayname, admin, public_key, email, passwd, salt FROM users"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "SELECT name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users"
+	}
+
+	stmt, err := data_store.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
