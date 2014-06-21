@@ -127,11 +127,7 @@ func Get(clientname string) (*Client, util.Gerror){
 	var err error
 
 	if config.UsingDB() {
-		if config.Config.UseMySQL {
-			client, err = getClientMySQL(clientname)
-		} else if config.Config.UsePostgreSQL {
-			client, err = getClientPostgreSQL(clientname)
-		}
+		client, err = getClientSQL(clientname)
 		if err != nil {
 			var gerr util.Gerror
 			if err != sql.ErrNoRows {
@@ -193,12 +189,7 @@ func (c *Client) Delete() error {
 	}
 
 	if config.UsingDB() {
-		var err error
-		if config.Config.UseMySQL {
-			err = c.deleteMySQL()
-		} else if config.Config.UsePostgreSQL {
-			err = c.deletePostgreSQL()
-		}
+		err := c.deleteSQL()
 		if err != nil {
 			return err
 		}
@@ -227,10 +218,8 @@ func (c *Client) ToJson() map[string]interface{} {
 func (c *Client) isLastAdmin() bool {
 	if c.Admin {
 		numAdmins := 0
-		if config.Config.UseMySQL {
-			numAdmins = numAdminsMySQL()
-		} else if config.Config.UsePostgreSQL {
-			numAdmins = numAdminsPostgreSQL()
+		if config.UsingDB() {
+			numAdmins = numAdminsSQL()
 		} else {
 			clist := GetList()
 			for _, cc := range clist {
@@ -408,10 +397,8 @@ func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
 // Returns a list of clients.
 func GetList() []string {
 	var client_list []string
-	if config.Config.UseMySQL {
-		client_list = getListMySQL()
-	} else if config.Config.UsePostgreSQL {
-		client_list = getListPostgreSQL()
+	if config.UsingDB() {
+		client_list = getListSQL()
 	} else {
 		ds := data_store.New()
 		client_list = ds.GetList("client")

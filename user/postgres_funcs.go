@@ -21,28 +21,11 @@ package user
 import (
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/util"
-	"database/sql"
-	"log"
 	"net/http"
 	"strings"
 )
 
 var defaultOrgId int = 1
-
-func getUserPostgreSQL(name string) (*User, error) {
-	user := new(User)
-	stmt, err := data_store.Dbh.Prepare("select name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users WHERE name = $1")
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-	row := stmt.QueryRow(name)
-	err = user.fillUserFromSQL(row)
-	if err != nil {
-		return nil, err
-	}
-	return user, nil
-}
 
 func (u *User) savePostgreSQL() util.Gerror {
 	tx, err := data_store.Dbh.Begin()
@@ -58,20 +41,6 @@ func (u *User) savePostgreSQL() util.Gerror {
 			gerr.SetStatus(http.StatusConflict)
 		}
 		return gerr
-	}
-	tx.Commit()
-	return nil
-}
-
-func (u *User) deletePostgreSQL() error {
-	tx, err := data_store.Dbh.Begin()
-	if err != nil {
-		return err
-	}
-	_, err = tx.Exec("DELETE FROM goiardi.users WHERE name = $1", u.Username)
-	if err != nil {
-		tx.Rollback()
-		return err
 	}
 	tx.Commit()
 	return nil
@@ -96,44 +65,4 @@ func (u *User) renamePostgreSQL(new_name string) util.Gerror {
 	}
 	tx.Commit()
 	return nil
-}
-
-func numAdminsPostgreSQL() int {
-	var numAdmins int
-	stmt, err := data_store.Dbh.Prepare("SELECT count(*) FROM goiardi.users WHERE admin = TRUE")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-	err = stmt.QueryRow().Scan(&numAdmins)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return numAdmins
-}
-
-func getListPostgreSQL() []string {
-	var user_list []string
-	rows, err := data_store.Dbh.Query("SELECT name FROM goiardi.users")
-	if err != nil {
-		if err != sql.ErrNoRows {
-			log.Fatal(err)
-		}
-		rows.Close()
-		return user_list
-	}
-	user_list = make([]string, 0)
-	for rows.Next() {
-		var user_name string
-		err = rows.Scan(&user_name)
-		if err != nil {
-			log.Fatal(err)
-		}
-		user_list = append(user_list, user_name)
-	}
-	rows.Close()
-	if err = rows.Err(); err != nil {
-		log.Fatal(err)
-	}
-	return user_list
 }

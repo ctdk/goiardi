@@ -63,9 +63,9 @@ func New(name string) (*DataBag, util.Gerror){
 		return nil, err
 	}
 
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForDataBagMySQL(data_store.Dbh, name)
+		found, cerr = checkForDataBagSQL(data_store.Dbh, name)
 		if cerr != nil {
 			err = util.Errorf(cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
@@ -93,8 +93,8 @@ func New(name string) (*DataBag, util.Gerror){
 func Get(db_name string) (*DataBag, util.Gerror){
 	var data_bag *DataBag
 	var err error
-	if config.Config.UseMySQL {
-		data_bag, err = getDataBagMySQL(db_name)
+	if config.UsingDB() {
+		data_bag, err = getDataBagSQL(db_name)
 		if err != nil {
 			var gerr util.Gerror
 			if err == sql.ErrNoRows {
@@ -128,6 +128,8 @@ func Get(db_name string) (*DataBag, util.Gerror){
 func (db *DataBag) Save() error {
 	if config.Config.UseMySQL {
 		return db.saveMySQL()
+	} else if config.Config.UsePostgreSQL {
+		return db.savePostgreSQL()
 	} else {
 		ds := data_store.New()
 		ds.Set("data_bag", db.Name, db)
@@ -136,8 +138,8 @@ func (db *DataBag) Save() error {
 }
 
 func (db *DataBag) Delete() error {
-	if config.Config.UseMySQL {
-		err := db.deleteMySQL()
+	if config.UsingDB() {
+		err := db.deleteSQL()
 		if err != nil {
 			return err
 		}
@@ -156,8 +158,8 @@ func (db *DataBag) Delete() error {
 // Returns a list of data bags on the server.
 func GetList() []string {
 	var db_list []string
-	if config.Config.UseMySQL {
-		db_list = getListMySQL()
+	if config.UsingDB() {
+		db_list = getListSQL()
 	} else {
 		ds := data_store.New()
 		db_list = ds.GetList("data_bag")
@@ -208,8 +210,8 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 	}
 	dbi_full_name := fmt.Sprintf("data_bag_item_%s_%s", db.Name, dbi_id)
 
-	if config.Config.UseMySQL {
-		d, err := db.getDBItemMySQL(dbi_id)
+	if config.UsingDB() {
+		d, err := db.getDBItemSQL(dbi_id)
 		if d != nil || (err != nil && err != sql.ErrNoRows) {
 			if err != nil {
 				logger.Debugf("Log real SQL error in NewDBItem: %s", err.Error())
@@ -218,7 +220,11 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 			gerr.SetStatus(http.StatusConflict)
 			return nil, gerr
 		}
-		dbag_item, err = db.newDBItemMySQL(dbi_id, raw_dbag_item)
+		if config.Config.UseMySQL {
+			dbag_item, err = db.newDBItemMySQL(dbi_id, raw_dbag_item)
+		} else if config.Config.UsePostgreSQL {
+			dbag_item, err = db.newDBItemPostgreSQL(dbi_id, raw_dbag_item)
+		}
 		if err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -261,8 +267,8 @@ func (db *DataBag) UpdateDBItem(dbi_id string, raw_dbag_item map[string]interfac
 		return nil, err
 	}
 	db_item.RawData = raw_dbag_item
-	if config.Config.UseMySQL {
-		err = db_item.updateDBItemMySQL()
+	if config.UsingDB() {
+		err = db_item.updateDBItemSQL()
 		if err != nil {
 			return nil, err
 		}
@@ -278,12 +284,12 @@ func (db *DataBag) UpdateDBItem(dbi_id string, raw_dbag_item map[string]interfac
 }
 
 func (db *DataBag) DeleteDBItem(db_item_name string) error {
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		dbi, err := db.GetDBItem(db_item_name)
 		if err != nil {
 			return err
 		}
-		err = dbi.deleteDBItemMySQL()
+		err = dbi.deleteDBItemSQL()
 		if err != nil {
 			return err
 		}
@@ -299,8 +305,8 @@ func (db *DataBag) DeleteDBItem(db_item_name string) error {
 }
 
 func (db *DataBag) GetDBItem(db_item_name string) (*DataBagItem, error) {
-	if config.Config.UseMySQL {
-		dbi, err := db.getDBItemMySQL(db_item_name)
+	if config.UsingDB() {
+		dbi, err := db.getDBItemSQL(db_item_name)
 		if err == sql.ErrNoRows {
 			err = fmt.Errorf("data bag item %s in %s not found", db_item_name, db.Name)
 		}
@@ -316,16 +322,16 @@ func (db *DataBag) GetDBItem(db_item_name string) (*DataBagItem, error) {
 }
 
 func (db *DataBag) AllDBItems() (map[string]*DataBagItem, error) {
-	if config.Config.UseMySQL {
-		return db.allDBItemsMySQL()
+	if config.UsingDB() {
+		return db.allDBItemsSQL()
 	} else {
 		return db.DataBagItems, nil
 	}
 }
 
 func (db *DataBag) ListDBItems() []string {
-	if config.Config.UseMySQL {
-		return db.listDBItemsMySQL()
+	if config.UsingDB() {
+		return db.listDBItemsSQL()
 	} else {
 		dbis := make([]string, len(db.DataBagItems))
 		n := 0
@@ -338,8 +344,8 @@ func (db *DataBag) ListDBItems() []string {
 }
 
 func (db *DataBag) NumDBItems() int {
-	if config.Config.UseMySQL {
-		return db.numDBItemsMySQL()
+	if config.UsingDB() {
+		return db.numDBItemsSQL()
 	} else {
 		return len(db.DataBagItems)
 	}

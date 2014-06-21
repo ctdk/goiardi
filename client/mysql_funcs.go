@@ -21,24 +21,8 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 )
-
-func getClientMySQL(name string) (*Client, error) {
-	client := new(Client)
-	stmt, err := data_store.Dbh.Prepare("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o on c.organization_id = o.id WHERE c.name = ?")
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-	row := stmt.QueryRow(name)
-	err = client.fillClientFromSQL(row)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
-}
 
 func (c *Client) saveMySQL() error {
 	tx, err := data_store.Dbh.Begin()
@@ -59,20 +43,6 @@ func (c *Client) saveMySQL() error {
 		return err
 	}
 
-	tx.Commit()
-	return nil
-}
-
-func (c *Client) deleteMySQL() error {
-	tx, err := data_store.Dbh.Begin()
-	if err != nil {
-		return err
-	}
-	_, err = tx.Exec("DELETE FROM clients WHERE name = ?", c.Name)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
 	tx.Commit()
 	return nil
 }
@@ -132,46 +102,6 @@ func chkInMemUser (name string) error {
 		err = fmt.Errorf("a user named %s was found that would conflict with this client", name)
 	}
 	return err
-}
-
-func numAdminsMySQL() int {
-	var numAdmins int
-	stmt, err := data_store.Dbh.Prepare("SELECT count(*) FROM clients WHERE admin = 1")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-	err = stmt.QueryRow().Scan(&numAdmins)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return numAdmins
-}
-
-func getListMySQL() []string {
-	var client_list []string
-	rows, err := data_store.Dbh.Query("SELECT name FROM clients")
-	if err != nil {
-		if err != sql.ErrNoRows {
-			log.Fatal(err)
-		}
-		rows.Close()
-		return client_list
-	}
-	client_list = make([]string, 0)
-	for rows.Next() {
-		var client_name string
-		err = rows.Scan(&client_name)
-		if err != nil {
-			log.Fatal(err)
-		}
-		client_list = append(client_list, client_name)
-	}
-	rows.Close()
-	if err = rows.Err(); err != nil {
-		log.Fatal(err)
-	}
-	return client_list
 }
 
 func allClientsSQL() []*Client {
