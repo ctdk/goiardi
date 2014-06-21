@@ -136,7 +136,7 @@ func (c *Cookbook)NumVersions() int {
 // Return all the cookbooks that have been uploaded to this server.
 func AllCookbooks() (cookbooks []*Cookbook) {
 	if config.UsingDB() {
-		cookbooks = allCookbooksMySQL()
+		cookbooks = allCookbooksSQL()
 		for _, c := range cookbooks {
 			// populate the versions hash
 			c.sortedVersions()

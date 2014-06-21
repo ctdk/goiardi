@@ -96,32 +96,3 @@ func chkForClient(handle data_store.Dbhandle, name string) error {
 	}
 	return err 
 }
-
-func allUsersSQL() []*User {
-	users := make([]*User, 0)
-	stmt, err := data_store.Dbh.Prepare("select name, displayname, admin, public_key, email, passwd, salt FROM users")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-	rows, qerr := stmt.Query()
-	if qerr != nil {
-		if qerr == sql.ErrNoRows {
-			return users
-		}
-		log.Fatal(qerr)
-	}
-	for rows.Next() {
-		us := new(User)
-		err = us.fillUserFromSQL(rows)
-		if err != nil {
-			log.Fatal(err)
-		}
-		users = append(users, us)
-	}
-	rows.Close()
-	if err = rows.Err(); err != nil {
-		log.Fatal(err)
-	}
-	return users
-}

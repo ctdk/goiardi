@@ -36,7 +36,7 @@ func checkForClientSQL(dbhandle data_store.Dbhandle, name string) (bool, error) 
 	}
 }
 
-func (c *Client) fillClientFromSQL(row *sql.Row) error {
+func (c *Client) fillClientFromSQL(row data_store.ResRow) error {
 	err := row.Scan(&c.Name, &c.NodeName, &c.Validator, &c.Admin, &c.Orgname, &c.pubKey, &c.Certificate)
 	if err != nil {
 		return err
@@ -135,4 +135,33 @@ func getListSQL() []string {
 		log.Fatal(err)
 	}
 	return client_list
+}
+
+func allClientsSQL() []*Client {
+	clients := make([]*Client, 0)
+	stmt, err := data_store.Dbh.Prepare("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o on c.organization_id = o.id")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return clients
+		}
+		log.Fatal(qerr)
+	}
+	for rows.Next() {
+		cl := new(Client)
+		err = cl.fillClientFromSQL(rows)
+		if err != nil {
+			log.Fatal(err)
+		}
+		clients = append(clients, cl)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return clients
 }

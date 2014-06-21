@@ -310,3 +310,36 @@ func getListSQL() []string {
 
 	return db_list
 }
+
+func allDataBagsSQL() []*DataBag {
+	dbags := make([]*DataBag, 0)
+	stmt, err := data_store.Dbh.Prepare("SELECT id, name FROM data_bags")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query()
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Fatal(err)
+		}
+		return dbags
+	}
+	for rows.Next() {
+		data_bag := new(DataBag)
+		err = rows.Scan(&data_bag.id, &data_bag.Name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		data_bag.DataBagItems, err = data_bag.allDBItemsSQL()
+		if err != nil {
+			log.Fatal(err)
+		}
+		dbags = append(dbags, data_bag)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return dbags
+}
