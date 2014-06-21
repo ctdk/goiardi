@@ -104,11 +104,7 @@ func Get(name string) (*User, util.Gerror){
 	var user *User
 	if config.UsingDB() {
 		var err error
-		if config.Config.UseMySQL {
-			user, err = getUserMySQL(name)
-		} else if config.Config.UsePostgreSQL {
-			user, err = getUserPostgreSQL(name) 
-		}
+		user, err = getUserSQL(name)
 		if err != nil {
 			var gerr util.Gerror
 			if err != sql.ErrNoRows {
@@ -166,12 +162,7 @@ func (u *User) Delete() util.Gerror {
 		return err
 	}
 	if config.UsingDB() {
-		var err error
-		if config.Config.UseMySQL {
-			err = u.deleteMySQL()
-		} else {
-			err = u.deletePostgreSQL()
-		}
+		err := u.deleteSQL()
 		if err != nil {
 			gerr := util.CastErr(err)
 			return gerr
@@ -307,10 +298,8 @@ func (u *User)UpdateFromJson(json_user map[string]interface{}) util.Gerror {
 // Returns a list of users.
 func GetList() []string {
 	var user_list []string
-	if config.Config.UseMySQL {
-		user_list = getListMySQL()
-	} else if config.Config.UsePostgreSQL {
-		user_list = getListPostgreSQL()
+	if config.UsingDB() {
+		user_list = getListSQL()
 	} else {
 		ds := data_store.New()
 		user_list = ds.GetList("user")
@@ -333,10 +322,8 @@ func (u *User) ToJson() map[string]interface{} {
 func (u *User) isLastAdmin() bool {
 	if u.Admin {
 		numAdmins := 0
-		if config.Config.UseMySQL {
-			numAdmins = numAdminsMySQL()
-		} else if config.Config.UsePostgreSQL {
-			numAdmins = numAdminsPostgreSQL()
+		if config.UsingDB() {
+			numAdmins = numAdminsSQL()
 		} else {		
 			user_list := GetList()
 			for _, u := range user_list {
@@ -515,4 +502,13 @@ func (u *User) GobDecode(b []byte) error {
 	}
 
 	return nil
+}
+
+func chkInMemClient (name string) error {
+	var err error
+	ds := data_store.New()
+	if _, found := ds.Get("clients", name); found {
+		err = fmt.Errorf("a client named %s was found that would conflict with this user", name)
+	}
+	return err
 }

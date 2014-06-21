@@ -226,13 +226,13 @@ func (cbv *CookbookVersion) updateCookbookVersionSQL() util.Gerror {
 
 func allCookbooksSQL() []*Cookbook {
 	cookbooks := make([]*Cookbook, 0)
-	var stmt *sql.Stmt
-	var err error
+	var sqlStatement string
 	if config.Config.UseMySQL {
-		stmt, err = data_store.Dbh.Prepare("SELECT id, name FROM cookbooks")
+		sqlStatement = "SELECT id, name FROM cookbooks"
 	} else {
-		stmt, err = data_store.Dbh.Prepare("SELECT id, name FROM goiardi.cookbooks")
+		sqlStatement = "SELECT id, name FROM goiardi.cookbooks"
 	}
+	stmt, err := data_store.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -262,13 +262,13 @@ func allCookbooksSQL() []*Cookbook {
 
 func getCookbookSQL(name string) (*Cookbook, error) {
 	cookbook := new(Cookbook)
-	var stmt *sql.Stmt
-	var err error
+	var sqlStatement string
 	if config.Config.UseMySQL {
-		stmt, err = data_store.Dbh.Prepare("SELECT id, name FROM cookbooks WHERE name = ?")
+		sqlStatement = "SELECT id, name FROM cookbooks WHERE name = ?"
 	} else if config.Config.UsePostgreSQL {
-		stmt, err = data_store.Dbh.Prepare("SELECT id, name FROM goiardi.cookbooks WHERE name = $1")
+		sqlStatement = "SELECT id, name FROM goiardi.cookbooks WHERE name = $1"
 	}
+	stmt, err := data_store.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -337,13 +337,14 @@ func (c *Cookbook) deleteCookbookSQL() error {
 
 func getCookbookListSQL() []string {
 	cb_list := make([]string, 0)
-	var rows *sql.Rows
-	var err error
+	
+	var sqlStatement string
 	if config.Config.UseMySQL {
-		rows, err = data_store.Dbh.Query("SELECT name FROM cookbooks")
+		sqlStatement = "SELECT name FROM cookbooks"
 	} else if config.Config.UsePostgreSQL {
-		rows, err = data_store.Dbh.Query("SELECT name FROM goiardi.cookbooks")
+		sqlStatement = "SELECT name FROM goiardi.cookbooks"
 	}
+	rows, err := data_store.Dbh.Query(sqlStatement)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
@@ -369,13 +370,14 @@ func getCookbookListSQL() []string {
 
 func (c *Cookbook) sortedCookbookVersionsSQL() ([]*CookbookVersion) {
 	sorted := make([]*CookbookVersion, 0)
-	var stmt *sql.Stmt
-	var err error
+	
+	var sqlStatement string
 	if config.Config.UseMySQL {
-		stmt, err = data_store.Dbh.Prepare("SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC")
+		sqlStatement = "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC"
 	} else {
-		stmt, err = data_store.Dbh.Prepare("SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC")
+		sqlStatement = "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC"
 	}
+	stmt, err := data_store.Dbh.Prepare(sqlStatement)
 
 	if err != nil {
 		log.Fatal(err)
@@ -407,19 +409,18 @@ func (c *Cookbook) sortedCookbookVersionsSQL() ([]*CookbookVersion) {
 }
 
 func (c *Cookbook)getCookbookVersionSQL(cbVersion string) (*CookbookVersion, error) {
-	var stmt *sql.Stmt
-	var err error
-
 	cbv := new(CookbookVersion)
 	maj, min, patch, cverr := extractVerNums(cbVersion)
 	if cverr != nil {
 		return nil, cverr
 	}
+	var sqlStatement string
 	if config.Config.UseMySQL {
-		stmt, err = data_store.Dbh.Prepare("SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?")
+		sqlStatement = "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?"
 	} else if config.Config.UsePostgreSQL {
-		stmt, err = data_store.Dbh.Prepare("SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 AND major_ver = $2 AND minor_ver = $3 AND patch_ver = $4")
+		sqlStatement = "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 AND major_ver = $2 AND minor_ver = $3 AND patch_ver = $4"
 	}
+	stmt, err := data_store.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}

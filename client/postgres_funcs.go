@@ -19,26 +19,9 @@ package client
 import (
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/util"
-	"database/sql"
-	"log"
 	"net/http"
 	"strings"
 )
-
-func getClientPostgreSQL(name string) (*Client, error) {
-	client := new(Client)
-	stmt, err := data_store.Dbh.Prepare("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE c.name = $1")
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-	row := stmt.QueryRow(name)
-	err = client.fillClientFromSQL(row)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
-}
 
 func (c *Client) savePostgreSQL() util.Gerror {
 	tx, err := data_store.Dbh.Begin()
@@ -54,20 +37,6 @@ func (c *Client) savePostgreSQL() util.Gerror {
 			gerr.SetStatus(http.StatusConflict)
 		}
 		return gerr
-	}
-	tx.Commit()
-	return nil
-}
-
-func (c *Client) deletePostgreSQL() error {
-	tx, err := data_store.Dbh.Begin()
-	if err != nil {
-		return err
-	}
-	_, err = tx.Exec("DELETE FROM goiardi.clients WHERE name = $1", c.Name)
-	if err != nil {
-		tx.Rollback()
-		return err
 	}
 	tx.Commit()
 	return nil
@@ -92,44 +61,4 @@ func (c *Client) renamePostgreSQL(new_name string) util.Gerror {
 	}
 	tx.Commit()
 	return nil
-}
-
-func numAdminsPostgreSQL() int {
-	var numAdmins int
-	stmt, err := data_store.Dbh.Prepare("SELECT count(*) FROM goiardi.clients WHERE admin = TRUE")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-	err = stmt.QueryRow().Scan(&numAdmins)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return numAdmins
-}
-
-func getListPostgreSQL() []string {
-	var client_list []string
-	rows, err := data_store.Dbh.Query("SELECT name FROM goiardi.clients")
-	if err != nil {
-		if err != sql.ErrNoRows {
-			log.Fatal(err)
-		}
-		rows.Close()
-		return client_list
-	}
-	client_list = make([]string, 0)
-	for rows.Next() {
-		var client_name string
-		err = rows.Scan(&client_name)
-		if err != nil {
-			log.Fatal(err)
-		}
-		client_list = append(client_list, client_name)
-	}
-	rows.Close()
-	if err = rows.Err(); err != nil {
-		log.Fatal(err)
-	}
-	return client_list
 }
