@@ -310,7 +310,6 @@ func getListSQL() []string {
 
 	return db_list
 }
-
 func allDataBagsSQL() []*DataBag {
 	dbags := make([]*DataBag, 0)
 	var sqlStatement string

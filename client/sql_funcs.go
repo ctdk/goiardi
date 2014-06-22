@@ -136,7 +136,6 @@ func getListSQL() []string {
 	}
 	return client_list
 }
-
 func allClientsSQL() []*Client {
 	clients := make([]*Client, 0)
 	var sqlStatement string
