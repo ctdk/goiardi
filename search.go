@@ -24,8 +24,10 @@ import (
 	"github.com/ctdk/goiardi/data_bag"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/role"
+	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/indexer"
-	"github.com/ctdk/goiardi/data_store"
 	"net/http"
 	"encoding/json"
 	"fmt"
@@ -218,23 +220,24 @@ func reindexHandler(w http.ResponseWriter, r *http.Request){
 				JsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 				return
 			}
-			reindexObjs := make([]indexer.Indexable, 0)
+			reindexObjs := make([]indexer.Indexable, 0, 100)
 			// We clear the index, *then* do the fetch because if
 			// something comes in between the time we fetch the
 			// objects to reindex and when it gets done, they'll
 			// just be added naturally
 			indexer.ClearIndex()
-			// default indices
-			defaults := [...]string{ "node", "client", "role", "env" }
-			ds := data_store.New()
-			for _, d := range defaults {
-				objList := ds.GetList(d)
-				for _, oname := range objList {
-					u, _ := ds.Get(d, oname)
-					if u != nil {
-						reindexObjs = append(reindexObjs, u.(indexer.Indexable))	
-					}
-				}
+
+			for _, v := range client.AllClients() {
+				reindexObjs = append(reindexObjs, v)
+			}
+			for _, v := range node.AllNodes() {
+				reindexObjs = append(reindexObjs, v)
+			}
+			for _, v := range role.AllRoles() {
+				reindexObjs = append(reindexObjs, v)
+			}
+			for _, v := range environment.AllEnvironments() {
+				reindexObjs = append(reindexObjs, v)
 			}
 			// data bags have to be done separately
 			dbags := data_bag.GetList()
