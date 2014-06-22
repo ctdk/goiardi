@@ -239,6 +239,8 @@ func reindexHandler(w http.ResponseWriter, r *http.Request){
 			for _, v := range environment.AllEnvironments() {
 				reindexObjs = append(reindexObjs, v)
 			}
+			defaultEnv, _ := environment.Get("_default")
+			reindexObjs = append(reindexObjs, defaultEnv)
 			// data bags have to be done separately
 			dbags := data_bag.GetList()
 			for _, db := range dbags {
