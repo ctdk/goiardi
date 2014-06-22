@@ -72,7 +72,7 @@ func (db *DataBag) saveMySQL() error {
 	if err != nil {
 		return err
 	}
-	res, rerr := tx.Exec("INSERT INTO data_bags (name, created_at, updated_at) VALUES (?, NOW(), NOW()) ON DUPLICATE KEY UPDATE updated_now = NOW()", db.Name)
+	res, rerr := tx.Exec("INSERT INTO data_bags (name, created_at, updated_at) VALUES (?, NOW(), NOW()) ON DUPLICATE KEY UPDATE updated_at = NOW()", db.Name)
 	if rerr != nil {
 		tx.Rollback()
 		return rerr
