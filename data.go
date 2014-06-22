@@ -100,7 +100,8 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 			default:
 				/* The chef-pedant spec wants this response for
 				 * some reason. Mix it up, I guess. */
-				JsonErrorReport(w, r, "GET, PUT", http.StatusMethodNotAllowed)
+				w.Header().Set("Allow", "GET, POST")
+				JsonErrorReport(w, r, "GET, POST", http.StatusMethodNotAllowed)
 				return
 		}
 	} else { 
@@ -110,6 +111,13 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 		 * as 404 by fetching the data bag before we see if the method
 		 * is allowed, so do a quick check for that here. */
 		if (len(path_array) == 2  && r.Method == "PUT") || (len(path_array) == 3 && r.Method == "POST"){
+			var allowed string
+			if len(path_array) == 2 {
+				allowed = "GET, POST, DELETE"
+			} else {
+				allowed = "GET, PUT, DELETE"
+			}
+			w.Header().Set("Allow", allowed)
 			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
@@ -193,6 +201,7 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 					db_response["chef_type"] = dbitem.ChefType
 					w.WriteHeader(http.StatusCreated)
 				default:
+					w.Header().Set("Allow", "GET, DELETE, POST")
 					JsonErrorReport(w, r, "GET, DELETE, POST", http.StatusMethodNotAllowed)
 					return
 			}
@@ -271,6 +280,7 @@ func data_handler(w http.ResponseWriter, r *http.Request){
 					db_response["chef_type"] = dbitem.ChefType
 					db_response["id"] = db_item_name
 				default:
+					w.Header().Set("Allow", "GET, DELETE, PUT")
 					JsonErrorReport(w, r, "GET, DELETE, PUT", http.StatusMethodNotAllowed)
 					return
 			}
