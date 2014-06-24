@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-/* MySQL specific functions for nodes */
-
 package node
 
 import (
 	"github.com/ctdk/goiardi/data_store"
 )
 
-func (n *Node) saveMySQL(tx data_store.Dbhandle, rlb, aab, nab, dab, oab []byte) error {
-	_, err := tx.Exec("INSERT INTO nodes (name, chef_environment, run_list, automatic_attr, normal_attr, default_attr, override_attr, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE chef_environment = ?, n.run_list = ?, n.automatic_attr = ?, n.normal_attr = ?, n.default_attr = ?, n.override_attr = ?, n.updated_at = NOW()", n.Name, n.ChefEnvironment, rlb, aab, nab, dab, oab, n.ChefEnvironment, rlb, aab, nab, dab, oab)
+func (n *Node) savePostgreSQL(tx data_store.Dbhandle, rlb, aab, nab, dab, oab []byte) error {
+	_, err := tx.Exec("SELECT goiardi.merge_nodes($1, $2, $3, $4, $5, $6, $7)", n.Name, n.ChefEnvironment, rlb, aab, nab, dab, oab)
 	if err != nil {
 		return err
 	}

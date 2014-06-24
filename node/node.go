@@ -43,11 +43,16 @@ type Node struct {
 
 func New(name string) (*Node, util.Gerror) {
 	/* check for an existing node with this name */
+	if !util.ValidateDBagName(name){
+		err := util.Errorf("Field 'name' invalid")
+		return nil, err
+	}
+
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		// will need redone if orgs ever get implemented
 		var err error
-		found, err = checkForNodeMySQL(data_store.Dbh, name)
+		found, err = checkForNodeSQL(data_store.Dbh, name)
 		if err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -62,10 +67,7 @@ func New(name string) (*Node, util.Gerror) {
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
-	if !util.ValidateDBagName(name){
-		err := util.Errorf("Field 'name' invalid")
-		return nil, err
-	}
+	
 	/* No node, we make a new one */
 	node := &Node{
 		Name: name,
@@ -101,9 +103,9 @@ func NewFromJson(json_node map[string]interface{}) (*Node, util.Gerror){
 func Get(node_name string) (*Node, error) {
 	var node *Node
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		node, err = getMySQL(node_name)
+		node, err = getSQL(node_name)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -228,8 +230,8 @@ func (n *Node) UpdateFromJson(json_node map[string]interface{}) util.Gerror {
 }
 
 func (n *Node) Save() error {
-	if config.Config.UseMySQL {
-		if err := n.saveMySQL(); err != nil {
+	if config.UsingDB() {
+		if err := n.saveSQL(); err != nil {
 			return err
 		}
 	} else {
@@ -242,8 +244,8 @@ func (n *Node) Save() error {
 }
 
 func (n *Node) Delete() error {
-	if config.Config.UseMySQL {
-		if err := n.deleteMySQL(); err != nil {
+	if config.UsingDB() {
+		if err := n.deleteSQL(); err != nil {
 			return err
 		}
 	} else {
@@ -257,8 +259,8 @@ func (n *Node) Delete() error {
 // Get a list of the nodes on this server.
 func GetList() []string {
 	var node_list []string
-	if config.Config.UseMySQL {
-		node_list = getListMySQL()
+	if config.UsingDB() {
+		node_list = getListSQL()
 	} else {
 		ds := data_store.New()
 		node_list = ds.GetList("node")
@@ -267,8 +269,8 @@ func GetList() []string {
 }
 
 func GetFromEnv(env_name string) ([]*Node, error) {
-	if config.Config.UseMySQL {
-		return getNodesInEnvMySQL(env_name)
+	if config.UsingDB() {
+		return getNodesInEnvSQL(env_name)
 	}
 	env_nodes := make([]*Node, 0)
 	node_list := GetList()
@@ -311,7 +313,7 @@ func (n *Node) Flatten() []string {
 // Return all the nodes on the server
 func AllNodes() []*Node {
 	nodes := make([]*Node, 0)
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		nodes = allNodesSQL()
 	} else {
 		node_list := GetList()

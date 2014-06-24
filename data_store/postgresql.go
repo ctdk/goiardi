@@ -20,15 +20,11 @@ package data_store
 import (
 	"github.com/ctdk/goiardi/config"
 	"fmt"
-	//"net"
-	//"net/url"
 	"strings"
-	"log"
 )
 
 func formatPostgresqlConStr(p interface{}) string {
 	params := p.(config.PostgreSQLdb)
-	log.Printf("postgres params: %v", params)
 	con_params := make([]string, 0)
 
 	if params.Username != "" {
