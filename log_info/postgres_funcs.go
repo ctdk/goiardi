@@ -16,33 +16,27 @@
 
 package log_info
 
-/* MySQL specific functions for log_info */
+/* PostgreSQL specific functions for log_info */
 
 import (
 	"github.com/ctdk/goiardi/data_store"
-	"time"
 )
 
-func (le *LogInfo)fillLogEventFromMySQL(row data_store.ResRow) error {
-	var tb []byte
-	err := row.Scan(&le.Id, &le.ActorType, &le.ActorInfo, &tb, &le.Action, &le.ObjectType, &le.ObjectName, &le.ExtendedInfo)
-	if err != nil {
-		return err
-	}
-	le.Time, err = time.Parse(data_store.MySQLTimeFormat, string(tb))
+func (le *LogInfo)fillLogEventFromPostgreSQL(row data_store.ResRow) error {
+	err := row.Scan(&le.Id, &le.ActorType, &le.ActorInfo, &le.Time, &le.Action, &le.ObjectType, &le.ObjectName, &le.ExtendedInfo)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (le *LogInfo)actualWriteEventMySQL(tx data_store.Dbhandle, actorId int32) error {
+func (le *LogInfo)actualWriteEventPostgreSQL(tx data_store.Dbhandle, actorId int32) error {
 	var err error
 	if le.Id == 0 {
-		sqlStmt := "INSERT INTO log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+		sqlStmt := "INSERT INTO goiardi.log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
 		_, err = tx.Exec(sqlStmt, actorId, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
 	} else {
-		sqlStmt := "INSERT INTO log_infos (id, actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		sqlStmt := "INSERT INTO goiardi.log_infos (id, actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
 		_, err = tx.Exec(sqlStmt, le.Id, actorId, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
 	}
 	return err

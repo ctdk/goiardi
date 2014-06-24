@@ -75,8 +75,8 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 	}
 	le.ActorInfo = actor_info
 
-	if config.Config.UseMySQL {
-		return le.writeEventMySQL()
+	if config.UsingDB() {
+		return le.writeEventSQL()
 	} else {
 		return le.writeEventInMem()
 	}
@@ -98,7 +98,7 @@ func Import(logData map[string]interface{}) error {
 	}
 	le.Time = t
 
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		return le.importEventSQL()
 	} else {
 		return le.importEventInMem()
@@ -119,9 +119,9 @@ func (le *LogInfo)importEventInMem() error {
 func Get(id int) (*LogInfo, error) {
 	var le *LogInfo
 
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		le, err = getLogEventMySQL(id)
+		le, err = getLogEventSQL(id)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = fmt.Errorf("Couldn't find log event with id %d", id)
@@ -143,8 +143,8 @@ func Get(id int) (*LogInfo, error) {
 }
 
 func (le *LogInfo)Delete() error {
-	if config.Config.UseMySQL {
-		return le.deleteMySQL()
+	if config.UsingDB() {
+		return le.deleteSQL()
 	} else {
 		ds := data_store.New()
 		ds.DeleteLogInfo(le.Id)
@@ -153,8 +153,8 @@ func (le *LogInfo)Delete() error {
 }
 
 func PurgeLogInfos(id int) (int64, error) {
-	if config.Config.UseMySQL {
-		return purgeMySQL(id)
+	if config.UsingDB() {
+		return purgeSQL(id)
 	} else {
 		ds := data_store.New()
 		return ds.PurgeLogInfoBefore(id)
@@ -166,8 +166,8 @@ func PurgeLogInfos(id int) (int64, error) {
 // (in that order) but that is not required. The offset can be specified without
 // a limit, but a limit requires an offset (which can be 0).
 func GetLogInfos(limits ...int) []*LogInfo {
-	if config.Config.UseMySQL {
-		return getLogInfoListMySQL(limits...)
+	if config.UsingDB() {
+		return getLogInfoListSQL(limits...)
 	} else {
 		var offset, limit int
 		if len(limits) > 0 {
