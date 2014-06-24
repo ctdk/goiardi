@@ -16,14 +16,14 @@
 
 package environment
 
-/* MySQL specific functions for environments */
+/* Postgres specific functions for environments */
 
 import (
-	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/data_store"
 )
 
-func (e *ChefEnvironment) saveEnvironmentMySQL() util.Gerror {
+func (e *ChefEnvironment) saveEnvironmentPostgreSQL() util.Gerror {
 	dab, daerr := data_store.EncodeBlob(&e.Default)
 	if daerr != nil {
 		return util.CastErr(daerr)
@@ -39,16 +39,16 @@ func (e *ChefEnvironment) saveEnvironmentMySQL() util.Gerror {
 
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
-		return util.CastErr(err)
+		gerr := util.CastErr(err)
+		return gerr
 	}
 
-	_, err = tx.Exec("INSERT INTO environments (name, description, default_attr, override_attr, cookbook_vers, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE SET description = ?, default_attr = ?, override_attr = ?, cookbook_vers = ?, updated_at = NOW()", e.Name, e.Description, dab, oab, cvb, e.Description, dab, oab, cvb)
+	_, err = tx.Exec("SELECT goiardi.merge_environments($1, $2, $3, $4, $5)", e.Name, e.Description, dab, oab, cvb)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)
 		return gerr
 	}
-
 	tx.Commit()
 	return nil
 }

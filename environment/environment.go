@@ -46,10 +46,16 @@ type ChefEnvironment struct {
 // Creates a new environment, returning an error if the environment already
 // exists or you try to create an environment named "_default".
 func New(name string) (*ChefEnvironment, util.Gerror){
+	if !util.ValidateEnvName(name){
+		err := util.Errorf("Field 'name' invalid")
+		err.SetStatus(http.StatusBadRequest)
+		return nil, err
+	}
+
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var eerr error
-		found, eerr = checkForEnvironmentMySQL(data_store.Dbh, name)
+		found, eerr = checkForEnvironmentSQL(data_store.Dbh, name)
 		if eerr != nil {
 			err := util.CastErr(eerr)
 			err.SetStatus(http.StatusInternalServerError)
@@ -63,11 +69,7 @@ func New(name string) (*ChefEnvironment, util.Gerror){
 		err := util.Errorf("Environment already exists")
 		return nil, err
 	}
-	if !util.ValidateEnvName(name){
-		err := util.Errorf("Field 'name' invalid")
-		err.SetStatus(http.StatusBadRequest)
-		return nil, err
-	}
+	
 	env := &ChefEnvironment{
 		Name: name,
 		ChefType: "environment",
@@ -210,9 +212,9 @@ func Get(env_name string) (*ChefEnvironment, util.Gerror){
 	}
 	var env *ChefEnvironment
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		env, err = getEnvironmentMySQL(env_name)
+		env, err = getEnvironmentSQL(env_name)
 		if err != nil {
 			var gerr util.Gerror
 			if err != sql.ErrNoRows {
@@ -290,6 +292,11 @@ func (e *ChefEnvironment) Save() util.Gerror {
 		if err != nil {
 			return err
 		}
+	} else if config.Config.UsePostgreSQL {
+		err := e.saveEnvironmentPostgreSQL()
+		if err != nil {
+			return err
+		}
 	} else {
 		ds := data_store.New()
 		ds.Set("env", e.Name, e)
@@ -305,8 +312,8 @@ func (e *ChefEnvironment) Delete() error {
 		err := fmt.Errorf("The '_default' environment cannot be modified.")
 		return err
 	}
-	if config.Config.UseMySQL {
-		if err := e.deleteEnvironmentMySQL(); err != nil {
+	if config.UsingDB() {
+		if err := e.deleteEnvironmentSQL(); err != nil {
 			return nil
 		}
 	} else {
@@ -320,7 +327,7 @@ func (e *ChefEnvironment) Delete() error {
 // Get a list of all environments on this server.
 func GetList() []string {
 	var env_list []string
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		env_list = getEnvironmentList()
 	} else {
 		ds := data_store.New()
@@ -403,7 +410,7 @@ func (e *ChefEnvironment) Flatten() []string {
 // Return all environments on this server.
 func AllEnvironments() []*ChefEnvironment {
 	environments := make([]*ChefEnvironment, 0)
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		environments = allEnvironmentsSQL()
 	} else {
 		env_list := GetList()

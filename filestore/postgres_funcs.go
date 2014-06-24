@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-/* MySQL specific functions for filestore */
+/* Postgres specific functions for file store */
 
 package filestore
 
@@ -26,13 +26,13 @@ import (
 	"github.com/tideland/goas/v2/logger"
 )
 
-func (f *FileStore) saveMySQL() error {
+func (f *FileStore) savePostgreSQL() error {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		return err
 	}
 
-	_, err = tx.Exec("INSERT IGNORE INTO file_checksums (checksum) VALUES (?)", f.Chksum)
+	_, err = tx.Exec("INSERT INTO goiardi.file_checksums (checksum) VALUES ($1)", f.Chksum)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -42,7 +42,7 @@ func (f *FileStore) saveMySQL() error {
 	return nil
 }
 
-func deleteHashesMySQL(file_hashes []string) {
+func deleteHashesPostgreSQL(file_hashes []string) {
 	if len(file_hashes) == 0 {
 		return // nothing to do
 	}
@@ -50,17 +50,13 @@ func deleteHashesMySQL(file_hashes []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	delete_query := "DELETE FROM file_checksums WHERE checksum IN(?" + strings.Repeat(",?", len(file_hashes) - 1) + ")"
-	del_args := make([]interface{}, len(file_hashes))
-	for i, v := range file_hashes {
-		del_args[i] = v
-	}
-	_, err = tx.Exec(delete_query, del_args...)
+	delete_query := "DELETE FROM goiardi.file_checksums WHERE checksum = ANY($1::string[])"
+	_, err = tx.Exec(delete_query, file_hashes)
 	if err != nil && err != sql.ErrNoRows {
 		logger.Debugf("Error %s trying to delete hashes", err.Error())
 		tx.Rollback()
 		return
 	} 
 	tx.Commit()
-	return 
+	return
 }
