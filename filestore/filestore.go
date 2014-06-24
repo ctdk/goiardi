@@ -84,9 +84,9 @@ func New(chksum string, data io.ReadCloser, data_length int64) (*FileStore, erro
 func Get(chksum string) (*FileStore, error){
 	var filestore *FileStore
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		filestore, err = getMySQL(chksum)
+		filestore, err = getSQL(chksum)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -147,6 +147,11 @@ func (f *FileStore) Save() error {
 		if err != nil {
 			return err
 		}
+	} else if config.Config.UsePostgreSQL {
+		err := f.savePostgreSQL()
+		if err != nil {
+			return nil
+		}
 	} else {
 		ds := data_store.New()
 		ds.Set("filestore", f.Chksum, f)
@@ -167,8 +172,8 @@ func (f *FileStore) Save() error {
 }
 
 func (f *FileStore) Delete() error {
-	if config.Config.UseMySQL {
-		err := f.deleteMySQL()
+	if config.UsingDB() {
+		err := f.deleteSQL()
 		if err != nil {
 			return err
 		}
@@ -189,8 +194,8 @@ func (f *FileStore) Delete() error {
 // Get a list of files that have been uploaded.
 func GetList() []string {
 	var file_list []string
-	if config.Config.UseMySQL {
-		file_list = getListMySQL()
+	if config.UsingDB() {
+		file_list = getListSQL()
 	} else {
 		ds := data_store.New()
 		file_list = ds.GetList("filestore")
@@ -202,6 +207,8 @@ func GetList() []string {
 func DeleteHashes(file_hashes []string) {
 	if config.Config.UseMySQL {
 		deleteHashesMySQL(file_hashes)
+	} else if config.Config.UsePostgreSQL {
+		deleteHashesPostgreSQL(file_hashes)
 	} else {
 		for _, ff := range file_hashes {
 		del_file, err := Get(ff)
@@ -231,7 +238,7 @@ func DeleteHashes(file_hashes []string) {
 // All file checksums and their contents, for exporting.
 func AllFilestores() []*FileStore {
 	filestores := make([]*FileStore, 0)
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		filestores = allFilestoresSQL()
 	} else {
 		file_list := GetList()

@@ -23,8 +23,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"strings"
-	"github.com/tideland/goas/v2/logger"
 )
 
 func getSQL(chksum string) (*FileStore, error) {
@@ -32,7 +30,7 @@ func getSQL(chksum string) (*FileStore, error) {
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT checksum FROM file_checksums WHERE checksum = ?"
-	} else if config.Config.UsePostreSQL {
+	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT checksum FROM goiardi.file_checksums WHERE checksum = $1"
 	}
 	stmt, err := data_store.Dbh.Prepare(sqlStatement)
@@ -57,7 +55,7 @@ func (f *FileStore) deleteSQL() error {
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "DELETE FROM file_checksums WHERE checksum = ?"
-	} else if config.Config.UsePostreSQL {
+	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "DELETE FROM goiardi.file_checksums WHERE checksum = $1"
 	}
 
@@ -78,7 +76,7 @@ func getListSQL() []string {
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT checksum FROM file_checksums"
-	} else if config.Config.UsePostreSQL {
+	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT checksum FROM goiardi.file_checksums"
 	}
 
@@ -111,7 +109,7 @@ func allFilestoresSQL() []*FileStore {
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT checksum FROM file_checksums"
-	} else if config.Config.UsePostreSQL {
+	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT checksum FROM goiardi.file_checksums"
 	}
 
