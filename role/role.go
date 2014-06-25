@@ -45,9 +45,9 @@ type Role struct {
 
 func New(name string) (*Role, util.Gerror){
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		found, err = checkForRoleMySQL(data_store.Dbh, name)
+		found, err = checkForRoleSQL(data_store.Dbh, name)
 		if err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -186,9 +186,9 @@ func (r *Role) UpdateFromJson(json_role map[string]interface{}) util.Gerror {
 func Get(role_name string) (*Role, error){
 	var role *Role
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		role, err = getMySQL(role_name)
+		role, err = getSQL(role_name)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -218,6 +218,10 @@ func (r *Role) Save() error {
 		if err := r.saveMySQL(); err != nil {
 			return nil
 		}
+	} else if config.Config.UsePostgreSQL {
+		if err := r.savePostgreSQL(); err != nil {
+			return nil
+		}
 	} else {
 		ds := data_store.New()
 		ds.Set("role", r.Name, r)
@@ -227,8 +231,8 @@ func (r *Role) Save() error {
 }
 
 func (r *Role) Delete() error {
-	if config.Config.UseMySQL {
-		if err := r.deleteMySQL(); err != nil {
+	if config.UsingDB() {
+		if err := r.deleteSQL(); err != nil {
 			return err
 		}
 	} else {
@@ -242,8 +246,8 @@ func (r *Role) Delete() error {
 // Get a list of the roles on this server.
 func GetList() []string {
 	var role_list []string
-	if config.Config.UseMySQL {
-		role_list = getListMySQL()
+	if config.UsingDB() {
+		role_list = getListSQL()
 	} else {
 		ds := data_store.New()
 		role_list = ds.GetList("role")
@@ -276,7 +280,7 @@ func (r *Role) Flatten() []string {
 // Return all the roles on the server
 func AllRoles() []*Role {
 	roles := make([]*Role, 0)
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		roles = allRolesSQL()
 	} else {
 		role_list := GetList()

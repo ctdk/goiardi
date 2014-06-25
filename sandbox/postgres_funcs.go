@@ -14,36 +14,37 @@
  * limitations under the License.
  */
 
-package role
+package sandbox
 
-/* MySQL funcs for roles */
+/* PostgreSQL functions for sandboxes */
 
 import (
 	"github.com/ctdk/goiardi/data_store"
 )
 
-func (r *Role)saveMySQL() error {
-	rlb, rlerr := data_store.EncodeBlob(&r.RunList)
-	if rlerr != nil {
-		return rlerr
+func (s *Sandbox)fillSandboxFromPostgreSQL(row data_store.ResRow) error {
+	var csb []byte
+	err := row.Scan(&s.Id, &s.CreationTime, &csb, &s.Completed)
+	if err != nil {
+		return err
 	}
-	erb, ererr := data_store.EncodeBlob(&r.EnvRunLists)
-	if ererr != nil {
-		return ererr
+	err = data_store.DecodeBlob(csb, &s.Checksums)
+	if err != nil {
+		return err
 	}
-	dab, daerr := data_store.EncodeBlob(&r.Default)
-	if daerr != nil {
-		return daerr
-	}
-	oab, oaerr := data_store.EncodeBlob(&r.Override)
-	if oaerr != nil {
-		return oaerr
+	return nil
+}
+
+func (s *Sandbox) savePostgreSQL() error {
+	ckb, ckerr := data_store.EncodeBlob(&s.Checksums)
+	if ckerr != nil {
+		return ckerr
 	}
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("INSERT INTO roles (name, description, run_list, env_run_lists, default_attr, override_attr, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE description = ?, run_list = ?, env_run_lists = ?, default_attr = ?, override_attr = ?, updated_at = NOW()", r.Name, r.Description, rlb, erb, dab, oab, r.Description, rlb, erb, dab, oab)
+	_, err = tx.Exec("SELECT goiardi.merge_sandboxes($1, $2, $3, $4)", s.Id, s.CreationTime, ckb, s.Completed)
 	if err != nil {
 		tx.Rollback()
 		return err

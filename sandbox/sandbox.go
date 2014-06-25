@@ -115,9 +115,9 @@ func Get(sandbox_id string) (*Sandbox, error){
 	var sandbox *Sandbox
 	var found bool
 
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		sandbox, err = getMySQL(sandbox_id)
+		sandbox, err = getSQL(sandbox_id)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -148,6 +148,10 @@ func (s *Sandbox) Save() error {
 		if err := s.saveMySQL(); err != nil {
 			return err
 		}
+	} else if config.Config.UsePostgreSQL {
+		if err := s.savePostgreSQL(); err != nil {
+			return err
+		}
 	} else {
 		ds := data_store.New()
 		ds.Set("sandbox", s.Id, s)
@@ -156,8 +160,8 @@ func (s *Sandbox) Save() error {
 }
 
 func (s *Sandbox) Delete() error {
-	if config.Config.UseMySQL {
-		if err := s.deleteMySQL(); err != nil {
+	if config.UsingDB() {
+		if err := s.deleteSQL(); err != nil {
 			return nil
 		}
 	} else {
@@ -169,8 +173,8 @@ func (s *Sandbox) Delete() error {
 
 func GetList() []string {
 	var sandbox_list []string
-	if config.Config.UseMySQL {
-		sandbox_list = getListMySQL()
+	if config.UsingDB() {
+		sandbox_list = getListSQL()
 	} else {
 		ds := data_store.New()
 		sandbox_list = ds.GetList("sandbox")
@@ -221,7 +225,7 @@ func (s *Sandbox) URLType() string {
 // Return all sandboxes on the server.
 func AllSandboxes() ([]*Sandbox) {
 	sandboxes := make([]*Sandbox, 0)
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		sandboxes = allSandboxesSQL()
 	} else {
 		sandbox_list := GetList()

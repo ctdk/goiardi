@@ -62,9 +62,9 @@ type privReport struct {
 
 func New(runId string, nodeName string) (*Report, util.Gerror) {
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		found, err = checkForReportMySQL(data_store.Dbh, runId)
+		found, err = checkForReportSQL(data_store.Dbh, runId)
 		if err != nil {
 			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -95,9 +95,9 @@ func New(runId string, nodeName string) (*Report, util.Gerror) {
 func Get(runId string) (*Report, util.Gerror) {
 	var report *Report
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		report, err = getReportMySQL(runId)
+		report, err = getReportSQL(runId)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -128,6 +128,8 @@ func Get(runId string) (*Report, util.Gerror) {
 func (r *Report)Save() error {
 	if config.Config.UseMySQL {
 		return r.saveMySQL()
+	} else if config.Config.UsePostgreSQL {
+		return r.savePostgreSQL()
 	} else {
 		ds := data_store.New()
 		ds.Set("report", r.RunId, r)
@@ -136,8 +138,8 @@ func (r *Report)Save() error {
 }
 
 func (r *Report)Delete() error {
-	if config.Config.UseMySQL {
-		return r.deleteMySQL()
+	if config.UsingDB() {
+		return r.deleteSQL()
 	} else {
 		ds := data_store.New()
 		ds.Delete("report", r.RunId)
@@ -258,8 +260,8 @@ func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
 
 func GetList() []string {
 	var report_list []string
-	if config.Config.UseMySQL {
-		report_list = getListMySQL()
+	if config.UsingDB() {
+		report_list = getListSQL()
 	} else {
 		ds := data_store.New()
 		report_list = ds.GetList("report")
@@ -268,8 +270,8 @@ func GetList() []string {
 }
 
 func GetReportList(from, until time.Time, rows int) ([]*Report, error) {
-	if config.Config.UseMySQL {
-		return getReportListMySQL(from, until, rows)
+	if config.UsingDB() {
+		return getReportListSQL(from, until, rows)
 	} else {
 		reports := make([]*Report, 0)
 		report_list := GetList()
@@ -293,8 +295,8 @@ func (r *Report)checkTimeRange(from, until time.Time) bool {
 }
 
 func GetNodeList(nodeName string, from, until time.Time, rows int) ([]*Report, error) {
-	if config.Config.UseMySQL {
-		return getNodeListMySQL(nodeName, from, until, rows)
+	if config.UsingDB() {
+		return getNodeListSQL(nodeName, from, until, rows)
 	} else {
 		// Really really not the most efficient way, but deliberately
 		// not doing it in a better manner for now. If reporting
@@ -339,7 +341,7 @@ func (r *Report) GobDecode(b []byte) error {
 
 // Return all run reports currently on the server for export.
 func AllReports() []*Report {
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		return getReportsSQL()
 	} else {
 		reports := make([]*Report, 0)

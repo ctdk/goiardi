@@ -16,13 +16,13 @@
 
 package role
 
-/* MySQL funcs for roles */
+/* PostgreSQL funcs for roles */
 
 import (
 	"github.com/ctdk/goiardi/data_store"
 )
 
-func (r *Role)saveMySQL() error {
+func (r *Role)savePostgreSQL() error {
 	rlb, rlerr := data_store.EncodeBlob(&r.RunList)
 	if rlerr != nil {
 		return rlerr
@@ -43,7 +43,7 @@ func (r *Role)saveMySQL() error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("INSERT INTO roles (name, description, run_list, env_run_lists, default_attr, override_attr, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE description = ?, run_list = ?, env_run_lists = ?, default_attr = ?, override_attr = ?, updated_at = NOW()", r.Name, r.Description, rlb, erb, dab, oab, r.Description, rlb, erb, dab, oab)
+	_, err = tx.Exec("SELECT goiardi.merge_roles($1, $2, $3, $4, $5, $6)", r.Name, r.Description, rlb, erb, dab, oab)
 	if err != nil {
 		tx.Rollback()
 		return err

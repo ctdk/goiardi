@@ -135,7 +135,7 @@ func event_list_handler(w http.ResponseWriter, r *http.Request){
 				return
 			}
 		default:
-			JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 	}
 }
@@ -191,7 +191,7 @@ func event_handler(w http.ResponseWriter, r *http.Request){
 				return
 			}
 		default:
-			JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 	}
 	return
