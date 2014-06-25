@@ -23,7 +23,7 @@ import (
 	"database/sql"
 	"log"
 	"strings"
-	"github.com/tideland/goas/v2/logger"
+	"github.com/ctdk/goas/v2/logger"
 )
 
 func (f *FileStore) savePostgreSQL() error {

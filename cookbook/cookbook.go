@@ -29,7 +29,7 @@ import (
 	"strings"
 	"strconv"
 	"sort"
-	"github.com/tideland/goas/v2/logger"
+	"github.com/ctdk/goas/v2/logger"
 	"net/http"
 	"regexp"
 	"database/sql"

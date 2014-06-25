@@ -45,7 +45,7 @@ import (
 	"time"
 	"github.com/ctdk/goiardi/authentication"
 	"strings"
-	"github.com/tideland/goas/v2/logger"
+	"github.com/ctdk/goas/v2/logger"
 	"compress/gzip"
 )
 

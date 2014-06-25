@@ -35,7 +35,7 @@ import (
 	"io/ioutil"
 	"time"
 	"fmt"
-	"github.com/tideland/goas/v2/logger"
+	"github.com/ctdk/goas/v2/logger"
 )
 
 func importAll(fileName string) error {

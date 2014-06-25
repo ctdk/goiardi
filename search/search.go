@@ -26,7 +26,7 @@ import (
 	"github.com/ctdk/goiardi/data_bag"
 	"net/url"
 	"fmt"
-	"github.com/tideland/goas/v2/logger"
+	"github.com/ctdk/goas/v2/logger"
 )
 
 // Holds a parsed query and query chain to run against the index.

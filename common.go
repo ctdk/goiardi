@@ -22,7 +22,7 @@ import (
 	"io"
 	"encoding/json"
 	"net/http"
-	"github.com/tideland/goas/v2/logger"
+	"github.com/ctdk/goas/v2/logger"
 	"strings"
 	"fmt"
 )

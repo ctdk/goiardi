@@ -33,7 +33,7 @@ import (
 	"fmt"
 	"strconv"
 	"regexp"
-	"github.com/tideland/goas/v2/logger"
+	"github.com/ctdk/goas/v2/logger"
 )
 
 func search_handler(w http.ResponseWriter, r *http.Request){

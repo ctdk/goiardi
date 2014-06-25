@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"time"
 	"path"
-	"github.com/tideland/goas/v2/logger"
+	"github.com/ctdk/goas/v2/logger"
 	"strings"
 	"net"
 	"strconv"

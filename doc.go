@@ -41,7 +41,7 @@ To install them, run:
    go get github.com/ctdk/go-trie/gtrie
    go get github.com/BurntSushi/toml
    go get github.com/go-sql-driver/mysql
-   go get github.com/tideland/goas/v2/logger
+   go get github.com/ctdk/goas/v2/logger
    go get github.com/codeskyblue/go-uuid
 
 from your $GOROOT, or just use the -t flag when you go get goiardi.

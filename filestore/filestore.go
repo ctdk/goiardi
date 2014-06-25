@@ -35,7 +35,7 @@ import (
 	"database/sql"
 	"os"
 	"path"
-	"github.com/tideland/goas/v2/logger"
+	"github.com/ctdk/goas/v2/logger"
 )
 
 /* Local filestorage struct. Add fields as needed. */
