@@ -105,6 +105,8 @@ INSTALLATION
                           -D/--data-file options to be set). (Default 300
                           seconds/5 minutes.)
    -L, --log-file=        Log to file X
+   -s, --syslog           Log to syslog rather than a log file. Incompatible
+                          with -L/--log-file.
        --time-slew=       Time difference allowed between the server's clock at
                           the time in the X-OPS-TIMESTAMP header. Formatted like
                           5m, 150s, etc. Defaults to 15m.
