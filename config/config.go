@@ -47,6 +47,7 @@ type Conf struct {
 	FreezeInterval int `toml:"freeze-interval"`
 	FreezeData bool `toml:"freeze-data"`
 	LogFile string `toml:"log-file"`
+	SysLog bool `toml:"syslog"`
 	UseAuth bool `toml:"use-auth"`
 	TimeSlew string `toml:"time-slew"`
 	TimeSlewDur time.Duration
@@ -104,6 +105,7 @@ type Options struct {
 	DataStoreFile string `short:"D" long:"data-file" description:"File to save data store data to."`
 	FreezeInterval int `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk (requires -i/--index-file and -D/--data-file options to be set). (Default 300 seconds/5 minutes.)"`
 	LogFile string `short:"L" long:"log-file" description:"Log to file X"`
+	SysLog bool `short:"s" long:"syslog" description:"Log to syslog rather than a log file. Incompatible with -L/--log-file."`
 	TimeSlew string `long:"time-slew" description:"Time difference allowed between the server's clock at the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m."`
 	ConfRoot string `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set."`
 	UseAuth bool `short:"A" long:"use-auth" description:"Use authentication. Default: false."`
@@ -244,6 +246,9 @@ func ParseConfigOptions() error {
 	if opts.LogFile != "" {
 		Config.LogFile = opts.LogFile
 	}
+	if opts.SysLog {
+		Config.SysLog = opts.SysLog
+	}
 	if Config.LogFile != "" {
 		lfp, lerr := os.Create(Config.LogFile)
 		if lerr != nil {
@@ -268,7 +273,16 @@ func ParseConfigOptions() error {
 	logger.SetLevel(logger.LogLevel(Config.DebugLevel))
 	debug_level := map[int]string { 0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical" }
 	log.Printf("Logging at %s level", debug_level[Config.DebugLevel])
-	logger.SetLogger(logger.NewGoLogger())
+	if Config.SysLog {
+		sl, err := logger.NewSysLogger("goiardi")
+		if err != nil {
+			log.Println(err.Error())
+			os.Exit(1)
+		}
+		logger.SetLogger(sl)
+	} else {
+		logger.SetLogger(logger.NewGoLogger())
+	}
 
 	/* Database options */
 	
