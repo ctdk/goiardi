@@ -1,3 +1,15 @@
+0.6.0 (not released yet)
+-----
+* Postgres support.
+* Fix rebuilding indexes with an SQL backend.
+* Fix a bug where in MySQL mode events were being logged twice.
+* Fix an annoying chef-pedant error with data bags.
+* Event logging methods that are not allowed now return Method Not Allowed
+  rather than Bad Request.
+* Switch the logger to a fork that can be built and used with Windows that
+  excludes syslog when building on Windows.
+* Add basic syslog support.
+
 0.5.2
 -----
 * Add import/export of goiardi data through a JSON dump.
