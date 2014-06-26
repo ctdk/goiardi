@@ -9,6 +9,9 @@
 * Switch the logger to a fork that can be built and used with Windows that
   excludes syslog when building on Windows.
 * Add basic syslog support.
+* Add a 'status' param to reporting, so a list of reports return by 'knife
+  runs' can be narrowed by the status of the chef run (started, success, and
+  failure).
 
 0.5.2
 -----
