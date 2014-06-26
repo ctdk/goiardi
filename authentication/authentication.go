@@ -80,7 +80,7 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 		shaRe := regexp.MustCompile(`algorithm=(\w+)`)
 		if verChk := re.FindStringSubmatch(xopssign); verChk != nil {
 			apiVer = verChk[1]
-			if apiVer != "1.0" && apiVer != "1.1" {
+			if apiVer != "1.0" && apiVer != "1.1" && apiVer != "1.2" {
 				gerr := util.Errorf("Bad version number '%s' in X-Ops-Header", apiVer)
 				return gerr
 			}
@@ -115,6 +115,35 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 	}
 	headToCheck := assembleHeaderToCheck(r, chkHash, apiVer)
 
+	if apiVer == "1.2" {
+		chkerr = checkAuth12Headers(user, r, headToCheck, signedHeaders)
+	} else {
+		chkerr = checkAuthHeaders(user, r, headToCheck, signedHeaders)
+	}
+
+	if chkerr != nil {
+		chkerr.SetStatus(http.StatusUnauthorized)
+		return chkerr
+	}
+
+	return nil
+}
+
+func checkAuth12Headers(user actor.Actor, r *http.Request, headToCheck, signedHeaders string) util.Gerror {
+	sig, err := base64.StdEncoding.DecodeString(signedHeaders)
+	if err != nil {
+		gerr := util.CastErr(err)
+		return gerr
+	}
+	sigSha := sha1.Sum([]byte(headToCheck))
+	err = chef_crypto.Auth12HeaderVerify(user.PublicKey(), sigSha[:], sig)
+	if err != nil {
+		return util.CastErr(err)
+	}
+	return nil
+}
+
+func checkAuthHeaders(user actor.Actor, r *http.Request, headToCheck, signedHeaders string) util.Gerror {
 	decHead, berr := chef_crypto.HeaderDecrypt(user.PublicKey(), signedHeaders)
 
 	if berr != nil {
@@ -207,7 +236,7 @@ func assembleHeaderToCheck(r *http.Request, cHash string, apiVer string) string 
 	hashPath := hashStr(path.Clean(r.URL.Path))
 	timestamp := r.Header.Get("x-ops-timestamp")
 	user_id := r.Header.Get("x-ops-userid")
-	if apiVer == "1.1" {
+	if apiVer != "1.0" {
 		user_id = hashStr(user_id)
 	}
 

@@ -163,7 +163,7 @@ user, are not present, it will create new keys in the --conf-root directory. Use
 them as you would normally for validating clients, performing tasks with the
 admin user, or using chef-webui if webui will run in front of goiardi.
 
-In auth mode, goiardi supports both versions 1.0 and 1.1 of the Chef
+In auth mode, goiardi supports versions 1.0, 1.1, and 1.2 of the Chef
 authentication protocol.
 
 *Note:* The admin user, when created on startup, does not have a password. This

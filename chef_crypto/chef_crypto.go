@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"crypto/rsa"
 	"crypto/rand"
+	"crypto"
 	"encoding/pem"
 	"crypto/x509"
 	"encoding/base64"
@@ -119,6 +120,18 @@ func HeaderDecrypt(pkPem string, data string) ([]byte, error){
 		}
 	}
 	return dec[skip:], nil
+}
+
+func Auth12HeaderVerify(pkPem string, hashed, sig []byte) error {
+	block, _ := pem.Decode([]byte(pkPem))
+	if block == nil {
+		return fmt.Errorf("Invalid block size for '%s'", pkPem)
+	}
+	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return err
+	}
+	return rsa.VerifyPKCS1v15(pubKey.(*rsa.PublicKey), crypto.SHA1, hashed, sig)
 }
 
 // There has been discussion of renaming this and submitting it along with its
