@@ -80,7 +80,7 @@ func TestReportListing(t *testing.T){
 	}
 	from := time.Now().Add(-(time.Duration(24 * 90) * time.Hour))
 	until := time.Now()
-	ns, nerr := GetNodeList(n.Name, from, until, 100)
+	ns, nerr := GetNodeList(n.Name, from, until, 100, "")
 	if nerr != nil {
 		t.Errorf(nerr.Error())
 	}

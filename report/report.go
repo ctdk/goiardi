@@ -269,9 +269,9 @@ func GetList() []string {
 	return report_list
 }
 
-func GetReportList(from, until time.Time, rows int) ([]*Report, error) {
+func GetReportList(from, until time.Time, rows int, status string) ([]*Report, error) {
 	if config.UsingDB() {
-		return getReportListSQL(from, until, rows)
+		return getReportListSQL(from, until, rows, status)
 	} else {
 		reports := make([]*Report, 0)
 		report_list := GetList()
@@ -294,15 +294,15 @@ func (r *Report)checkTimeRange(from, until time.Time) bool {
 	return r.StartTime.After(from) && r.StartTime.Before(until)
 }
 
-func GetNodeList(nodeName string, from, until time.Time, rows int) ([]*Report, error) {
+func GetNodeList(nodeName string, from, until time.Time, rows int, status string) ([]*Report, error) {
 	if config.UsingDB() {
-		return getNodeListSQL(nodeName, from, until, rows)
+		return getNodeListSQL(nodeName, from, until, rows, status)
 	} else {
 		// Really really not the most efficient way, but deliberately
 		// not doing it in a better manner for now. If reporting
 		// performance becomes a concern, SQL mode is probably a better
 		// choice
-		reports, _ := GetReportList(from, until, rows)
+		reports, _ := GetReportList(from, until, rows, status)
 		node_report_list := make([]*Report, 0)
 		for _, r := range reports {
 			if nodeName == r.NodeName {

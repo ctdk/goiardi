@@ -22,6 +22,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/config"
 	"strconv"
 	"time"
 	"fmt"
@@ -56,6 +57,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 			// to see the node run reports
 			var rows int
 			var from, until time.Time
+			var status string
 			r.ParseForm()
 			if fr, found := r.Form["rows"]; found {
 				if len(fr) < 0 {
@@ -101,6 +103,22 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 				until = time.Now()
 			}
 
+			if st, found := r.Form["status"]; found {
+				if len(st) < 0 {
+					JsonErrorReport(w, r, "invalid status", http.StatusBadRequest)
+					return
+				}
+				if !config.UsingDB() {
+					JsonErrorReport(w, r, "Status cannot be used to search for reports in in-memory mode, only with an SQL backend", http.StatusBadRequest)
+					return
+				}
+				status = st[0]
+				if status != "started" && status != "success" && status != "failure" {
+					JsonErrorReport(w, r, "invalid status given", http.StatusBadRequest)
+					return
+				}
+			}
+
 			// If the end time is more than 90 days ahead of the
 			// start time, give an error
 			if from.Truncate(time.Hour).Sub(until.Truncate(time.Hour)) >= (time.Duration(24 * 90) * time.Hour) {
@@ -120,7 +138,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 			op := path_array[1]
 			if op == "nodes" && path_array_len == 4 {
 				nodeName := path_array[2]
-				runs, nerr := report.GetNodeList(nodeName, from, until, rows)
+				runs, nerr := report.GetNodeList(nodeName, from, until, rows, status)
 				if nerr != nil {
 					JsonErrorReport(w, r, nerr.Error(), http.StatusInternalServerError)
 					return
@@ -136,7 +154,7 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 					}
 					report_response = format_run_show(run)
 				} else {
-					runs, rerr := report.GetReportList(from, until, rows)
+					runs, rerr := report.GetReportList(from, until, rows, status)
 					if rerr != nil {
 						JsonErrorReport(w, r, rerr.Error(), http.StatusInternalServerError)
 						return

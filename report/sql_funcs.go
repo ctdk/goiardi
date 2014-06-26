@@ -145,14 +145,22 @@ func getListSQL() []string {
 	return reportList
 }
 
-func getReportListSQL(from, until time.Time, retrows int) ([]*Report, error) {
+func getReportListSQL(from, until time.Time, retrows int, status string) ([]*Report, error) {
 	reports := make([]*Report, 0)
 	var sqlStmt string
 
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE start_time >= ? AND start_time <= ? LIMIT ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE start_time >= $1 AND start_time <= $2 LIMIT $3"
+	if status == "" {
+		if config.Config.UseMySQL {
+			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE start_time >= ? AND start_time <= ? LIMIT ?"
+		} else if config.Config.UsePostgreSQL {
+			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE start_time >= $1 AND start_time <= $2 LIMIT $3"
+		}
+	} else {
+		if config.Config.UseMySQL {
+			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE start_time >= ? AND start_time <= ? AND status = ? LIMIT ?"
+		} else if config.Config.UsePostgreSQL {
+			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE start_time >= $1 AND start_time <= $2 AND status = $3 LIMIT $4"
+		}
 	}
 
 	stmt, err := data_store.Dbh.Prepare(sqlStmt)
@@ -160,7 +168,14 @@ func getReportListSQL(from, until time.Time, retrows int) ([]*Report, error) {
 		return nil, err
 	}
 	defer stmt.Close()
-	rows, rerr := stmt.Query(from, until, retrows)
+	var rows *sql.Rows
+	var rerr error
+
+	if status == "" {
+		rows, rerr = stmt.Query(from, until, retrows)
+	} else {
+		rows, rerr = stmt.Query(from, until, status, retrows)
+	}
 	if rerr != nil {
 		if rerr == sql.ErrNoRows {
 			return reports, nil
@@ -183,14 +198,22 @@ func getReportListSQL(from, until time.Time, retrows int) ([]*Report, error) {
 	return reports, nil
 }
 
-func getNodeListSQL(nodeName string, from, until time.Time, retrows int) ([]*Report, error) {
+func getNodeListSQL(nodeName string, from, until time.Time, retrows int, status string) ([]*Report, error) {
 	reports := make([]*Report, 0)
 
 	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE node_name = ? AND start_time >= ? AND start_time <= ? LIMIT ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE node_name = $1 AND start_time >= $2 AND start_time <= $3 LIMIT $4"
+	if status == "" {
+		if config.Config.UseMySQL {
+			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE node_name = ? AND start_time >= ? AND start_time <= ? LIMIT ?"
+		} else if config.Config.UsePostgreSQL {
+			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE node_name = $1 AND start_time >= $2 AND start_time <= $3 LIMIT $4"
+		}
+	} else {
+		if config.Config.UseMySQL {
+			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE node_name = ? AND start_time >= ? AND start_time <= ? AND status = ? LIMIT ?"
+		} else if config.Config.UsePostgreSQL {
+			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE node_name = $1 AND start_time >= $2 AND start_time <= $3 AND status = $4 LIMIT $5"
+		}
 	}
 
 	stmt, err := data_store.Dbh.Prepare(sqlStmt)
@@ -198,7 +221,14 @@ func getNodeListSQL(nodeName string, from, until time.Time, retrows int) ([]*Rep
 		return nil, err
 	}
 	defer stmt.Close()
-	rows, rerr := stmt.Query(nodeName, from, until, retrows)
+
+	var rows *sql.Rows
+	var rerr error
+	if status == "" {
+		rows, rerr = stmt.Query(nodeName, from, until, retrows)
+	} else {
+		rows, rerr = stmt.Query(nodeName, from, until, status, retrows)
+	}
 	if rerr != nil {
 		if rerr == sql.ErrNoRows {
 			return reports, nil
