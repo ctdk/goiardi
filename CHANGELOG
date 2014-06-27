@@ -15,8 +15,13 @@
   failure).
 * Fix an action at a distance problem with in-memory mode objects. If this
   behavior is still desirable (it seems to be slightly faster than the new way),
-  it can be turned back on with the --use-unsafe-mem-store flag.
+  it can be turned back on with the --use-unsafe-mem-store flag. This change
+  DEFINITELY breaks in-mem data file compatibility. If upgrading, export your 
+  data, upgrade goiardi, and reload your data.
 * Add several new searchable parameters for logged events.
+* Add organization_id to all MySQL tables that might need it someday. Orgs are
+  not used at all, so only the default value of 1 currently makes it to the 
+  database.
 
 0.5.2
 -----

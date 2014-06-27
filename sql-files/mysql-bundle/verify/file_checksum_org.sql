@@ -1,4 +1,4 @@
--- Verify file_checksums
+-- Verify file_checksum_org
 
 BEGIN;
 

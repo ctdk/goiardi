@@ -19,3 +19,7 @@ file_checksums 2014-03-23T02:03:13Z Jeremy Bingham <jbingham@gmail.com> # Create
 log_infos [log_infos@v0.5.0] 2014-05-05T05:52:17Z Jeremy Bingham <jbingham@gmail.com># Change log_infos to store the objects name, rather than its id. Makes life a little simpler, especially if the object has been deleted.
 reports 2014-05-07T01:11:10Z Jeremy Bingham <jbingham@gmail.com> # Create reports table
 @v0.5.1 2014-05-26T18:25:17Z Jeremy Bingham <jbingham@gmail.com> # v0.5.1 release
+
+file_checksum_org [file_checksums] 2014-05-29T21:21:38Z Jeremy Bingham <jbingham@gmail.com> # Rename org_id column to organization_id for file_checksums
+all_org_ids 2014-06-27T00:18:00Z Jeremy Bingham <jbingham@gmail.com> # All relevant tables should have an organization id, even though it will only ever be the default
+@v0.6.0 2014-06-27T07:19:42Z Jeremy Bingham <jbingham@gmail.com> # Tag v0.6.0 for release
