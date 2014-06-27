@@ -205,7 +205,7 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 		}
 		sqlStmt = sqlStmt + " ORDER BY id DESC LIMIT ?, ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos li JOIN goiardi.users u ON li.actor_id = u.id WHERE time >= ? AND time >= ?"
+		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos li JOIN goiardi.users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
 		if action, ok := searchParams["action"]; ok {
 			sqlStmt = sqlStmt + " AND action = ?"
 			sqlArgs = append(sqlArgs, action)
