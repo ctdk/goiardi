@@ -69,6 +69,7 @@ type Conf struct {
 	ImpExFile string
 	ObjMaxSize int64 `toml:"obj-max-size"`
 	JsonReqMaxSize int64 `toml:"json-req-max-size"`
+	UseUnsafeMemStore bool `toml:"use-unsafe-mem-store"`
 }
 var LogLevelNames = map[string]int{ "debug": 4, "info": 3, "warning": 2, "error": 1, "critical": 0 }
 
@@ -123,6 +124,7 @@ type Options struct {
 	Import string `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Cannot be used at the same time as -x/--export."`
 	ObjMaxSize int64 `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)."`
 	JsonReqMaxSize int64 `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000."`
+	UseUnsafeMemStore bool `long:"use-unsafe-mem-store" description:"Use the faster, but less safe, old method of storing data in the in-memory data store with pointers, rather than encoding the data with gob and giving a new copy of the object to each requestor. If this is enabled goiardi will run faster in in-memory mode, but one goroutine could change an object while it's being used by another. Has no effect when using an SQL backend."`
 }
 
 // The goiardi version.
@@ -416,6 +418,10 @@ func ParseConfigOptions() error {
 	}
 	if Config.JsonReqMaxSize == 0 {
 		Config.JsonReqMaxSize = 1000000
+	}
+
+	if opts.UseUnsafeMemStore {
+		Config.UseUnsafeMemStore = opts.UseUnsafeMemStore
 	}
 
 	return nil

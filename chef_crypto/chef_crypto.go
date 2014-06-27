@@ -103,10 +103,6 @@ func HeaderDecrypt(pkPem string, data string) ([]byte, error){
 	if perr != nil {
 		return nil, perr
 	}
-	/* decData, dderr := pem.Decode(pemData)
-	if decData == nil {
-		return nil, fmt.Errorf("pem decoding didn't go so well, %s", string(dderr))
-	} */
 	dec, derr := decrypt(pubKey.(*rsa.PublicKey), decData)
 	if derr != nil {
 		return nil, derr

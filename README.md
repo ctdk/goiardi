@@ -147,6 +147,14 @@ INSTALLATION
                           Default 10485760 bytes (10MB).
    -j, --json-req-max-size= Maximum size for a JSON request from the client.
                           Per chef-pedant, default is 1000000.
+       --use-unsafe-mem-store Use the faster, but less safe, old method of
+                          storing data in the in-memory data store with
+                          pointers, rather than encoding the data with gob
+                          and giving a new copy of the object to each
+                          requestor. If this is enabled goiardi will run
+                          faster in in-memory mode, but one goroutine could
+                          change an object while it's being used by
+                          another. Has no effect when using an SQL backend.
 ```
 
    Options specified on the command line override options in the config file.

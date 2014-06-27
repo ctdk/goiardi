@@ -42,7 +42,7 @@ func (e *ChefEnvironment) saveEnvironmentMySQL() util.Gerror {
 		return util.CastErr(err)
 	}
 
-	_, err = tx.Exec("INSERT INTO environments (name, description, default_attr, override_attr, cookbook_vers, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE SET description = ?, default_attr = ?, override_attr = ?, cookbook_vers = ?, updated_at = NOW()", e.Name, e.Description, dab, oab, cvb, e.Description, dab, oab, cvb)
+	_, err = tx.Exec("INSERT INTO environments (name, description, default_attr, override_attr, cookbook_vers, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE description = ?, default_attr = ?, override_attr = ?, cookbook_vers = ?, updated_at = NOW()", e.Name, e.Description, dab, oab, cvb, e.Description, dab, oab, cvb)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)

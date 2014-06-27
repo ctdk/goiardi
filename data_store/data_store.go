@@ -39,6 +39,7 @@ import (
 	"reflect"
 	"compress/zlib"
 	"path"
+	"github.com/ctdk/goiardi/config"
 )
 
 // Main data store.
@@ -51,6 +52,10 @@ type DataStore struct {
 type dsFileStore struct {
 	Cache []byte
 	Obj_list []byte
+}
+
+type dsItem struct {
+	Item interface{}
 }
 
 var dataStoreCache = initDataStore()
@@ -78,15 +83,46 @@ func (ds *DataStore) Set(key_type string, key string, val interface{}){
 	ds_key := ds.make_key(key_type, key)
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	ds.dsc.Set(ds_key, val, -1)
+	if config.Config.UseUnsafeMemStore {
+		ds.dsc.Set(ds_key, val, -1)
+	} else {
+		valBuf := new(bytes.Buffer)
+		valItem := &dsItem{ Item: val }
+		enc := gob.NewEncoder(valBuf)
+		err := enc.Encode(valItem)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		ds.dsc.Set(ds_key, valBuf.Bytes(), -1)
+	}
 	ds.addToList(key_type, key)
 }
 
 func (ds *DataStore) Get(key_type string, key string) (interface {}, bool){
+	var val interface{}
+	var found bool
+
 	ds_key := ds.make_key(key_type, key)
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	val, found := ds.dsc.Get(ds_key)
+
+	if config.Config.UseUnsafeMemStore {
+		val, found = ds.dsc.Get(ds_key)
+	} else {
+		valEnc, f := ds.dsc.Get(ds_key)
+		found = f
+		
+		if valEnc != nil {
+			valBuf := bytes.NewBuffer(valEnc.([]byte))
+			valItem := new(dsItem)
+			dec := gob.NewDecoder(valBuf)
+			err := dec.Decode(&valItem)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			val = valItem.Item
+		}
+	}
 	if val != nil {
 		ChkNilArray(val)
 	}

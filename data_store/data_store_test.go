@@ -21,12 +21,14 @@ import (
 	"io/ioutil"
 	"fmt"
 	"os"
+	"encoding/gob"
 )
 
 type dsObj struct {
 	Name string `json:"name"`
 	JsonClass string `json:"json_class"`
 	ChefType string `json:"chef_type"`
+	TestMap map[string]string `json:"testmap"`
 }
 
 func makeDsObj() *dsObj {
@@ -42,6 +44,7 @@ func TestNew(t *testing.T){
 func TestSet(t *testing.T){
 	ds := New()
 	baz := makeDsObj()
+	gob.Register(baz)
 	ds.Set("foo", "bar", baz)
 }
 
@@ -139,6 +142,39 @@ func TestSaveAndLoadData(t *testing.T) {
 		t.Errorf("Did not successfully retrieve baz from saved data store")
 	} else if bazSave.Name != baz.Name {
 		t.Errorf("Retrieved the wrong object! Expected %s, got %s", baz.Name, bazSave.Name)
+	}
+}
+
+func TestActionAtADistance(t *testing.T) {
+	baz := makeDsObj()
+	baz.TestMap = make(map[string]string)
+	baz.TestMap["foo"] = "barbaloo"
+	ds := New()
+	ds.Set("foo", "baz", baz)
+	val, _ := ds.Get("foo", "baz")
+	bar := val.(*dsObj)
+	bar.Name = "moohoo"
+	if bar.Name == baz.Name {
+		t.Errorf("This action at a distance stuff is happening")
+	}
+	if bar.TestMap["foo"] != baz.TestMap["foo"] {
+		t.Errorf("map elements weren't the same, but should have been")
+	}
+	bar.TestMap["foo"] = "moohooloonoo"
+	if bar.TestMap["foo"] == baz.TestMap["foo"] {
+		t.Errorf("map elements were the same this time, but should not have been")
+	}
+	ds.Set("foo", "baz", bar)
+	val, _ = ds.Get("foo", "baz")
+	baz2 := val.(*dsObj)
+	if baz2.Name != bar.Name {
+		t.Errorf("baz2 and bar should have the same names, but instead baz2 had %s and bar had %s", baz2.Name, bar.Name)
+	}
+	if baz2.Name == baz.Name {
+		t.Errorf("baz2 and baz should have had different names, but instead both had %s", baz2.Name)
+	}
+	if baz2.TestMap["foo"] == baz.TestMap["foo"] {
+		t.Errorf("baz and baz2 map elements were the same, but should not have been")
 	}
 }
 

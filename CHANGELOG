@@ -13,6 +13,9 @@
 * Add a 'status' param to reporting, so a list of reports return by 'knife
   runs' can be narrowed by the status of the chef run (started, success, and
   failure).
+* Fix an action at a distance problem with in-memory mode objects. If this
+  behavior is still desirable (it seems to be slightly faster than the new way),
+  it can be turned back on with the --use-unsafe-mem-store flag.
 
 0.5.2
 -----

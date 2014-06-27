@@ -23,7 +23,7 @@ import (
 )
 
 func (n *Node) saveMySQL(tx data_store.Dbhandle, rlb, aab, nab, dab, oab []byte) error {
-	_, err := tx.Exec("INSERT INTO nodes (name, chef_environment, run_list, automatic_attr, normal_attr, default_attr, override_attr, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE chef_environment = ?, n.run_list = ?, n.automatic_attr = ?, n.normal_attr = ?, n.default_attr = ?, n.override_attr = ?, n.updated_at = NOW()", n.Name, n.ChefEnvironment, rlb, aab, nab, dab, oab, n.ChefEnvironment, rlb, aab, nab, dab, oab)
+	_, err := tx.Exec("INSERT INTO nodes (name, chef_environment, run_list, automatic_attr, normal_attr, default_attr, override_attr, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE chef_environment = ?, run_list = ?, automatic_attr = ?, normal_attr = ?, default_attr = ?, override_attr = ?, updated_at = NOW()", n.Name, n.ChefEnvironment, rlb, aab, nab, dab, oab, n.ChefEnvironment, rlb, aab, nab, dab, oab)
 	if err != nil {
 		return err
 	}

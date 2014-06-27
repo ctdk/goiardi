@@ -180,6 +180,12 @@ func Get(name string) (*Cookbook, util.Gerror){
 		if c != nil {
 			cookbook = c.(*Cookbook)
 		}
+		/* hrm. */
+		if cookbook != nil && config.Config.UseUnsafeMemStore {
+			for _, v := range cookbook.Versions {
+				data_store.ChkNilArray(v)
+			}
+		}
 	}
 	if !found {
 		err := util.Errorf("Cannot find a cookbook named %s", name)
@@ -231,9 +237,10 @@ func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
 	keys := make(VersionStrings, len(c.Versions))
 
 	u := 0
-	for k, _ := range c.Versions {
+	for k, cbv := range c.Versions {
 		keys[u] = k
 		u++
+		data_store.ChkNilArray(cbv)
 	}
 	sort.Sort(sort.Reverse(keys))
 
@@ -259,6 +266,9 @@ func (c *Cookbook) LatestVersion() *CookbookVersion {
 	if c.latest == nil {
 		sorted := c.sortedVersions()
 		c.latest = sorted[0]
+		if c.latest != nil {
+			data_store.ChkNilArray(c.latest)
+		}
 	}
 	return c.latest
 }
@@ -632,6 +642,12 @@ func (c *Cookbook)GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
 		}
 	} else {
 		cbv, found = c.Versions[cbVersion]
+		if cbv != nil {
+			data_store.ChkNilArray(cbv)
+			if cbv.Recipes == nil {
+				cbv.Recipes = make([]map[string]interface{}, 0)
+			}
+		}
 	}
 
 	if !found {
@@ -679,12 +695,17 @@ func extractVerNums(cbVersion string) (maj, min, patch int64, err util.Gerror) {
 }
 
 func (c *Cookbook)deleteHashes(file_hashes []string) {
-	/* And remove the unused hashes. Currently, sigh, this involes checking
+	/* And remove the unused hashes. Currently, sigh, this involves checking
 	 * every cookbook. Probably will be easier with an actual database, I
 	 * imagine. */
 	all_cookbooks := AllCookbooks()
 	for _, cb := range all_cookbooks {
 		/* just move on if we don't find it somehow */
+		// if we get to this cookbook, check the versions currently in
+		// memory
+		if cb.Name == c.Name {
+			cb = c
+		}
 		for _, ver := range cb.sortedVersions() {
 			ver_hash := ver.fileHashes()
 			for _, vh := range ver_hash {
@@ -731,9 +752,9 @@ func (c *Cookbook)DeleteVersion(cb_version string) util.Gerror {
 	c.numVersions = nil
 
 	delete(c.Versions, cb_version)
+	c.Save()
 	c.deleteHashes(file_hashes)
 	
-	c.Save()
 	return nil
 }
 
@@ -875,6 +896,7 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 	if len(file_hashes) > 0 {
 		// Get our parent. Bravely assuming that if it exists we exist.
 		cbook, _ := Get(cbv.CookbookName)
+		cbook.Versions[cbv.Version] = cbv
 		cbook.deleteHashes(file_hashes)
 	}
 	

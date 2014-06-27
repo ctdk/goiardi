@@ -30,6 +30,13 @@ data-file = "/tmp/goiardi-data.bin"
 # particularly useful without setting index-file and data-file
 freeze-interval = 120
 
+# Use the faster, but less safe, old method of storing data in the in-memory data
+# store with pointers, rather than encoding the data with gob and giving a new 
+# copy of the object to each requestor. If this is enabled goiardi will run 
+# faster in in-memory mode, but one goroutine could change an object while it's 
+# being used by another. Has no effect when using an SQL backend.
+# use-unsafe-mem-store = false
+
 # Time slew: the time difference allowed between the server's clock and the time
 # in the X-Ops-Timestamp header. Formatted like 5m, 150s, etc. Defaults to 15m.
 time-slew = "15m"
