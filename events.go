@@ -93,6 +93,19 @@ func event_list_handler(w http.ResponseWriter, r *http.Request){
 			return
 		}
 	}
+
+	paramStrs := []string{ "from", "until", "action", "object_type", "object_name", "doer" }
+	searchParams := make(map[string]string, 6)
+
+	for _, v := range paramStrs {
+		if st, found := r.Form[v]; found {
+			if len(st) < 0 {
+				JsonErrorReport(w, r, "invalid " + v, http.StatusBadRequest)
+				return
+			}
+			searchParams[v] = st[0]
+		}
+	}
 	
 	switch r.Method {
 		case "GET":
@@ -101,10 +114,15 @@ func event_list_handler(w http.ResponseWriter, r *http.Request){
 				return
 			}
 			var le_list []*log_info.LogInfo
+			var err error
 			if limit_found {
-				le_list = log_info.GetLogInfos(offset, limit)
+				le_list, err = log_info.GetLogInfos(searchParams, offset, limit)
 			} else {
-				le_list = log_info.GetLogInfos(offset)
+				le_list, err = log_info.GetLogInfos(searchParams, offset)
+			}
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				return
 			}
 			le_resp := make([]map[string]interface{}, len(le_list))
 			for i, v := range le_list {

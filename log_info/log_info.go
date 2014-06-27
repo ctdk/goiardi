@@ -28,6 +28,8 @@ import (
 	"database/sql"
 	"sort"
 	"github.com/ctdk/goas/v2/logger"
+	"strconv"
+	"strings"
 )
 
 type LogInfo struct {
@@ -165,9 +167,39 @@ func PurgeLogInfos(id int) (int64, error) {
 // Get a slice of the logged events. May be called with an offset and limit, 
 // (in that order) but that is not required. The offset can be specified without
 // a limit, but a limit requires an offset (which can be 0).
-func GetLogInfos(limits ...int) []*LogInfo {
+func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, error) {
+	// optional params
+	var from, until time.Time
+	if f, ok := searchParams["from"]; ok {
+		fUnix, err := strconv.ParseInt(f, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		from = time.Unix(fUnix, 0)
+	} else {
+		from = time.Unix(0, 0)
+	}
+	if u, ok := searchParams["until"]; ok {
+		uUnix, err := strconv.ParseInt(u, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		until = time.Unix(uUnix, 0)
+	} else {
+		until = time.Now()
+	}
+	if ot, ok := searchParams["object_type"]; ok {
+		/* If this is false, assume it's not a name of the pointer */
+		if !strings.ContainsAny(ot, "*.") {
+			if ot == "environment" {
+				searchParams["object_type"] = "*environment.ChefEnvironment"
+			} else {
+				searchParams["object_type"] = fmt.Sprintf("*%s.%s", ot, strings.Title(ot))
+			}
+		}
+	}
 	if config.UsingDB() {
-		return getLogInfoListSQL(limits...)
+		return getLogInfoListSQL(searchParams, from, until, limits...)
 	} else {
 		var offset, limit int
 		if len(limits) > 0 {
@@ -178,6 +210,7 @@ func GetLogInfos(limits ...int) []*LogInfo {
 		} else {
 			offset = 0
 		}
+		
 		ds := data_store.New()
 		arr := ds.GetLogInfoList()
 		lis := make([]*LogInfo, len(arr))
@@ -191,13 +224,15 @@ func GetLogInfos(limits ...int) []*LogInfo {
 			k, ok := arr[i]
 			if ok {
 				item := k.(*LogInfo)
-				item.Id = i
-				lis[n] = item
-				n++
+				if item.checkTimeRange(from, until) && (searchParams["action"] == "" || searchParams["action"] == item.Action) && (searchParams["object_type"] == "" || searchParams["object_type"] == item.ObjectType) && (searchParams["object_name"] == "" || searchParams["object_name"] == item.ObjectName) && (searchParams["doer"] == "" || searchParams["doer"] == item.Actor.GetName()) {
+					item.Id = i
+					lis[n] = item
+					n++
+				}
 			}
 		}
 		if len(lis) == 0 {
-			return lis
+			return lis, nil
 		}
 		if len(limits) > 1 {
 			limit = offset + limit
@@ -207,12 +242,20 @@ func GetLogInfos(limits ...int) []*LogInfo {
 		} else {
 			limit = len(lis)
 		}
-		return lis[offset:limit]
+		if n < limit {
+			limit = n
+		}
+		return lis[offset:limit], nil
 	}
+}
+
+func (l *LogInfo)checkTimeRange(from, until time.Time) bool {
+	return l.Time.After(from) && l.Time.Before(until)
 }
 
 // Return a list of all logged events in the database. Provides a wrapper around
 // GetLogInfos() for consistency with the other object types for exporting data.
 func AllLogInfos() []*LogInfo {
-	return GetLogInfos()
+	l, _ := GetLogInfos(nil)
+	return l
 }

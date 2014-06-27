@@ -22,11 +22,12 @@ import (
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/config"
 	"database/sql"
-	"log"
 	"fmt"
 	"bytes"
 	"io/ioutil"
 	"encoding/json"
+	"time"
+	"regexp"
 )
 
 func (le *LogInfo)writeEventSQL() error {
@@ -166,7 +167,7 @@ func purgeSQL(id int) (int64, error) {
 	return rows_affected, nil
 }
 
-func getLogInfoListSQL(limits ...int) []*LogInfo {
+func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, limits ...int) ([]*LogInfo, error) {
 	var offset int
 	var limit int64 = (1 << 63) - 1
 	if len(limits) > 0 {
@@ -180,23 +181,74 @@ func getLogInfoListSQL(limits ...int) []*LogInfo {
 	logged_events := make([]*LogInfo, 0)
 
 	var sqlStmt string
+	sqlArgs := []interface{}{ from, until }
 	if config.Config.UseMySQL {
-		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos ORDER BY id DESC LIMIT ?, ?"
+		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos li JOIN users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?" 
+		if action, ok := searchParams["action"]; ok {
+			sqlStmt = sqlStmt + " AND action = ?"
+			sqlArgs = append(sqlArgs, action)
+		}
+		if objectType, ok := searchParams["object_type"]; ok {
+			sqlStmt = sqlStmt + " AND object_type = ?"
+			sqlArgs = append(sqlArgs, objectType)
+		}
+		if objectName, ok := searchParams["object_name"]; ok {
+			sqlStmt = sqlStmt + " AND object_name = ?"
+			sqlArgs = append(sqlArgs, objectName)
+		}
+		if doer, ok := searchParams["doer"]; ok {
+			sqlStmt = sqlStmt + " AND u.name = ?"
+			sqlArgs = append(sqlArgs, doer)
+		} else {
+			re := regexp.MustCompile("JOIN users u ON li.actor_id = u.id")
+			sqlStmt = re.ReplaceAllString(sqlStmt, "")
+		}
+		sqlStmt = sqlStmt + " ORDER BY id DESC LIMIT ?, ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos ORDER BY id DESC OFFSET $1 LIMIT $2"
+		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos li JOIN goiardi.users u ON li.actor_id = u.id WHERE time >= ? AND time >= ?"
+		if action, ok := searchParams["action"]; ok {
+			sqlStmt = sqlStmt + " AND action = ?"
+			sqlArgs = append(sqlArgs, action)
+		}
+		if objectType, ok := searchParams["object_type"]; ok {
+			sqlStmt = sqlStmt + " AND object_type = ?"
+			sqlArgs = append(sqlArgs, objectType)
+		}
+		if objectName, ok := searchParams["object_name"]; ok {
+			sqlStmt = sqlStmt + " AND object_name = ?"
+			sqlArgs = append(sqlArgs, objectName)
+		}
+		if doer, ok := searchParams["doer"]; ok {
+			sqlStmt = sqlStmt + " AND u.name = ?"
+			sqlArgs = append(sqlArgs, doer)
+		} else {
+			re := regexp.MustCompile("JOIN goiardi.users u ON li.actor_id = u.id")
+			sqlStmt = re.ReplaceAllString(sqlStmt, "")
+		}
+ 		sqlStmt = sqlStmt + " ORDER BY id DESC OFFSET ? LIMIT ?"
+		re := regexp.MustCompile("\\?")
+		u := 1
+		rfunc := func([]byte) []byte {
+			r := []byte(fmt.Sprintf("$%d", u))
+			u++
+			return r
+		}
+		sqlStmt = string(re.ReplaceAllFunc([]byte(sqlStmt), rfunc))
 	}
+	sqlArgs = append(sqlArgs, offset)
+	sqlArgs = append(sqlArgs, limit)
 
 	stmt, err := data_store.Dbh.Prepare(sqlStmt)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query(offset, limit)
+	rows, qerr := stmt.Query(sqlArgs...)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
-			return logged_events
+			return logged_events, nil
 		}
-		log.Fatal(qerr)
+		return nil, qerr
 	}
 	for rows.Next() {
 		le := new(LogInfo)
@@ -206,13 +258,13 @@ func getLogInfoListSQL(limits ...int) []*LogInfo {
 			err = le.fillLogEventFromPostgreSQL(rows)
 		}
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		logged_events = append(logged_events, le)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return logged_events
+	return logged_events, nil
 }

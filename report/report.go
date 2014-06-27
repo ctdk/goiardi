@@ -278,7 +278,7 @@ func GetReportList(from, until time.Time, rows int, status string) ([]*Report, e
 		i := 0
 		for _, r := range report_list {
 			rp, _ := Get(r)
-			if rp != nil && rp.checkTimeRange(from, until) {
+			if rp != nil && rp.checkTimeRange(from, until) && (status == "" || (status != "" && rp.Status == status)) {
 				reports = append(reports, rp)
 				i++
 			}
@@ -305,7 +305,7 @@ func GetNodeList(nodeName string, from, until time.Time, rows int, status string
 		reports, _ := GetReportList(from, until, rows, status)
 		node_report_list := make([]*Report, 0)
 		for _, r := range reports {
-			if nodeName == r.NodeName {
+			if nodeName == r.NodeName && (status == "" || (status != "" && r.Status == status)) {
 				node_report_list = append(node_report_list, r)
 			}
 		}

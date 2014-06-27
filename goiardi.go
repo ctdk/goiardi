@@ -469,7 +469,7 @@ func setLogEventPurgeTicker() {
 		ticker := time.NewTicker(time.Second * time.Duration(60))
 		go func() {
 			for _ = range ticker.C {
-				les := log_info.GetLogInfos(0, 1)
+				les, _ := log_info.GetLogInfos(nil, 0, 1)
 				if len(les) != 0 {
 					p, err := log_info.PurgeLogInfos(les[0].Id - config.Config.LogEventKeep)
 					if err != nil {

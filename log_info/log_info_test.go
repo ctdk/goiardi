@@ -38,15 +38,15 @@ func TestLogEvent(t *testing.T) {
 	if len(arr) != 1 {
 		t.Errorf("Too many (or not enough) log events: %d found", len(arr))
 	}
-	arr2 := GetLogInfos(0,1)
+	arr2, _ := GetLogInfos(nil, 0,1)
 	if len(arr2) != 1 {
 		t.Errorf("Something went wrong with variadic args with GetLogInfoList")
 	}
-	arr3 := GetLogInfos()
+	arr3, _ := GetLogInfos(nil)
 	if len(arr3) != 1 {
 		t.Errorf("Something went wrong with variadic args with no arguments with GetLogInfoList")
 	}
-	arr4 := GetLogInfos(0)
+	arr4, _ := GetLogInfos(nil, 0)
 	if len(arr4) != 1 {
 		t.Errorf("Something went wrong with variadic args with one argument with GetLogInfoList")
 	}
@@ -86,5 +86,20 @@ func TestLogEvent(t *testing.T) {
 	arr7 := ds.GetLogInfoList()
 	if len(arr7) != 5 {
 		t.Errorf("Should have been 5 events after purging, got %d", len(arr7))
+	}
+	ds.PurgeLogInfoBefore(10)
+	doer2, _ := client.New("doer2")
+	for i := 0; i < 10; i++ {
+		LogEvent(doer, obj, "modify")
+		LogEvent(doer2, obj, "create")
+	}
+	searchParams := make(map[string]string)
+	searchParams["doer"] = doer2.Name
+	searching, err := GetLogInfos(searchParams, 0)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if len(searching) != 10 {
+		t.Errorf("len(searching) for log events by doer2 should have returned 10 items, but returned %d instead", len(searching))
 	}
 }

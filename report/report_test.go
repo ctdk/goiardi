@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/node"
 	"time"
+	"encoding/gob"
 )
 
 func TestReportCreation(t *testing.T){
@@ -60,6 +61,7 @@ func TestReportUpdating(t *testing.T){
 
 func TestReportListing(t *testing.T){
 	uuid := "12b8be8d-a2ef-4fc6-88b3-4c18103b88d%d"
+	gob.Register(new(Report))
 	for i := 0; i < 3; i++ {
 		u := fmt.Sprintf(uuid, i)
 		r, _ := New(u, "node")
@@ -86,5 +88,21 @@ func TestReportListing(t *testing.T){
 	}
 	if len(ns) != 2 {
 		t.Errorf("expected 2 items from node 'node2', got %d", len(ns))
+	}
+
+	zs, rerr := GetReportList(from, until, 100, "started")
+	if rerr != nil {
+		t.Errorf(rerr.Error())
+	}
+	rs = GetList()
+	if len(zs) != len(rs) {
+		t.Errorf("Searching on 'started' status here should have returned everything but it didn't")
+	}
+	zs, rerr = GetReportList(from, until, 100, "success")
+	if rerr != nil {
+		t.Errorf(rerr.Error())
+	}
+	if len(zs) != 0 {
+		t.Errorf("Searching for successful runs should have returned zero results, but returned %d instead", len(zs))
 	}
 }
