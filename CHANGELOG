@@ -16,6 +16,7 @@
 * Fix an action at a distance problem with in-memory mode objects. If this
   behavior is still desirable (it seems to be slightly faster than the new way),
   it can be turned back on with the --use-unsafe-mem-store flag.
+* Add several new searchable parameters for logged events.
 
 0.5.2
 -----
