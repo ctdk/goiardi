@@ -128,41 +128,41 @@ func main() {
 	handleSignals()
 
 	/* Register the various handlers, found in their own source files. */
-	http.HandleFunc("/authenticate_user", authenticate_user_handler)
-	http.HandleFunc("/clients", list_handler)
-	http.HandleFunc("/clients/", client_handler)
-	http.HandleFunc("/cookbooks", cookbook_handler)
-	http.HandleFunc("/cookbooks/", cookbook_handler)
-	http.HandleFunc("/data", data_handler)
-	http.HandleFunc("/data/", data_handler)
-	http.HandleFunc("/environments", environment_handler)
-	http.HandleFunc("/environments/", environment_handler)
-	http.HandleFunc("/nodes", list_handler)
-	http.HandleFunc("/nodes/", node_handler)
-	http.HandleFunc("/principals/", principal_handler)
-	http.HandleFunc("/roles", list_handler)
-	http.HandleFunc("/roles/", role_handler)
-	http.HandleFunc("/sandboxes", sandbox_handler)
-	http.HandleFunc("/sandboxes/", sandbox_handler)
-	http.HandleFunc("/search", search_handler)
-	http.HandleFunc("/search/", search_handler)
+	http.HandleFunc("/authenticate_user", authenticateUserHandler)
+	http.HandleFunc("/clients", listHandler)
+	http.HandleFunc("/clients/", clientHandler)
+	http.HandleFunc("/cookbooks", cookbookHandler)
+	http.HandleFunc("/cookbooks/", cookbookHandler)
+	http.HandleFunc("/data", dataHandler)
+	http.HandleFunc("/data/", dataHandler)
+	http.HandleFunc("/environments", environmentHandler)
+	http.HandleFunc("/environments/", environmentHandler)
+	http.HandleFunc("/nodes", listHandler)
+	http.HandleFunc("/nodes/", nodeHandler)
+	http.HandleFunc("/principals/", principalHandler)
+	http.HandleFunc("/roles", listHandler)
+	http.HandleFunc("/roles/", roleHandler)
+	http.HandleFunc("/sandboxes", sandboxHandler)
+	http.HandleFunc("/sandboxes/", sandboxHandler)
+	http.HandleFunc("/search", searchHandler)
+	http.HandleFunc("/search/", searchHandler)
 	http.HandleFunc("/search/reindex", reindexHandler)
-	http.HandleFunc("/users", list_handler)
-	http.HandleFunc("/users/", user_handler)
-	http.HandleFunc("/file_store/", file_store_handler)
-	http.HandleFunc("/events", event_list_handler)
-	http.HandleFunc("/events/", event_handler)
-	http.HandleFunc("/reports/", report_handler)
+	http.HandleFunc("/users", listHandler)
+	http.HandleFunc("/users/", userHandler)
+	http.HandleFunc("/file_store/", fileStoreHandler)
+	http.HandleFunc("/events", eventListHandler)
+	http.HandleFunc("/events/", eventHandler)
+	http.HandleFunc("/reports/", reportHandler)
 
 	/* TODO: figure out how to handle the root & not found pages */
-	http.HandleFunc("/", root_handler)
+	http.HandleFunc("/", rootHandler)
 
-	listen_addr := config.ListenAddr()
+	listenAddr := config.ListenAddr()
 	var err error
 	if config.Config.UseSSL {
-		err = http.ListenAndServeTLS(listen_addr, config.Config.SslCert, config.Config.SslKey, &InterceptHandler{})
+		err = http.ListenAndServeTLS(listenAddr, config.Config.SSLCert, config.Config.SSLKey, &InterceptHandler{})
 	} else {
-		err = http.ListenAndServe(listen_addr, &InterceptHandler{})
+		err = http.ListenAndServe(listenAddr, &InterceptHandler{})
 	}
 	if err != nil {
 		logger.Criticalf("ListenAndServe: %s", err.Error())
@@ -170,7 +170,7 @@ func main() {
 	}
 }
 
-func root_handler(w http.ResponseWriter, r *http.Request) {
+func rootHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: make root do something useful
 	return
 }

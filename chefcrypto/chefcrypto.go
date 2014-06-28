@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-// Package chef_crypto bundles up crytographic routines for goairdi.
-package chef_crypto
+// Package chefcrypto bundles up crytographic routines for goairdi.
+package chefcrypto
 
 import (
 	"crypto"
@@ -32,7 +32,7 @@ import (
 	"math/big"
 )
 
-// Creates a pair of private and public keys for a client.
+// GenerateRSAKeys creates a pair of private and public keys for a client.
 func GenerateRSAKeys() (string, string, error) {
 	/* Shamelessly borrowed and adapted from some golang-samples */
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -40,33 +40,33 @@ func GenerateRSAKeys() (string, string, error) {
 		return "", "", err
 	}
 	if err := priv.Validate(); err != nil {
-		err_str := fmt.Errorf("RSA key validation failed: %s", err)
-		return "", "", err_str
+		errStr := fmt.Errorf("RSA key validation failed: %s", err)
+		return "", "", errStr
 	}
-	priv_der := x509.MarshalPKCS1PrivateKey(priv)
+	privDer := x509.MarshalPKCS1PrivateKey(priv)
 	/* For some reason chef doesn't label the keys RSA PRIVATE/PUBLIC KEY */
-	priv_blk := pem.Block{
+	privBlk := pem.Block{
 		Type:    "RSA PRIVATE KEY",
 		Headers: nil,
-		Bytes:   priv_der,
+		Bytes:   privDer,
 	}
-	priv_pem := string(pem.EncodeToMemory(&priv_blk))
+	privPem := string(pem.EncodeToMemory(&privBlk))
 	pub := priv.PublicKey
-	pub_der, err := x509.MarshalPKIXPublicKey(&pub)
+	pubDer, err := x509.MarshalPKIXPublicKey(&pub)
 	if err != nil {
-		err_str := fmt.Errorf("Failed to get der format for public key: %s", err)
-		return "", "", err_str
+		errStr := fmt.Errorf("Failed to get der format for public key: %s", err)
+		return "", "", errStr
 	}
-	pub_blk := pem.Block{
+	pubBlk := pem.Block{
 		Type:    "PUBLIC KEY",
 		Headers: nil,
-		Bytes:   pub_der,
+		Bytes:   pubDer,
 	}
-	pub_pem := string(pem.EncodeToMemory(&pub_blk))
-	return priv_pem, pub_pem, nil
+	pubPem := string(pem.EncodeToMemory(&pubBlk))
+	return privPem, pubPem, nil
 }
 
-// Checks that the provided public key is valid.
+// ValidatePublicKey checks that the provided public key is valid.
 func ValidatePublicKey(publicKey interface{}) (bool, error) {
 	switch publicKey := publicKey.(type) {
 	case string:
@@ -87,8 +87,8 @@ func ValidatePublicKey(publicKey interface{}) (bool, error) {
 	}
 }
 
-// Decrypt the encrypted header with the client or user's public key for
-// validating requests. This function is informed by chef-golang's
+// HeaderDecrypt decrypts the encrypted header with the client or user's public 
+// key for validating requests. This function is informed by chef-golang's 
 // privateDecrypt function.
 func HeaderDecrypt(pkPem string, data string) ([]byte, error) {
 	block, _ := pem.Decode([]byte(pkPem))
@@ -118,6 +118,8 @@ func HeaderDecrypt(pkPem string, data string) ([]byte, error) {
 	return dec[skip:], nil
 }
 
+// Auth12HeaderVerify verifies the newer version 1.2 Chef authentication protocol
+// headers.
 func Auth12HeaderVerify(pkPem string, hashed, sig []byte) error {
 	block, _ := pem.Decode([]byte(pkPem))
 	if block == nil {
@@ -143,7 +145,7 @@ func decrypt(pubKey *rsa.PublicKey, data []byte) ([]byte, error) {
 	return out, nil
 }
 
-// SHA512 hash a password string with the provided salt.
+// HashPasswd SHA512 hashes a password string with the provided salt.
 func HashPasswd(passwd string, salt []byte) (string, error) {
 	if passwd == "" {
 		err := fmt.Errorf("Password is empty")
@@ -154,7 +156,7 @@ func HashPasswd(passwd string, salt []byte) (string, error) {
 	return hashPw, nil
 }
 
-// Generate a new salt for hashing a password.
+// GenerateSalt makes a new salt for hashing a password.
 func GenerateSalt() ([]byte, error) {
 	numbytes := 64
 	b := make([]byte, numbytes)

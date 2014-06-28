@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-// Package chef_crypto bundles up crytographic routines for goairdi.
-package chef_crypto
+// Package chefcrypto bundles up crytographic routines for goairdi.
+package chefcrypto
 
 import (
 	"strings"

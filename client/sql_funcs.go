@@ -27,13 +27,11 @@ func checkForClientSQL(dbhandle data_store.Dbhandle, name string) (bool, error) 
 	_, err := data_store.CheckForOne(dbhandle, "clients", name)
 	if err == nil {
 		return true, nil
-	} else {
-		if err != sql.ErrNoRows {
-			return false, err
-		} else {
-			return false, nil
-		}
 	}
+	if err != sql.ErrNoRows {
+		return false, err
+	}
+	return false, nil
 }
 
 func (c *Client) fillClientFromSQL(row data_store.ResRow) error {
@@ -106,7 +104,7 @@ func numAdminsSQL() int {
 }
 
 func getListSQL() []string {
-	var client_list []string
+	var clientList []string
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT name FROM clients"
@@ -119,25 +117,24 @@ func getListSQL() []string {
 			log.Fatal(err)
 		}
 		rows.Close()
-		return client_list
+		return clientList
 	}
-	client_list = make([]string, 0)
 	for rows.Next() {
-		var client_name string
-		err = rows.Scan(&client_name)
+		var clientName string
+		err = rows.Scan(&clientName)
 		if err != nil {
 			log.Fatal(err)
 		}
-		client_list = append(client_list, client_name)
+		clientList = append(clientList, clientName)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
-	return client_list
+	return clientList
 }
 func allClientsSQL() []*Client {
-	clients := make([]*Client, 0)
+	var clients []*Client
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o ON c.organization_id = o.id"

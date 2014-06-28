@@ -47,31 +47,30 @@ func (c *Client) saveMySQL() error {
 	return nil
 }
 
-func (c *Client) renameMySQL(new_name string) util.Gerror {
+func (c *Client) renameMySQL(newName string) util.Gerror {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	if err = chkForUser(tx, new_name); err != nil {
+	if err = chkForUser(tx, newName); err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	found, err := checkForClientSQL(data_store.Dbh, new_name)
+	found, err := checkForClientSQL(data_store.Dbh, newName)
 	if found || err != nil {
 		tx.Rollback()
 		if found && err == nil {
-			gerr := util.Errorf("Client %s already exists, cannot rename %s", new_name, c.Name)
+			gerr := util.Errorf("Client %s already exists, cannot rename %s", newName, c.Name)
 			gerr.SetStatus(http.StatusConflict)
 			return gerr
-		} else {
-			gerr := util.Errorf(err.Error())
-			gerr.SetStatus(http.StatusInternalServerError)
-			return gerr
 		}
+		gerr := util.Errorf(err.Error())
+		gerr.SetStatus(http.StatusInternalServerError)
+		return gerr
 	}
-	_, err = tx.Exec("UPDATE clients SET name = ? WHERE name = ?", new_name, c.Name)
+	_, err = tx.Exec("UPDATE clients SET name = ? WHERE name = ?", newName, c.Name)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())
@@ -83,11 +82,11 @@ func (c *Client) renameMySQL(new_name string) util.Gerror {
 }
 
 func chkForUser(handle data_store.Dbhandle, name string) error {
-	var user_id int32
-	err := handle.QueryRow("SELECT id FROM users WHERE name = ?", name).Scan(&user_id)
+	var userID int32
+	err := handle.QueryRow("SELECT id FROM users WHERE name = ?", name).Scan(&userID)
 	if err != sql.ErrNoRows {
 		if err == nil {
-			err = fmt.Errorf("a user with id %d named %s was found that would conflict with this client", user_id, name)
+			err = fmt.Errorf("a user with id %d named %s was found that would conflict with this client", userID, name)
 		}
 	} else {
 		err = nil

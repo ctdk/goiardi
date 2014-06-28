@@ -34,18 +34,18 @@ type authResponse struct {
 	Verified bool   `json:"verified"`
 }
 
-func authenticate_user_handler(w http.ResponseWriter, r *http.Request) {
+func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	dec := json.NewDecoder(r.Body)
-	authJson := make(map[string]interface{})
-	if err := dec.Decode(&authJson); err != nil {
-		JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+	authJSON := make(map[string]interface{})
+	if err := dec.Decode(&authJSON); err != nil {
+		JSONErrorReport(w, r, err.Error(), http.StatusBadRequest)
 		return
 	}
-	auth, authErr := validateJson(authJson)
+	auth, authErr := validateJSON(authJSON)
 	if authErr != nil {
-		JsonErrorReport(w, r, authErr.Error(), http.StatusBadRequest)
+		JSONErrorReport(w, r, authErr.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -53,7 +53,7 @@ func authenticate_user_handler(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(resp); err != nil {
-		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		JSONErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -80,9 +80,9 @@ func validateLogin(auth *authenticator) authResponse {
 	return resp
 }
 
-func validateJson(authJson map[string]interface{}) (*authenticator, error) {
+func validateJSON(authJSON map[string]interface{}) (*authenticator, error) {
 	auth := new(authenticator)
-	if name, ok := authJson["name"]; ok {
+	if name, ok := authJSON["name"]; ok {
 		switch name := name.(type) {
 		case string:
 			auth.Name = name
@@ -94,7 +94,7 @@ func validateJson(authJson map[string]interface{}) (*authenticator, error) {
 		err := fmt.Errorf("Field 'name' missing")
 		return nil, err
 	}
-	if passwd, ok := authJson["password"]; ok {
+	if passwd, ok := authJSON["password"]; ok {
 		switch passwd := passwd.(type) {
 		case string:
 			auth.Password = passwd

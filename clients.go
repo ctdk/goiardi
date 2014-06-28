@@ -27,57 +27,57 @@ import (
 	"net/http"
 )
 
-func client_handler(w http.ResponseWriter, r *http.Request) {
+func clientHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	path := SplitPath(r.URL.Path)
-	client_name := path[1]
+	clientName := path[1]
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		JSONErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 
 	switch r.Method {
 	case "DELETE":
-		chef_client, gerr := client.Get(client_name)
+		chefClient, gerr := client.Get(clientName)
 		if gerr != nil {
-			JsonErrorReport(w, r, gerr.Error(), gerr.Status())
+			JSONErrorReport(w, r, gerr.Error(), gerr.Status())
 			return
 		}
-		if !opUser.IsAdmin() && !opUser.IsSelf(chef_client) {
-			JsonErrorReport(w, r, "Deleting that client is forbidden", http.StatusForbidden)
+		if !opUser.IsAdmin() && !opUser.IsSelf(chefClient) {
+			JSONErrorReport(w, r, "Deleting that client is forbidden", http.StatusForbidden)
 			return
 		}
 		/* Docs were incorrect. It does want the body of the
 		 * deleted object. */
-		json_client := chef_client.ToJson()
+		jsonClient := chefClient.ToJson()
 
 		/* Log the delete event before deleting the client, in
 		 * case the client is deleting itself. */
-		if lerr := log_info.LogEvent(opUser, chef_client, "delete"); lerr != nil {
-			JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+		if lerr := log_info.LogEvent(opUser, chefClient, "delete"); lerr != nil {
+			JSONErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
-		err := chef_client.Delete()
+		err := chefClient.Delete()
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusForbidden)
+			JSONErrorReport(w, r, err.Error(), http.StatusForbidden)
 			return
 		}
 
 		enc := json.NewEncoder(w)
-		if err = enc.Encode(&json_client); err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		if err = enc.Encode(&jsonClient); err != nil {
+			JSONErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "GET":
-		chef_client, gerr := client.Get(client_name)
+		chefClient, gerr := client.Get(clientName)
 
 		if gerr != nil {
-			JsonErrorReport(w, r, gerr.Error(), gerr.Status())
+			JSONErrorReport(w, r, gerr.Error(), gerr.Status())
 			return
 		}
-		if !opUser.IsAdmin() && !opUser.IsSelf(chef_client) {
-			JsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+		if !opUser.IsAdmin() && !opUser.IsSelf(chefClient) {
+			JSONErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return
 		}
 
@@ -86,130 +86,129 @@ func client_handler(w http.ResponseWriter, r *http.Request) {
 		 * and clientname, and it wants chef_type and
 		 * json_class
 		 */
-		json_client := chef_client.ToJson()
+		jsonClient := chefClient.ToJson()
 		enc := json.NewEncoder(w)
-		if err := enc.Encode(&json_client); err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		if err := enc.Encode(&jsonClient); err != nil {
+			JSONErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "PUT":
-		client_data, jerr := ParseObjJson(r.Body)
+		clientData, jerr := ParseObjJson(r.Body)
 		if jerr != nil {
-			JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			JSONErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
 		}
-		chef_client, err := client.Get(client_name)
+		chefClient, err := client.Get(clientName)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			JSONErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
 
 		/* Makes chef-pedant happy. I suppose it is, after all,
 		 * pedantic. */
-		if averr := util.CheckAdminPlusValidator(client_data); averr != nil {
-			JsonErrorReport(w, r, averr.Error(), averr.Status())
+		if averr := util.CheckAdminPlusValidator(clientData); averr != nil {
+			JSONErrorReport(w, r, averr.Error(), averr.Status())
 			return
 		}
 
-		if !opUser.IsAdmin() && !opUser.IsSelf(chef_client) {
-			JsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+		if !opUser.IsAdmin() && !opUser.IsSelf(chefClient) {
+			JSONErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return
 		}
 		if !opUser.IsAdmin() {
 			var verr util.Gerror
-			aerr := opUser.CheckPermEdit(client_data, "admin")
+			aerr := opUser.CheckPermEdit(clientData, "admin")
 			if !opUser.IsValidator() {
-				verr = opUser.CheckPermEdit(client_data, "validator")
+				verr = opUser.CheckPermEdit(clientData, "validator")
 			}
 			if aerr != nil && verr != nil {
-				JsonErrorReport(w, r, "Client can be either an admin or a validator, but not both.", http.StatusBadRequest)
+				JSONErrorReport(w, r, "Client can be either an admin or a validator, but not both.", http.StatusBadRequest)
 				return
 			} else if aerr != nil || verr != nil {
 				if aerr == nil {
 					aerr = verr
 				}
-				JsonErrorReport(w, r, aerr.Error(), aerr.Status())
+				JSONErrorReport(w, r, aerr.Error(), aerr.Status())
 				return
 			}
 		}
 
-		json_name, sterr := util.ValidateAsString(client_data["name"])
+		jsonName, sterr := util.ValidateAsString(clientData["name"])
 		if sterr != nil {
-			JsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
+			JSONErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
 			return
 		}
 
-		/* If client_name and client_data["name"] aren't the
+		/* If clientName and clientData["name"] aren't the
 		 * same, we're renaming. Check the new name doesn't
 		 * already exist. */
-		json_client := chef_client.ToJson()
-		if client_name != json_name {
-			if lerr := log_info.LogEvent(opUser, chef_client, "modify"); lerr != nil {
-				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+		jsonClient := chefClient.ToJson()
+		if clientName != jsonName {
+			if lerr := log_info.LogEvent(opUser, chefClient, "modify"); lerr != nil {
+				JSONErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
-			err := chef_client.Rename(json_name)
+			err := chefClient.Rename(jsonName)
 			if err != nil {
-				JsonErrorReport(w, r, err.Error(), err.Status())
+				JSONErrorReport(w, r, err.Error(), err.Status())
 				return
-			} else {
-				w.WriteHeader(http.StatusCreated)
 			}
+			w.WriteHeader(http.StatusCreated)
 		}
-		if uerr := chef_client.UpdateFromJson(client_data); uerr != nil {
-			JsonErrorReport(w, r, uerr.Error(), uerr.Status())
+		if uerr := chefClient.UpdateFromJson(clientData); uerr != nil {
+			JSONErrorReport(w, r, uerr.Error(), uerr.Status())
 			return
 		}
 
-		if pk, pkfound := client_data["public_key"]; pkfound {
+		if pk, pkfound := clientData["public_key"]; pkfound {
 			switch pk := pk.(type) {
 			case string:
 				if pkok, pkerr := client.ValidatePublicKey(pk); !pkok {
-					JsonErrorReport(w, r, pkerr.Error(), http.StatusBadRequest)
+					JSONErrorReport(w, r, pkerr.Error(), http.StatusBadRequest)
 					return
 				}
-				chef_client.SetPublicKey(pk)
-				json_client["public_key"] = pk
+				chefClient.SetPublicKey(pk)
+				jsonClient["public_key"] = pk
 			case nil:
 				//show_public_key = false
 
 			default:
-				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+				JSONErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
 			}
 		}
 
-		if p, pfound := client_data["private_key"]; pfound {
+		if p, pfound := clientData["private_key"]; pfound {
 			switch p := p.(type) {
 			case bool:
 				if p {
 					var cgerr error
-					if json_client["private_key"], cgerr = chef_client.GenerateKeys(); cgerr != nil {
-						JsonErrorReport(w, r, cgerr.Error(), http.StatusInternalServerError)
+					if jsonClient["private_key"], cgerr = chefClient.GenerateKeys(); cgerr != nil {
+						JSONErrorReport(w, r, cgerr.Error(), http.StatusInternalServerError)
 						return
 					}
 					// make sure the json
 					// client gets the new
 					// public key
-					json_client["public_key"] = chef_client.PublicKey()
+					jsonClient["public_key"] = chefClient.PublicKey()
 				}
 			default:
-				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+				JSONErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
 			}
 		}
-		chef_client.Save()
-		if lerr := log_info.LogEvent(opUser, chef_client, "modify"); lerr != nil {
-			JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+		chefClient.Save()
+		if lerr := log_info.LogEvent(opUser, chefClient, "modify"); lerr != nil {
+			JSONErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		enc := json.NewEncoder(w)
-		if err := enc.Encode(&json_client); err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		if err := enc.Encode(&jsonClient); err != nil {
+			JSONErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	default:
-		JsonErrorReport(w, r, "Unrecognized method for client!", http.StatusMethodNotAllowed)
+		JSONErrorReport(w, r, "Unrecognized method for client!", http.StatusMethodNotAllowed)
 	}
 }

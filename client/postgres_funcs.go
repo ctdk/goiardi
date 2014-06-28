@@ -42,13 +42,13 @@ func (c *Client) savePostgreSQL() util.Gerror {
 	return nil
 }
 
-func (c *Client) renamePostgreSQL(new_name string) util.Gerror {
+func (c *Client) renamePostgreSQL(newName string) util.Gerror {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.rename_client($1, $2)", c.Name, new_name)
+	_, err = tx.Exec("SELECT goiardi.rename_client($1, $2)", c.Name, newName)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())

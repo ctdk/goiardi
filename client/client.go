@@ -31,7 +31,7 @@ import (
 	"database/sql"
 	"encoding/gob"
 	"fmt"
-	"github.com/ctdk/goiardi/chef_crypto"
+	"github.com/ctdk/goiardi/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/indexer"
@@ -39,14 +39,14 @@ import (
 	"net/http"
 )
 
-// A client and a user are very similar, with some small differences - users
+// A Client and a user are very similar, with some small differences - users
 // can never be validators, while clients don't have passwords. Generally nodes
 // and the like will be clients, while people interacting with the goiardi
 // server will be users.
 type Client struct {
 	Name        string `json:"name"`
 	NodeName    string `json:"node_name"`
-	JsonClass   string `json:"json_class"`
+	JSONClass   string `json:"json_class"`
 	ChefType    string `json:"chef_type"`
 	Validator   bool   `json:"validator"`
 	Orgname     string `json:"orgname"`
@@ -61,7 +61,7 @@ type Client struct {
 type privClient struct {
 	Name        *string `json:"name"`
 	NodeName    *string `json:"node_name"`
-	JsonClass   *string `json:"json_class"`
+	JSONClass   *string `json:"json_class"`
 	ChefType    *string `json:"chef_type"`
 	Validator   *bool   `json:"validator"`
 	Orgname     *string `json:"orgname"`
@@ -74,7 +74,7 @@ type privClient struct {
 type flatClient struct {
 	Name        string `json:"name"`
 	NodeName    string `json:"node_name"`
-	JsonClass   string `json:"json_class"`
+	JSONClass   string `json:"json_class"`
 	ChefType    string `json:"chef_type"`
 	Validator   bool   `json:"validator"`
 	Orgname     string `json:"orgname"`
@@ -83,7 +83,7 @@ type flatClient struct {
 	Certificate string `json:"certificate"`
 }
 
-// Creates a new client.
+// New creates a new client.
 func New(clientname string) (*Client, util.Gerror) {
 	var found bool
 	var err util.Gerror
@@ -111,7 +111,7 @@ func New(clientname string) (*Client, util.Gerror) {
 		Name:        clientname,
 		NodeName:    clientname,
 		ChefType:    "client",
-		JsonClass:   "Chef::ApiClient",
+		JSONClass:   "Chef::ApiClient",
 		Validator:   false,
 		Orgname:     "",
 		pubKey:      "",
@@ -121,7 +121,7 @@ func New(clientname string) (*Client, util.Gerror) {
 	return client, nil
 }
 
-// Gets an actor from the data store.
+// Get gets a client from the data store.
 func Get(clientname string) (*Client, util.Gerror) {
 	var client *Client
 	var err error
@@ -178,7 +178,7 @@ func (c *Client) Save() error {
 	return nil
 }
 
-// Deletes a client, but will refuse to do so if it is the last client
+// Delete a client, but will refuse to do so if it is the last client
 // that is an adminstrator.
 func (c *Client) Delete() error {
 	// Make sure this isn't the last admin or something
@@ -201,18 +201,18 @@ func (c *Client) Delete() error {
 	return nil
 }
 
-// Convert the client object into a JSON object, massaging it as needed
+// ToJSON converts the client object into a JSON object, massaging it as needed
 // to make chef-pedant happy.
-func (c *Client) ToJson() map[string]interface{} {
-	toJson := make(map[string]interface{})
-	toJson["name"] = c.Name
-	toJson["admin"] = c.Admin
-	toJson["public_key"] = c.PublicKey()
-	toJson["validator"] = c.Validator
-	toJson["json_class"] = c.JsonClass
-	toJson["chef_type"] = c.ChefType
+func (c *Client) ToJSON() map[string]interface{} {
+	toJSON := make(map[string]interface{})
+	toJSON["name"] = c.Name
+	toJSON["admin"] = c.Admin
+	toJSON["public_key"] = c.PublicKey()
+	toJSON["validator"] = c.Validator
+	toJSON["json_class"] = c.JSONClass
+	toJSON["chef_type"] = c.ChefType
 
-	return toJson
+	return toJSON
 }
 
 func (c *Client) isLastAdmin() bool {
@@ -236,10 +236,10 @@ func (c *Client) isLastAdmin() bool {
 	return false
 }
 
-// Renames the client. Save() must be called after this method is used.
+// Rename the client. Save() must be called after this method is used.
 // Will not rename the last admin.
-func (c *Client) Rename(new_name string) util.Gerror {
-	if err := validateClientName(new_name); err != nil {
+func (c *Client) Rename(newName string) util.Gerror {
+	if err := validateClientName(newName); err != nil {
 		return err
 	}
 	if c.isLastAdmin() {
@@ -251,66 +251,66 @@ func (c *Client) Rename(new_name string) util.Gerror {
 	if config.UsingDB() {
 		var err util.Gerror
 		if config.Config.UseMySQL {
-			err = c.renameMySQL(new_name)
+			err = c.renameMySQL(newName)
 		} else if config.Config.UsePostgreSQL {
-			err = c.renamePostgreSQL(new_name)
+			err = c.renamePostgreSQL(newName)
 		}
 		if err != nil {
 			return err
 		}
 	} else {
-		if err := chkInMemUser(new_name); err != nil {
+		if err := chkInMemUser(newName); err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusConflict)
 			return gerr
 		}
 		ds := data_store.New()
-		if _, found := ds.Get("client", new_name); found {
-			err := util.Errorf("Client %s already exists, cannot rename %s", new_name, c.Name)
+		if _, found := ds.Get("client", newName); found {
+			err := util.Errorf("Client %s already exists, cannot rename %s", newName, c.Name)
 			err.SetStatus(http.StatusConflict)
 			return err
 		}
 		ds.Delete("client", c.Name)
 	}
-	c.Name = new_name
+	c.Name = newName
 	return nil
 }
 
-// Build a new client/user from a json object.
-func NewFromJson(json_actor map[string]interface{}) (*Client, util.Gerror) {
-	actor_name, nerr := util.ValidateAsString(json_actor["name"])
+// NewFromJSON builds a new client/user from a json object.
+func NewFromJSON(jsonActor map[string]interface{}) (*Client, util.Gerror) {
+	actorName, nerr := util.ValidateAsString(jsonActor["name"])
 	if nerr != nil {
 		return nil, nerr
 	}
-	client, err := New(actor_name)
+	client, err := New(actorName)
 	if err != nil {
 		return nil, err
 	}
-	err = client.UpdateFromJson(json_actor)
+	err = client.UpdateFromJSON(jsonActor)
 	if err != nil {
 		return nil, err
 	}
 	return client, nil
 }
 
-// Update a client/user from a json object. Does a bunch of validations inside
-// rather than in the handler.
-func (c *Client) UpdateFromJson(json_actor map[string]interface{}) util.Gerror {
-	actor_name, nerr := util.ValidateAsString(json_actor["name"])
+// UpdateFromJSON updates a client/user from a json object. Does a bunch of 
+// validations inside rather than in the handler.
+func (c *Client) UpdateFromJSON(jsonActor map[string]interface{}) util.Gerror {
+	actorName, nerr := util.ValidateAsString(jsonActor["name"])
 	if nerr != nil {
 		return nerr
 	}
-	if c.Name != actor_name {
-		err := util.Errorf("Client name %s and %s from JSON do not match", c.Name, actor_name)
+	if c.Name != actorName {
+		err := util.Errorf("Client name %s and %s from JSON do not match", c.Name, actorName)
 		return err
 	}
 
 	/* Validations. */
 	/* Invalid top level elements */
-	valid_elements := []string{"name", "json_class", "chef_type", "validator", "org_name", "orgname", "public_key", "private_key", "admin", "certificate", "password", "node_name"}
+	validElements := []string{"name", "json_class", "chef_type", "validator", "org_name", "orgname", "public_key", "private_key", "admin", "certificate", "password", "node_name"}
 ValidElem:
-	for k, _ := range json_actor {
-		for _, i := range valid_elements {
+	for k := range jsonActor {
+		for _, i := range validElements {
 			if k == i {
 				continue ValidElem
 			}
@@ -320,37 +320,37 @@ ValidElem:
 	}
 	var verr util.Gerror
 
-	json_actor["json_class"], verr = util.ValidateAsFieldString(json_actor["json_class"])
+	jsonActor["json_class"], verr = util.ValidateAsFieldString(jsonActor["json_class"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' nil" {
-			json_actor["json_class"] = c.JsonClass
+			jsonActor["json_class"] = c.JSONClass
 		} else {
 			return verr
 		}
 	} else {
-		if json_actor["json_class"].(string) != "Chef::ApiClient" {
+		if jsonActor["json_class"].(string) != "Chef::ApiClient" {
 			verr = util.Errorf("Field 'json_class' invalid")
 			return verr
 		}
 	}
 
-	json_actor["chef_type"], verr = util.ValidateAsFieldString(json_actor["chef_type"])
+	jsonActor["chef_type"], verr = util.ValidateAsFieldString(jsonActor["chef_type"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' nil" {
-			json_actor["chef_type"] = c.ChefType
+			jsonActor["chef_type"] = c.ChefType
 		} else {
 			return verr
 		}
 	} else {
-		if json_actor["chef_type"].(string) != "client" {
+		if jsonActor["chef_type"].(string) != "client" {
 			verr = util.Errorf("Field 'chef_type' invalid")
 			return verr
 		}
 	}
 
 	var ab, vb bool
-	if admin_val, ok := json_actor["admin"]; ok {
-		if ab, verr = util.ValidateAsBool(admin_val); verr != nil {
+	if adminVal, ok := jsonActor["admin"]; ok {
+		if ab, verr = util.ValidateAsBool(adminVal); verr != nil {
 			// NOTE: may need to tweak this error message depending
 			// if this is a user or a client
 			verr = util.Errorf("Field 'admin' invalid")
@@ -363,8 +363,8 @@ ValidElem:
 			}
 		}
 	}
-	if validator_val, ok := json_actor["validator"]; ok {
-		if vb, verr = util.ValidateAsBool(validator_val); verr != nil {
+	if validatorVal, ok := jsonActor["validator"]; ok {
+		if vb, verr = util.ValidateAsBool(validatorVal); verr != nil {
 			return verr
 		}
 	}
@@ -372,58 +372,60 @@ ValidElem:
 		verr = util.Errorf("Client can be either an admin or a validator, but not both.")
 		verr.SetStatus(http.StatusBadRequest)
 		return verr
-	} else {
-		c.Admin = ab
-		c.Validator = vb
 	}
-	c.ChefType = json_actor["chef_type"].(string)
-	c.JsonClass = json_actor["json_class"].(string)
+	c.Admin = ab
+	c.Validator = vb
+
+	c.ChefType = jsonActor["chef_type"].(string)
+	c.JSONClass = jsonActor["json_class"].(string)
 
 	return nil
 }
 
-// Checks that the provided public key is valid. Wrapper around
-// chef_crypto.ValidatePublicKey(), but with a different error type.
+// ValidatePublicKey checks that the provided public key is valid. Wrapper around
+// chefcrypto.ValidatePublicKey(), but with a different error type.
 func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
-	ok, pkerr := chef_crypto.ValidatePublicKey(publicKey)
+	ok, pkerr := chefcrypto.ValidatePublicKey(publicKey)
 	var err util.Gerror
 	if !ok {
-		err = util.Errorf(pkerr.Error())
+		err = util.CastErr(pkerr)
 	}
 	return ok, err
 }
 
-// Returns a list of clients.
+// GetList returns a list of clients.
 func GetList() []string {
-	var client_list []string
+	var clientList []string
 	if config.UsingDB() {
-		client_list = getListSQL()
+		clientList = getListSQL()
 	} else {
 		ds := data_store.New()
-		client_list = ds.GetList("client")
+		clientList = ds.GetList("client")
 	}
-	return client_list
+	return clientList
 }
 
-// Generate a new set of RSA keys for the client. The new private key is saved
-// with the client, the public key is given to the client and not saved on the
-// server at all.
+// GenerateKeys makes a new set of RSA keys for the client. The new private key
+// is saved with the client, the public key is given to the client and not saved
+// on the server at all.
 func (c *Client) GenerateKeys() (string, error) {
-	priv_pem, pub_pem, err := chef_crypto.GenerateRSAKeys()
+	privPem, pubPem, err := chefcrypto.GenerateRSAKeys()
 	if err != nil {
 		return "", err
 	}
-	c.pubKey = pub_pem
-	return priv_pem, nil
+	c.pubKey = pubPem
+	return privPem, nil
 }
 
-func (a *Client) GetName() string {
-	return a.Name
+// GetName gives the client's name.
+func (c *Client) GetName() string {
+	return c.Name
 }
 
-func (a *Client) URLType() string {
-	url_type := fmt.Sprintf("%ss", a.ChefType)
-	return url_type
+// URLType returns the base URL element for clients.
+func (c *Client) URLType() string {
+	urlType := fmt.Sprintf("%ss", c.ChefType)
+	return urlType
 }
 
 func validateClientName(name string) util.Gerror {
@@ -436,14 +438,17 @@ func validateClientName(name string) util.Gerror {
 
 /* Search indexing functions */
 
-func (c *Client) DocId() string {
+// DocID is for the indexer, to tell what it's identifier is.
+func (c *Client) DocID() string {
 	return c.Name
 }
 
+// Index tells the indexer which collection of objects to place the client into.
 func (c *Client) Index() string {
 	return "client"
 }
 
+// Flatten out the client so it's suitable for indexing.
 func (c *Client) Flatten() []string {
 	flatten := util.FlattenObj(c.flatExport())
 	indexified := util.Indexify(flatten)
@@ -453,7 +458,8 @@ func (c *Client) Flatten() []string {
 /* Permission functions. Later role-based perms may be implemented, but for now
  * it's just the basic admin/validator/user perms */
 
-// Is the client an admin? If use-auth is false, this always returns true.
+// IsAdmin returns true if the client is an admin. If use-auth is false, this 
+// always returns true.
 func (c *Client) IsAdmin() bool {
 	if !useAuth() {
 		return true
@@ -461,8 +467,8 @@ func (c *Client) IsAdmin() bool {
 	return c.Admin
 }
 
-// Is the client a validator client? If use-auth is false, this always returns
-// false.
+// IsValidator returns true if the client is a validator client. If use-auth is
+// false, this always returns false.
 func (c *Client) IsValidator() bool {
 	if !useAuth() {
 		return false
@@ -473,7 +479,7 @@ func (c *Client) IsValidator() bool {
 	return false
 }
 
-// Is the other actor provided the same as the caller.
+// IsSelf returns true if the other actor provided is the same as the caller.
 func (c *Client) IsSelf(other interface{}) bool {
 	if !useAuth() {
 		return true
@@ -486,20 +492,22 @@ func (c *Client) IsSelf(other interface{}) bool {
 	return false
 }
 
+// IsUser always returns false for clients. Part of the Actor interface.
 func (c *Client) IsUser() bool {
 	return false
 }
 
+// IsClient always returns true for clients. Part of the Actor interface.
 func (c *Client) IsClient() bool {
 	return true
 }
 
-// Returns the client's public key. Part of the Actor interface.
+// PublicKey returns the client's public key. Part of the Actor interface.
 func (c *Client) PublicKey() string {
 	return c.pubKey
 }
 
-// Set the client's public key.
+// SetPublicKey sets the client's public key.
 func (c *Client) SetPublicKey(pk interface{}) error {
 	switch pk := pk.(type) {
 	case string:
@@ -515,13 +523,13 @@ func (c *Client) SetPublicKey(pk interface{}) error {
 	return nil
 }
 
-// A check to see if the client is trying to edit admin and validator
-// attributes.
-func (c *Client) CheckPermEdit(client_data map[string]interface{}, perm string) util.Gerror {
+// CheckPermEdit checks to see if the client is trying to edit admin and
+// validator attributes, and if it has permissions to do so.
+func (c *Client) CheckPermEdit(clientData map[string]interface{}, perm string) util.Gerror {
 	gerr := util.Errorf("You are not allowed to take this action.")
 	gerr.SetStatus(http.StatusForbidden)
 
-	if av, ok := client_data[perm]; ok {
+	if av, ok := clientData[perm]; ok {
 		if a, _ := util.ValidateAsBool(av); a {
 			return gerr
 		}
@@ -535,11 +543,11 @@ func useAuth() bool {
 }
 
 func (c *Client) export() *privClient {
-	return &privClient{Name: &c.Name, NodeName: &c.NodeName, JsonClass: &c.JsonClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.pubKey, Admin: &c.Admin, Certificate: &c.Certificate}
+	return &privClient{Name: &c.Name, NodeName: &c.NodeName, JSONClass: &c.JSONClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.pubKey, Admin: &c.Admin, Certificate: &c.Certificate}
 }
 
 func (c *Client) flatExport() *flatClient {
-	return &flatClient{Name: c.Name, NodeName: c.NodeName, JsonClass: c.JsonClass, ChefType: c.ChefType, Validator: c.Validator, Orgname: c.Orgname, PublicKey: c.pubKey, Admin: c.Admin, Certificate: c.Certificate}
+	return &flatClient{Name: c.Name, NodeName: c.NodeName, JSONClass: c.JSONClass, ChefType: c.ChefType, Validator: c.Validator, Orgname: c.Orgname, PublicKey: c.pubKey, Admin: c.Admin, Certificate: c.Certificate}
 }
 
 func (c *Client) GobEncode() ([]byte, error) {
@@ -564,14 +572,14 @@ func (c *Client) GobDecode(b []byte) error {
 	return nil
 }
 
-// Return all the clients on this server.
+// AllClients returns a slice of all the clients on this server.
 func AllClients() []*Client {
-	clients := make([]*Client, 0)
+	var clients []*Client
 	if config.UsingDB() {
 		clients = allClientsSQL()
 	} else {
-		client_list := GetList()
-		for _, c := range client_list {
+		clientList := GetList()
+		for _, c := range clientList {
 			cl, err := Get(c)
 			if err != nil {
 				continue
@@ -582,7 +590,7 @@ func AllClients() []*Client {
 	return clients
 }
 
-// Return all clients in a fashion suitable for exporting.
+// ExportAllClients returns all clients in a fashion suitable for exporting.
 func ExportAllClients() []interface{} {
 	clients := AllClients()
 	export := make([]interface{}, len(clients))
