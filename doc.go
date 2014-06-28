@@ -338,6 +338,10 @@ The data returned by an event should look something like this:
 	  "id": 22
 	}
 
+The easiest way to use the event log is with the knife-goiardi-event-log knife
+plugin. It's available on rubygems, or at github at 
+https://github.com/ctdk/knife-goiardi-event-log.
+
 Reporting
 
 Goiardi now supports, on an experimental basis, Chef's reporting facilities.
@@ -350,6 +354,11 @@ passed in a GET request that lists reports to limit the reports returned to ones
 that match the status, so you can read only reports of chef runs that were
 successful, failed, or started but haven't completed yet. Valid values for the
 "status" parameter are "started", "success", and "failure".
+
+To use reporting, you'll either need the Chef knife-reporting plugin, or use the
+knife-goiardi-reporting plugin that supports querying runs by status. It's
+available on rubygems, or on github at 
+https://github.com/ctdk/knife-goiardi-reporting.
 
 As this is an experimental feature, it may not work entirely correctly. Bug
 reports are appreciated.

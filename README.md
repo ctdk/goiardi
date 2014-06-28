@@ -308,6 +308,10 @@ tracked. The event log can be viewed through the /events API endpoint.
 If the `-K`/`--log-event-keep` option is set, then once a minute the event log
 will be automatically purged, leaving that many events in the log. This is particularly recommended when using the event log in in-memory mode.
 
+The easiest way to use the event log is with the knife-goiardi-event-log knife
+plugin. It's available on rubygems, or at github at 
+https://github.com/ctdk/knife-goiardi-event-log.
+
 The event API endpoints work as follows:
 
 > `GET /events` - optionally taking `offset`, `limit`, `from`, `until`,
@@ -357,6 +361,11 @@ passed in a GET request that lists reports to limit the reports returned to ones
 that match the status, so you can read only reports of chef runs that were
 successful, failed, or started but haven't completed yet. Valid values for the
 "status" parameter are "started", "success", and "failure".
+
+To use reporting, you'll either need the Chef knife-reporting plugin, or use the
+knife-goiardi-reporting plugin that supports querying runs by status. It's
+available on rubygems, or on github at 
+https://github.com/ctdk/knife-goiardi-reporting.
 
 As this is an experimental feature, it may not work entirely correctly. Bug
 reports are appreciated.
