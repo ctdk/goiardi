@@ -42,7 +42,7 @@ type User struct {
 	Name string `json:"name"`
 	Email string `json:"email"`
 	Admin bool `json:"admin"`
-	pubKey string `json:"public_key"`
+	pubKey string 
 	passwd string
 	salt []byte
 }

@@ -167,7 +167,7 @@ func ParseConfigOptions() error {
 	 * config file options. */
 	if opts.ConfFile != "" {
 		if _, err := toml.DecodeFile(opts.ConfFile, Config); err != nil {
-			panic(err)
+			log.Println(err)
 			os.Exit(1)
 		}
 		Config.ConfFile = opts.ConfFile

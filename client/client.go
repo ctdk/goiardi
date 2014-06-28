@@ -50,7 +50,7 @@ type Client struct {
 	ChefType string `json:"chef_type"`
 	Validator bool `json:"validator"`
 	Orgname string `json:"orgname"`
-	pubKey string `json:"public_key"`
+	pubKey string
 	Admin bool `json:"admin"`
 	Certificate string `json:"certificate"`
 }

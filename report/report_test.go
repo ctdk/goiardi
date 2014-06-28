@@ -36,7 +36,7 @@ func TestReportCreation(t *testing.T){
 	}
 	_, err = New(invalid_uid, "node")
 	if err == nil {
-		t.Errorf("%s created a report, but it shouldn't have")
+		t.Errorf("%s created a report, but it shouldn't have", invalid_uid)
 	}
 	r.Delete()
 }

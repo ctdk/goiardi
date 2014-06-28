@@ -664,7 +664,7 @@ func extractVerNums(cbVersion string) (maj, min, patch int64, err util.Gerror) {
 	}
 	nums := strings.Split(cbVersion, ".")
 	if len(nums) < 2 && len(nums) > 3 {
-		err = util.Errorf("incorrect number of numbers in version string '%s'", len(nums))
+		err = util.Errorf("incorrect number of numbers in version string '%s': %d", cbVersion, len(nums))
 		return 0, 0, 0, err
 	}
 	var vt int64
