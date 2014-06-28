@@ -21,22 +21,22 @@ package authentication
 /* Geez, import all the things why don't you. */
 
 import (
-	"github.com/ctdk/goiardi/chef_crypto"
-	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/config"
-	"net/http"
-	"io"
-	"io/ioutil"
 	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
-	"strings"
+	"fmt"
+	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/chef_crypto"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/util"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"path"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
-	"path"
-	"fmt"
 )
 
 // Check the signed headers sent by the client against the expected result
@@ -47,7 +47,7 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 		gerr := util.Errorf("Failed to authenticate as '%s'. Ensure that your node_name and client key are correct.", user_id)
 		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
-	} 
+	}
 	contentHash := r.Header.Get("X-OPS-CONTENT-HASH")
 	if contentHash == "" {
 		gerr := util.Errorf("no content hash provided")
@@ -68,7 +68,7 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 	}
 	// Eventually this may be put to some sort of use, but for now just
 	// make sure that it's there. Presumably eventually it would be used to
-	// use algorithms other than sha1 for hashing the body, or using a 
+	// use algorithms other than sha1 for hashing the body, or using a
 	// different version of the header signing algorithm.
 	xopssign := r.Header.Get("x-ops-sign")
 	var apiVer string
@@ -109,7 +109,7 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 		return gerr
 	}
 
-	signedHeaders, sherr  := assembleSignedHeader(r)
+	signedHeaders, sherr := assembleSignedHeader(r)
 	if sherr != nil {
 		return sherr
 	}
@@ -203,7 +203,7 @@ func assembleSignedHeader(r *http.Request) (string, util.Gerror) {
 			gerr.SetStatus(http.StatusUnauthorized)
 			return "", gerr
 		}
-		sH[k - 1] = v
+		sH[k-1] = v
 	}
 	signedHeaders := strings.Join(sH, "")
 

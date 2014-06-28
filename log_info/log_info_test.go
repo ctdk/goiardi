@@ -18,10 +18,10 @@
 package log_info
 
 import (
-	"testing"
 	"github.com/ctdk/goiardi/client"
-	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
+	"testing"
 	"time"
 )
 
@@ -38,7 +38,7 @@ func TestLogEvent(t *testing.T) {
 	if len(arr) != 1 {
 		t.Errorf("Too many (or not enough) log events: %d found", len(arr))
 	}
-	arr2, _ := GetLogInfos(nil, 0,1)
+	arr2, _ := GetLogInfos(nil, 0, 1)
 	if len(arr2) != 1 {
 		t.Errorf("Something went wrong with variadic args with GetLogInfoList")
 	}
@@ -60,7 +60,7 @@ func TestLogEvent(t *testing.T) {
 	if le.ActorType != "client" {
 		t.Errorf("wrong actor type, got %s", le.ActorType)
 	}
-	if le.ObjectName != obj.GetName()  {
+	if le.ObjectName != obj.GetName() {
 		t.Errorf("wrong object")
 	}
 	var tdef time.Time

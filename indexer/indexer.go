@@ -15,24 +15,24 @@
  */
 
 // Package indexer indexes objects that implement the Indexable interface. The
-// index is all in memory right now, but it can be frozen and saved to disk for 
+// index is all in memory right now, but it can be frozen and saved to disk for
 // persistence.
 package indexer
 
 import (
+	"bytes"
+	"compress/zlib"
+	"encoding/gob"
+	"fmt"
 	"github.com/ctdk/go-trie/gtrie"
 	"github.com/ctdk/goas/v2/logger"
-	"sync"
-	"strings"
-	"sort"
-	"fmt"
-	"regexp"
-	"encoding/gob"
-	"bytes"
-	"os"
 	"io/ioutil"
-	"compress/zlib"
+	"os"
 	"path"
+	"regexp"
+	"sort"
+	"strings"
+	"sync"
 )
 
 // Interface that provides all the information necessary to index an object.
@@ -45,20 +45,20 @@ type Indexable interface {
 
 // Holds a map of document collections.
 type Index struct {
-	m sync.RWMutex
+	m      sync.RWMutex
 	idxmap map[string]*IdxCollection
 }
 
 // Holds a map of documents.
 type IdxCollection struct {
-	m sync.RWMutex
+	m    sync.RWMutex
 	docs map[string]*IdxDoc
 }
 
 // The indexed documents that are actually searched.
 type IdxDoc struct {
-	m sync.RWMutex
-	trie *gtrie.Node
+	m       sync.RWMutex
+	trie    *gtrie.Node
 	docText string
 }
 
@@ -124,7 +124,7 @@ func (i *Index) deleteItem(idxName string, doc string) error {
 	return nil
 }
 
-func (i *Index) search(idx string, term string, notop bool) (map[string]*IdxDoc, error){
+func (i *Index) search(idx string, term string, notop bool) (map[string]*IdxDoc, error) {
 	if idc, found := i.idxmap[idx]; !found {
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
 		return nil, err
@@ -133,7 +133,7 @@ func (i *Index) search(idx string, term string, notop bool) (map[string]*IdxDoc,
 		// keys
 		if term == "*:*" {
 			return idc.docs, nil
-		} 
+		}
 		results, err := idc.searchCollection(term, notop)
 		return results, err
 	}
@@ -149,7 +149,7 @@ func (i *Index) searchText(idx string, term string, notop bool) (map[string]*Idx
 	}
 }
 
-func (i *Index) searchRange(idx string, field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error){
+func (i *Index) searchRange(idx string, field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error) {
 	if idc, found := i.idxmap[idx]; !found {
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
 		return nil, err
@@ -188,7 +188,7 @@ func (ic *IdxCollection) addDoc(object Indexable) {
 func (ic *IdxCollection) delDoc(doc string) {
 	ic.m.Lock()
 	defer ic.m.Unlock()
-	
+
 	delete(ic.docs, doc)
 }
 
@@ -229,7 +229,7 @@ func (ic *IdxCollection) searchRange(field string, start string, end string, inc
 	results := make(map[string]*IdxDoc)
 	ic.m.RLock()
 	defer ic.m.RUnlock()
-	
+
 	for k, v := range ic.docs {
 		m, err := v.RangeSearch(field, start, end, inclusive)
 		if err != nil {
@@ -251,7 +251,7 @@ func (idoc *IdxDoc) update(object Indexable) {
 	/* recover from horrific trie errors that seem to happen with really
 	 * big values. :-/ */
 	defer func() {
-		if e:= recover(); e != nil {
+		if e := recover(); e != nil {
 			logger.Errorf("There was a problem creating the trie: %s", fmt.Sprintln(e))
 		}
 	}()
@@ -269,7 +269,7 @@ func (idoc *IdxDoc) update(object Indexable) {
 func (idoc *IdxDoc) Examine(term string) (bool, error) {
 	idoc.m.RLock()
 	defer idoc.m.RUnlock()
-	
+
 	r := regexp.MustCompile(`\*|\?`)
 	if r.MatchString(term) {
 		m, err := idoc.regexSearch(term)
@@ -392,12 +392,12 @@ func initializeIndex() *Index {
 	/* We always want these indices at least. */
 	im := new(Index)
 	im.makeDefaultCollections()
-	
+
 	return im
 }
 
 func (i *Index) makeDefaultCollections() {
-	defaults := [...]string{ "client", "environment", "node", "role" }
+	defaults := [...]string{"client", "environment", "node", "role"}
 	i.m.Lock()
 	i.idxmap = make(map[string]*IdxCollection)
 	i.m.Unlock()
@@ -448,7 +448,7 @@ func LoadIndex(idxFile string) error {
 
 /* gob encoding functions for the index */
 
-func (i *Index) GobEncode() ([]byte, error){
+func (i *Index) GobEncode() ([]byte, error) {
 	w := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w)
 	i.m.RLock()
@@ -466,7 +466,7 @@ func (i *Index) GobDecode(buf []byte) error {
 	return decoder.Decode(&i.idxmap)
 }
 
-func (i *IdxCollection) GobEncode() ([]byte, error){
+func (i *IdxCollection) GobEncode() ([]byte, error) {
 	w := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w)
 	i.m.RLock()
@@ -484,7 +484,7 @@ func (i *IdxCollection) GobDecode(buf []byte) error {
 	return decoder.Decode(&i.docs)
 }
 
-func (i *IdxDoc) GobEncode() ([]byte, error){
+func (i *IdxDoc) GobEncode() ([]byte, error) {
 	w := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w)
 	i.m.RLock()
@@ -569,6 +569,7 @@ func ClearIndex() {
 	indexMap.makeDefaultCollections()
 	return
 }
+
 // Rebuild the search index from scratch
 func ReIndex(objects []Indexable) error {
 	for _, o := range objects {
@@ -576,6 +577,5 @@ func ReIndex(objects []Indexable) error {
 	}
 	// We really ought to be able to return from an error, but at the moment
 	// there aren't any ways it does so in the index save bits.
-	return nil 
+	return nil
 }
-

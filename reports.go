@@ -17,14 +17,14 @@
 package main
 
 import (
-	"net/http"
 	"encoding/json"
+	"fmt"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/util"
+	"net/http"
 	"strconv"
 	"time"
-	"fmt"
 )
 
 func report_handler(w http.ResponseWriter, r *http.Request) {
@@ -51,167 +51,167 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 	report_response := make(map[string]interface{})
 
 	switch r.Method {
-		case "GET":
-			// Making an informed guess that admin rights are needed
-			// to see the node run reports
-			var rows int
-			var from, until time.Time
-			var status string
-			r.ParseForm()
-			if fr, found := r.Form["rows"]; found {
-				if len(fr) < 0 {
-					JsonErrorReport(w, r, "invalid rows", http.StatusBadRequest)
-					return
-				}
-				var err error
-				rows, err = strconv.Atoi(fr[0])
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-					return
-				}
-			} else {
-				// default is 10
-				rows = 10 
-			}
-			if ff, found := r.Form["from"]; found {
-				if len(ff) < 0 {
-					JsonErrorReport(w, r, "invalid from", http.StatusBadRequest)
-					return
-				}
-				fromUnix, err := strconv.ParseInt(ff[0], 10, 64)
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-					return
-				}
-				from = time.Unix(fromUnix, 0)
-			} else {
-				from = time.Now().Add(-(time.Duration(24 * 90) * time.Hour))
-			}
-			if fu, found := r.Form["until"]; found {
-				if len(fu) < 0 {
-					JsonErrorReport(w, r, "invalid until", http.StatusBadRequest)
-					return
-				}
-				untilUnix, err := strconv.ParseInt(fu[0], 10, 64)
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-					return
-				}
-				until = time.Unix(untilUnix, 0)
-			} else {
-				until = time.Now()
-			}
-
-			if st, found := r.Form["status"]; found {
-				if len(st) < 0 {
-					JsonErrorReport(w, r, "invalid status", http.StatusBadRequest)
-					return
-				}
-				status = st[0]
-				if status != "started" && status != "success" && status != "failure" {
-					JsonErrorReport(w, r, "invalid status given", http.StatusBadRequest)
-					return
-				}
-			}
-
-			// If the end time is more than 90 days ahead of the
-			// start time, give an error
-			if from.Truncate(time.Hour).Sub(until.Truncate(time.Hour)) >= (time.Duration(24 * 90) * time.Hour) {
-				msg := fmt.Sprintf("End time %s is too far ahead of start time %s (max 90 days)", until.String(), from.String())
-				JsonErrorReport(w, r, msg, http.StatusNotAcceptable)
+	case "GET":
+		// Making an informed guess that admin rights are needed
+		// to see the node run reports
+		var rows int
+		var from, until time.Time
+		var status string
+		r.ParseForm()
+		if fr, found := r.Form["rows"]; found {
+			if len(fr) < 0 {
+				JsonErrorReport(w, r, "invalid rows", http.StatusBadRequest)
 				return
 			}
+			var err error
+			rows, err = strconv.Atoi(fr[0])
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				return
+			}
+		} else {
+			// default is 10
+			rows = 10
+		}
+		if ff, found := r.Form["from"]; found {
+			if len(ff) < 0 {
+				JsonErrorReport(w, r, "invalid from", http.StatusBadRequest)
+				return
+			}
+			fromUnix, err := strconv.ParseInt(ff[0], 10, 64)
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				return
+			}
+			from = time.Unix(fromUnix, 0)
+		} else {
+			from = time.Now().Add(-(time.Duration(24*90) * time.Hour))
+		}
+		if fu, found := r.Form["until"]; found {
+			if len(fu) < 0 {
+				JsonErrorReport(w, r, "invalid until", http.StatusBadRequest)
+				return
+			}
+			untilUnix, err := strconv.ParseInt(fu[0], 10, 64)
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				return
+			}
+			until = time.Unix(untilUnix, 0)
+		} else {
+			until = time.Now()
+		}
 
-			if !opUser.IsAdmin() {
-				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+		if st, found := r.Form["status"]; found {
+			if len(st) < 0 {
+				JsonErrorReport(w, r, "invalid status", http.StatusBadRequest)
 				return
 			}
-			if path_array_len < 3 || path_array_len > 4 {
-				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			status = st[0]
+			if status != "started" && status != "success" && status != "failure" {
+				JsonErrorReport(w, r, "invalid status given", http.StatusBadRequest)
 				return
 			}
-			op := path_array[1]
-			if op == "nodes" && path_array_len == 4 {
-				nodeName := path_array[2]
-				runs, nerr := report.GetNodeList(nodeName, from, until, rows, status)
-				if nerr != nil {
-					JsonErrorReport(w, r, nerr.Error(), http.StatusInternalServerError)
+		}
+
+		// If the end time is more than 90 days ahead of the
+		// start time, give an error
+		if from.Truncate(time.Hour).Sub(until.Truncate(time.Hour)) >= (time.Duration(24*90) * time.Hour) {
+			msg := fmt.Sprintf("End time %s is too far ahead of start time %s (max 90 days)", until.String(), from.String())
+			JsonErrorReport(w, r, msg, http.StatusNotAcceptable)
+			return
+		}
+
+		if !opUser.IsAdmin() {
+			JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+			return
+		}
+		if path_array_len < 3 || path_array_len > 4 {
+			JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			return
+		}
+		op := path_array[1]
+		if op == "nodes" && path_array_len == 4 {
+			nodeName := path_array[2]
+			runs, nerr := report.GetNodeList(nodeName, from, until, rows, status)
+			if nerr != nil {
+				JsonErrorReport(w, r, nerr.Error(), http.StatusInternalServerError)
+				return
+			}
+			report_response["run_history"] = runs
+		} else if op == "org" {
+			if path_array_len == 4 {
+				runId := path_array[3]
+				run, err := report.Get(runId)
+				if err != nil {
+					JsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				report_response = format_run_show(run)
+			} else {
+				runs, rerr := report.GetReportList(from, until, rows, status)
+				if rerr != nil {
+					JsonErrorReport(w, r, rerr.Error(), http.StatusInternalServerError)
 					return
 				}
 				report_response["run_history"] = runs
-			} else if op == "org" {
-				if path_array_len == 4 {
-					runId := path_array[3]
-					run, err := report.Get(runId)
-					if err != nil {
-						JsonErrorReport(w, r, err.Error(), err.Status())
-						return
-					}
-					report_response = format_run_show(run)
-				} else {
-					runs, rerr := report.GetReportList(from, until, rows, status)
-					if rerr != nil {
-						JsonErrorReport(w, r, rerr.Error(), http.StatusInternalServerError)
-						return
-					}
-					report_response["run_history"] = runs
-				}
-			} else {
-				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
-				return
 			}
-		case "POST":
-			// Can't use the usual ParseObjJson function here, since
-			// the reporting "run_list" type is a string rather
-			// than []interface{}.
-			json_report := make(map[string]interface{})
-			dec := json.NewDecoder(r.Body)
-			if jerr := dec.Decode(&json_report); jerr != nil {
-				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-				return
-			}
-
-			if path_array_len < 4 || path_array_len > 5 {
-				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
-				return
-			}
-			nodeName := path_array[2]
-			if path_array_len == 4 {
-				rep, err := report.NewFromJson(nodeName, json_report)
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
-				// what's the expected response?
-				serr := rep.Save()
-				if serr != nil {
-					JsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
-					return
-				}
-				report_response["run_detail"] = rep
-			} else {
-				run_id := path_array[4]
-				rep, err := report.Get(run_id)
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
-				err = rep.UpdateFromJson(json_report)
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
-				serr := rep.Save()
-				if serr != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				// .... and?
-				report_response["run_detail"] = rep
-			} 
-		default:
+		} else {
 			JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 			return
+		}
+	case "POST":
+		// Can't use the usual ParseObjJson function here, since
+		// the reporting "run_list" type is a string rather
+		// than []interface{}.
+		json_report := make(map[string]interface{})
+		dec := json.NewDecoder(r.Body)
+		if jerr := dec.Decode(&json_report); jerr != nil {
+			JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if path_array_len < 4 || path_array_len > 5 {
+			JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			return
+		}
+		nodeName := path_array[2]
+		if path_array_len == 4 {
+			rep, err := report.NewFromJson(nodeName, json_report)
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			// what's the expected response?
+			serr := rep.Save()
+			if serr != nil {
+				JsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
+				return
+			}
+			report_response["run_detail"] = rep
+		} else {
+			run_id := path_array[4]
+			rep, err := report.Get(run_id)
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			err = rep.UpdateFromJson(json_report)
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			serr := rep.Save()
+			if serr != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			// .... and?
+			report_response["run_detail"] = rep
+		}
+	default:
+		JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+		return
 	}
 
 	enc := json.NewEncoder(w)

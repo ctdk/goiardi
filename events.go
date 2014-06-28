@@ -19,24 +19,24 @@
 package main
 
 import (
-	"net/http"
-	"github.com/ctdk/goiardi/log_info"
-	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/util"
 	"encoding/json"
-	"strconv"
 	"fmt"
+	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/util"
+	"net/http"
+	"strconv"
 )
 
 // The whole list
-func event_list_handler(w http.ResponseWriter, r *http.Request){
+func event_list_handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	
+
 	// Look for offset and limit parameters
 	r.ParseForm()
 	var offset, limit, purge_from int
@@ -94,72 +94,72 @@ func event_list_handler(w http.ResponseWriter, r *http.Request){
 		}
 	}
 
-	paramStrs := []string{ "from", "until", "action", "object_type", "object_name", "doer" }
+	paramStrs := []string{"from", "until", "action", "object_type", "object_name", "doer"}
 	searchParams := make(map[string]string, 6)
 
 	for _, v := range paramStrs {
 		if st, found := r.Form[v]; found {
 			if len(st) < 0 {
-				JsonErrorReport(w, r, "invalid " + v, http.StatusBadRequest)
+				JsonErrorReport(w, r, "invalid "+v, http.StatusBadRequest)
 				return
 			}
 			searchParams[v] = st[0]
 		}
 	}
-	
+
 	switch r.Method {
-		case "GET":
-			if !opUser.IsAdmin() {
-				JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
-				return
-			}
-			var le_list []*log_info.LogInfo
-			var err error
-			if limit_found {
-				le_list, err = log_info.GetLogInfos(searchParams, offset, limit)
-			} else {
-				le_list, err = log_info.GetLogInfos(searchParams, offset)
-			}
-			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-				return
-			}
-			le_resp := make([]map[string]interface{}, len(le_list))
-			for i, v := range le_list {
-				le_resp[i] = make(map[string]interface{})
-				le_resp[i]["event"] = v
-				le_url := fmt.Sprintf("/events/%d", v.Id)
-				le_resp[i]["url"] = util.CustomURL(le_url)
-			}
-			enc := json.NewEncoder(w)
-			if err := enc.Encode(&le_resp); err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		case "DELETE":
-			if !opUser.IsAdmin() {
-				JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
-				return
-			}
-			purged, err := log_info.PurgeLogInfos(purge_from)
-			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-			}
-			le_resp := make(map[string]string)
-			le_resp["purged"] = fmt.Sprintf("Purged %d logged events", purged)
-			enc := json.NewEncoder(w)
-			if err := enc.Encode(&le_resp); err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		default:
-			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+	case "GET":
+		if !opUser.IsAdmin() {
+			JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
+		}
+		var le_list []*log_info.LogInfo
+		var err error
+		if limit_found {
+			le_list, err = log_info.GetLogInfos(searchParams, offset, limit)
+		} else {
+			le_list, err = log_info.GetLogInfos(searchParams, offset)
+		}
+		if err != nil {
+			JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			return
+		}
+		le_resp := make([]map[string]interface{}, len(le_list))
+		for i, v := range le_list {
+			le_resp[i] = make(map[string]interface{})
+			le_resp[i]["event"] = v
+			le_url := fmt.Sprintf("/events/%d", v.Id)
+			le_resp[i]["url"] = util.CustomURL(le_url)
+		}
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(&le_resp); err != nil {
+			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	case "DELETE":
+		if !opUser.IsAdmin() {
+			JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
+			return
+		}
+		purged, err := log_info.PurgeLogInfos(purge_from)
+		if err != nil {
+			JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+		}
+		le_resp := make(map[string]string)
+		le_resp["purged"] = fmt.Sprintf("Purged %d logged events", purged)
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(&le_resp); err != nil {
+			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	default:
+		JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 }
 
 // Individual log events
-func event_handler(w http.ResponseWriter, r *http.Request){
+func event_handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
@@ -173,44 +173,44 @@ func event_handler(w http.ResponseWriter, r *http.Request){
 	}
 
 	switch r.Method {
-		case "GET":
-			if !opUser.IsAdmin() {
-				JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
-				return
-			}
-			le, err := log_info.Get(event_id)
-			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
-				return
-			}
-			enc := json.NewEncoder(w)
-			if err = enc.Encode(&le); err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		case "DELETE":
-			if !opUser.IsAdmin() {
-				JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
-				return
-			}
-			le, err := log_info.Get(event_id)
-			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
-				return
-			}
-			err = le.Delete()
-			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			enc := json.NewEncoder(w)
-			if err = enc.Encode(&le); err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		default:
-			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+	case "GET":
+		if !opUser.IsAdmin() {
+			JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
+		}
+		le, err := log_info.Get(event_id)
+		if err != nil {
+			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			return
+		}
+		enc := json.NewEncoder(w)
+		if err = enc.Encode(&le); err != nil {
+			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	case "DELETE":
+		if !opUser.IsAdmin() {
+			JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
+			return
+		}
+		le, err := log_info.Get(event_id)
+		if err != nil {
+			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			return
+		}
+		err = le.Delete()
+		if err != nil {
+			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		enc := json.NewEncoder(w)
+		if err = enc.Encode(&le); err != nil {
+			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	default:
+		JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 	return
 }

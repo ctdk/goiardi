@@ -17,10 +17,10 @@
 package environment
 
 import (
-	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/config"
 	"database/sql"
 	"fmt"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
 	"log"
 )
 

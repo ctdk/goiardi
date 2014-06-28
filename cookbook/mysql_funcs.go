@@ -20,8 +20,8 @@ package cookbook
 
 import (
 	"github.com/ctdk/goiardi/data_store"
-	"net/http"
 	"github.com/ctdk/goiardi/util"
+	"net/http"
 )
 
 func (c *Cookbook) saveCookbookMySQL() error {
@@ -40,12 +40,10 @@ func (c *Cookbook) saveCookbookMySQL() error {
 		return err
 	}
 	c.id = int32(c_id)
-	
+
 	tx.Commit()
 	return nil
 }
-
-
 
 func (cbv *CookbookVersion) updateCookbookVersionMySQL(defb, libb, attb, recb, prob, resb, temb, roob, filb, metb []byte, maj, min, patch int64) util.Gerror {
 	tx, err := data_store.Dbh.Begin()

@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-func (s *Sandbox)fillSandboxFromMySQL(row data_store.ResRow) error {
+func (s *Sandbox) fillSandboxFromMySQL(row data_store.ResRow) error {
 	var csb []byte
 	var tb []byte
 	err := row.Scan(&s.Id, &tb, &csb, &s.Completed)

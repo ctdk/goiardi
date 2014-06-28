@@ -20,20 +20,20 @@
 package chef_crypto
 
 import (
-	"fmt"
-	"crypto/rsa"
-	"crypto/rand"
 	"crypto"
-	"encoding/pem"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha512"
 	"crypto/x509"
 	"encoding/base64"
-	"math/big"
-	"crypto/sha512"
 	"encoding/hex"
+	"encoding/pem"
+	"fmt"
+	"math/big"
 )
 
 // Creates a pair of private and public keys for a client.
-func GenerateRSAKeys() (string, string, error){
+func GenerateRSAKeys() (string, string, error) {
 	/* Shamelessly borrowed and adapted from some golang-samples */
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -45,10 +45,10 @@ func GenerateRSAKeys() (string, string, error){
 	}
 	priv_der := x509.MarshalPKCS1PrivateKey(priv)
 	/* For some reason chef doesn't label the keys RSA PRIVATE/PUBLIC KEY */
-	priv_blk := pem.Block {
-		Type: "RSA PRIVATE KEY",
+	priv_blk := pem.Block{
+		Type:    "RSA PRIVATE KEY",
 		Headers: nil,
-		Bytes: priv_der,
+		Bytes:   priv_der,
 	}
 	priv_pem := string(pem.EncodeToMemory(&priv_blk))
 	pub := priv.PublicKey
@@ -57,10 +57,10 @@ func GenerateRSAKeys() (string, string, error){
 		err_str := fmt.Errorf("Failed to get der format for public key: %s", err)
 		return "", "", err_str
 	}
-	pub_blk := pem.Block {
-		Type: "PUBLIC KEY",
+	pub_blk := pem.Block{
+		Type:    "PUBLIC KEY",
 		Headers: nil,
-		Bytes: pub_der,
+		Bytes:   pub_der,
 	}
 	pub_pem := string(pem.EncodeToMemory(&pub_blk))
 	return priv_pem, pub_pem, nil
@@ -69,28 +69,28 @@ func GenerateRSAKeys() (string, string, error){
 // Checks that the provided public key is valid.
 func ValidatePublicKey(publicKey interface{}) (bool, error) {
 	switch publicKey := publicKey.(type) {
-		case string:
-			// at the moment we don't care about the pub interface
-			decPubKey, _ := pem.Decode([]byte(publicKey))
-			if decPubKey == nil {
-				err := fmt.Errorf("Public key does not validate")
-				return false, err
-			}
-			if _, err := x509.ParsePKIXPublicKey(decPubKey.Bytes); err != nil {
-				nerr := fmt.Errorf("Public key did not validate: %s", err.Error())
-				return false, nerr
-			}
-			return true, nil
-		default:
+	case string:
+		// at the moment we don't care about the pub interface
+		decPubKey, _ := pem.Decode([]byte(publicKey))
+		if decPubKey == nil {
 			err := fmt.Errorf("Public key does not validate")
 			return false, err
+		}
+		if _, err := x509.ParsePKIXPublicKey(decPubKey.Bytes); err != nil {
+			nerr := fmt.Errorf("Public key did not validate: %s", err.Error())
+			return false, nerr
+		}
+		return true, nil
+	default:
+		err := fmt.Errorf("Public key does not validate")
+		return false, err
 	}
 }
 
-// Decrypt the encrypted header with the client or user's public key for 
-// validating requests. This function is informed by chef-golang's 
+// Decrypt the encrypted header with the client or user's public key for
+// validating requests. This function is informed by chef-golang's
 // privateDecrypt function.
-func HeaderDecrypt(pkPem string, data string) ([]byte, error){
+func HeaderDecrypt(pkPem string, data string) ([]byte, error) {
 	block, _ := pem.Decode([]byte(pkPem))
 	if block == nil {
 		return nil, fmt.Errorf("Invalid block size for '%s'", pkPem)
@@ -109,10 +109,10 @@ func HeaderDecrypt(pkPem string, data string) ([]byte, error){
 	}
 	/* skip past the 0xff padding added to the header before encrypting. */
 	skip := 0
-	for i := 2; i < len(dec); i++{
-		if dec[i] == 0xff && dec[i + 1] == 0 {
+	for i := 2; i < len(dec); i++ {
+		if dec[i] == 0xff && dec[i+1] == 0 {
 			skip = i + 2
-			break;
+			break
 		}
 	}
 	return dec[skip:], nil

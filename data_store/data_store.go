@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-/* 
+/*
 Package data_store provides data store functionality. The data store is kept in
 memory, but optionally the data store may be saved to a file to provide a
 perisistent data store. This uses go-cache (https://github.com/pmylund/go-cache)
@@ -26,31 +26,31 @@ argument that specifies what kind of object it is.
 package data_store
 
 import (
-	"github.com/pmylund/go-cache"
-	"strings"
-	"sort"
+	"bytes"
+	"compress/zlib"
 	"encoding/gob"
 	"fmt"
-	"bytes"
-	"sync"
-	"os"
-	"log"
-	"io/ioutil"
-	"reflect"
-	"compress/zlib"
-	"path"
 	"github.com/ctdk/goiardi/config"
+	"github.com/pmylund/go-cache"
+	"io/ioutil"
+	"log"
+	"os"
+	"path"
+	"reflect"
+	"sort"
+	"strings"
+	"sync"
 )
 
 // Main data store.
 type DataStore struct {
-	dsc *cache.Cache
+	dsc      *cache.Cache
 	obj_list map[string]map[string]bool
-	m sync.RWMutex
+	m        sync.RWMutex
 }
 
 type dsFileStore struct {
-	Cache []byte
+	Cache    []byte
 	Obj_list []byte
 }
 
@@ -79,7 +79,7 @@ func (ds *DataStore) make_key(key_type string, key string) string {
 	return strings.Join(new_key, ":")
 }
 
-func (ds *DataStore) Set(key_type string, key string, val interface{}){
+func (ds *DataStore) Set(key_type string, key string, val interface{}) {
 	ds_key := ds.make_key(key_type, key)
 	ds.m.Lock()
 	defer ds.m.Unlock()
@@ -87,7 +87,7 @@ func (ds *DataStore) Set(key_type string, key string, val interface{}){
 		ds.dsc.Set(ds_key, val, -1)
 	} else {
 		valBuf := new(bytes.Buffer)
-		valItem := &dsItem{ Item: val }
+		valItem := &dsItem{Item: val}
 		enc := gob.NewEncoder(valBuf)
 		err := enc.Encode(valItem)
 		if err != nil {
@@ -98,7 +98,7 @@ func (ds *DataStore) Set(key_type string, key string, val interface{}){
 	ds.addToList(key_type, key)
 }
 
-func (ds *DataStore) Get(key_type string, key string) (interface {}, bool){
+func (ds *DataStore) Get(key_type string, key string) (interface{}, bool) {
 	var val interface{}
 	var found bool
 
@@ -111,7 +111,7 @@ func (ds *DataStore) Get(key_type string, key string) (interface {}, bool){
 	} else {
 		valEnc, f := ds.dsc.Get(ds_key)
 		found = f
-		
+
 		if valEnc != nil {
 			valBuf := bytes.NewBuffer(valEnc.([]byte))
 			valItem := new(dsItem)
@@ -129,7 +129,7 @@ func (ds *DataStore) Get(key_type string, key string) (interface {}, bool){
 	return val, found
 }
 
-func (ds *DataStore) Delete(key_type string, key string){
+func (ds *DataStore) Delete(key_type string, key string) {
 	ds_key := ds.make_key(key_type, key)
 	ds.m.Lock()
 	defer ds.m.Unlock()
@@ -141,14 +141,14 @@ func (ds *DataStore) Delete(key_type string, key string){
  * since it's not a database and we can't just pull that up. This won't be
  * useful normally. */
 
-func (ds *DataStore) addToList(key_type string, key string){
+func (ds *DataStore) addToList(key_type string, key string) {
 	if ds.obj_list[key_type] == nil {
 		ds.obj_list[key_type] = make(map[string]bool)
 	}
 	ds.obj_list[key_type][key] = true
 }
 
-func (ds *DataStore) removeFromList(key_type string, key string){
+func (ds *DataStore) removeFromList(key_type string, key string) {
 	if ds.obj_list[key_type] != nil {
 		/* If it's nil, we don't have to worry about deleting the key */
 		delete(ds.obj_list[key_type], key)
@@ -156,7 +156,7 @@ func (ds *DataStore) removeFromList(key_type string, key string){
 }
 
 // Return a list of all objects of the given type.
-func (ds *DataStore) GetList(key_type string) []string{
+func (ds *DataStore) GetList(key_type string) []string {
 	j := make([]string, len(ds.obj_list[key_type]))
 	i := 0
 	ds.m.RLock()
@@ -258,7 +258,7 @@ func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 	return item, nil
 }
 
-// Get all the log infos currently stored 
+// Get all the log infos currently stored
 func (ds *DataStore) GetLogInfoList() map[int]interface{} {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
@@ -383,16 +383,16 @@ func ChkNilArray(obj interface{}) {
 	for i := 0; i < s.NumField(); i++ {
 		v := s.Field(i)
 		switch v.Kind() {
-			case reflect.Slice:
-				if v.IsNil(){
-					o := reflect.MakeSlice(v.Type(), 0, 0)
-					v.Set(o)
-				}
-			case reflect.Map:
-				m := v.Interface()
-				m = WalkMapForNil(m)
-				g := reflect.ValueOf(m)
-				v.Set(g)
+		case reflect.Slice:
+			if v.IsNil() {
+				o := reflect.MakeSlice(v.Type(), 0, 0)
+				v.Set(o)
+			}
+		case reflect.Map:
+			m := v.Interface()
+			m = WalkMapForNil(m)
+			g := reflect.ValueOf(m)
+			v.Set(g)
 		}
 	}
 }
@@ -402,25 +402,25 @@ func ChkNilArray(obj interface{}) {
 // chef objects in goiardi.
 func WalkMapForNil(r interface{}) interface{} {
 	switch m := r.(type) {
-		case map[string]interface{}:
-			for k, v := range m {
-				m[k] = WalkMapForNil(v)
-			}
-			r = m
-			return r
-		case []string:
-			if m == nil {
-				m = make([]string, 0)
-			} 
-			r = m
-			return r
-		case []interface{}:
-			if m == nil {
-				m = make([]interface{}, 0)
-			}
-			r = m
-			return r
-		default:
-			return r
+	case map[string]interface{}:
+		for k, v := range m {
+			m[k] = WalkMapForNil(v)
+		}
+		r = m
+		return r
+	case []string:
+		if m == nil {
+			m = make([]string, 0)
+		}
+		r = m
+		return r
+	case []interface{}:
+		if m == nil {
+			m = make([]interface{}, 0)
+		}
+		r = m
+		return r
+	default:
+		return r
 	}
 }

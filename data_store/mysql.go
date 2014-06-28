@@ -18,8 +18,8 @@
 package data_store
 
 import (
-	"github.com/ctdk/goiardi/config"
 	"fmt"
+	"github.com/ctdk/goiardi/config"
 	"net"
 	"net/url"
 	"strings"
@@ -28,10 +28,10 @@ import (
 func formatMysqlConStr(p interface{}) (string, error) {
 	params := p.(config.MySQLdb)
 	var (
-		userpass string
-		protocol string
-		address string
-		dbname string
+		userpass      string
+		protocol      string
+		address       string
+		dbname        string
 		extraParamStr string
 	)
 	extraParams := make([]string, 0)

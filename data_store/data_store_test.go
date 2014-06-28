@@ -17,38 +17,38 @@
 package data_store
 
 import (
-	"testing"
-	"io/ioutil"
-	"fmt"
-	"os"
 	"encoding/gob"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"testing"
 )
 
 type dsObj struct {
-	Name string `json:"name"`
-	JsonClass string `json:"json_class"`
-	ChefType string `json:"chef_type"`
-	TestMap map[string]string `json:"testmap"`
+	Name      string            `json:"name"`
+	JsonClass string            `json:"json_class"`
+	ChefType  string            `json:"chef_type"`
+	TestMap   map[string]string `json:"testmap"`
 }
 
 func makeDsObj() *dsObj {
-	return &dsObj{ Name: "baz", JsonClass: "Chef::DsObj", ChefType: "ds_obj" }
+	return &dsObj{Name: "baz", JsonClass: "Chef::DsObj", ChefType: "ds_obj"}
 }
 
-func TestNew(t *testing.T){
+func TestNew(t *testing.T) {
 	if d := New(); d == nil {
 		t.Errorf("New() should have returned a data store object, but returned nil")
 	}
 }
 
-func TestSet(t *testing.T){
+func TestSet(t *testing.T) {
 	ds := New()
 	baz := makeDsObj()
 	gob.Register(baz)
 	ds.Set("foo", "bar", baz)
 }
 
-func TestGet(t *testing.T){
+func TestGet(t *testing.T) {
 	ds := New()
 	val, found := ds.Get("foo", "bar2")
 	if found {
@@ -62,7 +62,7 @@ func TestGet(t *testing.T){
 	}
 }
 
-func TestDelete(t *testing.T){
+func TestDelete(t *testing.T) {
 	ds := New()
 	baz := makeDsObj()
 	ds.Set("foo", "bar3", baz)
@@ -77,9 +77,9 @@ func TestDelete(t *testing.T){
 	}
 }
 
-func TestGetList(t *testing.T){
+func TestGetList(t *testing.T) {
 	ds := New()
-	complist := []string{ "baz", "moo" }
+	complist := []string{"baz", "moo"}
 	baz := makeDsObj()
 	moo := makeDsObj()
 	moo.Name = "moo"

@@ -17,14 +17,14 @@
 package search
 
 import (
-	"testing"
-	"github.com/ctdk/goiardi/node"
-	"github.com/ctdk/goiardi/role"
-	"github.com/ctdk/goiardi/environment"
-	"github.com/ctdk/goiardi/client"
-	"github.com/ctdk/goiardi/data_bag"
 	"encoding/gob"
 	"fmt"
+	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/data_bag"
+	"github.com/ctdk/goiardi/environment"
+	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/role"
+	"testing"
 )
 
 // Most search testing can be handled fine with chef-pedant, but that's no
@@ -51,7 +51,7 @@ var dbag2 *data_bag.DataBag
 var dbag3 *data_bag.DataBag
 var dbag4 *data_bag.DataBag
 
-func makeSearchItems() int{
+func makeSearchItems() int {
 	/* Gotta populate the search index */
 	nodes := make([]*node.Node, 4)
 	roles := make([]*role.Role, 4)
@@ -65,15 +65,15 @@ func makeSearchItems() int{
 	gob.Register(new(data_bag.DataBag))
 
 	for i := 0; i < 4; i++ {
-		nodes[i], _ = node.New(fmt.Sprintf("node%d",i))
+		nodes[i], _ = node.New(fmt.Sprintf("node%d", i))
 		nodes[i].Save()
-		roles[i], _ = role.New(fmt.Sprintf("role%d",i))
+		roles[i], _ = role.New(fmt.Sprintf("role%d", i))
 		roles[i].Save()
-		envs[i], _ = environment.New(fmt.Sprintf("env%d",i))
+		envs[i], _ = environment.New(fmt.Sprintf("env%d", i))
 		envs[i].Save()
-		clients[i], _ = client.New(fmt.Sprintf("client%d",i))
+		clients[i], _ = client.New(fmt.Sprintf("client%d", i))
 		clients[i].Save()
-		dbags[i], _ = data_bag.New(fmt.Sprintf("data_bag%d",i))
+		dbags[i], _ = data_bag.New(fmt.Sprintf("data_bag%d", i))
 		dbags[i].Save()
 		dbi := make(map[string]interface{})
 		dbi["id"] = fmt.Sprintf("dbi%d", i)
@@ -108,78 +108,78 @@ func makeSearchItems() int{
 
 var v = makeSearchItems()
 
-func TestFoo(t *testing.T){
+func TestFoo(t *testing.T) {
 	return
 }
 
-/* Only basic search tests are here. The stronger tests are handled in 
+/* Only basic search tests are here. The stronger tests are handled in
  * chef-pedant, but these tests are meant to check basic search functionality.
  */
 
-func TestSearchNode(t *testing.T){
+func TestSearchNode(t *testing.T) {
 	n, _ := Search("node", "name:node1")
 	if n[0].(*node.Node).Name != "node1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
-func TestSearchNodeAll(t *testing.T){
+func TestSearchNodeAll(t *testing.T) {
 	n, _ := Search("node", "*:*")
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
-func TestSearchRole(t *testing.T){
+func TestSearchRole(t *testing.T) {
 	r, _ := Search("role", "name:role1")
 	if r[0].(*role.Role).Name != "role1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
-func TestSearchRoleAll(t *testing.T){
+func TestSearchRoleAll(t *testing.T) {
 	n, _ := Search("role", "*:*")
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
-func TestSearchEnv(t *testing.T){
+func TestSearchEnv(t *testing.T) {
 	e, _ := Search("environment", "name:env1")
 	if e[0].(*environment.ChefEnvironment).Name != "env1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
-func TestSearchEnvAll(t *testing.T){
+func TestSearchEnvAll(t *testing.T) {
 	n, _ := Search("environment", "*:*")
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
-func TestSearchClient(t *testing.T){
+func TestSearchClient(t *testing.T) {
 	c, _ := Search("client", "name:client1")
 	if c[0].(*client.Client).Name != "client1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
-func TestSearchClientAll(t *testing.T){
+func TestSearchClientAll(t *testing.T) {
 	n, _ := Search("client", "*:*")
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
-func TestSearchDbag(t *testing.T){
+func TestSearchDbag(t *testing.T) {
 	d, _ := Search("data_bag1", "foo:dbag_item_1")
 	if len(d) == 0 {
 		t.Errorf("nothing returned from search")
 	}
 }
 
-func TestSearchDbagAll(t *testing.T){
+func TestSearchDbagAll(t *testing.T) {
 	d, _ := Search("data_bag1", "*:*")
 	if len(d) != 1 {
 		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(d))

@@ -19,24 +19,24 @@
 package main
 
 import (
-	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/search"
-	"github.com/ctdk/goiardi/data_bag"
-	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/client"
-	"github.com/ctdk/goiardi/node"
-	"github.com/ctdk/goiardi/role"
-	"github.com/ctdk/goiardi/environment"
-	"github.com/ctdk/goiardi/indexer"
-	"net/http"
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"regexp"
 	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/data_bag"
+	"github.com/ctdk/goiardi/environment"
+	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/role"
+	"github.com/ctdk/goiardi/search"
+	"github.com/ctdk/goiardi/util"
+	"net/http"
+	"regexp"
+	"strconv"
 )
 
-func search_handler(w http.ResponseWriter, r *http.Request){
+func search_handler(w http.ResponseWriter, r *http.Request) {
 	/* ... and we need search to run the environment tests, so here we
 	 * go. */
 	w.Header().Set("Content-Type", "application/json")
@@ -54,8 +54,8 @@ func search_handler(w http.ResponseWriter, r *http.Request){
 	var (
 		paramQuery string
 		paramsRows int
-		sortOrder string
-		start int
+		sortOrder  string
+		start      int
 	)
 	r.ParseForm()
 	if q, found := r.Form["q"]; found {
@@ -95,104 +95,104 @@ func search_handler(w http.ResponseWriter, r *http.Request){
 	if path_array_len == 1 {
 		/* base end points */
 		switch r.Method {
-			case "GET":
-				if opUser.IsValidator() {
-					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-					return
-				}
-				searchEndpoints := search.GetEndpoints()
-				for _, s := range searchEndpoints {
-					search_response[s] = util.CustomURL(fmt.Sprintf("/search/%s", s))
-				}
-			default:
-				JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		case "GET":
+			if opUser.IsValidator() {
+				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
+			}
+			searchEndpoints := search.GetEndpoints()
+			for _, s := range searchEndpoints {
+				search_response[s] = util.CustomURL(fmt.Sprintf("/search/%s", s))
+			}
+		default:
+			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+			return
 		}
 	} else if path_array_len == 2 {
 		switch r.Method {
-			case "GET", "POST":
-				if opUser.IsValidator() {
-					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-					return
-				}
-				/* start figuring out what comes in POSTS now,
-				 * so the partial search tests don't complain
-				 * anymore. */
-				var partial_data map[string]interface{}
-				if r.Method == "POST" {
-					var perr error
-					partial_data, perr = ParseObjJson(r.Body)
-					if perr != nil {
-						JsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
-						return
-					}
-				}
-
-				idx := path_array[1]
-				rObjs, err := search.Search(idx, paramQuery)
-
-				if err != nil {
-					statusCode := http.StatusBadRequest
-					re := regexp.MustCompile(`^I don't know how to search for .*? data objects.`)
-					if re.MatchString(err.Error()) {
-						statusCode = http.StatusNotFound
-					}
-					JsonErrorReport(w, r, err.Error(), statusCode)
-					return
-				}
-
-				res := make([]map[string]interface{}, len(rObjs))
-				for i, r := range rObjs {
-					switch r := r.(type) {
-						case *client.Client:
-							jc := map[string]interface{}{
-								"name": r.Name,
-								"chef_type": r.ChefType,
-								"json_class": r.JsonClass,
-								"admin": r.Admin,
-								"public_key": r.PublicKey(),
-								"validator": r.Validator,
-							}
-							res[i] = jc
-						default:
-							res[i] = util.MapifyObject(r)
-					}
-				}
-
-				/* If we're doing partial search, tease out the
-				 * fields we want. */
-				if r.Method == "POST" {
-					res, err = partialSearchFormat(res, partial_data)
-					if err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-						return
-					}
-					for x, z := range res {
-						tmpRes := make(map[string]interface{})
-						switch ro := rObjs[x].(type) {
-							case *data_bag.DataBagItem:
-								dbi_url := fmt.Sprintf("/data/%s/%s", ro.DataBagName, ro.RawData["id"].(string))
-								tmpRes["url"] = util.CustomURL(dbi_url)
-							default:
-								tmpRes["url"] = util.ObjURL(rObjs[x].(util.GoiardiObj))
-							}
-						tmpRes["data"] = z
-
-						res[x] = tmpRes
-					}
-				}
-				
-				end := start + paramsRows
-				if end > len(res) {
-					end = len(res)
-				}
-				res = res[start:end]
-				search_response["total"] = len(res)
-				search_response["start"] = start
-				search_response["rows"] = res
-			default:
-				JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		case "GET", "POST":
+			if opUser.IsValidator() {
+				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
+			}
+			/* start figuring out what comes in POSTS now,
+			 * so the partial search tests don't complain
+			 * anymore. */
+			var partial_data map[string]interface{}
+			if r.Method == "POST" {
+				var perr error
+				partial_data, perr = ParseObjJson(r.Body)
+				if perr != nil {
+					JsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
+					return
+				}
+			}
+
+			idx := path_array[1]
+			rObjs, err := search.Search(idx, paramQuery)
+
+			if err != nil {
+				statusCode := http.StatusBadRequest
+				re := regexp.MustCompile(`^I don't know how to search for .*? data objects.`)
+				if re.MatchString(err.Error()) {
+					statusCode = http.StatusNotFound
+				}
+				JsonErrorReport(w, r, err.Error(), statusCode)
+				return
+			}
+
+			res := make([]map[string]interface{}, len(rObjs))
+			for i, r := range rObjs {
+				switch r := r.(type) {
+				case *client.Client:
+					jc := map[string]interface{}{
+						"name":       r.Name,
+						"chef_type":  r.ChefType,
+						"json_class": r.JsonClass,
+						"admin":      r.Admin,
+						"public_key": r.PublicKey(),
+						"validator":  r.Validator,
+					}
+					res[i] = jc
+				default:
+					res[i] = util.MapifyObject(r)
+				}
+			}
+
+			/* If we're doing partial search, tease out the
+			 * fields we want. */
+			if r.Method == "POST" {
+				res, err = partialSearchFormat(res, partial_data)
+				if err != nil {
+					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+					return
+				}
+				for x, z := range res {
+					tmpRes := make(map[string]interface{})
+					switch ro := rObjs[x].(type) {
+					case *data_bag.DataBagItem:
+						dbi_url := fmt.Sprintf("/data/%s/%s", ro.DataBagName, ro.RawData["id"].(string))
+						tmpRes["url"] = util.CustomURL(dbi_url)
+					default:
+						tmpRes["url"] = util.ObjURL(rObjs[x].(util.GoiardiObj))
+					}
+					tmpRes["data"] = z
+
+					res[x] = tmpRes
+				}
+			}
+
+			end := start + paramsRows
+			if end > len(res) {
+				end = len(res)
+			}
+			res = res[start:end]
+			search_response["total"] = len(res)
+			search_response["start"] = start
+			search_response["rows"] = res
+		default:
+			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+			return
 		}
 	} else {
 		/* Say what? Bad request. */
@@ -206,7 +206,7 @@ func search_handler(w http.ResponseWriter, r *http.Request){
 	}
 }
 
-func reindexHandler(w http.ResponseWriter, r *http.Request){
+func reindexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	reindex_response := make(map[string]interface{})
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
@@ -215,58 +215,58 @@ func reindexHandler(w http.ResponseWriter, r *http.Request){
 		return
 	}
 	switch r.Method {
-		case "POST":
-			if !opUser.IsAdmin() {
-				JsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
-				return
-			}
-			reindexObjs := make([]indexer.Indexable, 0, 100)
-			// We clear the index, *then* do the fetch because if
-			// something comes in between the time we fetch the
-			// objects to reindex and when it gets done, they'll
-			// just be added naturally
-			indexer.ClearIndex()
-
-			for _, v := range client.AllClients() {
-				reindexObjs = append(reindexObjs, v)
-			}
-			for _, v := range node.AllNodes() {
-				reindexObjs = append(reindexObjs, v)
-			}
-			for _, v := range role.AllRoles() {
-				reindexObjs = append(reindexObjs, v)
-			}
-			for _, v := range environment.AllEnvironments() {
-				reindexObjs = append(reindexObjs, v)
-			}
-			defaultEnv, _ := environment.Get("_default")
-			reindexObjs = append(reindexObjs, defaultEnv)
-			// data bags have to be done separately
-			dbags := data_bag.GetList()
-			for _, db := range dbags {
-				dbag, err := data_bag.Get(db)
-				if err != nil {
-					continue
-				}
-				dbis := make([]indexer.Indexable, dbag.NumDBItems())
-				i := 0
-				allDBItems, derr := dbag.AllDBItems()
-				if derr != nil {
-					logger.Errorf(derr.Error())
-					continue
-				}
-				for _, k := range allDBItems {
-					n := k
-					dbis[i] = n
-					i++
-				}
-				reindexObjs = append(reindexObjs, dbis...)
-			}
-			indexer.ReIndex(reindexObjs)
-			reindex_response["reindex"] = "OK"
-		default:
-			JsonErrorReport(w, r, "Method not allowed. If you're trying to do something with a data bag named 'reindex', it's not going to work I'm afraid.", http.StatusMethodNotAllowed)
+	case "POST":
+		if !opUser.IsAdmin() {
+			JsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return
+		}
+		reindexObjs := make([]indexer.Indexable, 0, 100)
+		// We clear the index, *then* do the fetch because if
+		// something comes in between the time we fetch the
+		// objects to reindex and when it gets done, they'll
+		// just be added naturally
+		indexer.ClearIndex()
+
+		for _, v := range client.AllClients() {
+			reindexObjs = append(reindexObjs, v)
+		}
+		for _, v := range node.AllNodes() {
+			reindexObjs = append(reindexObjs, v)
+		}
+		for _, v := range role.AllRoles() {
+			reindexObjs = append(reindexObjs, v)
+		}
+		for _, v := range environment.AllEnvironments() {
+			reindexObjs = append(reindexObjs, v)
+		}
+		defaultEnv, _ := environment.Get("_default")
+		reindexObjs = append(reindexObjs, defaultEnv)
+		// data bags have to be done separately
+		dbags := data_bag.GetList()
+		for _, db := range dbags {
+			dbag, err := data_bag.Get(db)
+			if err != nil {
+				continue
+			}
+			dbis := make([]indexer.Indexable, dbag.NumDBItems())
+			i := 0
+			allDBItems, derr := dbag.AllDBItems()
+			if derr != nil {
+				logger.Errorf(derr.Error())
+				continue
+			}
+			for _, k := range allDBItems {
+				n := k
+				dbis[i] = n
+				i++
+			}
+			reindexObjs = append(reindexObjs, dbis...)
+		}
+		indexer.ReIndex(reindexObjs)
+		reindex_response["reindex"] = "OK"
+	default:
+		JsonErrorReport(w, r, "Method not allowed. If you're trying to do something with a data bag named 'reindex', it's not going to work I'm afraid.", http.StatusMethodNotAllowed)
+		return
 	}
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&reindex_response); err != nil {
@@ -279,25 +279,25 @@ func partialSearchFormat(results []map[string]interface{}, partialFormat map[str
 	psearchKeys := make(map[string][]string, len(partialFormat))
 	for k, v := range partialFormat {
 		switch v := v.(type) {
-			case []interface{}:
-				psearchKeys[k] = make([]string, len(v))
-				for i, j := range v {
-					switch j := j.(type) {
-						case string:
-							psearchKeys[k][i] = j
-						default:
-							err := fmt.Errorf("Partial search key %s badly formatted: %T %v", k, j, j)
-							return nil, err
-					}
-				}
-			case []string:
-				psearchKeys[k] = make([]string, len(v))
-				for i, j := range v {
+		case []interface{}:
+			psearchKeys[k] = make([]string, len(v))
+			for i, j := range v {
+				switch j := j.(type) {
+				case string:
 					psearchKeys[k][i] = j
+				default:
+					err := fmt.Errorf("Partial search key %s badly formatted: %T %v", k, j, j)
+					return nil, err
 				}
-			default:
-				err := fmt.Errorf("Partial search key %s badly formatted: %T %v", k, v, v)
-				return nil, err
+			}
+		case []string:
+			psearchKeys[k] = make([]string, len(v))
+			for i, j := range v {
+				psearchKeys[k][i] = j
+			}
+		default:
+			err := fmt.Errorf("Partial search key %s badly formatted: %T %v", k, v, v)
+			return nil, err
 		}
 	}
 	newResults := make([]map[string]interface{}, len(results))
@@ -320,26 +320,26 @@ func partialSearchFormat(results []map[string]interface{}, partialFormat map[str
 						// bear in mind precedence. We need to
 						// overwrite later values with earlier
 						// ones.
-						keyRange := []string{ "raw_data", "default", "default_attributes", "normal", "override", "override_attributes", "automatic" }
+						keyRange := []string{"raw_data", "default", "default_attributes", "normal", "override", "override_attributes", "automatic"}
 						for _, r := range keyRange {
 							tval := walk(j[r], vals[0:])
 							if tval != nil {
 								switch pv := pval.(type) {
+								case map[string]interface{}:
+									// only merge if tval is also a map[string]interface{}
+									switch tval := tval.(type) {
 									case map[string]interface{}:
-										// only merge if tval is also a map[string]interface{}
-										switch tval := tval.(type) {
-											case map[string]interface{}:
-												for g, h := range tval {
-													pv[g] = h
-												}
-												pval = pv
+										for g, h := range tval {
+											pv[g] = h
 										}
-									default:
-										pval = tval
+										pval = pv
+									}
+								default:
+									pval = tval
 								}
 							}
 						}
-					} 
+					}
 				}
 			}
 			newResults[i][key] = pval
@@ -348,27 +348,27 @@ func partialSearchFormat(results []map[string]interface{}, partialFormat map[str
 	return newResults, nil
 }
 
-func walk (v interface{}, keys []string) (interface{}) {
+func walk(v interface{}, keys []string) interface{} {
 	switch v := v.(type) {
-		case map[string]interface{}:
-			if _, found := v[keys[0]]; found {
-				if len(keys) > 1 {
-					return walk(v[keys[0]], keys[1:])
-				} else {
-					return v[keys[0]]
-				}
+	case map[string]interface{}:
+		if _, found := v[keys[0]]; found {
+			if len(keys) > 1 {
+				return walk(v[keys[0]], keys[1:])
 			} else {
-				return nil
+				return v[keys[0]]
 			}
-		case map[string]string:
-			return v[keys[0]]
-		case map[string][]string:
-			return v[keys[0]]
-		default:
-			if len(keys) == 1 {
-				return v
-			} else {
-				return nil
-			}
+		} else {
+			return nil
+		}
+	case map[string]string:
+		return v[keys[0]]
+	case map[string][]string:
+		return v[keys[0]]
+	default:
+		if len(keys) == 1 {
+			return v
+		} else {
+			return nil
+		}
 	}
 }

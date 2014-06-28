@@ -18,8 +18,8 @@
 package node
 
 import (
-	"testing"
 	"encoding/gob"
+	"testing"
 )
 
 func TestActionAtADistance(t *testing.T) {

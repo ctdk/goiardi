@@ -17,9 +17,11 @@
 package main
 
 import (
-	"encoding/json"
-	"encoding/base64"
 	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/data_bag"
@@ -28,14 +30,12 @@ import (
 	"github.com/ctdk/goiardi/log_info"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/report"
-	"github.com/ctdk/goiardi/role" 
+	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
-	"github.com/ctdk/goiardi/user" 
-	"os"
+	"github.com/ctdk/goiardi/user"
 	"io/ioutil"
+	"os"
 	"time"
-	"fmt"
-	"github.com/ctdk/goas/v2/logger"
 )
 
 func importAll(fileName string) error {
@@ -217,7 +217,7 @@ func importAll(fileName string) error {
 			for i, c := range sbck {
 				sbChecksums[i] = c.(string)
 			}
-			sbox := &sandbox.Sandbox{ Id: sbid, CreationTime: sbTime, Completed: sbcomplete, Checksums: sbChecksums }
+			sbox := &sandbox.Sandbox{Id: sbid, CreationTime: sbTime, Completed: sbcomplete, Checksums: sbChecksums}
 			if err = sbox.Save(); err != nil {
 				return err
 			}
@@ -241,14 +241,14 @@ func importAll(fileName string) error {
 				if err != nil {
 					return err
 				}
-				 v.(map[string]interface{})["start_time"] = t.Format(report.ReportTimeFormat)
+				v.(map[string]interface{})["start_time"] = t.Format(report.ReportTimeFormat)
 			}
 			if et, ok := v.(map[string]interface{})["end_time"].(string); ok {
 				t, err := time.Parse(time.RFC3339, et)
 				if err != nil {
 					return err
 				}
-				 v.(map[string]interface{})["end_time"] = t.Format(report.ReportTimeFormat)
+				v.(map[string]interface{})["end_time"] = t.Format(report.ReportTimeFormat)
 			}
 			if r, err := report.NewFromJson(nodeName, v.(map[string]interface{})); err != nil {
 				return err
@@ -267,7 +267,7 @@ func importAll(fileName string) error {
 					}
 				}
 			}
-			
+
 		}
 
 	} else {

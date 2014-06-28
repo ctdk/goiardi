@@ -19,10 +19,10 @@ package report
 /* Generic SQL funcs for reports */
 
 import (
-	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/config"
 	"database/sql"
 	"fmt"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
 	"log"
 	"time"
 )
@@ -55,7 +55,7 @@ func checkForReportSQL(dbhandle data_store.Dbhandle, runId string) (bool, error)
 	}
 }
 
-func (r *Report)fillReportFromSQL(row data_store.ResRow) error{
+func (r *Report) fillReportFromSQL(row data_store.ResRow) error {
 	if config.Config.UseMySQL {
 		return r.fillReportFromMySQL(row)
 	} else if config.Config.UsePostgreSQL {
@@ -87,7 +87,7 @@ func getReportSQL(runId string) (*Report, error) {
 	return r, nil
 }
 
-func (r *Report)deleteSQL() error {
+func (r *Report) deleteSQL() error {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		return nil

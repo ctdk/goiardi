@@ -18,30 +18,30 @@
 package log_info
 
 import (
-	"github.com/ctdk/goiardi/data_store"
+	"database/sql"
+	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/util"
-	"fmt"
-	"time"
 	"reflect"
-	"database/sql"
 	"sort"
-	"github.com/ctdk/goas/v2/logger"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type LogInfo struct {
-	Actor actor.Actor `json:"-"`
-	ActorInfo string `json:"actor_info"`
-	ActorType string `json:"actor_type"`
-	Time time.Time `json:"time"`
-	Action string `json:"action"`
-	ObjectType string `json:"object_type"`
-	ObjectName string `json:"object_name"`
-	ExtendedInfo string `json:"extended_info"`
-	Id int `json:"id"`
+	Actor        actor.Actor `json:"-"`
+	ActorInfo    string      `json:"actor_info"`
+	ActorType    string      `json:"actor_type"`
+	Time         time.Time   `json:"time"`
+	Action       string      `json:"action"`
+	ObjectType   string      `json:"object_type"`
+	ObjectName   string      `json:"object_name"`
+	ExtendedInfo string      `json:"extended_info"`
+	Id           int         `json:"id"`
 }
 
 // Write an event of the action type, performed by the given actor, against the
@@ -107,12 +107,12 @@ func Import(logData map[string]interface{}) error {
 	}
 }
 
-func (le *LogInfo)writeEventInMem() error {
+func (le *LogInfo) writeEventInMem() error {
 	ds := data_store.New()
 	return ds.SetLogInfo(le)
 }
 
-func (le *LogInfo)importEventInMem() error {
+func (le *LogInfo) importEventInMem() error {
 	ds := data_store.New()
 	return ds.SetLogInfo(le, le.Id)
 }
@@ -144,7 +144,7 @@ func Get(id int) (*LogInfo, error) {
 	return le, nil
 }
 
-func (le *LogInfo)Delete() error {
+func (le *LogInfo) Delete() error {
 	if config.UsingDB() {
 		return le.deleteSQL()
 	} else {
@@ -163,8 +163,7 @@ func PurgeLogInfos(id int) (int64, error) {
 	}
 }
 
-
-// Get a slice of the logged events. May be called with an offset and limit, 
+// Get a slice of the logged events. May be called with an offset and limit,
 // (in that order) but that is not required. The offset can be specified without
 // a limit, but a limit requires an offset (which can be 0). The map of search
 // params may be nil, but something must be present.
@@ -213,7 +212,7 @@ func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, err
 		} else {
 			offset = 0
 		}
-		
+
 		ds := data_store.New()
 		arr := ds.GetLogInfoList()
 		lis := make([]*LogInfo, len(arr))
@@ -252,7 +251,7 @@ func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, err
 	}
 }
 
-func (l *LogInfo)checkTimeRange(from, until time.Time) bool {
+func (l *LogInfo) checkTimeRange(from, until time.Time) bool {
 	return l.Time.After(from) && l.Time.Before(until)
 }
 

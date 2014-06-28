@@ -17,10 +17,10 @@
 package client
 
 import (
-	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/util"
 	"database/sql"
 	"fmt"
+	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
@@ -30,7 +30,7 @@ func (c *Client) saveMySQL() error {
 		return err
 	}
 	// check for a user with this name first. If orgs are ever
-	// implemented, it will only need to check for a user 
+	// implemented, it will only need to check for a user
 	// associated with this organization
 	err = chkForUser(tx, c.Name)
 	if err != nil {
@@ -92,5 +92,5 @@ func chkForUser(handle data_store.Dbhandle, name string) error {
 	} else {
 		err = nil
 	}
-	return err 
+	return err
 }

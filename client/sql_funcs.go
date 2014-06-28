@@ -17,9 +17,9 @@
 package client
 
 import (
-	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/config"
 	"database/sql"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
 	"log"
 )
 
@@ -107,7 +107,7 @@ func numAdminsSQL() int {
 
 func getListSQL() []string {
 	var client_list []string
-	var sqlStatement string 
+	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT name FROM clients"
 	} else if config.Config.UsePostgreSQL {

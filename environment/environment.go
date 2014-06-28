@@ -22,31 +22,31 @@
 package environment
 
 import (
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/cookbook"
-	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/indexer"
-	"fmt"
-	"sort"
-	"net/http"
 	"database/sql"
+	"fmt"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/cookbook"
+	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/util"
+	"net/http"
+	"sort"
 )
 
 type ChefEnvironment struct {
-	Name string `json:"name"`
-	ChefType string `json:"chef_type"`
-	JsonClass string `json:"json_class"`
-	Description string `json:"description"`
-	Default map[string]interface{} `json:"default_attributes"`
-	Override map[string]interface{} `json:"override_attributes"`
-	CookbookVersions map[string]string `json:"cookbook_versions"`
+	Name             string                 `json:"name"`
+	ChefType         string                 `json:"chef_type"`
+	JsonClass        string                 `json:"json_class"`
+	Description      string                 `json:"description"`
+	Default          map[string]interface{} `json:"default_attributes"`
+	Override         map[string]interface{} `json:"override_attributes"`
+	CookbookVersions map[string]string      `json:"cookbook_versions"`
 }
 
 // Creates a new environment, returning an error if the environment already
 // exists or you try to create an environment named "_default".
-func New(name string) (*ChefEnvironment, util.Gerror){
-	if !util.ValidateEnvName(name){
+func New(name string) (*ChefEnvironment, util.Gerror) {
+	if !util.ValidateEnvName(name) {
 		err := util.Errorf("Field 'name' invalid")
 		err.SetStatus(http.StatusBadRequest)
 		return nil, err
@@ -69,20 +69,20 @@ func New(name string) (*ChefEnvironment, util.Gerror){
 		err := util.Errorf("Environment already exists")
 		return nil, err
 	}
-	
+
 	env := &ChefEnvironment{
-		Name: name,
-		ChefType: "environment",
-		JsonClass: "Chef::Environment",
-		Default: map[string]interface{}{},
-		Override: map[string]interface{}{},
+		Name:             name,
+		ChefType:         "environment",
+		JsonClass:        "Chef::Environment",
+		Default:          map[string]interface{}{},
+		Override:         map[string]interface{}{},
 		CookbookVersions: map[string]string{},
 	}
 	return env, nil
 }
 
 // Create a new environment from JSON uploaded to the server.
-func NewFromJson(json_env map[string]interface{}) (*ChefEnvironment, util.Gerror){
+func NewFromJson(json_env map[string]interface{}) (*ChefEnvironment, util.Gerror) {
 	env, err := New(json_env["name"].(string))
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func NewFromJson(json_env map[string]interface{}) (*ChefEnvironment, util.Gerror
 }
 
 // Updates an existing environment from JSON uploaded to the server.
-func (e *ChefEnvironment)UpdateFromJson(json_env map[string]interface{}) util.Gerror {
+func (e *ChefEnvironment) UpdateFromJson(json_env map[string]interface{}) util.Gerror {
 	if e.Name != json_env["name"].(string) {
 		err := util.Errorf("Environment name %s and %s from JSON do not match", e.Name, json_env["name"].(string))
 		return err
@@ -106,8 +106,8 @@ func (e *ChefEnvironment)UpdateFromJson(json_env map[string]interface{}) util.Ge
 	}
 
 	/* Validations */
-	valid_elements := []string{ "name", "chef_type", "json_class", "description", "default_attributes", "override_attributes", "cookbook_versions" }
-	ValidElem:
+	valid_elements := []string{"name", "chef_type", "json_class", "description", "default_attributes", "override_attributes", "cookbook_versions"}
+ValidElem:
 	for k := range json_env {
 		for _, i := range valid_elements {
 			if k == i {
@@ -120,7 +120,7 @@ func (e *ChefEnvironment)UpdateFromJson(json_env map[string]interface{}) util.Ge
 
 	var verr util.Gerror
 
-	attrs := []string{ "default_attributes", "override_attributes" }
+	attrs := []string{"default_attributes", "override_attributes"}
 	for _, a := range attrs {
 		json_env[a], verr = util.ValidateAttributes(a, json_env[a])
 		if verr != nil {
@@ -141,7 +141,6 @@ func (e *ChefEnvironment)UpdateFromJson(json_env map[string]interface{}) util.Ge
 			return verr
 		}
 	}
-
 
 	json_env["chef_type"], verr = util.ValidateAsFieldString(json_env["chef_type"])
 	if verr != nil {
@@ -199,14 +198,14 @@ func (e *ChefEnvironment)UpdateFromJson(json_env map[string]interface{}) util.Ge
 	e.Override = json_env["override_attributes"].(map[string]interface{})
 	/* clear out, then loop over the cookbook versions */
 	e.CookbookVersions = make(map[string]string, len(json_env["cookbook_versions"].(map[string]interface{})))
-	for c, v := range json_env["cookbook_versions"].(map[string]interface{}){
+	for c, v := range json_env["cookbook_versions"].(map[string]interface{}) {
 		e.CookbookVersions[c] = v.(string)
 	}
 
 	return nil
 }
 
-func Get(env_name string) (*ChefEnvironment, util.Gerror){
+func Get(env_name string) (*ChefEnvironment, util.Gerror) {
 	if env_name == "_default" {
 		return defaultEnvironment(), nil
 	}
@@ -240,7 +239,7 @@ func Get(env_name string) (*ChefEnvironment, util.Gerror){
 		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
-	
+
 	return env, nil
 }
 
@@ -267,14 +266,14 @@ func MakeDefaultEnvironment() {
 	indexer.IndexObj(de)
 }
 
-func defaultEnvironment() (*ChefEnvironment) {
+func defaultEnvironment() *ChefEnvironment {
 	return &ChefEnvironment{
-		Name: "_default",
-		ChefType: "environment",
-		JsonClass: "Chef::Environment",
-		Description: "The default Chef environment",
-		Default: map[string]interface{}{},
-		Override: map[string]interface{}{},
+		Name:             "_default",
+		ChefType:         "environment",
+		JsonClass:        "Chef::Environment",
+		Description:      "The default Chef environment",
+		Default:          map[string]interface{}{},
+		Override:         map[string]interface{}{},
 		CookbookVersions: map[string]string{},
 	}
 }
@@ -305,7 +304,7 @@ func (e *ChefEnvironment) Save() util.Gerror {
 	return nil
 }
 
-// Deletes the environment, returning an error if you try to delete the 
+// Deletes the environment, returning an error if you try to delete the
 // "_default" environment.
 func (e *ChefEnvironment) Delete() error {
 	if e.Name == "_default" {
@@ -349,7 +348,7 @@ func (e *ChefEnvironment) cookbookList() []*cookbook.Cookbook {
 	return cookbook.AllCookbooks()
 }
 
-// Gets a hash of the cookbooks and their versions available to this 
+// Gets a hash of the cookbooks and their versions available to this
 // environment.
 func (e *ChefEnvironment) AllCookbookHash(num_versions interface{}) map[string]interface{} {
 	cb_hash := make(map[string]interface{})
@@ -376,7 +375,7 @@ func (e *ChefEnvironment) RecipeList() []string {
 			continue
 		}
 		rlist, _ := cbv.RecipeList()
-		
+
 		for _, recipe := range rlist {
 			recipe_list[recipe] = recipe
 		}

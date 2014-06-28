@@ -27,15 +27,15 @@
 package filestore
 
 import (
-	"io"
-	"fmt"
-	"github.com/ctdk/goiardi/data_store"
 	"crypto/md5"
-	"github.com/ctdk/goiardi/config"
 	"database/sql"
+	"fmt"
+	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
+	"io"
 	"os"
 	"path"
-	"github.com/ctdk/goas/v2/logger"
 )
 
 /* Local filestorage struct. Add fields as needed. */
@@ -45,7 +45,7 @@ import (
 // is stored as a pointer to an array of bytes.
 type FileStore struct {
 	Chksum string
-	Data *[]byte
+	Data   *[]byte
 }
 
 /* New, for this, includes giving it the file data */
@@ -53,7 +53,7 @@ type FileStore struct {
 // Create a new filestore item with the given checksum, io.ReadCloser holding
 // the file's data, and the length of the file. If the file data's checksum does
 // not match the provided checksum an error will be trhown.
-func New(chksum string, data io.ReadCloser, data_length int64) (*FileStore, error){
+func New(chksum string, data io.ReadCloser, data_length int64) (*FileStore, error) {
 	if _, err := Get(chksum); err == nil {
 		err := fmt.Errorf("File with checksum %s already exists.", chksum)
 		return nil, err
@@ -74,14 +74,14 @@ func New(chksum string, data io.ReadCloser, data_length int64) (*FileStore, erro
 		chk_err := fmt.Errorf("Checksum %s did not match original %s!", ver_chksum, chksum)
 		return nil, chk_err
 	}
-	filestore := &FileStore {
+	filestore := &FileStore{
 		Chksum: chksum,
-		Data: &file_data,
+		Data:   &file_data,
 	}
 	return filestore, nil
 }
 
-func Get(chksum string) (*FileStore, error){
+func Get(chksum string) (*FileStore, error) {
 	var filestore *FileStore
 	var found bool
 	if config.UsingDB() {
@@ -119,7 +119,7 @@ func Get(chksum string) (*FileStore, error){
 func (f *FileStore) loadData() error {
 	/* If this is called, file data is stored on disk */
 	chkPath := path.Join(config.Config.LocalFstoreDir, f.Chksum)
-	
+
 	fp, err := os.Open(chkPath)
 	if err != nil {
 		return err
@@ -211,7 +211,7 @@ func DeleteHashes(file_hashes []string) {
 		deleteHashesPostgreSQL(file_hashes)
 	} else {
 		for _, ff := range file_hashes {
-		del_file, err := Get(ff)
+			del_file, err := Get(ff)
 			if err != nil {
 				logger.Debugf("Strange, we got an error trying to get %s to delete it.\n", ff)
 				logger.Debugf(err.Error())

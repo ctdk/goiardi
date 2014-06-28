@@ -18,8 +18,8 @@
 package data_store
 
 import (
-	"github.com/ctdk/goiardi/config"
 	"fmt"
+	"github.com/ctdk/goiardi/config"
 	"strings"
 )
 

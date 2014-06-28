@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-func TestTimeSlewSuccess(t *testing.T){
+func TestTimeSlewSuccess(t *testing.T) {
 	dur, _ := time.ParseDuration("15m")
 	nowTime := time.Now().UTC()
 	nowStr := nowTime.Format(time.RFC3339)

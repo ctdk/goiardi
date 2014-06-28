@@ -19,18 +19,18 @@
 package main
 
 import (
-	"net/http"
-	"github.com/ctdk/goiardi/role"
-	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/environment"
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/role"
+	"github.com/ctdk/goiardi/util"
+	"net/http"
 )
 
-func role_handler(w http.ResponseWriter, r *http.Request){
+func role_handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
@@ -53,78 +53,78 @@ func role_handler(w http.ResponseWriter, r *http.Request){
 	if len(path_array) == 2 {
 		/* Normal /roles/NAME case */
 		switch r.Method {
-			case "GET", "DELETE":
-				if opUser.IsValidator() || (!opUser.IsAdmin() && r.Method == "DELETE") {
-					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-					return
-				}
-				enc := json.NewEncoder(w)
-				if err = enc.Encode(&chef_role); err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				if r.Method == "DELETE" {
-					err = chef_role.Delete()
-					if err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-						return
-					}
-					if lerr := log_info.LogEvent(opUser, chef_role, "delete"); lerr != nil {
-						JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
-						return
-					}
-				}
-			case "PUT":
-				if !opUser.IsAdmin() {
-					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-					return
-				}
-				role_data, jerr := ParseObjJson(r.Body)
-				if jerr != nil {
-					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-					return
-				}
-				if _, ok := role_data["name"]; !ok {
-					role_data["name"] = role_name
-				}
-				json_name, sterr := util.ValidateAsString(role_data["name"])
-				if sterr != nil {
-					JsonErrorReport(w, r, sterr.Error(), sterr.Status())
-					return
-				}
-				if role_name != role_data["name"].(string) {
-					JsonErrorReport(w, r, "Role name mismatch", http.StatusBadRequest)
-					return
-				} else {
-					if json_name == "" {
-						role_data["name"] = role_name
-					}
-					nerr := chef_role.UpdateFromJson(role_data)
-					if nerr != nil {
-						JsonErrorReport(w, r, nerr.Error(), nerr.Status())
-						return
-					}
-				}
-	
-				err = chef_role.Save()
+		case "GET", "DELETE":
+			if opUser.IsValidator() || (!opUser.IsAdmin() && r.Method == "DELETE") {
+				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				return
+			}
+			enc := json.NewEncoder(w)
+			if err = enc.Encode(&chef_role); err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if r.Method == "DELETE" {
+				err = chef_role.Delete()
 				if err != nil {
 					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := log_info.LogEvent(opUser, chef_role, "modify"); lerr != nil {
+				if lerr := log_info.LogEvent(opUser, chef_role, "delete"); lerr != nil {
 					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
-				enc := json.NewEncoder(w)
-				if err = enc.Encode(&chef_role); err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			}
+		case "PUT":
+			if !opUser.IsAdmin() {
+				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				return
+			}
+			role_data, jerr := ParseObjJson(r.Body)
+			if jerr != nil {
+				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return
+			}
+			if _, ok := role_data["name"]; !ok {
+				role_data["name"] = role_name
+			}
+			json_name, sterr := util.ValidateAsString(role_data["name"])
+			if sterr != nil {
+				JsonErrorReport(w, r, sterr.Error(), sterr.Status())
+				return
+			}
+			if role_name != role_data["name"].(string) {
+				JsonErrorReport(w, r, "Role name mismatch", http.StatusBadRequest)
+				return
+			} else {
+				if json_name == "" {
+					role_data["name"] = role_name
 				}
-			default:
-				JsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
+				nerr := chef_role.UpdateFromJson(role_data)
+				if nerr != nil {
+					JsonErrorReport(w, r, nerr.Error(), nerr.Status())
+					return
+				}
+			}
+
+			err = chef_role.Save()
+			if err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if lerr := log_info.LogEvent(opUser, chef_role, "modify"); lerr != nil {
+				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				return
+			}
+			enc := json.NewEncoder(w)
+			if err = enc.Encode(&chef_role); err != nil {
+				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			}
+		default:
+			JsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
 		}
 	} else {
 		var environment_name string
-		if len(path_array) == 4{
+		if len(path_array) == 4 {
 			environment_name = path_array[3]
 			if _, err := environment.Get(environment_name); err != nil {
 				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
@@ -133,44 +133,44 @@ func role_handler(w http.ResponseWriter, r *http.Request){
 		}
 		/* only method for the /roles/NAME/environment stuff is GET */
 		switch r.Method {
-			case "GET":
-				/* If we have an environment name, return the
-				 * environment specific run_list. Otherwise,
-				 * return the environments we have run lists
-				 * for. Always at least return "_default",
-				 * which refers to run_list. */
-				if opUser.IsValidator() {
-					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-					return
-				}
+		case "GET":
+			/* If we have an environment name, return the
+			 * environment specific run_list. Otherwise,
+			 * return the environments we have run lists
+			 * for. Always at least return "_default",
+			 * which refers to run_list. */
+			if opUser.IsValidator() {
+				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				return
+			}
 
-				enc := json.NewEncoder(w)
-				if environment_name != "" {
-					var run_list []string
-					if environment_name == "_default" {
-						run_list = chef_role.RunList
-					} else {
-						run_list = chef_role.EnvRunLists[environment_name]
-					}
-					resp := make(map[string][]string, 1)
-					resp["run_list"] = run_list
-					if err = enc.Encode(&resp); err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-					}
+			enc := json.NewEncoder(w)
+			if environment_name != "" {
+				var run_list []string
+				if environment_name == "_default" {
+					run_list = chef_role.RunList
 				} else {
-					role_envs := make([]string, len(chef_role.EnvRunLists) + 1)
-					role_envs[0] = "_default"
-					i := 1
-					for k, _ := range chef_role.EnvRunLists {
-						role_envs[i] = k
-						i++
-					}
-					if err = enc.Encode(&role_envs); err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-					}
+					run_list = chef_role.EnvRunLists[environment_name]
 				}
-			default:
-				JsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
+				resp := make(map[string][]string, 1)
+				resp["run_list"] = run_list
+				if err = enc.Encode(&resp); err != nil {
+					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				}
+			} else {
+				role_envs := make([]string, len(chef_role.EnvRunLists)+1)
+				role_envs[0] = "_default"
+				i := 1
+				for k, _ := range chef_role.EnvRunLists {
+					role_envs[i] = k
+					i++
+				}
+				if err = enc.Encode(&role_envs); err != nil {
+					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				}
+			}
+		default:
+			JsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
 		}
 	}
 }

@@ -16,42 +16,42 @@
  * limitations under the License.
  */
 
-/* 
+/*
 Package client defines the Chef clients. Formerly clients and users were the
 same kind of object and stored together, but they have now been split apart.
 They do both implement the Actor interface, though. Clients are the more usual
-case for the nodes interacting with the server, but users are used for the 
-webui and often for general user (as opposed to node) interactions with the 
+case for the nodes interacting with the server, but users are used for the
+webui and often for general user (as opposed to node) interactions with the
 server.
 */
 package client
 
 import (
-	"github.com/ctdk/goiardi/data_store"
-	"fmt"
-	"github.com/ctdk/goiardi/chef_crypto"
-	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/indexer"
-	"github.com/ctdk/goiardi/config"
-	"net/http"
-	"encoding/gob"
 	"bytes"
 	"database/sql"
+	"encoding/gob"
+	"fmt"
+	"github.com/ctdk/goiardi/chef_crypto"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/util"
+	"net/http"
 )
 
-// A client and a user are very similar, with some small differences - users 
-// can never be validators, while clients don't have passwords. Generally nodes 
-// and the like will be clients, while people interacting with the goiardi 
+// A client and a user are very similar, with some small differences - users
+// can never be validators, while clients don't have passwords. Generally nodes
+// and the like will be clients, while people interacting with the goiardi
 // server will be users.
 type Client struct {
-	Name string `json:"name"`
-	NodeName string `json:"node_name"`
-	JsonClass string `json:"json_class"`
-	ChefType string `json:"chef_type"`
-	Validator bool `json:"validator"`
-	Orgname string `json:"orgname"`
-	pubKey string
-	Admin bool `json:"admin"`
+	Name        string `json:"name"`
+	NodeName    string `json:"node_name"`
+	JsonClass   string `json:"json_class"`
+	ChefType    string `json:"chef_type"`
+	Validator   bool   `json:"validator"`
+	Orgname     string `json:"orgname"`
+	pubKey      string
+	Admin       bool   `json:"admin"`
 	Certificate string `json:"certificate"`
 }
 
@@ -59,32 +59,32 @@ type Client struct {
 // by a different struct now. However, they're staying because they may still be
 // useful.
 type privClient struct {
-	Name *string `json:"name"`
-	NodeName *string `json:"node_name"`
-	JsonClass *string `json:"json_class"`
-	ChefType *string `json:"chef_type"`
-	Validator *bool `json:"validator"`
-	Orgname *string `json:"orgname"`
-	PublicKey *string `json:"public_key"`
-	Admin *bool `json:"admin"`
+	Name        *string `json:"name"`
+	NodeName    *string `json:"node_name"`
+	JsonClass   *string `json:"json_class"`
+	ChefType    *string `json:"chef_type"`
+	Validator   *bool   `json:"validator"`
+	Orgname     *string `json:"orgname"`
+	PublicKey   *string `json:"public_key"`
+	Admin       *bool   `json:"admin"`
 	Certificate *string `json:"certificate"`
 }
 
 // For flattening. Needs the json tags for flattening.
 type flatClient struct {
-	Name string `json:"name"`
-	NodeName string `json:"node_name"`
-	JsonClass string `json:"json_class"`
-	ChefType string `json:"chef_type"`
-	Validator bool `json:"validator"`
-	Orgname string `json:"orgname"`
-	PublicKey string `json:"public_key"`
-	Admin bool `json:"admin"`
+	Name        string `json:"name"`
+	NodeName    string `json:"node_name"`
+	JsonClass   string `json:"json_class"`
+	ChefType    string `json:"chef_type"`
+	Validator   bool   `json:"validator"`
+	Orgname     string `json:"orgname"`
+	PublicKey   string `json:"public_key"`
+	Admin       bool   `json:"admin"`
 	Certificate string `json:"certificate"`
 }
 
 // Creates a new client.
-func New(clientname string) (*Client, util.Gerror){
+func New(clientname string) (*Client, util.Gerror) {
 	var found bool
 	var err util.Gerror
 	if config.UsingDB() {
@@ -108,21 +108,21 @@ func New(clientname string) (*Client, util.Gerror){
 		return nil, err
 	}
 	client := &Client{
-		Name: clientname,
-		NodeName: clientname,
-		ChefType: "client",
-		JsonClass: "Chef::ApiClient",
-		Validator: false,
-		Orgname: "",
-		pubKey: "",
-		Admin: false,
+		Name:        clientname,
+		NodeName:    clientname,
+		ChefType:    "client",
+		JsonClass:   "Chef::ApiClient",
+		Validator:   false,
+		Orgname:     "",
+		pubKey:      "",
+		Admin:       false,
 		Certificate: "",
 	}
 	return client, nil
 }
 
 // Gets an actor from the data store.
-func Get(clientname string) (*Client, util.Gerror){
+func Get(clientname string) (*Client, util.Gerror) {
 	var client *Client
 	var err error
 
@@ -295,7 +295,7 @@ func NewFromJson(json_actor map[string]interface{}) (*Client, util.Gerror) {
 
 // Update a client/user from a json object. Does a bunch of validations inside
 // rather than in the handler.
-func (c *Client)UpdateFromJson(json_actor map[string]interface{}) util.Gerror {
+func (c *Client) UpdateFromJson(json_actor map[string]interface{}) util.Gerror {
 	actor_name, nerr := util.ValidateAsString(json_actor["name"])
 	if nerr != nil {
 		return nerr
@@ -307,8 +307,8 @@ func (c *Client)UpdateFromJson(json_actor map[string]interface{}) util.Gerror {
 
 	/* Validations. */
 	/* Invalid top level elements */
-	valid_elements := []string{ "name", "json_class", "chef_type", "validator", "org_name", "orgname", "public_key", "private_key", "admin", "certificate", "password", "node_name" }
-	ValidElem:
+	valid_elements := []string{"name", "json_class", "chef_type", "validator", "org_name", "orgname", "public_key", "private_key", "admin", "certificate", "password", "node_name"}
+ValidElem:
 	for k, _ := range json_actor {
 		for _, i := range valid_elements {
 			if k == i {
@@ -333,7 +333,6 @@ func (c *Client)UpdateFromJson(json_actor map[string]interface{}) util.Gerror {
 			return verr
 		}
 	}
-
 
 	json_actor["chef_type"], verr = util.ValidateAsFieldString(json_actor["chef_type"])
 	if verr != nil {
@@ -367,7 +366,7 @@ func (c *Client)UpdateFromJson(json_actor map[string]interface{}) util.Gerror {
 	if validator_val, ok := json_actor["validator"]; ok {
 		if vb, verr = util.ValidateAsBool(validator_val); verr != nil {
 			return verr
-		} 
+		}
 	}
 	if ab && vb {
 		verr = util.Errorf("Client can be either an admin or a validator, but not both.")
@@ -383,7 +382,7 @@ func (c *Client)UpdateFromJson(json_actor map[string]interface{}) util.Gerror {
 	return nil
 }
 
-// Checks that the provided public key is valid. Wrapper around 
+// Checks that the provided public key is valid. Wrapper around
 // chef_crypto.ValidatePublicKey(), but with a different error type.
 func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
 	ok, pkerr := chef_crypto.ValidatePublicKey(publicKey)
@@ -408,8 +407,8 @@ func GetList() []string {
 
 // Generate a new set of RSA keys for the client. The new private key is saved
 // with the client, the public key is given to the client and not saved on the
-// server at all. 
-func (c *Client) GenerateKeys() (string, error){
+// server at all.
+func (c *Client) GenerateKeys() (string, error) {
 	priv_pem, pub_pem, err := chef_crypto.GenerateRSAKeys()
 	if err != nil {
 		return "", err
@@ -456,16 +455,16 @@ func (c *Client) Flatten() []string {
 
 // Is the client an admin? If use-auth is false, this always returns true.
 func (c *Client) IsAdmin() bool {
-	if !useAuth(){
+	if !useAuth() {
 		return true
 	}
 	return c.Admin
 }
 
-// Is the client a validator client? If use-auth is false, this always returns 
-// false. 
+// Is the client a validator client? If use-auth is false, this always returns
+// false.
 func (c *Client) IsValidator() bool {
-	if !useAuth(){
+	if !useAuth() {
 		return false
 	}
 	if c.ChefType == "client" && c.Validator {
@@ -476,7 +475,7 @@ func (c *Client) IsValidator() bool {
 
 // Is the other actor provided the same as the caller.
 func (c *Client) IsSelf(other interface{}) bool {
-	if !useAuth(){
+	if !useAuth() {
 		return true
 	}
 	if oc, ok := other.(*Client); ok {
@@ -503,20 +502,20 @@ func (c *Client) PublicKey() string {
 // Set the client's public key.
 func (c *Client) SetPublicKey(pk interface{}) error {
 	switch pk := pk.(type) {
-		case string:
-			ok, err := ValidatePublicKey(pk)
-			if !ok {
-				return err
-			}
-			c.pubKey = pk
-		default:
-			err := fmt.Errorf("invalid type %T for public key", pk)
+	case string:
+		ok, err := ValidatePublicKey(pk)
+		if !ok {
 			return err
+		}
+		c.pubKey = pk
+	default:
+		err := fmt.Errorf("invalid type %T for public key", pk)
+		return err
 	}
 	return nil
 }
 
-// A check to see if the client is trying to edit admin and validator 
+// A check to see if the client is trying to edit admin and validator
 // attributes.
 func (c *Client) CheckPermEdit(client_data map[string]interface{}, perm string) util.Gerror {
 	gerr := util.Errorf("You are not allowed to take this action.")
@@ -536,11 +535,11 @@ func useAuth() bool {
 }
 
 func (c *Client) export() *privClient {
-	return &privClient{ Name: &c.Name, NodeName: &c.NodeName, JsonClass: &c.JsonClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.pubKey, Admin: &c.Admin, Certificate: &c.Certificate }
+	return &privClient{Name: &c.Name, NodeName: &c.NodeName, JsonClass: &c.JsonClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.pubKey, Admin: &c.Admin, Certificate: &c.Certificate}
 }
 
 func (c *Client) flatExport() *flatClient {
-	return &flatClient{ Name: c.Name, NodeName: c.NodeName, JsonClass: c.JsonClass, ChefType: c.ChefType, Validator: c.Validator, Orgname: c.Orgname, PublicKey: c.pubKey, Admin: c.Admin, Certificate: c.Certificate }
+	return &flatClient{Name: c.Name, NodeName: c.NodeName, JsonClass: c.JsonClass, ChefType: c.ChefType, Validator: c.Validator, Orgname: c.Orgname, PublicKey: c.pubKey, Admin: c.Admin, Certificate: c.Certificate}
 }
 
 func (c *Client) GobEncode() ([]byte, error) {
@@ -566,7 +565,7 @@ func (c *Client) GobDecode(b []byte) error {
 }
 
 // Return all the clients on this server.
-func AllClients() ([]*Client) {
+func AllClients() []*Client {
 	clients := make([]*Client, 0)
 	if config.UsingDB() {
 		clients = allClientsSQL()
@@ -578,7 +577,7 @@ func AllClients() ([]*Client) {
 				continue
 			}
 			clients = append(clients, cl)
-		} 
+		}
 	}
 	return clients
 }
@@ -593,7 +592,7 @@ func ExportAllClients() []interface{} {
 	return export
 }
 
-func chkInMemUser (name string) error {
+func chkInMemUser(name string) error {
 	var err error
 	ds := data_store.New()
 	if _, found := ds.Get("users", name); found {

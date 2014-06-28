@@ -18,11 +18,11 @@
 package actor
 
 import (
-	"testing"
-	"github.com/ctdk/goiardi/user"
+	"encoding/gob"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
-	"encoding/gob"
+	"github.com/ctdk/goiardi/user"
+	"testing"
 )
 
 func TestActorClient(t *testing.T) {

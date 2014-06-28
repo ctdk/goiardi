@@ -19,17 +19,17 @@
 package cookbook
 
 import (
-	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/data_store"
 	"database/sql"
-	"github.com/ctdk/goiardi/config"
 	"fmt"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/util"
 	"log"
 	"net/http"
 	"sort"
 )
 
-func (c *Cookbook)numVersionsSQL() *int {
+func (c *Cookbook) numVersionsSQL() *int {
 	var cbv_count int
 	var sqlStatement string
 	if config.Config.UseMySQL {
@@ -75,18 +75,18 @@ func (c *Cookbook) fillCookbookFromSQL(row data_store.ResRow) error {
 	return nil
 }
 
-func (cbv *CookbookVersion)fillCookbookVersionFromSQL(row data_store.ResRow) error {
+func (cbv *CookbookVersion) fillCookbookVersionFromSQL(row data_store.ResRow) error {
 	var (
-		defb []byte
-		libb []byte
-		attb []byte
-		recb []byte
-		prob []byte
-		resb []byte
-		temb []byte
-		roob []byte
-		filb []byte
-		metb []byte
+		defb  []byte
+		libb  []byte
+		attb  []byte
+		recb  []byte
+		prob  []byte
+		resb  []byte
+		temb  []byte
+		roob  []byte
+		filb  []byte
+		metb  []byte
 		major int64
 		minor int64
 		patch int64
@@ -151,7 +151,7 @@ func (cbv *CookbookVersion)fillCookbookVersionFromSQL(row data_store.ResRow) err
 }
 
 func (cbv *CookbookVersion) updateCookbookVersionSQL() util.Gerror {
-	// Preparing the complex data structures to be saved 
+	// Preparing the complex data structures to be saved
 	defb, deferr := data_store.EncodeBlob(cbv.Definitions)
 	if deferr != nil {
 		gerr := util.Errorf(deferr.Error())
@@ -217,7 +217,7 @@ func (cbv *CookbookVersion) updateCookbookVersionSQL() util.Gerror {
 	if config.Config.UseMySQL {
 		return cbv.updateCookbookVersionMySQL(defb, libb, attb, recb, prob, resb, temb, roob, filb, metb, maj, min, patch)
 	} else if config.Config.UsePostgreSQL {
-		return cbv.updateCookbookVersionPostgreSQL(defb, libb, attb, recb, prob, resb, temb, roob, filb, metb, maj, min, patch) 
+		return cbv.updateCookbookVersionPostgreSQL(defb, libb, attb, recb, prob, resb, temb, roob, filb, metb, maj, min, patch)
 	}
 	gerr := util.Errorf("Somehow we ended up in an impossible place trying to use an unsupported db engine")
 	gerr.SetStatus(http.StatusInternalServerError)
@@ -273,7 +273,7 @@ func getCookbookSQL(name string) (*Cookbook, error) {
 		return nil, err
 	}
 	defer stmt.Close()
-	
+
 	row := stmt.QueryRow(name)
 	err = cookbook.fillCookbookFromSQL(row)
 	if err != nil {
@@ -290,7 +290,7 @@ func (c *Cookbook) deleteCookbookSQL() error {
 		return err
 	}
 	/* Delete the versions first. */
-	/* First delete the hashes. This is a relatively unlikely 
+	/* First delete the hashes. This is a relatively unlikely
 	 * scenario, but it's best to make sure to reap any straggling
 	 * versions and file hashes. */
 	fileHashes := make([]string, 0)
@@ -303,13 +303,13 @@ func (c *Cookbook) deleteCookbookSQL() error {
 	// beginning and not just the end -- might have been from general hash
 	// deletion with mysql problems earlier.
 	//c.deleteHashes(fileHashes)
-	
+
 	if config.Config.UseMySQL {
 		_, err = tx.Exec("DELETE FROM cookbook_versions WHERE cookbook_id = ?", c.id)
 	} else if config.Config.UsePostgreSQL {
 		_, err = tx.Exec("DELETE FROM goiardi.cookbook_versions WHERE cookbook_id = $1", c.id)
 	}
-	
+
 	if err != nil && err != sql.ErrNoRows {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -337,7 +337,7 @@ func (c *Cookbook) deleteCookbookSQL() error {
 
 func getCookbookListSQL() []string {
 	cb_list := make([]string, 0)
-	
+
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT name FROM cookbooks"
@@ -368,9 +368,9 @@ func getCookbookListSQL() []string {
 	return cb_list
 }
 
-func (c *Cookbook) sortedCookbookVersionsSQL() ([]*CookbookVersion) {
+func (c *Cookbook) sortedCookbookVersionsSQL() []*CookbookVersion {
 	sorted := make([]*CookbookVersion, 0)
-	
+
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC"
@@ -383,7 +383,7 @@ func (c *Cookbook) sortedCookbookVersionsSQL() ([]*CookbookVersion) {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	
+
 	rows, qerr := stmt.Query(c.id)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
@@ -408,7 +408,7 @@ func (c *Cookbook) sortedCookbookVersionsSQL() ([]*CookbookVersion) {
 	return sorted
 }
 
-func (c *Cookbook)getCookbookVersionSQL(cbVersion string) (*CookbookVersion, error) {
+func (c *Cookbook) getCookbookVersionSQL(cbVersion string) (*CookbookVersion, error) {
 	cbv := new(CookbookVersion)
 	maj, min, patch, cverr := extractVerNums(cbVersion)
 	if cverr != nil {
@@ -429,12 +429,12 @@ func (c *Cookbook)getCookbookVersionSQL(cbVersion string) (*CookbookVersion, err
 	err = cbv.fillCookbookVersionFromSQL(row)
 	if err != nil {
 		return nil, err
-	} 
+	}
 
 	return cbv, nil
 }
 
-func (cbv *CookbookVersion)deleteCookbookVersionSQL() util.Gerror {
+func (cbv *CookbookVersion) deleteCookbookVersionSQL() util.Gerror {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())

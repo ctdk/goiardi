@@ -18,16 +18,16 @@
 package report
 
 import (
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/data_store"
 	"bytes"
+	"database/sql"
 	"encoding/gob"
-	"time"
+	"github.com/codeskyblue/go-uuid"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"strconv"
-	"database/sql"
-	"github.com/codeskyblue/go-uuid"
+	"time"
 )
 
 // The format for reporting start and end times in JSON. Of course, subtly
@@ -35,28 +35,28 @@ import (
 const ReportTimeFormat = "2006-01-02 15:04:05 -0700"
 
 type Report struct {
-	RunId string `json:"run_id"`
-	StartTime time.Time `json:"start_time"`
-	EndTime time.Time `json:"end_time"`
-	TotalResCount int `json:"total_res_count"`
-	Status string `json:"status"`
-	RunList string `json:"run_list"`
-	Resources []interface{} `json:"resources"`
-	Data map[string]interface{} `json:"data"` // I think this is right
-	NodeName string `json:"node_name"`
+	RunId          string                 `json:"run_id"`
+	StartTime      time.Time              `json:"start_time"`
+	EndTime        time.Time              `json:"end_time"`
+	TotalResCount  int                    `json:"total_res_count"`
+	Status         string                 `json:"status"`
+	RunList        string                 `json:"run_list"`
+	Resources      []interface{}          `json:"resources"`
+	Data           map[string]interface{} `json:"data"` // I think this is right
+	NodeName       string                 `json:"node_name"`
 	organizationId int
 }
 
 type privReport struct {
-	RunId *string
-	StartTime *time.Time
-	EndTime *time.Time
-	TotalResCount *int
-	Status *string 
-	RunList *string
-	Resources *[]interface{}
-	Data *map[string]interface{}
-	NodeName *string
+	RunId          *string
+	StartTime      *time.Time
+	EndTime        *time.Time
+	TotalResCount  *int
+	Status         *string
+	RunList        *string
+	Resources      *[]interface{}
+	Data           *map[string]interface{}
+	NodeName       *string
 	OrganizationId *int
 }
 
@@ -85,9 +85,9 @@ func New(runId string, nodeName string) (*Report, util.Gerror) {
 		return nil, err
 	}
 	report := &Report{
-		RunId: runId,
+		RunId:    runId,
 		NodeName: nodeName,
-		Status: "started",
+		Status:   "started",
 	}
 	return report, nil
 }
@@ -107,7 +107,7 @@ func Get(runId string) (*Report, util.Gerror) {
 				return nil, gerr
 			}
 		} else {
-			found = true 
+			found = true
 		}
 	} else {
 		ds := data_store.New()
@@ -125,7 +125,7 @@ func Get(runId string) (*Report, util.Gerror) {
 	return report, nil
 }
 
-func (r *Report)Save() error {
+func (r *Report) Save() error {
 	if config.Config.UseMySQL {
 		return r.saveMySQL()
 	} else if config.Config.UsePostgreSQL {
@@ -137,7 +137,7 @@ func (r *Report)Save() error {
 	return nil
 }
 
-func (r *Report)Delete() error {
+func (r *Report) Delete() error {
 	if config.UsingDB() {
 		return r.deleteSQL()
 	} else {
@@ -174,7 +174,7 @@ func NewFromJson(node_name string, json_report map[string]interface{}) (*Report,
 		err := util.CastErr(terr)
 		return nil, err
 	}
-	
+
 	report, err := New(rid, node_name)
 	if err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ func NewFromJson(node_name string, json_report map[string]interface{}) (*Report,
 	return report, nil
 }
 
-func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
+func (r *Report) UpdateFromJson(json_report map[string]interface{}) util.Gerror {
 	if action, ok := json_report["action"].(string); ok {
 		if action != "end" {
 			err := util.Errorf("invalid action %s", action)
@@ -208,20 +208,20 @@ func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
 	}
 	var trc int
 	switch t := json_report["total_res_count"].(type) {
-		case string:
-			var err error
-			trc, err = strconv.Atoi(t)
-			if err != nil {
-				err := util.Errorf("Error converting %v to int: %s", json_report["total_res_count"], err.Error())
-				return err
-			}
-		case float64:
-			trc = int(t)
-		case int:
-			trc = t
-		default:
-			err := util.Errorf("invalid total_res_count %T", t)
+	case string:
+		var err error
+		trc, err = strconv.Atoi(t)
+		if err != nil {
+			err := util.Errorf("Error converting %v to int: %s", json_report["total_res_count"], err.Error())
 			return err
+		}
+	case float64:
+		trc = int(t)
+	case int:
+		trc = t
+	default:
+		err := util.Errorf("invalid total_res_count %T", t)
+		return err
 	}
 	status, ok := json_report["status"].(string)
 	if ok {
@@ -290,7 +290,7 @@ func GetReportList(from, until time.Time, rows int, status string) ([]*Report, e
 	}
 }
 
-func (r *Report)checkTimeRange(from, until time.Time) bool {
+func (r *Report) checkTimeRange(from, until time.Time) bool {
 	return r.StartTime.After(from) && r.StartTime.Before(until)
 }
 
@@ -314,7 +314,7 @@ func GetNodeList(nodeName string, from, until time.Time, rows int, status string
 }
 
 func (r *Report) export() *privReport {
-	return &privReport{ RunId: &r.RunId, StartTime: &r.StartTime, EndTime: &r.EndTime, TotalResCount: &r.TotalResCount, Status: &r.Status, Resources: &r.Resources, Data: &r.Data, NodeName: &r.NodeName, OrganizationId: &r.organizationId }
+	return &privReport{RunId: &r.RunId, StartTime: &r.StartTime, EndTime: &r.EndTime, TotalResCount: &r.TotalResCount, Status: &r.Status, Resources: &r.Resources, Data: &r.Data, NodeName: &r.NodeName, OrganizationId: &r.organizationId}
 }
 
 func (r *Report) GobEncode() ([]byte, error) {

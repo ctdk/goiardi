@@ -18,10 +18,10 @@
 package filestore
 
 import (
-	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/config"
 	"database/sql"
 	"fmt"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
 	"log"
 )
 
@@ -44,8 +44,6 @@ func getSQL(chksum string) (*FileStore, error) {
 	}
 	return filestore, nil
 }
-
-
 
 func (f *FileStore) deleteSQL() error {
 	tx, err := data_store.Dbh.Begin()

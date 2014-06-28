@@ -22,7 +22,7 @@ import (
 	"github.com/ctdk/goiardi/data_store"
 )
 
-func (r *Role)savePostgreSQL() error {
+func (r *Role) savePostgreSQL() error {
 	rlb, rlerr := data_store.EncodeBlob(&r.RunList)
 	if rlerr != nil {
 		return rlerr

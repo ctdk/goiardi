@@ -21,29 +21,29 @@
 package role
 
 import (
+	"database/sql"
+	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/indexer"
-	"fmt"
+	"github.com/ctdk/goiardi/util"
 	"net/http"
-	"database/sql"
 )
 
 /* Need env_run_lists?!!? */
 
 type Role struct {
-	Name string `json:"name"`
-	ChefType string `json:"chef_type"`
-	JsonClass string `json:"json_class"`
-	RunList []string `json:"run_list"`
-	EnvRunLists map[string][]string `json:"env_run_lists"`
-	Description string `json:"description"`
-	Default map[string]interface{} `json:"default_attributes"`
-	Override map[string]interface{} `json:"override_attributes"`
+	Name        string                 `json:"name"`
+	ChefType    string                 `json:"chef_type"`
+	JsonClass   string                 `json:"json_class"`
+	RunList     []string               `json:"run_list"`
+	EnvRunLists map[string][]string    `json:"env_run_lists"`
+	Description string                 `json:"description"`
+	Default     map[string]interface{} `json:"default_attributes"`
+	Override    map[string]interface{} `json:"override_attributes"`
 }
 
-func New(name string) (*Role, util.Gerror){
+func New(name string) (*Role, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var err error
@@ -62,26 +62,26 @@ func New(name string) (*Role, util.Gerror){
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
-	if !util.ValidateDBagName(name){
+	if !util.ValidateDBagName(name) {
 		err := util.Errorf("Field 'name' invalid")
 		err.SetStatus(http.StatusBadRequest)
 		return nil, err
 	}
 	role := &Role{
-		Name: name,
-		ChefType: "role",
-		JsonClass: "Chef::Role",
-		RunList: []string{},
+		Name:        name,
+		ChefType:    "role",
+		JsonClass:   "Chef::Role",
+		RunList:     []string{},
 		EnvRunLists: map[string][]string{},
-		Default: map[string]interface{}{},
-		Override: map[string]interface{}{},
+		Default:     map[string]interface{}{},
+		Override:    map[string]interface{}{},
 	}
 
 	return role, nil
 }
 
 // Create a new role from the uploaded JSON.
-func NewFromJson(json_role map[string]interface{}) (*Role, util.Gerror){
+func NewFromJson(json_role map[string]interface{}) (*Role, util.Gerror) {
 	role, err := New(json_role["name"].(string))
 	if err != nil {
 		return nil, err
@@ -106,8 +106,8 @@ func (r *Role) UpdateFromJson(json_role map[string]interface{}) util.Gerror {
 
 	/* Look for invalid top level elements. See node/node.go for more
 	 * information. */
-	valid_elements := []string{ "name", "json_class", "chef_type", "run_list", "env_run_lists", "default_attributes", "override_attributes", "description" }
-	ValidElem:
+	valid_elements := []string{"name", "json_class", "chef_type", "run_list", "env_run_lists", "default_attributes", "override_attributes", "description"}
+ValidElem:
 	for k := range json_role {
 		for _, i := range valid_elements {
 			if k == i {
@@ -123,7 +123,7 @@ func (r *Role) UpdateFromJson(json_role map[string]interface{}) util.Gerror {
 		return verr
 	}
 
-	if _, erl_exists := json_role["env_run_lists"]; erl_exists { 
+	if _, erl_exists := json_role["env_run_lists"]; erl_exists {
 		for k, v := range json_role["env_run_lists"].(map[string][]string) {
 			if json_role["env_run_lists"].(map[string][]string)[k], verr = util.ValidateRunList(v); verr != nil {
 				return verr
@@ -133,7 +133,7 @@ func (r *Role) UpdateFromJson(json_role map[string]interface{}) util.Gerror {
 		json_role["env_run_lists"] = make(map[string][]string)
 	}
 
-	attrs := []string{ "default_attributes", "override_attributes" }
+	attrs := []string{"default_attributes", "override_attributes"}
 	for _, a := range attrs {
 		json_role[a], verr = util.ValidateAttributes(a, json_role[a])
 		if verr != nil {
@@ -182,8 +182,7 @@ func (r *Role) UpdateFromJson(json_role map[string]interface{}) util.Gerror {
 	return nil
 }
 
-
-func Get(role_name string) (*Role, error){
+func Get(role_name string) (*Role, error) {
 	var role *Role
 	var found bool
 	if config.UsingDB() {

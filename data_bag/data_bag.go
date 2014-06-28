@@ -16,46 +16,46 @@
  * limitations under the License.
  */
 
-// Package data_bag provides a convenient way to store arbitrary data on the 
+// Package data_bag provides a convenient way to store arbitrary data on the
 // server.
 package data_bag
 
 import (
-	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/indexer"
-	"github.com/ctdk/goiardi/config"
-	"fmt"
+	"database/sql"
 	"encoding/json"
+	"fmt"
+	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/util"
 	"io"
 	"net/http"
 	"strings"
-	"database/sql"
-	"github.com/ctdk/goas/v2/logger"
 )
 
 // The overall data bag.
 type DataBag struct {
-	Name string
+	Name         string
 	DataBagItems map[string]*DataBagItem
-	id int32
+	id           int32
 }
 
 // An item within a data bag.
 type DataBagItem struct {
-	Name string `json:"name"`
-	ChefType string `json:"chef_type"`
-	JsonClass string `json:"json_class"`
-	DataBagName string `json:"data_bag"`
-	RawData map[string]interface{} `json:"raw_data"`
-	id int32
+	Name        string                 `json:"name"`
+	ChefType    string                 `json:"chef_type"`
+	JsonClass   string                 `json:"json_class"`
+	DataBagName string                 `json:"data_bag"`
+	RawData     map[string]interface{} `json:"raw_data"`
+	id          int32
 	data_bag_id int32
-	origName string
+	origName    string
 }
 
 /* Data bag functions and methods */
 
-func New(name string) (*DataBag, util.Gerror){
+func New(name string) (*DataBag, util.Gerror) {
 	var found bool
 	var err util.Gerror
 
@@ -80,17 +80,17 @@ func New(name string) (*DataBag, util.Gerror){
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
-	
+
 	dbi_map := make(map[string]*DataBagItem)
 	data_bag := &DataBag{
-		Name: name,
+		Name:         name,
 		DataBagItems: dbi_map,
 	}
 	indexer.CreateNewCollection(name)
 	return data_bag, nil
 }
 
-func Get(db_name string) (*DataBag, util.Gerror){
+func Get(db_name string) (*DataBag, util.Gerror) {
 	var data_bag *DataBag
 	var err error
 	if config.UsingDB() {
@@ -189,21 +189,21 @@ func (db *DataBagItem) URLType() string {
  * in the one stored in the hash there */
 
 // Create a new data bag item in the associated data bag.
-func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagItem, util.Gerror){
+func (db *DataBag) NewDBItem(raw_dbag_item map[string]interface{}) (*DataBagItem, util.Gerror) {
 	//dbi_id := raw_dbag_item["id"].(string)
 	var dbi_id string
 	var dbag_item *DataBagItem
 	switch t := raw_dbag_item["id"].(type) {
-		case string:
-			if t == "" {
-				err := util.Errorf("Field 'id' missing")
-				return nil, err
-			} else {
-				dbi_id = t
-			}
-		default:
+	case string:
+		if t == "" {
 			err := util.Errorf("Field 'id' missing")
 			return nil, err
+		} else {
+			dbi_id = t
+		}
+	default:
+		err := util.Errorf("Field 'id' missing")
+		return nil, err
 	}
 	if err := validateDataBagName(dbi_id, true); err != nil {
 		return nil, err
@@ -239,11 +239,11 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 		}
 		/* But should we store the raw data as a JSON string? */
 		dbag_item = &DataBagItem{
-			Name: dbi_full_name,
-			ChefType: "data_bag_item",
-			JsonClass: "Chef::DataBagItem",
+			Name:        dbi_full_name,
+			ChefType:    "data_bag_item",
+			JsonClass:   "Chef::DataBagItem",
 			DataBagName: db.Name,
-			RawData: raw_dbag_item,
+			RawData:     raw_dbag_item,
 		}
 		db.DataBagItems[dbi_id] = dbag_item
 	}
@@ -258,7 +258,7 @@ func (db *DataBag) NewDBItem (raw_dbag_item map[string]interface{}) (*DataBagIte
 }
 
 // Updates a data bag item in this data bag.
-func (db *DataBag) UpdateDBItem(dbi_id string, raw_dbag_item map[string]interface{}) (*DataBagItem, error){
+func (db *DataBag) UpdateDBItem(dbi_id string, raw_dbag_item map[string]interface{}) (*DataBagItem, error) {
 	db_item, err := db.GetDBItem(dbi_id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -355,15 +355,15 @@ func (db *DataBag) fullDBItemName(db_item_name string) string {
 	return fmt.Sprintf("data_bag_item_%s_%s", db.Name, db_item_name)
 }
 
-// Extract the data bag item's raw data from the request saving it to the 
+// Extract the data bag item's raw data from the request saving it to the
 // server.
-func RawDataBagJson (data io.ReadCloser) map[string]interface{} {
+func RawDataBagJson(data io.ReadCloser) map[string]interface{} {
 	raw_dbag_item := make(map[string]interface{})
 	json.NewDecoder(data).Decode(&raw_dbag_item)
 	var raw_data map[string]interface{}
 
 	/* The way data can come from knife may
-	 * not be entirely consistent. Use 
+	 * not be entirely consistent. Use
 	 * raw data from the json hash if we
 	 * have it, otherwise assume it's just
 	 * the raw data without the other chef
@@ -394,11 +394,11 @@ func validateDataBagName(name string, dbi bool) util.Gerror {
 /* Indexing functions for data bag items */
 func (dbi *DataBagItem) DocId() string {
 	switch did := dbi.RawData["id"].(type) {
-		case string:
-			return did
-		default:
-			d := strings.Replace(dbi.Name, dbi.DataBagName, "", 1)
-			return d
+	case string:
+		return did
+	default:
+		d := strings.Replace(dbi.Name, dbi.DataBagName, "", 1)
+		return d
 	}
 }
 
@@ -418,8 +418,8 @@ func (dbi *DataBagItem) Flatten() []string {
 	return indexified
 }
 
-// Return all data bags on this server, and all their items. 
-func AllDataBags() ([]*DataBag) {
+// Return all data bags on this server, and all their items.
+func AllDataBags() []*DataBag {
 	data_bags := make([]*DataBag, 0)
 	if config.UsingDB() {
 		data_bags = allDataBagsSQL()

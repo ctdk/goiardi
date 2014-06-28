@@ -17,10 +17,10 @@
 package data_bag
 
 import (
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
 	"database/sql"
 	"fmt"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
 	"log"
 )
 
@@ -142,7 +142,7 @@ func (dbi *DataBagItem) deleteDBItemSQL() error {
 	return nil
 }
 
-func (db *DataBag) allDBItemsSQL()(map[string]*DataBagItem, error) {
+func (db *DataBag) allDBItemsSQL() (map[string]*DataBagItem, error) {
 	dbis := make(map[string]*DataBagItem)
 	var sqlStatement string
 	if config.Config.UseMySQL {
@@ -260,7 +260,7 @@ func (db *DataBag) deleteSQL() error {
 	if config.Config.UseMySQL {
 		_, err = tx.Exec("DELETE FROM data_bags WHERE id = ?", db.id)
 	} else if config.Config.UsePostgreSQL {
-			_, err = tx.Exec("DELETE FROM goiardi.data_bags WHERE id = $1", db.id)
+		_, err = tx.Exec("DELETE FROM goiardi.data_bags WHERE id = $1", db.id)
 	}
 	if err != nil {
 		terr := tx.Rollback()

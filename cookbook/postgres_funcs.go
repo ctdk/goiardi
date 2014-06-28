@@ -24,12 +24,12 @@ import (
 	"net/http"
 )
 
-func (c *Cookbook)saveCookbookPostgreSQL() error {
+func (c *Cookbook) saveCookbookPostgreSQL() error {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		return err
 	}
-	
+
 	err = tx.QueryRow("SELECT goiardi.merge_cookbooks($1)", c.Name).Scan(&c.id)
 	if err != nil {
 		tx.Rollback()

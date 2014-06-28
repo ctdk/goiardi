@@ -18,13 +18,13 @@
 package client
 
 import (
-	"testing"
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"testing"
 )
 
-func TestGobEncodeDecode(t *testing.T){
+func TestGobEncodeDecode(t *testing.T) {
 	c, _ := New("foo")
 	saved := new(bytes.Buffer)
 	var err error

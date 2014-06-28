@@ -19,11 +19,11 @@
 package filestore
 
 import (
-	"github.com/ctdk/goiardi/data_store"
 	"database/sql"
+	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/data_store"
 	"log"
 	"strings"
-	"github.com/ctdk/goas/v2/logger"
 )
 
 func (f *FileStore) savePostgreSQL() error {
@@ -51,12 +51,12 @@ func deleteHashesPostgreSQL(file_hashes []string) {
 		log.Fatal(err)
 	}
 	delete_query := "DELETE FROM goiardi.file_checksums WHERE checksum = ANY($1::varchar(32)[])"
-	_, err = tx.Exec(delete_query, "{" + strings.Join(file_hashes, ",") + "}")
+	_, err = tx.Exec(delete_query, "{"+strings.Join(file_hashes, ",")+"}")
 	if err != nil && err != sql.ErrNoRows {
 		logger.Debugf("Error %s trying to delete hashes", err.Error())
 		tx.Rollback()
 		return
-	} 
+	}
 	tx.Commit()
 	return
 }

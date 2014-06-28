@@ -20,30 +20,30 @@
 package node
 
 import (
+	"database/sql"
+	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/util"
 	"github.com/ctdk/goiardi/indexer"
-	"fmt"
+	"github.com/ctdk/goiardi/util"
 	"net/http"
-	"database/sql"
 )
 
 type Node struct {
-	Name string `json:"name"`
-	ChefEnvironment string `json:"chef_environment"`
-	RunList []string `json:"run_list"`
-	JsonClass string `json:"json_class"`
-	ChefType string `json:"chef_type"`
-	Automatic map[string]interface{} `json:"automatic"`
-	Normal map[string]interface{} `json:"normal"`
-	Default map[string]interface{} `json:"default"`
-	Override map[string]interface{} `json:"override"`
+	Name            string                 `json:"name"`
+	ChefEnvironment string                 `json:"chef_environment"`
+	RunList         []string               `json:"run_list"`
+	JsonClass       string                 `json:"json_class"`
+	ChefType        string                 `json:"chef_type"`
+	Automatic       map[string]interface{} `json:"automatic"`
+	Normal          map[string]interface{} `json:"normal"`
+	Default         map[string]interface{} `json:"default"`
+	Override        map[string]interface{} `json:"override"`
 }
 
 func New(name string) (*Node, util.Gerror) {
 	/* check for an existing node with this name */
-	if !util.ValidateDBagName(name){
+	if !util.ValidateDBagName(name) {
 		err := util.Errorf("Field 'name' invalid")
 		return nil, err
 	}
@@ -67,24 +67,24 @@ func New(name string) (*Node, util.Gerror) {
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
-	
+
 	/* No node, we make a new one */
 	node := &Node{
-		Name: name,
+		Name:            name,
 		ChefEnvironment: "_default",
-		ChefType: "node",
-		JsonClass: "Chef::Node",
-		RunList: []string{},
-		Automatic: map[string]interface{}{},
-		Normal: map[string]interface{}{},
-		Default: map[string]interface{}{},
-		Override: map[string]interface{}{},
+		ChefType:        "node",
+		JsonClass:       "Chef::Node",
+		RunList:         []string{},
+		Automatic:       map[string]interface{}{},
+		Normal:          map[string]interface{}{},
+		Default:         map[string]interface{}{},
+		Override:        map[string]interface{}{},
 	}
 	return node, nil
 }
 
 // Create a new node from the uploaded JSON.
-func NewFromJson(json_node map[string]interface{}) (*Node, util.Gerror){
+func NewFromJson(json_node map[string]interface{}) (*Node, util.Gerror) {
 	node_name, nerr := util.ValidateAsString(json_node["name"])
 	if nerr != nil {
 		return nil, nerr
@@ -147,10 +147,10 @@ func (n *Node) UpdateFromJson(json_node map[string]interface{}) util.Gerror {
 	/* Validations */
 
 	/* Look for invalid top level elements. *We* don't have to worry about
-	 * them, but chef-pedant cares (probably because Chef <=10 stores
- 	 * json objects directly, dunno about Chef 11). */
-	valid_elements := []string{ "name", "json_class", "chef_type", "chef_environment", "run_list", "override", "normal", "default", "automatic" }
-	ValidElem:
+		 * them, but chef-pedant cares (probably because Chef <=10 stores
+	 	 * json objects directly, dunno about Chef 11). */
+	valid_elements := []string{"name", "json_class", "chef_type", "chef_environment", "run_list", "override", "normal", "default", "automatic"}
+ValidElem:
 	for k, _ := range json_node {
 		for _, i := range valid_elements {
 			if k == i {
@@ -166,7 +166,7 @@ func (n *Node) UpdateFromJson(json_node map[string]interface{}) util.Gerror {
 	if verr != nil {
 		return verr
 	}
-	attrs := []string{ "normal", "automatic", "default", "override" }
+	attrs := []string{"normal", "automatic", "default", "override"}
 	for _, a := range attrs {
 		json_node[a], verr = util.ValidateAttributes(a, json_node[a])
 		if verr != nil {
@@ -201,7 +201,6 @@ func (n *Node) UpdateFromJson(json_node map[string]interface{}) util.Gerror {
 			return verr
 		}
 	}
-
 
 	json_node["chef_type"], verr = util.ValidateAsFieldString(json_node["chef_type"])
 	if verr != nil {

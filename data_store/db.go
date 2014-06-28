@@ -19,15 +19,15 @@
 package data_store
 
 import (
-	"github.com/ctdk/goiardi/config"
+	"bytes"
 	"database/sql"
+	"encoding/gob"
+	"encoding/json"
+	"fmt"
+	"github.com/ctdk/goiardi/config"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	"strings"
-	"fmt"
-	"bytes"
-	"encoding/gob"
-	"encoding/json"
 )
 
 // The database handle.
@@ -54,31 +54,31 @@ type ResRow interface {
 // Currently supports MySQL.
 func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	switch strings.ToLower(dbEngine) {
-		case "mysql", "postgres":
-			var connectStr string
-			var cerr error
-			switch strings.ToLower(dbEngine) {
-				case "mysql":
-					connectStr, cerr = formatMysqlConStr(params)
-				case "postgres":
-					// no error needed at this step with
-					// postgres
-					connectStr = formatPostgresqlConStr(params)
-			}
-			if cerr != nil {
-				return nil, cerr
-			}
-			db, err := sql.Open(strings.ToLower(dbEngine), connectStr)
-			if err != nil {
-				return nil, err
-			}
-			if err = db.Ping(); err != nil {
-				return nil, err
-			}
-			return db, nil
-		default:
-			err := fmt.Errorf("cannot connect to database: unsupported database type %s", dbEngine)
+	case "mysql", "postgres":
+		var connectStr string
+		var cerr error
+		switch strings.ToLower(dbEngine) {
+		case "mysql":
+			connectStr, cerr = formatMysqlConStr(params)
+		case "postgres":
+			// no error needed at this step with
+			// postgres
+			connectStr = formatPostgresqlConStr(params)
+		}
+		if cerr != nil {
+			return nil, cerr
+		}
+		db, err := sql.Open(strings.ToLower(dbEngine), connectStr)
+		if err != nil {
 			return nil, err
+		}
+		if err = db.Ping(); err != nil {
+			return nil, err
+		}
+		return db, nil
+	default:
+		err := fmt.Errorf("cannot connect to database: unsupported database type %s", dbEngine)
+		return nil, err
 	}
 }
 
@@ -99,7 +99,7 @@ func EncodeToJSON(obj interface{}) (string, error) {
 	return buf.String(), nil
 }
 
-// Encode a slice or map of goiardi object data to save in the database. Pass 
+// Encode a slice or map of goiardi object data to save in the database. Pass
 // the object to be encoded in like data_store.EncodeBlob(&foo.Thing).
 func EncodeBlob(obj interface{}) ([]byte, error) {
 	buf := new(bytes.Buffer)
@@ -121,7 +121,7 @@ func EncodeBlob(obj interface{}) ([]byte, error) {
 // can be loaded back into a goiardi object. The 'obj' in the arguments *must*
 // be the address of the object receiving the blob of data (e.g.
 // data_store.DecodeBlob(data, &obj).
-func DecodeBlob(data []byte, obj interface{}) (error) {
+func DecodeBlob(data []byte, obj interface{}) error {
 	// hmmm
 	dbuf := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(dbuf)
@@ -135,12 +135,12 @@ func DecodeBlob(data []byte, obj interface{}) (error) {
 // Check for one object of the given type identified by the given name. For this
 // function to work, the underlying table MUST have its primary text identifier
 // be called "name".
-func CheckForOne(dbhandle Dbhandle, kind string, name string) (int32, error){
+func CheckForOne(dbhandle Dbhandle, kind string, name string) (int32, error) {
 	var obj_id int32
 	var prepStatement string
 	if config.Config.UseMySQL {
 		prepStatement = fmt.Sprintf("SELECT id FROM %s WHERE name = ?", kind)
-	} else if config.Config.UsePostgreSQL{
+	} else if config.Config.UsePostgreSQL {
 		prepStatement = fmt.Sprintf("SELECT id FROM goiardi.%s WHERE name = $1", kind)
 	}
 	stmt, err := dbhandle.Prepare(prepStatement)
@@ -148,7 +148,7 @@ func CheckForOne(dbhandle Dbhandle, kind string, name string) (int32, error){
 		return 0, err
 	}
 	defer stmt.Close()
-	
+
 	err = stmt.QueryRow(name).Scan(&obj_id)
 	return obj_id, err
 }

@@ -19,11 +19,11 @@ package role
 /* Generic SQL funcs for roles */
 
 import (
-	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/config"
-	"fmt"
-	"log"
 	"database/sql"
+	"fmt"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
+	"log"
 )
 
 func checkForRoleSQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
@@ -39,7 +39,7 @@ func checkForRoleSQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
 	}
 }
 
-func (r *Role)fillRoleFromSQL(row data_store.ResRow) error {
+func (r *Role) fillRoleFromSQL(row data_store.ResRow) error {
 	var (
 		rl []byte
 		er []byte

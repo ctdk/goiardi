@@ -19,38 +19,38 @@
 package main
 
 import (
-	"net/http"
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
+	"net/http"
 )
 
-func principal_handler(w http.ResponseWriter, r *http.Request){
+func principal_handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	principal_name := r.URL.Path[12:]
 	switch r.Method {
-		case "GET":
-			chef_actor, err := actor.GetReqUser(principal_name)
-			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
-				return
-			}
-			var chefType string
-			if chef_actor.IsUser() {
-				chefType = "user"
-			} else {
-				chefType = "client"
-			}
-			json_principal := map[string]interface{}{
-				"name": chef_actor.GetName(),
-				"type": chefType,
-				"public_key": chef_actor.PublicKey(),
-			}
-			enc := json.NewEncoder(w)
-			if encerr := enc.Encode(&json_principal); encerr != nil {
-				JsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
-				return
-			}
-		default:
-			JsonErrorReport(w, r, "Unrecognized method for principals!", http.StatusMethodNotAllowed)
+	case "GET":
+		chef_actor, err := actor.GetReqUser(principal_name)
+		if err != nil {
+			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			return
+		}
+		var chefType string
+		if chef_actor.IsUser() {
+			chefType = "user"
+		} else {
+			chefType = "client"
+		}
+		json_principal := map[string]interface{}{
+			"name":       chef_actor.GetName(),
+			"type":       chefType,
+			"public_key": chef_actor.PublicKey(),
+		}
+		enc := json.NewEncoder(w)
+		if encerr := enc.Encode(&json_principal); encerr != nil {
+			JsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
+			return
+		}
+	default:
+		JsonErrorReport(w, r, "Unrecognized method for principals!", http.StatusMethodNotAllowed)
 	}
 }

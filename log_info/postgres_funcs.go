@@ -22,7 +22,7 @@ import (
 	"github.com/ctdk/goiardi/data_store"
 )
 
-func (le *LogInfo)fillLogEventFromPostgreSQL(row data_store.ResRow) error {
+func (le *LogInfo) fillLogEventFromPostgreSQL(row data_store.ResRow) error {
 	err := row.Scan(&le.Id, &le.ActorType, &le.ActorInfo, &le.Time, &le.Action, &le.ObjectType, &le.ObjectName, &le.ExtendedInfo)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func (le *LogInfo)fillLogEventFromPostgreSQL(row data_store.ResRow) error {
 	return nil
 }
 
-func (le *LogInfo)actualWriteEventPostgreSQL(tx data_store.Dbhandle, actorId int32) error {
+func (le *LogInfo) actualWriteEventPostgreSQL(tx data_store.Dbhandle, actorId int32) error {
 	var err error
 	if le.Id == 0 {
 		sqlStmt := "INSERT INTO goiardi.log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"

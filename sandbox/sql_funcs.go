@@ -19,14 +19,14 @@ package sandbox
 /* Generic SQL functions for sandboxes */
 
 import (
-	"github.com/ctdk/goiardi/config"
 	"database/sql"
 	"fmt"
-	"log"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/data_store"
+	"log"
 )
 
-func (s *Sandbox)fillSandboxFromSQL(row data_store.ResRow) error {
+func (s *Sandbox) fillSandboxFromSQL(row data_store.ResRow) error {
 	if config.Config.UseMySQL {
 		return s.fillSandboxFromMySQL(row)
 	} else if config.Config.UsePostgreSQL {

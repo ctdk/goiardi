@@ -19,18 +19,18 @@ package log_info
 /* Generic SQL functions for logging events */
 
 import (
-	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/config"
-	"database/sql"
-	"fmt"
 	"bytes"
-	"io/ioutil"
+	"database/sql"
 	"encoding/json"
-	"time"
+	"fmt"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
+	"io/ioutil"
 	"regexp"
+	"time"
 )
 
-func (le *LogInfo)writeEventSQL() error {
+func (le *LogInfo) writeEventSQL() error {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func (le *LogInfo)writeEventSQL() error {
 	return nil
 }
 
-func (le *LogInfo)importEventSQL() error {
+func (le *LogInfo) importEventSQL() error {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func (le *LogInfo)importEventSQL() error {
 
 // This has been broken out to a separate function to simplify importing data
 // from json export dumps.
-func (le *LogInfo)actualWriteEventSQL(tx data_store.Dbhandle, actorId int32) error {
+func (le *LogInfo) actualWriteEventSQL(tx data_store.Dbhandle, actorId int32) error {
 	if config.Config.UseMySQL {
 		return le.actualWriteEventMySQL(tx, actorId)
 	} else if config.Config.UsePostgreSQL {
@@ -122,7 +122,7 @@ func getLogEventSQL(id int) (*LogInfo, error) {
 	return le, nil
 }
 
-func (le *LogInfo)deleteSQL() error {
+func (le *LogInfo) deleteSQL() error {
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		return err
@@ -177,13 +177,13 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 		}
 	} else {
 		offset = 0
-	} 
+	}
 	logged_events := make([]*LogInfo, 0)
 
 	var sqlStmt string
-	sqlArgs := []interface{}{ from, until }
+	sqlArgs := []interface{}{from, until}
 	if config.Config.UseMySQL {
-		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos li JOIN users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?" 
+		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos li JOIN users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
 		if action, ok := searchParams["action"]; ok {
 			sqlStmt = sqlStmt + " AND action = ?"
 			sqlArgs = append(sqlArgs, action)
@@ -225,7 +225,7 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 			re := regexp.MustCompile("JOIN goiardi.users u ON li.actor_id = u.id")
 			sqlStmt = re.ReplaceAllString(sqlStmt, "")
 		}
- 		sqlStmt = sqlStmt + " ORDER BY id DESC OFFSET ? LIMIT ?"
+		sqlStmt = sqlStmt + " ORDER BY id DESC OFFSET ? LIMIT ?"
 		re := regexp.MustCompile("\\?")
 		u := 1
 		rfunc := func([]byte) []byte {

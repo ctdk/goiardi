@@ -17,9 +17,9 @@
 package user
 
 import (
+	"database/sql"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/data_store"
-	"database/sql"
 	"log"
 )
 

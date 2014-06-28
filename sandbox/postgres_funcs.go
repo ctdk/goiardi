@@ -22,7 +22,7 @@ import (
 	"github.com/ctdk/goiardi/data_store"
 )
 
-func (s *Sandbox)fillSandboxFromPostgreSQL(row data_store.ResRow) error {
+func (s *Sandbox) fillSandboxFromPostgreSQL(row data_store.ResRow) error {
 	var csb []byte
 	err := row.Scan(&s.Id, &s.CreationTime, &csb, &s.Completed)
 	if err != nil {

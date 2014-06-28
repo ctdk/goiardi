@@ -19,22 +19,22 @@
 package main
 
 import (
-	"net/http"
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/user"
+	"net/http"
 )
 
 type authenticator struct {
 	Name, Password string
 }
 type authResponse struct {
-	Name string `json:"name"`
-	Verified bool `json:"verified"`
+	Name     string `json:"name"`
+	Verified bool   `json:"verified"`
 }
 
-func authenticate_user_handler(w http.ResponseWriter, r *http.Request){
+func authenticate_user_handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	dec := json.NewDecoder(r.Body)
@@ -70,7 +70,7 @@ func validateLogin(auth *authenticator) authResponse {
 	if err != nil {
 		resp.Verified = false
 		return resp
-	} 
+	}
 	perr := u.CheckPasswd(auth.Password)
 	if perr != nil {
 		resp.Verified = false
@@ -84,11 +84,11 @@ func validateJson(authJson map[string]interface{}) (*authenticator, error) {
 	auth := new(authenticator)
 	if name, ok := authJson["name"]; ok {
 		switch name := name.(type) {
-			case string:
-				auth.Name = name
-			default:
-				err := fmt.Errorf("Field 'name' invalid")
-				return nil, err
+		case string:
+			auth.Name = name
+		default:
+			err := fmt.Errorf("Field 'name' invalid")
+			return nil, err
 		}
 	} else {
 		err := fmt.Errorf("Field 'name' missing")
@@ -96,11 +96,11 @@ func validateJson(authJson map[string]interface{}) (*authenticator, error) {
 	}
 	if passwd, ok := authJson["password"]; ok {
 		switch passwd := passwd.(type) {
-			case string:
-				auth.Password = passwd
-			default:
-				err := fmt.Errorf("Field 'password' invalid")
-				return nil, err
+		case string:
+			auth.Password = passwd
+		default:
+			err := fmt.Errorf("Field 'password' invalid")
+			return nil, err
 		}
 	} else {
 		err := fmt.Errorf("Field 'password' missing")

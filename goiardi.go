@@ -20,38 +20,38 @@
 package main
 
 import (
-	"net/http"
-	"path"
-	"github.com/ctdk/goiardi/config"
+	"compress/gzip"
+	"encoding/gob"
+	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/authentication"
 	"github.com/ctdk/goiardi/client"
-	"github.com/ctdk/goiardi/environment"
-	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/data_bag"
+	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/filestore"
+	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/log_info"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
-	"github.com/ctdk/goiardi/log_info"
-	"github.com/ctdk/goiardi/report"
-	"fmt"
+	"github.com/ctdk/goiardi/user"
+	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
-	"encoding/gob"
-	"time"
-	"github.com/ctdk/goiardi/authentication"
+	"path"
 	"strings"
-	"github.com/ctdk/goas/v2/logger"
-	"compress/gzip"
+	"syscall"
+	"time"
 )
 
-type InterceptHandler struct {} // Doesn't need to do anything, just sit there.
+type InterceptHandler struct{} // Doesn't need to do anything, just sit there.
 
-func main(){
+func main() {
 	config.ParseConfigOptions()
 
 	/* Here goes nothing, db... */
@@ -170,22 +170,22 @@ func main(){
 	}
 }
 
-func root_handler(w http.ResponseWriter, r *http.Request){
+func root_handler(w http.ResponseWriter, r *http.Request) {
 	// TODO: make root do something useful
 	return
 }
 
-func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
+func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* knife sometimes sends URL paths that start with //. Redirecting
-	 * worked for GETs, but since it was breaking POSTs and screwing with 
+	 * worked for GETs, but since it was breaking POSTs and screwing with
 	 * GETs with query params, we just clean up the path and move on. */
 
 	/* log the URL */
 	// TODO: set this to verbosity level 4 or so
 	logger.Debugf("Serving %s -- %s\n", r.URL.Path, r.Method)
 
-	if r.Method != "CONNECT" { 
-		if p := cleanPath(r.URL.Path); p != r.URL.Path{
+	if r.Method != "CONNECT" {
+		if p := cleanPath(r.URL.Path); p != r.URL.Path {
 			r.URL.Path = p
 		}
 	}
@@ -263,7 +263,7 @@ func cleanPath(p string) string {
 	if p[0] != '/' {
 		p = "/" + p
 	}
-        np := path.Clean(p)
+	np := path.Clean(p)
 	// path.Clean removes trailing slash except for root;
 	// put the trailing slash back if necessary.
 	if p[len(p)-1] == '/' && np != "/" {
@@ -294,7 +294,7 @@ func createDefaultActors() {
 					os.Exit(1)
 				}
 			}
-			
+
 			webui.Save()
 		}
 	}
@@ -365,9 +365,9 @@ func handleSignals() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 
 	// if we receive a SIGINT or SIGTERM, do cleanup here.
-	go func(){
+	go func() {
 		for sig := range c {
-			if sig == os.Interrupt || sig == syscall.SIGTERM{
+			if sig == os.Interrupt || sig == syscall.SIGTERM {
 				logger.Infof("cleaning up...")
 				if config.Config.FreezeData {
 					if config.Config.DataStoreFile != "" {
@@ -409,7 +409,7 @@ func gobRegister() {
 	gob.Register(s)
 	m := make(map[string]interface{})
 	gob.Register(m)
-	si := make([]interface{},0)
+	si := make([]interface{}, 0)
 	gob.Register(si)
 	i := new(indexer.Index)
 	ic := new(indexer.IdxCollection)
@@ -421,7 +421,7 @@ func gobRegister() {
 	gob.Register(ss)
 	ms := make(map[string]string)
 	gob.Register(ms)
-	smsi := make([]map[string]interface{},0)
+	smsi := make([]map[string]interface{}, 0)
 	gob.Register(smsi)
 	msss := make(map[string][]string)
 	gob.Register(msss)
@@ -445,7 +445,7 @@ func setSaveTicker() {
 	if config.Config.FreezeData {
 		ds := data_store.New()
 		ticker := time.NewTicker(time.Second * time.Duration(config.Config.FreezeInterval))
-		go func(){
+		go func() {
 			for _ = range ticker.C {
 				if config.Config.DataStoreFile != "" {
 					logger.Infof("Automatically saving data store...")

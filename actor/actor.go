@@ -23,9 +23,9 @@ package actor
 
 import (
 	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/config"
 	"net/http"
 )
 
@@ -41,7 +41,7 @@ type Actor interface {
 	CheckPermEdit(map[string]interface{}, string) util.Gerror
 }
 
-// Gets the actor making the request. If use-auth is not on, always returns 
+// Gets the actor making the request. If use-auth is not on, always returns
 // the admin user.
 func GetReqUser(name string) (Actor, util.Gerror) {
 	/* If UseAuth is turned off, use the automatically created admin user */
@@ -65,4 +65,3 @@ func GetReqUser(name string) (Actor, util.Gerror) {
 	}
 	return c, nil
 }
-

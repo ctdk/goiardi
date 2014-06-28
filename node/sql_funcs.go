@@ -19,11 +19,11 @@ package node
 /* Generic SQL functions for nodes */
 
 import (
-	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/config"
-	"fmt"
-	"log"
 	"database/sql"
+	"fmt"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/data_store"
+	"log"
 )
 
 func checkForNodeSQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
@@ -83,7 +83,7 @@ func (n *Node) fillNodeFromSQL(row data_store.ResRow) error {
 	return nil
 }
 
-func getSQL(node_name string) (*Node, error){
+func getSQL(node_name string) (*Node, error) {
 	node := new(Node)
 	var sqlStmt string
 	if config.Config.UseMySQL {
@@ -91,7 +91,7 @@ func getSQL(node_name string) (*Node, error){
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from goiardi.nodes n where n.name = $1"
 	}
-	
+
 	stmt, err := data_store.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err

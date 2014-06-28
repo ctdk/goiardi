@@ -14,26 +14,26 @@
  * limitations under the License.
  */
 
-/* 
+/*
 Goiardi is an implementation of the Chef server (http://www.opscode.com) written
 in Go. It can either run entirely in memory with the option to save and load the
-in-memory data and search indexes to and from disk, drawing inspiration from 
+in-memory data and search indexes to and from disk, drawing inspiration from
 chef-zero, or it can use MySQL or PostgreSQL as its storage backend.
 
 Like all software, it is a work in progress. Goiardi now, though, should have all
 the functionality of the open source Chef Server, plus some extras like reporting
-and event logging. It does not support other Enterprise Chef type features like 
+and event logging. It does not support other Enterprise Chef type features like
 organizations or pushy at this time. When used, knife works, and chef-client runs
-complete successfully. Almost all chef-pendant tests successfully successfully 
+complete successfully. Almost all chef-pendant tests successfully successfully
 run, with a few disagreements about error messages that don't impact the clients.
 It does pretty well against the official chef-pedant, but because goiardi handles
-some authentication matters a little differently than the official chef-server, 
-there is also a fork of chef-pedant located at 
+some authentication matters a little differently than the official chef-server,
+there is also a fork of chef-pedant located at
 https://github.com/ctdk/chef-pedant that's more custom tailored to goiardi.
 
 Many go tests are present as well in different goiardi subdirectories.
 
-Goiardi currently has eight dependencies: go-flags, go-cache, go-trie, toml, the 
+Goiardi currently has eight dependencies: go-flags, go-cache, go-trie, toml, the
 mysql driver from go-sql-driver, the postgres driver, logger, and go-uuid.
 
 To install them, run:
@@ -81,9 +81,9 @@ chef-pedant can and should be used for testing goiardi as well.
 
    goiardi <options>
 
-You can get a list of command-line options with the '-h' flag. 
+You can get a list of command-line options with the '-h' flag.
 
-Goiardi can also take a config file, run like goiardi -c 
+Goiardi can also take a config file, run like goiardi -c
 /path/to/conf-file. See etc/goiardi.conf-sample for an example documented
 configuration file. Options in the configuration file share the same name
 as the long command line arguments (so, for example, --ipaddress=127.0.0.1
@@ -145,7 +145,7 @@ Currently available command line and config file options:
                           afterwards. Should be used with caution. Cannot be
                           used at the same time as -m/--import.
    -m, --import=          Import data from the given file, exiting
-                          afterwards. Cannot be used at the same time as 
+                          afterwards. Cannot be used at the same time as
                           -x/--export.
    -Q, --obj-max-size=    Maximum object size in bytes for the file store.
                           Default 10485760 bytes (10MB).
@@ -165,11 +165,11 @@ Currently available command line and config file options:
 For more documentation on Chef, see http://docs.opscode.com.
 
 If goiardi is not running in use-auth mode, it does not actually care about .pem
-files at all. You still need to have one to keep knife and chef-client happy. 
+files at all. You still need to have one to keep knife and chef-client happy.
 It's like chef-zero in that regard.
 
-If goiardi is running in use-auth mode, then proper keys are needed. When 
-goiardi is started, if the chef-webui and chef-validator clients, and the admin 
+If goiardi is running in use-auth mode, then proper keys are needed. When
+goiardi is started, if the chef-webui and chef-validator clients, and the admin
 user, are not present, it will create new keys in the --conf-root directory. Use
 them as you would normally for validating clients, performing tasks with the
 admin user, or using chef-webui if webui will run in front of goiardi.
@@ -198,11 +198,11 @@ command line means more spewing into the log.
 
 MySQL mode
 
-Goiardi can now use MySQL to store its data, instead of keeping all its data 
+Goiardi can now use MySQL to store its data, instead of keeping all its data
 in memory (and optionally freezing its data to disk for persistence).
 
 If you want to use MySQL, you (unsurprisingly) need a MySQL installation that
-goiardi can access. This document assumes that you are able to install, 
+goiardi can access. This document assumes that you are able to install,
 configure, and run MySQL.
 
 Once the MySQL server is set up to your satisfaction, you'll need to install
@@ -265,7 +265,7 @@ may also want to create a user for it. If you decide to do that:
 * Create the database, if you decided to: `$ createdb goiardi_db <additional options>`. If you created a user, make it the owner of the goiardi db with `-O goiardi`.
 
 After you've done that, or decided to use an existing database and user, deploy
-the sqitch bundle in sql-files/postgres-bundle. If you're using the default 
+the sqitch bundle in sql-files/postgres-bundle. If you're using the default
 Postgres user on the local machine, `sqitch deploy db:pg:<dbname>` will be
 sufficient. Otherwise, the deploy command will be something like `sqitch deploy db:pg://user:password@localhost/goairdi_db`.
 
@@ -282,7 +282,7 @@ and can be seen below:
 
 	# PostgreSQL options. If "use-postgres" is set to true on the command line or in
 	# the configuration file, connect to postgres with the options in [postgres].
-	# These options are all strings. See 
+	# These options are all strings. See
 	# http://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters for details
 	# on the connection parameters. All of these parameters are technically optional,
 	# although chances are pretty good that you'd want to set at least some of them.
@@ -308,13 +308,13 @@ The event API endpoints work as follows:
 
 	`GET /events` - optionally taking `offset`, `limit`, `from`, `until`, `object_type`, `object_name`, and `doer` query parameters.
 
-	List the logged events, starting with the most recent. Use the `offset` 
-	and `limit` query parameters to view smaller chunks of the event log at 
+	List the logged events, starting with the most recent. Use the `offset`
+	and `limit` query parameters to view smaller chunks of the event log at
 	one time.  The `from`, `until`, `object_type`, `object_name`, and `doer`
-	query parameters can be used to narrow the results returned further, by 
-	time range (for `from` and `until`), the type of object and the name of 
-	the object (for `object_type` and `object_name`) and the name of the 
-	performer of the action (for `doer`).  These options may be used in 
+	query parameters can be used to narrow the results returned further, by
+	time range (for `from` and `until`), the type of object and the name of
+	the object (for `object_type` and `object_name`) and the name of the
+	performer of the action (for `doer`).  These options may be used in
 	singly or in concert.
 
 	`DELETE /events?purge=1234` - purge logged events older than the given id from the event log.
@@ -356,10 +356,10 @@ reports are appreciated.
 
 Import and Export of Data
 
-Goiardi can now import and export its data in a JSON file. This can help both 
+Goiardi can now import and export its data in a JSON file. This can help both
 when upgrading, when the on-disk data format changes between releases, and to
 convert your goiardi installation from in-memory to MySQL (or vice versa). The
-JSON file has a version number set (currently 1.0), so that in the future if 
+JSON file has a version number set (currently 1.0), so that in the future if
 there is some sort of incompatible change to the JSON file format the importer
 will be able to handle it.
 
@@ -379,7 +379,7 @@ given filename, and goiardi will exit.
 
 Importing is ever so slightly trickier. You should remove any existing data store
 and index files, and if using an SQL database use sqitch to revert and deploy all
-of the SQL files to set up a completely clean schema for goiardi. Then run 
+of the SQL files to set up a completely clean schema for goiardi. Then run
 goiardi with the new options like you normally would, but add `-m <filename>`.
 Goiardi will run, import the new data, and exit. Assuming it went well, the data
 will be all imported. The export dump does not contain the user and client .pem
@@ -394,14 +394,14 @@ up first.
 Tested Platforms
 
 Goiardi has been built and run with the native 6g compiler on Mac OS X (10.7,
-10.8, and 10.9), Debian squeeze and wheezy, a fairly recent Arch Linux, FreeBSD 
+10.8, and 10.9), Debian squeeze and wheezy, a fairly recent Arch Linux, FreeBSD
 9.2, and Solaris. Using Go's cross compiling capabilities, goiardi builds for all
-of Go's supported platforms except Dragonfly BSD and plan9 (because of issues 
+of Go's supported platforms except Dragonfly BSD and plan9 (because of issues
 with the postgres client library). Windows support has not been tested
 extensively, but a cross compiled binary has been tested successfully on Windows.
 
 Goiardi has also been built and run with gccgo (using the "-compiler gccgo"
-option with the "go" command) on Arch Linux. Building it with gccgo without 
+option with the "go" command) on Arch Linux. Building it with gccgo without
 the go command probably works, but it hasn't happened yet. This is a priority,
 though, so goiardi can be built on platforms the native compiler doesn't support
 yet.
@@ -409,11 +409,11 @@ yet.
 Note regarding goiardi persistence and freezing data
 
 As mentioned above, goiardi can now freeze its in-memory data store and index to
-disk if specified. It will save before quitting if the program receives a 
+disk if specified. It will save before quitting if the program receives a
 SIGTERM or SIGINT signal, along with saving every "freeze-interval" seconds
 automatically.
 
-Saving automatically helps guard against the case where the server receives a 
+Saving automatically helps guard against the case where the server receives a
 signal that it can't handle and forces it to quit. In addition, goiardi will not
 replace the old save files until the new one is all finished writing. However,
 it's still not anywhere near a real database with transaction protection, etc.,
@@ -423,9 +423,9 @@ and corruption do exist. The appropriate caution is warranted.
 Documentation
 
 In addition to the aforementioned Chef documentation at http://docs.opscode.com,
-more documentation specific to goiardi can be viewed with godoc. See 
+more documentation specific to goiardi can be viewed with godoc. See
 http://godoc.org/code.google.com/p/go.tools/cmd/godoc for an explanation of how
-godoc works. 
+godoc works.
 
 To do
 
@@ -451,8 +451,8 @@ Adding tests where there are no tests currently would be even more appreciated.
 At least, though, try and not break anything worse than it is. Test coverage has
 improved, but is still an ongoing concern.
 
-Goiardi is authored and copyright (c) Jeremy Bingham, 2013.  Like many Chef 
-ecosystem programs, goairdi is licensed under the Apache 2.0 License. See the 
+Goiardi is authored and copyright (c) Jeremy Bingham, 2013.  Like many Chef
+ecosystem programs, goairdi is licensed under the Apache 2.0 License. See the
 LICENSE file for details.
 
 Chef is copyright (c) 2008-2013 Opscode, Inc. and its various contributors.

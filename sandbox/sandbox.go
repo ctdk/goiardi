@@ -22,41 +22,41 @@
 package sandbox
 
 import (
+	"crypto/md5"
+	"crypto/rand"
+	"database/sql"
+	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/util"
-	"fmt"
-	"crypto/md5"
-	"crypto/rand"
 	"io"
 	"time"
-	"database/sql"
-	"github.com/ctdk/goas/v2/logger"
 )
 
 /* The structure of the sandbox responses is... inconsistent. */
 
 type Sandbox struct {
-	Id string
+	Id           string
 	CreationTime time.Time
-	Completed bool
-	Checksums []string
+	Completed    bool
+	Checksums    []string
 }
 
 /* We actually generate the sandbox_id ourselves, so we don't pass that in. */
 
 // Create a new sandbox, given a map of null values with file checksums as keys.
-func New(checksum_hash map[string]interface{}) (*Sandbox, error){
+func New(checksum_hash map[string]interface{}) (*Sandbox, error) {
 	/* For some reason the checksums come in a JSON hash that looks like
-	 * this:
- 	 * { "checksums": {
-	 * "385ea5490c86570c7de71070bce9384a":null,
-  	 * "f6f73175e979bd90af6184ec277f760c":null,
-  	 * "2e03dd7e5b2e6c8eab1cf41ac61396d5":null
-  	 * } } --- per the chef server api docs. Not sure why it comes in that
-	 * way rather than as an array, since those nulls are apparently never
-	 * anything but nulls. */
+		 * this:
+	 	 * { "checksums": {
+		 * "385ea5490c86570c7de71070bce9384a":null,
+	  	 * "f6f73175e979bd90af6184ec277f760c":null,
+	  	 * "2e03dd7e5b2e6c8eab1cf41ac61396d5":null
+	  	 * } } --- per the chef server api docs. Not sure why it comes in that
+		 * way rather than as an array, since those nulls are apparently never
+		 * anything but nulls. */
 
 	/* First generate an id for this sandbox. Collisions are certainly
 	 * possible, so we'll give it five tries to make a unique one before
@@ -68,7 +68,7 @@ func New(checksum_hash map[string]interface{}) (*Sandbox, error){
 		sandbox_id, err = generate_sandbox_id()
 		if err != nil {
 			/* Something went very wrong. */
-			return nil, err 
+			return nil, err
 		}
 		if s, _ := Get(sandbox_id); s != nil {
 			logger.Infof("Collision! Somehow %s already existed as a sandbox id on attempt %d. Trying again.", sandbox_id, i)
@@ -79,7 +79,7 @@ func New(checksum_hash map[string]interface{}) (*Sandbox, error){
 	if sandbox_id == "" {
 		err = fmt.Errorf("Somehow every attempt to create a unique sandbox id failed. Bailing.")
 		return nil, err
-	} 
+	}
 	checksums := make([]string, len(checksum_hash))
 	j := 0
 	for k, _ := range checksum_hash {
@@ -88,10 +88,10 @@ func New(checksum_hash map[string]interface{}) (*Sandbox, error){
 	}
 
 	sbox := &Sandbox{
-		Id: sandbox_id,
+		Id:           sandbox_id,
 		CreationTime: time.Now(),
-		Completed: false,
-		Checksums: checksums,
+		Completed:    false,
+		Checksums:    checksums,
 	}
 	return sbox, nil
 }
@@ -109,9 +109,7 @@ func generate_sandbox_id() (string, error) {
 	return sandbox_id, nil
 }
 
-
-
-func Get(sandbox_id string) (*Sandbox, error){
+func Get(sandbox_id string) (*Sandbox, error) {
 	var sandbox *Sandbox
 	var found bool
 
@@ -223,7 +221,7 @@ func (s *Sandbox) URLType() string {
 }
 
 // Return all sandboxes on the server.
-func AllSandboxes() ([]*Sandbox) {
+func AllSandboxes() []*Sandbox {
 	sandboxes := make([]*Sandbox, 0)
 	if config.UsingDB() {
 		sandboxes = allSandboxesSQL()
@@ -235,7 +233,7 @@ func AllSandboxes() ([]*Sandbox) {
 				continue
 			}
 			sandboxes = append(sandboxes, sb)
-		} 
+		}
 	}
 	return sandboxes
 }

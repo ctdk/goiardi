@@ -23,7 +23,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-func (r *Report)fillReportFromMySQL(row data_store.ResRow) error{
+func (r *Report) fillReportFromMySQL(row data_store.ResRow) error {
 	var res, dat []byte
 	var st, et mysql.NullTime
 	err := row.Scan(&r.RunId, &st, &et, &r.TotalResCount, &r.Status, &r.RunList, &res, &dat, &r.NodeName)
@@ -38,7 +38,7 @@ func (r *Report)fillReportFromMySQL(row data_store.ResRow) error{
 	}
 	if st.Valid {
 		r.StartTime = st.Time
-	} 
+	}
 	if et.Valid {
 		r.EndTime = et.Time
 	}
@@ -46,7 +46,7 @@ func (r *Report)fillReportFromMySQL(row data_store.ResRow) error{
 	return nil
 }
 
-func (r *Report)saveMySQL() error {
+func (r *Report) saveMySQL() error {
 	res, reserr := data_store.EncodeBlob(&r.Resources)
 	if reserr != nil {
 		return reserr

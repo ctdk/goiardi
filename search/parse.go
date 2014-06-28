@@ -21,8 +21,8 @@
 package search
 
 import (
-	"github.com/ctdk/goiardi/indexer"
 	"fmt"
+	"github.com/ctdk/goiardi/indexer"
 )
 
 type Op uint8
@@ -58,13 +58,13 @@ const (
 // Hold parsed tokens from the solr query
 type Token struct {
 	QueryChain Queryable
-	Latest Queryable
+	Latest     Queryable
 }
 
 // An individual query term and its operator.
 type QueryTerm struct {
-	term Term
-	mod Op
+	term      Term
+	mod       Op
 	fuzzboost Op
 	fuzzparam string
 }
@@ -72,46 +72,46 @@ type QueryTerm struct {
 // The no frills basic query type, without groups or ranges. Can contain regexp
 // terms, however.
 type BasicQuery struct {
-	field Field
-	term QueryTerm
-	op Op
-	next Queryable
+	field    Field
+	term     QueryTerm
+	op       Op
+	next     Queryable
 	complete bool
 }
 
 // Query grouped results.
 type GroupedQuery struct {
-	field Field
-	terms []QueryTerm
-	op Op
-	next Queryable
+	field    Field
+	terms    []QueryTerm
+	op       Op
+	next     Queryable
 	complete bool
 }
 
 // Query a range of values.
 type RangeQuery struct {
-	field Field
-	start RangeTerm
-	end RangeTerm
+	field     Field
+	start     RangeTerm
+	end       RangeTerm
 	inclusive bool
-	op Op
-	next Queryable
-	complete bool
+	op        Op
+	next      Queryable
+	complete  bool
 }
 
-// Subquery's really just a marker in the chain of queries. Later it will be 
+// Subquery's really just a marker in the chain of queries. Later it will be
 // processed by itself though.
 type SubQuery struct {
-	start bool
-	end bool
-	op Op
+	start    bool
+	end      bool
+	op       Op
 	complete bool
-	next Queryable
+	next     Queryable
 }
 
-// Interface of methods all the query chain types have to be able to implement 
+// Interface of methods all the query chain types have to be able to implement
 // to search the index.
-type Queryable interface{
+type Queryable interface {
 	// Search the index for the given term.
 	SearchIndex(string) (map[string]*indexer.IdxDoc, error)
 	// Add an operator to this query chain link.
@@ -139,7 +139,7 @@ type Queryable interface{
 }
 
 type GroupQueryHolder struct {
-	op Op
+	op  Op
 	res map[string]*indexer.IdxDoc
 }
 
@@ -199,7 +199,7 @@ func (q *BasicQuery) AddFuzzBoost(o Op) {
 	q.term.fuzzboost = o
 }
 
-func (q *BasicQuery) AddFuzzParam(s string){
+func (q *BasicQuery) AddFuzzParam(s string) {
 	q.term.fuzzparam = s
 }
 
@@ -217,19 +217,18 @@ func (q *GroupedQuery) AddField(s Field) {
 
 func (q *GroupedQuery) AddTerm(s Term) {
 	tlen := len(q.terms)
-	if (tlen == 0) || (q.terms[tlen - 1].term != "") {
-		t := QueryTerm{ mod: OpNotAnOp, term: s}
+	if (tlen == 0) || (q.terms[tlen-1].term != "") {
+		t := QueryTerm{mod: OpNotAnOp, term: s}
 		q.terms = append(q.terms, t)
 	} else {
-		q.terms[tlen - 1].term = s
+		q.terms[tlen-1].term = s
 	}
 }
 
 func (q *GroupedQuery) AddTermOp(o Op) {
-	t := QueryTerm{ mod: o , term: ""}
+	t := QueryTerm{mod: o, term: ""}
 	q.terms = append(q.terms, t)
 }
-
 
 func (q *GroupedQuery) SetNext(n Queryable) {
 	q.next = n
@@ -248,11 +247,11 @@ func (q *GroupedQuery) SetCompleted() {
 }
 
 func (q *GroupedQuery) AddFuzzBoost(o Op) {
-	q.terms[len(q.terms) - 1].fuzzboost = o
+	q.terms[len(q.terms)-1].fuzzboost = o
 }
 
-func (q *GroupedQuery) AddFuzzParam(s string){
-	q.terms[len(q.terms) - 1].fuzzparam = s
+func (q *GroupedQuery) AddFuzzParam(s string) {
+	q.terms[len(q.terms)-1].fuzzparam = s
 }
 
 func (q *RangeQuery) AddOp(o Op) {
@@ -277,7 +276,7 @@ func (q *RangeQuery) AddTerm(s Term) {
 }
 
 func (q *RangeQuery) AddTermOp(o Op) {
-	; // nop
+	// nop
 }
 
 func (q *RangeQuery) SetNext(n Queryable) {
@@ -300,11 +299,11 @@ func (q *RangeQuery) SetCompleted() {
 }
 
 func (q *RangeQuery) AddFuzzBoost(o Op) {
-	; // no-op
+	// no-op
 }
 
 func (q *RangeQuery) AddFuzzParam(s string) {
-	;
+
 }
 
 func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
@@ -339,7 +338,7 @@ func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, 
 					}
 				}
 			}
-		} else if !reqOp{
+		} else if !reqOp {
 			for k, v := range t.res {
 				res[k] = v
 			}
@@ -356,7 +355,7 @@ func (q *RangeQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, er
 	return res, err
 }
 
-func (q *SubQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) { 
+func (q *SubQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
 	return nil, nil
 }
 
@@ -369,15 +368,15 @@ func (q *SubQuery) Op() Op {
 }
 
 func (q *SubQuery) AddField(s Field) {
-	;
+
 }
 
 func (q *SubQuery) AddTerm(s Term) {
-	;
+
 }
 
 func (q *SubQuery) AddTermOp(o Op) {
-	;
+
 }
 
 func (q *SubQuery) SetNext(n Queryable) {
@@ -396,11 +395,11 @@ func (q *SubQuery) SetCompleted() {
 	q.complete = true
 }
 func (q *SubQuery) AddFuzzBoost(o Op) {
-	;
+
 }
 
-func (q *SubQuery) AddFuzzParam(s string){
-	;
+func (q *SubQuery) AddFuzzParam(s string) {
+
 }
 
 func (z *Token) AddOp(o Op) {
@@ -476,10 +475,9 @@ func (z *Token) SetCompleted() {
 	z.Latest.SetCompleted()
 }
 
-
-func (z *Token) StartSubQuery(){
+func (z *Token) StartSubQuery() {
 	// we don't want to start a subquery if we're in a field group query
-	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()){
+	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
 		sq := new(SubQuery)
 		sq.start = true
 		sq.complete = true
@@ -490,9 +488,9 @@ func (z *Token) StartSubQuery(){
 	}
 }
 
-func (z *Token) EndSubQuery(){
+func (z *Token) EndSubQuery() {
 	// we don't want to end a subquery if we're in a field group query
-	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()){
+	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
 		sq := new(SubQuery)
 		sq.end = true
 		sq.complete = true

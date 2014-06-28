@@ -17,14 +17,14 @@
 package report
 
 import (
-	"testing"
+	"encoding/gob"
 	"fmt"
 	"github.com/ctdk/goiardi/node"
+	"testing"
 	"time"
-	"encoding/gob"
 )
 
-func TestReportCreation(t *testing.T){
+func TestReportCreation(t *testing.T) {
 	uuid := "12b8be8d-a2ef-4fc6-88b3-4c18103b88df"
 	invalid_uid := "12b8be8d-a2ef-4fc6-88b3-4c18103b88zz"
 	r, err := New(uuid, "node")
@@ -41,11 +41,11 @@ func TestReportCreation(t *testing.T){
 	r.Delete()
 }
 
-func TestReportUpdating(t *testing.T){
-	create := map[string]interface{}{"action":"start","run_id":"12b8be8d-a2ef-4fc6-88b3-4c18103b88df","start_time":"2014-05-10 01:05:42 +0000"}
+func TestReportUpdating(t *testing.T) {
+	create := map[string]interface{}{"action": "start", "run_id": "12b8be8d-a2ef-4fc6-88b3-4c18103b88df", "start_time": "2014-05-10 01:05:42 +0000"}
 	//update := map[string]interface{}{"action":"end","resources":[],"status":"success","run_list":[],"total_res_count":"0","data":{},"start_time":"2014-05-10 01:05:42 +0000","end_time":"2014-05-10 01:05:42 +0000"}
-	update := map[string]interface{}{"action":"end", "status":"success", "start_time":"2014-05-10 01:05:42 +0000","end_time":"2014-05-10 01:05:42 +0000", "total_res_count":"0"  }
-	update["resources"] = make([]interface{},0)
+	update := map[string]interface{}{"action": "end", "status": "success", "start_time": "2014-05-10 01:05:42 +0000", "end_time": "2014-05-10 01:05:42 +0000", "total_res_count": "0"}
+	update["resources"] = make([]interface{}, 0)
 	update["run_list"] = "[]"
 	update["data"] = make(map[string]interface{})
 	r, err := NewFromJson("node", create)
@@ -59,7 +59,7 @@ func TestReportUpdating(t *testing.T){
 	r.Delete()
 }
 
-func TestReportListing(t *testing.T){
+func TestReportListing(t *testing.T) {
 	uuid := "12b8be8d-a2ef-4fc6-88b3-4c18103b88d%d"
 	gob.Register(new(Report))
 	for i := 0; i < 3; i++ {
@@ -80,7 +80,7 @@ func TestReportListing(t *testing.T){
 		r.StartTime = time.Now()
 		r.Save()
 	}
-	from := time.Now().Add(-(time.Duration(24 * 90) * time.Hour))
+	from := time.Now().Add(-(time.Duration(24*90) * time.Hour))
 	until := time.Now()
 	ns, nerr := GetNodeList(n.Name, from, until, 100, "")
 	if nerr != nil {

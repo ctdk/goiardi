@@ -18,14 +18,14 @@
 package chef_crypto
 
 import (
-	"testing"
 	"strings"
+	"testing"
 )
 
-/* Incidentally, I have a feeling this test file's going to get a lot more 
+/* Incidentally, I have a feeling this test file's going to get a lot more
  * action very soon. */
 
-func TestGenerateRSAKeys(t *testing.T){
+func TestGenerateRSAKeys(t *testing.T) {
 	priv, pub, err := GenerateRSAKeys()
 	if err != nil {
 		t.Errorf("Generating RSA keys generated an error: %s", err)
@@ -33,7 +33,7 @@ func TestGenerateRSAKeys(t *testing.T){
 	if !strings.HasPrefix(priv, "-----BEGIN RSA PRIVATE KEY-----") {
 		t.Errorf("Improper private key: %s", priv)
 	}
-	if !strings.HasPrefix(pub, "-----BEGIN PUBLIC KEY-----"){
+	if !strings.HasPrefix(pub, "-----BEGIN PUBLIC KEY-----") {
 		t.Errorf("Improper public key: %s", pub)
 	}
 }
@@ -47,51 +47,51 @@ var realBadPubKey = "-----BEGIN PUBLIC KEY-----\nI'm bad to the bone\n-----END P
 var arrPubKey = []string{}
 var mapPubKey = make(map[string]interface{})
 
-func TestGoodPubKey(t *testing.T){
+func TestGoodPubKey(t *testing.T) {
 	ok, err := ValidatePublicKey(goodPubKey)
 	if !ok {
 		t.Errorf("Valid public key was invalid: %s", err.Error())
 	}
 }
 
-func TestWellFormedBogusPubKey(t *testing.T){
+func TestWellFormedBogusPubKey(t *testing.T) {
 	ok, _ := ValidatePublicKey(badPubKey)
 	if ok {
 		t.Errorf("Well-formed but bogus public key validated when it should not have.")
 	}
 }
 
-func TestNumberPubKey(t *testing.T){
+func TestNumberPubKey(t *testing.T) {
 	ok, _ := ValidatePublicKey(onePubKey)
 	if ok {
 		t.Errorf("Well-formed but bogus public key validated when it should not have.")
 	}
 }
 
-func TestRealBadPubKey(t *testing.T){
+func TestRealBadPubKey(t *testing.T) {
 	ok, _ := ValidatePublicKey(realBadPubKey)
 	if ok {
 		t.Errorf("Well-formed but bogus public key validated when it should not have.")
 	}
 }
 
-func TestArrayPubKey(t *testing.T){
+func TestArrayPubKey(t *testing.T) {
 	ok, _ := ValidatePublicKey(arrPubKey)
 	if ok {
 		t.Errorf("Well-formed but bogus public key validated when it should not have.")
 	}
 }
 
-func TestMapPubKey(t *testing.T){
+func TestMapPubKey(t *testing.T) {
 	ok, _ := ValidatePublicKey(mapPubKey)
 	if ok {
 		t.Errorf("Well-formed but bogus public key validated when it should not have.")
 	}
 }
 
-func TestHashPasswd(t *testing.T){
+func TestHashPasswd(t *testing.T) {
 	passwd := "abc123"
-	salt := []byte{ 1, 2, 4, 5, 3, 5, 2, 1, 10 }
+	salt := []byte{1, 2, 4, 5, 3, 5, 2, 1, 10}
 	nosalt := []byte{}
 	expected := "c70b5dd9ebfb6f51d09d4132b7170c9d20750a7852f00680f65658f0310e810056e6763c34c9a00b0e940076f54495c169fc2302cceb312039271c43469507dc"
 	saltedExpected := "f4d643377e0809b0a0620bdcb01d7c76b246ee6c19f5d7539ecdbc7d4360b588f0e0254954ece97e9a38a6df6ea72dea4d82166c31ac02415f4e716dfd1b49d0"

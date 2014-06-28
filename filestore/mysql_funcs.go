@@ -19,11 +19,11 @@
 package filestore
 
 import (
-	"github.com/ctdk/goiardi/data_store"
 	"database/sql"
+	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/data_store"
 	"log"
 	"strings"
-	"github.com/ctdk/goas/v2/logger"
 )
 
 func (f *FileStore) saveMySQL() error {
@@ -50,7 +50,7 @@ func deleteHashesMySQL(file_hashes []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	delete_query := "DELETE FROM file_checksums WHERE checksum IN(?" + strings.Repeat(",?", len(file_hashes) - 1) + ")"
+	delete_query := "DELETE FROM file_checksums WHERE checksum IN(?" + strings.Repeat(",?", len(file_hashes)-1) + ")"
 	del_args := make([]interface{}, len(file_hashes))
 	for i, v := range file_hashes {
 		del_args[i] = v
@@ -60,7 +60,7 @@ func deleteHashesMySQL(file_hashes []string) {
 		logger.Debugf("Error %s trying to delete hashes", err.Error())
 		tx.Rollback()
 		return
-	} 
+	}
 	tx.Commit()
-	return 
+	return
 }
