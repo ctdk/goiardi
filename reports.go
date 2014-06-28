@@ -22,7 +22,6 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/config"
 	"strconv"
 	"time"
 	"fmt"
@@ -106,10 +105,6 @@ func report_handler(w http.ResponseWriter, r *http.Request) {
 			if st, found := r.Form["status"]; found {
 				if len(st) < 0 {
 					JsonErrorReport(w, r, "invalid status", http.StatusBadRequest)
-					return
-				}
-				if !config.UsingDB() {
-					JsonErrorReport(w, r, "Status cannot be used to search for reports in in-memory mode, only with an SQL backend", http.StatusBadRequest)
 					return
 				}
 				status = st[0]

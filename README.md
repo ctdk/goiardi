@@ -4,24 +4,26 @@ Goiardi
 Goiardi is an implementation of the Chef server (http://www.opscode.com) written
 in Go. It can either run entirely in memory with the option to save and load the
 in-memory data and search indexes to and from disk, drawing inspiration from 
-chef-zero, or it can use MySQL as its storage backend.
+chef-zero, or it can use MySQL or PostgreSQL as its storage backend.
 
-It is a work in progress. At the moment normal functionality as tested with 
-knife works, and chef-client runs complete successfully. At this point, almost
-all chef-pendant tests successfully successfully run, with a few disagreements
-that don't impact the clients. It does pretty well against the official 
-chef-pedant, but because goiardi handles some authentication matters a little 
-differently than the official chef-server, there is also a fork of chef-pedant 
-located at https://github.com/ctdk/chef-pedant that's more custom tailored to
-goiardi.
+Like all software, it is a work in progress. Goiardi now, though, should have all
+the functionality of the open source Chef Server, plus some extras like reporting
+and event logging. It does not support other Enterprise Chef type features like 
+organizations or pushy at this time. When used, knife works, and chef-client runs
+complete successfully. Almost all chef-pendant tests successfully successfully 
+run, with a few disagreements about error messages that don't impact the clients.
+It does pretty well against the official chef-pedant, but because goiardi handles
+some authentication matters a little differently than the official chef-server, 
+there is also a fork of chef-pedant located at 
+https://github.com/ctdk/chef-pedant that's more custom tailored to goiardi.
 
 Many go tests are present as well in different goiardi subdirectories.
 
 DEPENDENCIES
 ------------
 
-Goiardi currently has seven dependencies: go-flags, go-cache, go-trie, toml, the 
-mysql driver from go-sql-driver, logger, and go-uuid.
+Goiardi currently has eight dependencies: go-flags, go-cache, go-trie, toml, the 
+mysql driver from go-sql-driver, the postgres driver, logger, and go-uuid.
 
 To install them, run:
 
@@ -31,6 +33,7 @@ To install them, run:
    go get github.com/ctdk/go-trie/gtrie
    go get github.com/BurntSushi/toml
    go get github.com/go-sql-driver/mysql
+   go get github.com/lib/pq
    go get github.com/ctdk/goas/v2/logger
    go get github.com/codeskyblue/go-uuid
 ```
@@ -52,7 +55,7 @@ INSTALLATION
 ------------
 
 1. Install go. (http://golang.org/doc/install.html) You may need to upgrade to
-   go 1.2 to compile all the dependencies.
+   go 1.2 to compile all the dependencies. Go 1.3 is also confirmed to work.
 
 2. Make sure your $GOROOT and PATH are set up correctly per the Go installation
    instructions.
@@ -130,6 +133,8 @@ INSTALLATION
                           over the webui interface.
        --use-mysql        Use a MySQL database for data storage. Configure
                           database options in the config file.
+       --use-postgresql   Use a PostgreSQL database for data storage.
+                          Configure database options in the config file.
        --local-filestore-dir= Directory to save uploaded files in. Optional when
                           running in in-memory mode, *mandatory* for SQL
                           mode.
@@ -177,6 +182,14 @@ authentication protocol.
 *Note:* The admin user, when created on startup, does not have a password. This
 prevents logging in to the webui with the admin user, so a password will have to
 be set for admin before doing so.
+
+### Logging
+
+By default, goiardi logs to standard output. A log file may be specified with the
+`-L/--log-file` flag, or goiardi can log to syslog with the `-s/--syslog` flag on
+platforms that support syslog. Attempting to use syslog on one of these platforms
+(currently Windows and plan9 (although plan9 doesn't build for other reasons))
+will result in an error.
 
 ### Log levels
 
@@ -242,6 +255,49 @@ given below:
 		tls = "false"
 ```
 
+### Postgres mode
+
+Goiardi can also use Postgres as a backend for storing its data, instead of using
+MySQL or the in-memory data store. The overall procedure is pretty similar to
+setting up goiardi to use MySQL. Specifically for Postgres, you may want to
+create a database especially for goiardi, but it's not mandatory. If you do, you
+may also want to create a user for it. If you decide to do that:
+
+* Create the user: `$ createuser goiardi <additional options>`
+* Create the database, if you decided to: `$ createdb goiardi_db <additional options>`. If you created a user, make it the owner of the goiardi db with `-O goiardi`.
+
+After you've done that, or decided to use an existing database and user, deploy
+the sqitch bundle in sql-files/postgres-bundle. If you're using the default 
+Postgres user on the local machine, `sqitch deploy db:pg:<dbname>` will be
+sufficient. Otherwise, the deploy command will be something like `sqitch deploy db:pg://user:password@localhost/goairdi_db`.
+
+The Postgres sqitch tutorial at https://metacpan.org/pod/sqitchtutorial explains more about how to use sqitch and Postgres.
+
+Set `use-postgresql` in the configuration file, or specify `--use-postgresql` on
+the command line. It's also an error to specify both `-D`/`--data-file` flag and
+`--use-postgresql` at the same time like it is in MySQL mode. MySQL and Postgres
+cannot be used at the same time, either.
+
+Like MySQL, the Postgres connection options must be specified in the config file
+at this time. There is also an example Postgres configuration in the config file,
+and can be seen below:
+
+```
+# PostgreSQL options. If "use-postgres" is set to true on the command line or in
+# the configuration file, connect to postgres with the options in [postgres].
+# These options are all strings. See 
+# http://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters for details
+# on the connection parameters. All of these parameters are technically optional,
+# although chances are pretty good that you'd want to set at least some of them.
+[postgresql]
+	username = "foo"
+	password = "s3kr1t"
+	host = "localhost"
+	port = "5432"
+	dbname = "mydb"
+	sslmode = "disable"
+```
+
 ### Event Logging
 
 Goiardi has optional event logging. When enabled with the `--log-events` command
@@ -254,10 +310,16 @@ will be automatically purged, leaving that many events in the log. This is parti
 
 The event API endpoints work as follows:
 
-> `GET /events` - optionally taking `offset` and `limit` query parameters.
+> `GET /events` - optionally taking `offset`, `limit`, `from`, `until`,
+> `object_type`, `object_name`, and `doer` query parameters.
 >
 > List the logged events, starting with the most recent. Use the `offset` and
 > `limit` query parameters to view smaller chunks of the event log at one time.
+> The `from`, `until`, `object_type`, `object_name`, and `doer` query parameters
+> can be used to narrow the results returned further, by time range (for `from`
+> and `until`), the type of object and the name of the object (for `object_type`
+> and `object_name`) and the name of the performer of the action (for `doer`).
+> These options may be used in singly or in concert.
 
 > `DELETE /events?purge=1234` - purge logged events older than the given id from
 > the event log.
@@ -289,6 +351,12 @@ Goiardi now supports, on an experimental basis, Chef's reporting facilities.
 Nothing needs to be enabled in goiardi to use this, but changes are required with
 the client. See http://docs.opscode.com/reporting.html for details on how to
 enable reporting and how to use it.
+
+There is a goiardi extension to reporting: a "status" query parameter may be
+passed in a GET request that lists reports to limit the reports returned to ones
+that match the status, so you can read only reports of chef runs that were
+successful, failed, or started but haven't completed yet. Valid values for the
+"status" parameter are "started", "success", and "failure".
 
 As this is an experimental feature, it may not work entirely correctly. Bug
 reports are appreciated.
@@ -333,8 +401,11 @@ up first.
 ### Tested Platforms
 
 Goiardi has been built and run with the native 6g compiler on Mac OS X (10.7,
-10.8, and 10.9), Debian squeeze and wheezy, a fairly recent Arch Linux, and 
-FreeBSD 9.2.
+10.8, and 10.9), Debian squeeze and wheezy, a fairly recent Arch Linux, FreeBSD 
+9.2, and Solaris. Using Go's cross compiling capabilities, goiardi builds for all
+of Go's supported platforms except Dragonfly BSD and plan9 (because of issues 
+with the postgres client library). Windows support has not been tested
+extensively, but a cross compiled binary has been tested successfully on Windows.
 
 Goiardi has also been built and run with gccgo (using the `-compiler gccgo`
 option with the `go` command) on Arch Linux. Building it with gccgo without 
@@ -393,6 +464,7 @@ improvements, and submit a pull request. Tests would, of course, be appreciated.
 Adding tests where there are no tests currently would be even more appreciated.
 At least, though, try and not break anything worse than it is. Test coverage has
 improved, but is still an ongoing concern.
+
 AUTHOR
 ------
 

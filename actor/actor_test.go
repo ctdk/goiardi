@@ -22,11 +22,13 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
+	"encoding/gob"
 )
 
 func TestActorClient(t *testing.T) {
 	config.Config.UseAuth = true
 	c, _ := client.New("fooclient")
+	gob.Register(c)
 	c.Save()
 	c1, err := GetReqUser("fooclient")
 	if err != nil {
@@ -43,6 +45,7 @@ func TestActorClient(t *testing.T) {
 	}
 
 	u, _ := user.New("foouser")
+	gob.Register(u)
 	u.Save()
 
 	y = c1.IsSelf(u)

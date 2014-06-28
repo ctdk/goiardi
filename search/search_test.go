@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/data_bag"
+	"encoding/gob"
 	"fmt"
 )
 
@@ -57,6 +58,11 @@ func makeSearchItems() int{
 	envs := make([]*environment.ChefEnvironment, 4)
 	clients := make([]*client.Client, 4)
 	dbags := make([]*data_bag.DataBag, 4)
+	gob.Register(new(node.Node))
+	gob.Register(new(role.Role))
+	gob.Register(new(environment.ChefEnvironment))
+	gob.Register(new(client.Client))
+	gob.Register(new(data_bag.DataBag))
 
 	for i := 0; i < 4; i++ {
 		nodes[i], _ = node.New(fmt.Sprintf("node%d",i))

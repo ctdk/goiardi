@@ -166,7 +166,8 @@ func PurgeLogInfos(id int) (int64, error) {
 
 // Get a slice of the logged events. May be called with an offset and limit, 
 // (in that order) but that is not required. The offset can be specified without
-// a limit, but a limit requires an offset (which can be 0).
+// a limit, but a limit requires an offset (which can be 0). The map of search
+// params may be nil, but something must be present.
 func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, error) {
 	// optional params
 	var from, until time.Time
@@ -193,6 +194,8 @@ func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, err
 		if !strings.ContainsAny(ot, "*.") {
 			if ot == "environment" {
 				searchParams["object_type"] = "*environment.ChefEnvironment"
+			} else if ot == "cookbook_version" {
+				searchParams["object_type"] = "*cookbook.CookbookVersion"
 			} else {
 				searchParams["object_type"] = fmt.Sprintf("*%s.%s", ot, strings.Title(ot))
 			}

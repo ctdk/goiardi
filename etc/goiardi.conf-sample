@@ -110,16 +110,18 @@ use-mysql = false
 		tls = "false"
 		foo = "bar"
 
+use-postgres = false
+
 # PostgreSQL options. If "use-postgres" is set to true on the command line or in
 # the configuration file, connect to postgres with the options in [postgres].
 # These options are all strings. See 
 # http://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters for details
 # on the connection parameters. All of these parameters are technically optional,
 # although chances are pretty good that you'd want to set at least some of them.
-use-postgres = false
 [postgresql]
 	username = "foo"
 	password = "s3kr1t"
 	host = "localhost"
+	port = "5432"
 	dbname = "mydb"
 	sslmode = "disable"
