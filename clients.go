@@ -33,7 +33,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 	clientName := path[1]
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JSONErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 
@@ -41,11 +41,11 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 	case "DELETE":
 		chefClient, gerr := client.Get(clientName)
 		if gerr != nil {
-			JSONErrorReport(w, r, gerr.Error(), gerr.Status())
+			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 			return
 		}
 		if !opUser.IsAdmin() && !opUser.IsSelf(chefClient) {
-			JSONErrorReport(w, r, "Deleting that client is forbidden", http.StatusForbidden)
+			jsonErrorReport(w, r, "Deleting that client is forbidden", http.StatusForbidden)
 			return
 		}
 		/* Docs were incorrect. It does want the body of the
@@ -55,29 +55,29 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		/* Log the delete event before deleting the client, in
 		 * case the client is deleting itself. */
 		if lerr := log_info.LogEvent(opUser, chefClient, "delete"); lerr != nil {
-			JSONErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
 		err := chefClient.Delete()
 		if err != nil {
-			JSONErrorReport(w, r, err.Error(), http.StatusForbidden)
+			jsonErrorReport(w, r, err.Error(), http.StatusForbidden)
 			return
 		}
 
 		enc := json.NewEncoder(w)
 		if err = enc.Encode(&jsonClient); err != nil {
-			JSONErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "GET":
 		chefClient, gerr := client.Get(clientName)
 
 		if gerr != nil {
-			JSONErrorReport(w, r, gerr.Error(), gerr.Status())
+			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 			return
 		}
 		if !opUser.IsAdmin() && !opUser.IsSelf(chefClient) {
-			JSONErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return
 		}
 
@@ -89,30 +89,30 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		jsonClient := chefClient.ToJson()
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(&jsonClient); err != nil {
-			JSONErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "PUT":
 		clientData, jerr := ParseObjJson(r.Body)
 		if jerr != nil {
-			JSONErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
 		}
 		chefClient, err := client.Get(clientName)
 		if err != nil {
-			JSONErrorReport(w, r, err.Error(), http.StatusNotFound)
+			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
 
 		/* Makes chef-pedant happy. I suppose it is, after all,
 		 * pedantic. */
 		if averr := util.CheckAdminPlusValidator(clientData); averr != nil {
-			JSONErrorReport(w, r, averr.Error(), averr.Status())
+			jsonErrorReport(w, r, averr.Error(), averr.Status())
 			return
 		}
 
 		if !opUser.IsAdmin() && !opUser.IsSelf(chefClient) {
-			JSONErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return
 		}
 		if !opUser.IsAdmin() {
@@ -122,20 +122,20 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 				verr = opUser.CheckPermEdit(clientData, "validator")
 			}
 			if aerr != nil && verr != nil {
-				JSONErrorReport(w, r, "Client can be either an admin or a validator, but not both.", http.StatusBadRequest)
+				jsonErrorReport(w, r, "Client can be either an admin or a validator, but not both.", http.StatusBadRequest)
 				return
 			} else if aerr != nil || verr != nil {
 				if aerr == nil {
 					aerr = verr
 				}
-				JSONErrorReport(w, r, aerr.Error(), aerr.Status())
+				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 				return
 			}
 		}
 
 		jsonName, sterr := util.ValidateAsString(clientData["name"])
 		if sterr != nil {
-			JSONErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -145,18 +145,18 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		jsonClient := chefClient.ToJson()
 		if clientName != jsonName {
 			if lerr := log_info.LogEvent(opUser, chefClient, "modify"); lerr != nil {
-				JSONErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
 			err := chefClient.Rename(jsonName)
 			if err != nil {
-				JSONErrorReport(w, r, err.Error(), err.Status())
+				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
 			w.WriteHeader(http.StatusCreated)
 		}
 		if uerr := chefClient.UpdateFromJson(clientData); uerr != nil {
-			JSONErrorReport(w, r, uerr.Error(), uerr.Status())
+			jsonErrorReport(w, r, uerr.Error(), uerr.Status())
 			return
 		}
 
@@ -164,7 +164,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			switch pk := pk.(type) {
 			case string:
 				if pkok, pkerr := client.ValidatePublicKey(pk); !pkok {
-					JSONErrorReport(w, r, pkerr.Error(), http.StatusBadRequest)
+					jsonErrorReport(w, r, pkerr.Error(), http.StatusBadRequest)
 					return
 				}
 				chefClient.SetPublicKey(pk)
@@ -173,7 +173,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 				//show_public_key = false
 
 			default:
-				JSONErrorReport(w, r, "Bad request", http.StatusBadRequest)
+				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
 			}
 		}
@@ -184,7 +184,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 				if p {
 					var cgerr error
 					if jsonClient["private_key"], cgerr = chefClient.GenerateKeys(); cgerr != nil {
-						JSONErrorReport(w, r, cgerr.Error(), http.StatusInternalServerError)
+						jsonErrorReport(w, r, cgerr.Error(), http.StatusInternalServerError)
 						return
 					}
 					// make sure the json
@@ -193,22 +193,22 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 					jsonClient["public_key"] = chefClient.PublicKey()
 				}
 			default:
-				JSONErrorReport(w, r, "Bad request", http.StatusBadRequest)
+				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
 			}
 		}
 		chefClient.Save()
 		if lerr := log_info.LogEvent(opUser, chefClient, "modify"); lerr != nil {
-			JSONErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(&jsonClient); err != nil {
-			JSONErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	default:
-		JSONErrorReport(w, r, "Unrecognized method for client!", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "Unrecognized method for client!", http.StatusMethodNotAllowed)
 	}
 }

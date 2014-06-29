@@ -34,7 +34,7 @@ import (
 	"time"
 )
 
-/* Master struct for configuration. */
+// Conf is the master struct for holding configuration options.
 type Conf struct {
 	Ipaddress         string
 	Port              int
@@ -53,9 +53,9 @@ type Conf struct {
 	TimeSlewDur       time.Duration
 	ConfRoot          string       `toml:"conf-root"`
 	UseSSL            bool         `toml:"use-ssl"`
-	SslCert           string       `toml:"ssl-cert"`
-	SslKey            string       `toml:"ssl-key"`
-	HttpsUrls         bool         `toml:"https-urls"`
+	SSLCert           string       `toml:"ssl-cert"`
+	SSLKey            string       `toml:"ssl-key"`
+	HTTPSUrls         bool         `toml:"https-urls"`
 	DisableWebUI      bool         `toml:"disable-webui"`
 	UseMySQL          bool         `toml:"use-mysql"`
 	MySQL             MySQLdb      `toml:"mysql"`
@@ -68,13 +68,15 @@ type Conf struct {
 	DoImport          bool
 	ImpExFile         string
 	ObjMaxSize        int64 `toml:"obj-max-size"`
-	JsonReqMaxSize    int64 `toml:"json-req-max-size"`
+	JSONReqMaxSize    int64 `toml:"json-req-max-size"`
 	UseUnsafeMemStore bool  `toml:"use-unsafe-mem-store"`
 }
 
+// LogLevelNames give convenient, easier to remember than number name for the
+// different levels of logging.
 var LogLevelNames = map[string]int{"debug": 4, "info": 3, "warning": 2, "error": 1, "critical": 0}
 
-// MySQL connection options
+// MySQLdb holds MySQL connection options.
 type MySQLdb struct {
 	Username    string
 	Password    string
@@ -85,7 +87,7 @@ type MySQLdb struct {
 	ExtraParams map[string]string `toml:"extra_params"`
 }
 
-// Postgres connection options
+// PostgreSQLdb holds Postgres connection options.
 type PostgreSQLdb struct {
 	Username string
 	Password string
@@ -95,7 +97,9 @@ type PostgreSQLdb struct {
 	SSLMode  string
 }
 
-/* Struct for command line options. */
+// Options holds options set from the command line, which are then merged with
+// the options in Conf. Configurations from the command line are preferred to 
+// those set in the config file. 
 type Options struct {
 	Version           bool   `short:"v" long:"version" description:"Print version info."`
 	Verbose           []bool `short:"V" long:"verbose" description:"Show verbose debug information. Repeat for more verbosity."`
@@ -112,9 +116,9 @@ type Options struct {
 	ConfRoot          string `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set."`
 	UseAuth           bool   `short:"A" long:"use-auth" description:"Use authentication. Default: false."`
 	UseSSL            bool   `long:"use-ssl" description:"Use SSL for connections. If --port is set to 433, this will automatically be turned on. If it is set to 80, it will automatically be turned off. Default: off. Requires --ssl-cert and --ssl-key."`
-	SslCert           string `long:"ssl-cert" description:"SSL certificate file. If a relative path, will be set relative to --conf-root."`
-	SslKey            string `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root."`
-	HttpsUrls         bool   `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP."`
+	SSLCert           string `long:"ssl-cert" description:"SSL certificate file. If a relative path, will be set relative to --conf-root."`
+	SSLKey            string `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root."`
+	HTTPSUrls         bool   `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP."`
 	DisableWebUI      bool   `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface."`
 	UseMySQL          bool   `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file."`
 	UsePostgreSQL     bool   `long:"use-postgresql" description:"Use a PostgreSQL database for data storage. Configure database options in the config file."`
@@ -124,7 +128,7 @@ type Options struct {
 	Export            string `short:"x" long:"export" description:"Export all server data to the given file, exiting afterwards. Should be used with caution. Cannot be used at the same time as -m/--import."`
 	Import            string `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Cannot be used at the same time as -x/--export."`
 	ObjMaxSize        int64  `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)."`
-	JsonReqMaxSize    int64  `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000."`
+	JSONReqMaxSize    int64  `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000."`
 	UseUnsafeMemStore bool   `long:"use-unsafe-mem-store" description:"Use the faster, but less safe, old method of storing data in the in-memory data store with pointers, rather than encoding the data with gob and giving a new copy of the object to each requestor. If this is enabled goiardi will run faster in in-memory mode, but one goroutine could change an object while it's being used by another. Has no effect when using an SQL backend."`
 }
 
@@ -140,13 +144,15 @@ const ChefVersion = "11.1.3"
  * we know to look for a different config file if needed, but otherwise the
  * command line options override what's in the config file. */
 
-func InitConfig() *Conf { return &Conf{} }
+func initConfig() *Conf { return &Conf{} }
 
-// Conf struct with the options specified on the command line or in the config
+// Config struct with the options specified on the command line or in the config
 // file.
-var Config = InitConfig()
+var Config = initConfig()
 
-// Read and apply arguments from the command line.
+// ParseConfigOptions reads and applies arguments from the command line and the
+// configuration file, merging them together as needed, with command line options
+// taking precedence over options in the config file.
 func ParseConfigOptions() error {
 	var opts = &Options{}
 	_, err := flags.Parse(opts)
@@ -232,7 +238,7 @@ func ParseConfigOptions() error {
 	}
 
 	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || (Config.UseMySQL || Config.UsePostgreSQL)) && Config.IndexFile != "")) {
-		err := fmt.Errorf("-i and -D must either both be specified, or not specified.")
+		err := fmt.Errorf("-i and -D must either both be specified, or not specified")
 		log.Println(err)
 		os.Exit(1)
 	}
@@ -275,8 +281,8 @@ func ParseConfigOptions() error {
 
 	Config.DebugLevel = int(logger.LevelCritical) - Config.DebugLevel
 	logger.SetLevel(logger.LogLevel(Config.DebugLevel))
-	debug_level := map[int]string{0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical"}
-	log.Printf("Logging at %s level", debug_level[Config.DebugLevel])
+	debugLevel := map[int]string{0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical"}
+	log.Printf("Logging at %s level", debugLevel[Config.DebugLevel])
 	if Config.SysLog {
 		sl, err := logger.NewSysLogger("goiardi")
 		if err != nil {
@@ -346,14 +352,14 @@ func ParseConfigOptions() error {
 	if opts.UseSSL {
 		Config.UseSSL = opts.UseSSL
 	}
-	if opts.SslCert != "" {
-		Config.SslCert = opts.SslCert
+	if opts.SSLCert != "" {
+		Config.SSLCert = opts.SSLCert
 	}
-	if opts.SslKey != "" {
-		Config.SslKey = opts.SslKey
+	if opts.SSLKey != "" {
+		Config.SSLKey = opts.SSLKey
 	}
-	if opts.HttpsUrls {
-		Config.HttpsUrls = opts.HttpsUrls
+	if opts.HTTPSUrls {
+		Config.HTTPSUrls = opts.HTTPSUrls
 	}
 	// SSL setup
 	if Config.Port == 80 {
@@ -362,17 +368,17 @@ func ParseConfigOptions() error {
 		Config.UseSSL = true
 	}
 	if Config.UseSSL {
-		if Config.SslCert == "" || Config.SslKey == "" {
+		if Config.SSLCert == "" || Config.SSLKey == "" {
 			logger.Criticalf("SSL mode requires specifying both a certificate and a key file.")
 			os.Exit(1)
 		}
 		/* If the SSL cert and key are not absolute files, join them
 		 * with the conf root */
-		if !path.IsAbs(Config.SslCert) {
-			Config.SslCert = path.Join(Config.ConfRoot, Config.SslCert)
+		if !path.IsAbs(Config.SSLCert) {
+			Config.SSLCert = path.Join(Config.ConfRoot, Config.SSLCert)
 		}
-		if !path.IsAbs(Config.SslKey) {
-			Config.SslKey = path.Join(Config.ConfRoot, Config.SslKey)
+		if !path.IsAbs(Config.SSLKey) {
+			Config.SSLKey = path.Join(Config.ConfRoot, Config.SSLKey)
 		}
 	}
 
@@ -410,14 +416,14 @@ func ParseConfigOptions() error {
 	if opts.ObjMaxSize != 0 {
 		Config.ObjMaxSize = opts.ObjMaxSize
 	}
-	if opts.JsonReqMaxSize != 0 {
-		Config.JsonReqMaxSize = opts.JsonReqMaxSize
+	if opts.JSONReqMaxSize != 0 {
+		Config.JSONReqMaxSize = opts.JSONReqMaxSize
 	}
 	if Config.ObjMaxSize == 0 {
 		Config.ObjMaxSize = 10485760
 	}
-	if Config.JsonReqMaxSize == 0 {
-		Config.JsonReqMaxSize = 1000000
+	if Config.JSONReqMaxSize == 0 {
+		Config.JSONReqMaxSize = 1000000
 	}
 
 	if opts.UseUnsafeMemStore {
@@ -427,25 +433,24 @@ func ParseConfigOptions() error {
 	return nil
 }
 
-// The address and port goiardi is configured to listen on.
+// ListenAddr builds the address and port goiardi is configured to listen on.
 func ListenAddr() string {
-	listen_addr := net.JoinHostPort(Config.Ipaddress, strconv.Itoa(Config.Port))
-	return listen_addr
+	listenAddr := net.JoinHostPort(Config.Ipaddress, strconv.Itoa(Config.Port))
+	return listenAddr
 }
 
-// The hostname and port goiardi is configured to use.
+// ServerHostname returns the hostname and port goiardi is configured to use.
 func ServerHostname() string {
 	if !(Config.Port == 80 || Config.Port == 443) {
 		return net.JoinHostPort(Config.Hostname, strconv.Itoa(Config.Port))
-	} else {
-		return Config.Hostname
 	}
+	return Config.Hostname
 }
 
-// The base URL
+// ServerBaseURL returns the base scheme+hostname portion of a goiardi URL.
 func ServerBaseURL() string {
 	var urlScheme string
-	if Config.UseSSL || Config.HttpsUrls {
+	if Config.UseSSL || Config.HTTPSUrls {
 		urlScheme = "https"
 	} else {
 		urlScheme = "http"
@@ -454,7 +459,8 @@ func ServerBaseURL() string {
 	return url
 }
 
-// Return true if we're using any db engine.
+// UsingDB returns true if we're using any db engine, false if using the 
+// in-memory data store.
 func UsingDB() bool {
 	return Config.UseMySQL || Config.UsePostgreSQL
 }

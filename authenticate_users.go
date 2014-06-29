@@ -40,12 +40,12 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	authJSON := make(map[string]interface{})
 	if err := dec.Decode(&authJSON); err != nil {
-		JSONErrorReport(w, r, err.Error(), http.StatusBadRequest)
+		jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 		return
 	}
 	auth, authErr := validateJSON(authJSON)
 	if authErr != nil {
-		JSONErrorReport(w, r, authErr.Error(), http.StatusBadRequest)
+		jsonErrorReport(w, r, authErr.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -53,7 +53,7 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(resp); err != nil {
-		JSONErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }
 
