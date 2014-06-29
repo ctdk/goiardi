@@ -71,7 +71,7 @@ type CookbookVersion struct {
 	IsFrozen     bool                     `json:"frozen?"`
 	Metadata     map[string]interface{}   `json:"metadata"`
 	id           int32
-	cookbook_id  int32
+	cookbookID   int32
 }
 
 /* Cookbook methods and functions */
@@ -147,8 +147,8 @@ func AllCookbooks() (cookbooks []*Cookbook) {
 			c.sortedVersions()
 		}
 	} else {
-		cookbook_list := GetList()
-		for _, c := range cookbook_list {
+		cookbookList := GetList()
+		for _, c := range cookbookList {
 			cb, err := Get(c)
 			if err != nil {
 				logger.Debugf("Curious. Cookbook %s was in the cookbook list, but wasn't found when fetched. Continuing.", c)
@@ -601,7 +601,7 @@ func (c *Cookbook) NewVersion(cb_version string, cbv_data map[string]interface{}
 		ChefType:     "cookbook_version",
 		JSONClass:    "Chef::CookbookVersion",
 		IsFrozen:     false,
-		cookbook_id:  c.id, // should be ok even with in-mem
+		cookbookID:   c.id, // should be ok even with in-mem
 	}
 	err := cbv.UpdateVersion(cbv_data, "")
 	if err != nil {
