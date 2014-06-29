@@ -33,17 +33,19 @@ import (
 	"sort"
 )
 
+// ChefEnvironment is a collection of attributes and cookbook versions for
+// organizing how nodes are deployed.
 type ChefEnvironment struct {
 	Name             string                 `json:"name"`
 	ChefType         string                 `json:"chef_type"`
-	JsonClass        string                 `json:"json_class"`
+	JSONClass        string                 `json:"json_class"`
 	Description      string                 `json:"description"`
 	Default          map[string]interface{} `json:"default_attributes"`
 	Override         map[string]interface{} `json:"override_attributes"`
 	CookbookVersions map[string]string      `json:"cookbook_versions"`
 }
 
-// Creates a new environment, returning an error if the environment already
+// New creates a new environment, returning an error if the environment already
 // exists or you try to create an environment named "_default".
 func New(name string) (*ChefEnvironment, util.Gerror) {
 	if !util.ValidateEnvName(name) {
@@ -73,7 +75,7 @@ func New(name string) (*ChefEnvironment, util.Gerror) {
 	env := &ChefEnvironment{
 		Name:             name,
 		ChefType:         "environment",
-		JsonClass:        "Chef::Environment",
+		JSONClass:        "Chef::Environment",
 		Default:          map[string]interface{}{},
 		Override:         map[string]interface{}{},
 		CookbookVersions: map[string]string{},
@@ -81,21 +83,22 @@ func New(name string) (*ChefEnvironment, util.Gerror) {
 	return env, nil
 }
 
-// Create a new environment from JSON uploaded to the server.
-func NewFromJson(json_env map[string]interface{}) (*ChefEnvironment, util.Gerror) {
+// NewFromJSON creates a new environment from JSON uploaded to the server.
+func NewFromJSON(json_env map[string]interface{}) (*ChefEnvironment, util.Gerror) {
 	env, err := New(json_env["name"].(string))
 	if err != nil {
 		return nil, err
 	}
-	err = env.UpdateFromJson(json_env)
+	err = env.UpdateFromJSON(json_env)
 	if err != nil {
 		return nil, err
 	}
 	return env, nil
 }
 
-// Updates an existing environment from JSON uploaded to the server.
-func (e *ChefEnvironment) UpdateFromJson(json_env map[string]interface{}) util.Gerror {
+// UpdateFromJSON updates an existing environment from JSON uploaded to the 
+// server.
+func (e *ChefEnvironment) UpdateFromJSON(json_env map[string]interface{}) util.Gerror {
 	if e.Name != json_env["name"].(string) {
 		err := util.Errorf("Environment name %s and %s from JSON do not match", e.Name, json_env["name"].(string))
 		return err
@@ -131,7 +134,7 @@ ValidElem:
 	json_env["json_class"], verr = util.ValidateAsFieldString(json_env["json_class"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' nil" {
-			json_env["json_class"] = e.JsonClass
+			json_env["json_class"] = e.JSONClass
 		} else {
 			return verr
 		}
@@ -192,7 +195,7 @@ ValidElem:
 	}
 
 	e.ChefType = json_env["chef_type"].(string)
-	e.JsonClass = json_env["json_class"].(string)
+	e.JSONClass = json_env["json_class"].(string)
 	e.Description = json_env["description"].(string)
 	e.Default = json_env["default_attributes"].(map[string]interface{})
 	e.Override = json_env["override_attributes"].(map[string]interface{})
@@ -205,6 +208,7 @@ ValidElem:
 	return nil
 }
 
+// Get an environment.
 func Get(env_name string) (*ChefEnvironment, util.Gerror) {
 	if env_name == "_default" {
 		return defaultEnvironment(), nil
@@ -243,7 +247,7 @@ func Get(env_name string) (*ChefEnvironment, util.Gerror) {
 	return env, nil
 }
 
-// Creates the default environment on startup.
+// MakeDefaultEnvironment creates the default environment on startup.
 func MakeDefaultEnvironment() {
 	var de *ChefEnvironment
 	if config.Config.UseMySQL {
@@ -270,7 +274,7 @@ func defaultEnvironment() *ChefEnvironment {
 	return &ChefEnvironment{
 		Name:             "_default",
 		ChefType:         "environment",
-		JsonClass:        "Chef::Environment",
+		JSONClass:        "Chef::Environment",
 		Description:      "The default Chef environment",
 		Default:          map[string]interface{}{},
 		Override:         map[string]interface{}{},
@@ -278,7 +282,7 @@ func defaultEnvironment() *ChefEnvironment {
 	}
 }
 
-// Saves the environment. Returns an error if you try to save the "_default"
+// Save the environment. Returns an error if you try to save the "_default"
 // environment.
 func (e *ChefEnvironment) Save() util.Gerror {
 	if e.Name == "_default" {
@@ -304,7 +308,7 @@ func (e *ChefEnvironment) Save() util.Gerror {
 	return nil
 }
 
-// Deletes the environment, returning an error if you try to delete the
+// Delete the environment, returning an error if you try to delete the
 // "_default" environment.
 func (e *ChefEnvironment) Delete() error {
 	if e.Name == "_default" {
@@ -323,7 +327,7 @@ func (e *ChefEnvironment) Delete() error {
 	return nil
 }
 
-// Get a list of all environments on this server.
+// GetList gets a list of all environments on this server.
 func GetList() []string {
 	var env_list []string
 	if config.UsingDB() {
@@ -336,10 +340,12 @@ func GetList() []string {
 	return env_list
 }
 
+// GetName returns the environment's name.
 func (e *ChefEnvironment) GetName() string {
 	return e.Name
 }
 
+// URLType returns the base of an environment's URL.
 func (e *ChefEnvironment) URLType() string {
 	return "environments"
 }
@@ -348,8 +354,8 @@ func (e *ChefEnvironment) cookbookList() []*cookbook.Cookbook {
 	return cookbook.AllCookbooks()
 }
 
-// Gets a hash of the cookbooks and their versions available to this
-// environment.
+// AllCookbookHash returns a hash of the cookbooks and their versions available
+// to this environment.
 func (e *ChefEnvironment) AllCookbookHash(num_versions interface{}) map[string]interface{} {
 	cb_hash := make(map[string]interface{})
 	cb_list := e.cookbookList()
@@ -362,7 +368,7 @@ func (e *ChefEnvironment) AllCookbookHash(num_versions interface{}) map[string]i
 	return cb_hash
 }
 
-// Gets a list of recipes available to this environment.
+// RecipeList gets a list of recipes available to this environment.
 func (e *ChefEnvironment) RecipeList() []string {
 	recipe_list := make(map[string]string)
 	cb_list := e.cookbookList()
@@ -392,21 +398,24 @@ func (e *ChefEnvironment) RecipeList() []string {
 
 /* Search indexing methods */
 
-func (e *ChefEnvironment) DocId() string {
+// DocID returns the environment's name.
+func (e *ChefEnvironment) DocID() string {
 	return e.Name
 }
 
+// Index returns the environment's type so the indexer knows where it should go.
 func (e *ChefEnvironment) Index() string {
 	return "environment"
 }
 
+// Flatten the environment so it's suitable for indexing.
 func (e *ChefEnvironment) Flatten() []string {
 	flatten := util.FlattenObj(e)
 	indexified := util.Indexify(flatten)
 	return indexified
 }
 
-// Return all environments on this server.
+// AllEnvironments returns a slice of all environments on this server.
 func AllEnvironments() []*ChefEnvironment {
 	environments := make([]*ChefEnvironment, 0)
 	if config.UsingDB() {
