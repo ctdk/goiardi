@@ -42,20 +42,20 @@ func (f *FileStore) saveMySQL() error {
 	return nil
 }
 
-func deleteHashesMySQL(file_hashes []string) {
-	if len(file_hashes) == 0 {
+func deleteHashesMySQL(fileHashes []string) {
+	if len(fileHashes) == 0 {
 		return // nothing to do
 	}
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		log.Fatal(err)
 	}
-	delete_query := "DELETE FROM file_checksums WHERE checksum IN(?" + strings.Repeat(",?", len(file_hashes)-1) + ")"
-	del_args := make([]interface{}, len(file_hashes))
-	for i, v := range file_hashes {
-		del_args[i] = v
+	deleteQuery := "DELETE FROM file_checksums WHERE checksum IN(?" + strings.Repeat(",?", len(fileHashes)-1) + ")"
+	delArgs := make([]interface{}, len(fileHashes))
+	for i, v := range fileHashes {
+		delArgs[i] = v
 	}
-	_, err = tx.Exec(delete_query, del_args...)
+	_, err = tx.Exec(deleteQuery, delArgs...)
 	if err != nil && err != sql.ErrNoRows {
 		logger.Debugf("Error %s trying to delete hashes", err.Error())
 		tx.Rollback()

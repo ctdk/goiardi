@@ -58,7 +58,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
-			dbData, jerr := ParseObjJson(r.Body)
+			dbData, jerr := parseObjJSON(r.Body)
 			if jerr != nil {
 				jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 				return

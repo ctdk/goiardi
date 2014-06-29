@@ -29,67 +29,67 @@ import (
 )
 
 // The whole list
-func event_list_handler(w http.ResponseWriter, r *http.Request) {
+func eventListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 
 	// Look for offset and limit parameters
 	r.ParseForm()
-	var offset, limit, purge_from int
+	var offset, limit, purgeFrom int
 	if o, found := r.Form["offset"]; found {
 		if len(o) < 0 {
-			JsonErrorReport(w, r, "invalid offsets", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid offsets", http.StatusBadRequest)
 			return
 		}
 		var err error
 		offset, err = strconv.Atoi(o[0])
 		if err != nil {
-			JsonErrorReport(w, r, "invalid offset converstion to int", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid offset converstion to int", http.StatusBadRequest)
 			return
 		}
 		if offset < 0 {
-			JsonErrorReport(w, r, "invalid negative offset value", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid negative offset value", http.StatusBadRequest)
 			return
 		}
 	} else {
 		offset = 0
 	}
-	var limit_found bool
+	var limitFound bool
 	if l, found := r.Form["limit"]; found {
-		limit_found = true
+		limitFound = true
 		if len(l) < 0 {
-			JsonErrorReport(w, r, "invalid limit", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid limit", http.StatusBadRequest)
 			return
 		}
 		var err error
 		limit, err = strconv.Atoi(l[0])
 		if err != nil {
-			JsonErrorReport(w, r, "invalid limit converstion to int", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid limit converstion to int", http.StatusBadRequest)
 			return
 		}
 		if limit < 0 {
-			JsonErrorReport(w, r, "invalid negative limit value", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid negative limit value", http.StatusBadRequest)
 			return
 		}
 	}
 
 	if p, found := r.Form["purge"]; found {
 		if len(p) < 0 {
-			JsonErrorReport(w, r, "invalid purge id", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid purge id", http.StatusBadRequest)
 			return
 		}
 		var err error
-		purge_from, err = strconv.Atoi(p[0])
+		purgeFrom, err = strconv.Atoi(p[0])
 		if err != nil {
-			JsonErrorReport(w, r, "invalid purge from converstion to int", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid purge from converstion to int", http.StatusBadRequest)
 			return
 		}
-		if purge_from < 0 {
-			JsonErrorReport(w, r, "invalid negative purge_from value", http.StatusBadRequest)
+		if purgeFrom < 0 {
+			jsonErrorReport(w, r, "invalid negative purgeFrom value", http.StatusBadRequest)
 			return
 		}
 	}
@@ -100,7 +100,7 @@ func event_list_handler(w http.ResponseWriter, r *http.Request) {
 	for _, v := range paramStrs {
 		if st, found := r.Form[v]; found {
 			if len(st) < 0 {
-				JsonErrorReport(w, r, "invalid "+v, http.StatusBadRequest)
+				jsonErrorReport(w, r, "invalid "+v, http.StatusBadRequest)
 				return
 			}
 			searchParams[v] = st[0]
@@ -110,106 +110,106 @@ func event_list_handler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		if !opUser.IsAdmin() {
-			JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
+			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
 		}
-		var le_list []*log_info.LogInfo
+		var leList []*log_info.LogInfo
 		var err error
-		if limit_found {
-			le_list, err = log_info.GetLogInfos(searchParams, offset, limit)
+		if limitFound {
+			leList, err = log_info.GetLogInfos(searchParams, offset, limit)
 		} else {
-			le_list, err = log_info.GetLogInfos(searchParams, offset)
+			leList, err = log_info.GetLogInfos(searchParams, offset)
 		}
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 			return
 		}
-		le_resp := make([]map[string]interface{}, len(le_list))
-		for i, v := range le_list {
-			le_resp[i] = make(map[string]interface{})
-			le_resp[i]["event"] = v
-			le_url := fmt.Sprintf("/events/%d", v.Id)
-			le_resp[i]["url"] = util.CustomURL(le_url)
+		leResp := make([]map[string]interface{}, len(leList))
+		for i, v := range leList {
+			leResp[i] = make(map[string]interface{})
+			leResp[i]["event"] = v
+			leURL := fmt.Sprintf("/events/%d", v.Id)
+			leResp[i]["url"] = util.CustomURL(leURL)
 		}
 		enc := json.NewEncoder(w)
-		if err := enc.Encode(&le_resp); err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		if err := enc.Encode(&leResp); err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "DELETE":
 		if !opUser.IsAdmin() {
-			JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
+			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
 		}
-		purged, err := log_info.PurgeLogInfos(purge_from)
+		purged, err := log_info.PurgeLogInfos(purgeFrom)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 		}
-		le_resp := make(map[string]string)
-		le_resp["purged"] = fmt.Sprintf("Purged %d logged events", purged)
+		leResp := make(map[string]string)
+		leResp["purged"] = fmt.Sprintf("Purged %d logged events", purged)
 		enc := json.NewEncoder(w)
-		if err := enc.Encode(&le_resp); err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		if err := enc.Encode(&leResp); err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	default:
-		JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 }
 
 // Individual log events
-func event_handler(w http.ResponseWriter, r *http.Request) {
+func eventHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	event_id, aerr := strconv.Atoi(r.URL.Path[8:])
+	eventID, aerr := strconv.Atoi(r.URL.Path[8:])
 	if aerr != nil {
-		JsonErrorReport(w, r, aerr.Error(), http.StatusBadRequest)
+		jsonErrorReport(w, r, aerr.Error(), http.StatusBadRequest)
 		return
 	}
 
 	switch r.Method {
 	case "GET":
 		if !opUser.IsAdmin() {
-			JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
+			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
 		}
-		le, err := log_info.Get(event_id)
+		le, err := log_info.Get(eventID)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
 		enc := json.NewEncoder(w)
 		if err = enc.Encode(&le); err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "DELETE":
 		if !opUser.IsAdmin() {
-			JsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
+			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
 		}
-		le, err := log_info.Get(event_id)
+		le, err := log_info.Get(eventID)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
 		err = le.Delete()
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		enc := json.NewEncoder(w)
 		if err = enc.Encode(&le); err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	default:
-		JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	return

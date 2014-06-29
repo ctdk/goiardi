@@ -42,16 +42,16 @@ func (f *FileStore) savePostgreSQL() error {
 	return nil
 }
 
-func deleteHashesPostgreSQL(file_hashes []string) {
-	if len(file_hashes) == 0 {
+func deleteHashesPostgreSQL(fileHashes []string) {
+	if len(fileHashes) == 0 {
 		return // nothing to do
 	}
 	tx, err := data_store.Dbh.Begin()
 	if err != nil {
 		log.Fatal(err)
 	}
-	delete_query := "DELETE FROM goiardi.file_checksums WHERE checksum = ANY($1::varchar(32)[])"
-	_, err = tx.Exec(delete_query, "{"+strings.Join(file_hashes, ",")+"}")
+	deleteQuery := "DELETE FROM goiardi.file_checksums WHERE checksum = ANY($1::varchar(32)[])"
+	_, err = tx.Exec(deleteQuery, "{"+strings.Join(fileHashes, ",")+"}")
 	if err != nil && err != sql.ErrNoRows {
 		logger.Debugf("Error %s trying to delete hashes", err.Error())
 		tx.Rollback()

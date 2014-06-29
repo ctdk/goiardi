@@ -30,13 +30,11 @@ func checkForEnvironmentSQL(dbhandle data_store.Dbhandle, name string) (bool, er
 	_, err := data_store.CheckForOne(dbhandle, "environments", name)
 	if err == nil {
 		return true, nil
-	} else {
-		if err != sql.ErrNoRows {
-			return false, err
-		} else {
-			return false, nil
-		}
 	}
+	if err != sql.ErrNoRows {
+		return false, err
+	}
+	return false, nil
 }
 
 // Fill an environment in from a row returned from the SQL server. See the
@@ -73,7 +71,7 @@ func (e *ChefEnvironment) fillEnvFromSQL(row data_store.ResRow) error {
 	return nil
 }
 
-func getEnvironmentSQL(env_name string) (*ChefEnvironment, error) {
+func getEnvironmentSQL(envName string) (*ChefEnvironment, error) {
 	env := new(ChefEnvironment)
 	var sqlStatement string
 	if config.Config.UseMySQL {
@@ -86,7 +84,7 @@ func getEnvironmentSQL(env_name string) (*ChefEnvironment, error) {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(env_name)
+	row := stmt.QueryRow(envName)
 	err = env.fillEnvFromSQL(row)
 	if err != nil {
 		return nil, err
@@ -118,7 +116,7 @@ func (e *ChefEnvironment) deleteEnvironmentSQL() error {
 }
 
 func getEnvironmentList() []string {
-	env_list := make([]string, 0)
+	var envList []string
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT name FROM environments"
@@ -131,25 +129,25 @@ func getEnvironmentList() []string {
 			log.Fatal(err)
 		}
 		rows.Close()
-		return env_list
+		return envList
 	}
 	for rows.Next() {
-		var env_name string
-		err = rows.Scan(&env_name)
+		var envName string
+		err = rows.Scan(&envName)
 		if err != nil {
 			log.Fatal(err)
 		}
-		env_list = append(env_list, env_name)
+		envList = append(envList, envName)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
-	return env_list
+	return envList
 }
 
 func allEnvironmentsSQL() []*ChefEnvironment {
-	environments := make([]*ChefEnvironment, 0)
+	var environments []*ChefEnvironment
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments WHERE name != '_default'"

@@ -49,7 +49,7 @@ import (
 	"time"
 )
 
-type InterceptHandler struct{} // Doesn't need to do anything, just sit there.
+type interceptHandler struct{} // Doesn't need to do anything, just sit there.
 
 func main() {
 	config.ParseConfigOptions()
@@ -160,9 +160,9 @@ func main() {
 	listenAddr := config.ListenAddr()
 	var err error
 	if config.Config.UseSSL {
-		err = http.ListenAndServeTLS(listenAddr, config.Config.SSLCert, config.Config.SSLKey, &InterceptHandler{})
+		err = http.ListenAndServeTLS(listenAddr, config.Config.SSLCert, config.Config.SSLKey, &interceptHandler{})
 	} else {
-		err = http.ListenAndServe(listenAddr, &InterceptHandler{})
+		err = http.ListenAndServe(listenAddr, &interceptHandler{})
 	}
 	if err != nil {
 		logger.Criticalf("ListenAndServe: %s", err.Error())
@@ -175,7 +175,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* knife sometimes sends URL paths that start with //. Redirecting
 	 * worked for GETs, but since it was breaking POSTs and screwing with
 	 * GETs with query params, we just clean up the path and move on. */
@@ -202,40 +202,40 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Goiardi", "yes")
 	w.Header().Set("X-Goiardi-Version", config.Version)
 	w.Header().Set("X-Chef-Version", config.ChefVersion)
-	api_info := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
-	w.Header().Set("X-Ops-API-Info", api_info)
+	apiInfo := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
+	w.Header().Set("X-Ops-API-Info", apiInfo)
 
-	user_id := r.Header.Get("X-OPS-USERID")
+	userID := r.Header.Get("X-OPS-USERID")
 	if rs := r.Header.Get("X-Ops-Request-Source"); rs == "web" {
 		/* If use-auth is on and disable-webui is on, and this is a
 		 * webui connection, it needs to fail. */
 		if config.Config.DisableWebUI {
 			w.Header().Set("Content-Type", "application/json")
 			logger.Warningf("Attempting to log in through webui, but webui is disabled")
-			JsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
+			jsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
 			return
 		}
 
 		/* Check that the user in question with the web request exists.
 		 * If not, fail. */
-		if _, uherr := actor.GetReqUser(user_id); uherr != nil {
+		if _, uherr := actor.GetReqUser(userID); uherr != nil {
 			w.Header().Set("Content-Type", "application/json")
-			logger.Warningf("Attempting to use invalid user %s through X-Ops-Request-Source = web", user_id)
-			JsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
+			logger.Warningf("Attempting to use invalid user %s through X-Ops-Request-Source = web", userID)
+			jsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
 			return
 		}
-		user_id = "chef-webui"
+		userID = "chef-webui"
 	}
 	/* Only perform the authorization check if that's configured. Bomb with
 	 * an error if the check of the headers, timestamps, etc. fails. */
 	/* No clue why /principals doesn't require authorization. Hrmph. */
 	if config.Config.UseAuth && !strings.HasPrefix(r.URL.Path, "/file_store") && !(strings.HasPrefix(r.URL.Path, "/principals") && r.Method == "GET") {
-		herr := authentication.CheckHeader(user_id, r)
+		herr := authentication.CheckHeader(userID, r)
 		if herr != nil {
 			w.Header().Set("Content-Type", "application/json")
 			logger.Errorf("Authorization failure: %s\n", herr.Error())
 			//http.Error(w, herr.Error(), herr.Status())
-			JsonErrorReport(w, r, herr.Error(), herr.Status())
+			jsonErrorReport(w, r, herr.Error(), herr.Status())
 			return
 		}
 	}
@@ -246,7 +246,7 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			logger.Errorf("Failure decompressing gzipped request body: %s\n", err.Error())
-			JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 			return
 		}
 		r.Body = reader
@@ -409,7 +409,7 @@ func gobRegister() {
 	gob.Register(s)
 	m := make(map[string]interface{})
 	gob.Register(m)
-	si := make([]interface{}, 0)
+	var si []interface{}
 	gob.Register(si)
 	i := new(indexer.Index)
 	ic := new(indexer.IdxCollection)
@@ -417,11 +417,11 @@ func gobRegister() {
 	gob.Register(i)
 	gob.Register(ic)
 	gob.Register(id)
-	ss := make([]string, 0)
+	var ss []string
 	gob.Register(ss)
 	ms := make(map[string]string)
 	gob.Register(ms)
-	smsi := make([]map[string]interface{}, 0)
+	var smsi []map[string]interface{}
 	gob.Register(smsi)
 	msss := make(map[string][]string)
 	gob.Register(msss)

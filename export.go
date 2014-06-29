@@ -34,6 +34,9 @@ import (
 	"time"
 )
 
+// ExportData is a struct describing the container holding the exported data (or
+// the data file to import. It contains the major and minor version numbers, the
+// time the dump was created, and a map holding all of the data objects.
 type ExportData struct {
 	MajorVersion int
 	MinorVersion int
@@ -43,7 +46,9 @@ type ExportData struct {
 	Data map[string][]interface{}
 }
 
+// Major version number of the export file format.
 const ExportMajorVersion = 1
+// Minor version number of the export file format.
 const ExportMinorVersion = 0
 
 // Export all data to a json file. This can help with upgrading goiardi if save

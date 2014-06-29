@@ -15,6 +15,7 @@
  */
 
 /* General SQL functions for file store */
+
 package filestore
 
 import (
@@ -70,7 +71,7 @@ func (f *FileStore) deleteSQL() error {
 }
 
 func getListSQL() []string {
-	file_list := make([]string, 0)
+	var fileList []string
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT checksum FROM file_checksums"
@@ -84,7 +85,7 @@ func getListSQL() []string {
 			log.Fatal(perr)
 		}
 		stmt.Close()
-		return file_list
+		return fileList
 	}
 	rows, err := stmt.Query()
 	for rows.Next() {
@@ -93,17 +94,17 @@ func getListSQL() []string {
 		if err != nil {
 			log.Fatal(err)
 		}
-		file_list = append(file_list, chksum)
+		fileList = append(fileList, chksum)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
-	return file_list
+	return fileList
 }
 
 func allFilestoresSQL() []*FileStore {
-	filestores := make([]*FileStore, 0)
+	var filestores []*FileStore
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT checksum FROM file_checksums"

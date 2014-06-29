@@ -84,12 +84,12 @@ func New(name string) (*ChefEnvironment, util.Gerror) {
 }
 
 // NewFromJSON creates a new environment from JSON uploaded to the server.
-func NewFromJSON(json_env map[string]interface{}) (*ChefEnvironment, util.Gerror) {
-	env, err := New(json_env["name"].(string))
+func NewFromJSON(jsonEnv map[string]interface{}) (*ChefEnvironment, util.Gerror) {
+	env, err := New(jsonEnv["name"].(string))
 	if err != nil {
 		return nil, err
 	}
-	err = env.UpdateFromJSON(json_env)
+	err = env.UpdateFromJSON(jsonEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -98,9 +98,9 @@ func NewFromJSON(json_env map[string]interface{}) (*ChefEnvironment, util.Gerror
 
 // UpdateFromJSON updates an existing environment from JSON uploaded to the 
 // server.
-func (e *ChefEnvironment) UpdateFromJSON(json_env map[string]interface{}) util.Gerror {
-	if e.Name != json_env["name"].(string) {
-		err := util.Errorf("Environment name %s and %s from JSON do not match", e.Name, json_env["name"].(string))
+func (e *ChefEnvironment) UpdateFromJSON(jsonEnv map[string]interface{}) util.Gerror {
+	if e.Name != jsonEnv["name"].(string) {
+		err := util.Errorf("Environment name %s and %s from JSON do not match", e.Name, jsonEnv["name"].(string))
 		return err
 	} else if e.Name == "_default" {
 		err := util.Errorf("The '_default' environment cannot be modified.")
@@ -109,10 +109,10 @@ func (e *ChefEnvironment) UpdateFromJSON(json_env map[string]interface{}) util.G
 	}
 
 	/* Validations */
-	valid_elements := []string{"name", "chef_type", "json_class", "description", "default_attributes", "override_attributes", "cookbook_versions"}
+	validElements := []string{"name", "chef_type", "json_class", "description", "default_attributes", "override_attributes", "cookbook_versions"}
 ValidElem:
-	for k := range json_env {
-		for _, i := range valid_elements {
+	for k := range jsonEnv {
+		for _, i := range validElements {
 			if k == i {
 				continue ValidElem
 			}
@@ -125,83 +125,82 @@ ValidElem:
 
 	attrs := []string{"default_attributes", "override_attributes"}
 	for _, a := range attrs {
-		json_env[a], verr = util.ValidateAttributes(a, json_env[a])
+		jsonEnv[a], verr = util.ValidateAttributes(a, jsonEnv[a])
 		if verr != nil {
 			return verr
 		}
 	}
 
-	json_env["json_class"], verr = util.ValidateAsFieldString(json_env["json_class"])
+	jsonEnv["json_class"], verr = util.ValidateAsFieldString(jsonEnv["json_class"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' nil" {
-			json_env["json_class"] = e.JSONClass
+			jsonEnv["json_class"] = e.JSONClass
 		} else {
 			return verr
 		}
 	} else {
-		if json_env["json_class"].(string) != "Chef::Environment" {
+		if jsonEnv["json_class"].(string) != "Chef::Environment" {
 			verr = util.Errorf("Field 'json_class' invalid")
 			return verr
 		}
 	}
 
-	json_env["chef_type"], verr = util.ValidateAsFieldString(json_env["chef_type"])
+	jsonEnv["chef_type"], verr = util.ValidateAsFieldString(jsonEnv["chef_type"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' nil" {
-			json_env["chef_type"] = e.ChefType
+			jsonEnv["chef_type"] = e.ChefType
 		} else {
 			return verr
 		}
 	} else {
-		if json_env["chef_type"].(string) != "environment" {
+		if jsonEnv["chef_type"].(string) != "environment" {
 			verr = util.Errorf("Field 'chef_type' invalid")
 			return verr
 		}
 	}
 
-	json_env["cookbook_versions"], verr = util.ValidateAttributes("cookbook_versions", json_env["cookbook_versions"])
+	jsonEnv["cookbook_versions"], verr = util.ValidateAttributes("cookbook_versions", jsonEnv["cookbook_versions"])
 	if verr != nil {
 		return verr
-	} else {
-		for k, v := range json_env["cookbook_versions"].(map[string]interface{}) {
-			if !util.ValidateEnvName(k) || k == "" {
-				merr := util.Errorf("Cookbook name %s invalid", k)
-				merr.SetStatus(http.StatusBadRequest)
-				return merr
-			}
+	}
+	for k, v := range jsonEnv["cookbook_versions"].(map[string]interface{}) {
+		if !util.ValidateEnvName(k) || k == "" {
+			merr := util.Errorf("Cookbook name %s invalid", k)
+			merr.SetStatus(http.StatusBadRequest)
+			return merr
+		}
 
-			if v == nil {
-				verr = util.Errorf("Invalid version number")
-				return verr
-			}
-			_, verr = util.ValidateAsConstraint(v)
+		if v == nil {
+			verr = util.Errorf("Invalid version number")
+			return verr
+		}
+		_, verr = util.ValidateAsConstraint(v)
+		if verr != nil {
+			/* try validating as a version */
+			v, verr = util.ValidateAsVersion(v)
 			if verr != nil {
-				/* try validating as a version */
-				v, verr = util.ValidateAsVersion(v)
-				if verr != nil {
-					return verr
-				}
+				return verr
 			}
 		}
 	}
 
-	json_env["description"], verr = util.ValidateAsString(json_env["description"])
+	jsonEnv["description"], verr = util.ValidateAsString(jsonEnv["description"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' missing" {
-			json_env["description"] = ""
+			jsonEnv["description"] = ""
 		} else {
 			return verr
 		}
 	}
 
-	e.ChefType = json_env["chef_type"].(string)
-	e.JSONClass = json_env["json_class"].(string)
-	e.Description = json_env["description"].(string)
-	e.Default = json_env["default_attributes"].(map[string]interface{})
-	e.Override = json_env["override_attributes"].(map[string]interface{})
+	e.ChefType = jsonEnv["chef_type"].(string)
+	e.JSONClass = jsonEnv["json_class"].(string)
+	e.Description = jsonEnv["description"].(string)
+	e.Default = jsonEnv["default_attributes"].(map[string]interface{})
+	e.Override = jsonEnv["override_attributes"].(map[string]interface{})
 	/* clear out, then loop over the cookbook versions */
-	e.CookbookVersions = make(map[string]string, len(json_env["cookbook_versions"].(map[string]interface{})))
-	for c, v := range json_env["cookbook_versions"].(map[string]interface{}) {
+	e.CookbookVersions = make(map[string]string, len(jsonEnv["cookbook_versions"].(map[string]interface{})))
+	for c, v := range jsonEnv["cookbook_versions"].(map[string]interface{}) {
 		e.CookbookVersions[c] = v.(string)
 	}
 
@@ -209,37 +208,36 @@ ValidElem:
 }
 
 // Get an environment.
-func Get(env_name string) (*ChefEnvironment, util.Gerror) {
-	if env_name == "_default" {
+func Get(envName string) (*ChefEnvironment, util.Gerror) {
+	if envName == "_default" {
 		return defaultEnvironment(), nil
 	}
 	var env *ChefEnvironment
 	var found bool
 	if config.UsingDB() {
 		var err error
-		env, err = getEnvironmentSQL(env_name)
+		env, err = getEnvironmentSQL(envName)
 		if err != nil {
 			var gerr util.Gerror
 			if err != sql.ErrNoRows {
 				gerr = util.CastErr(err)
 				gerr.SetStatus(http.StatusInternalServerError)
 				return nil, gerr
-			} else {
-				found = false
 			}
+			found = false
 		} else {
 			found = true
 		}
 	} else {
 		ds := data_store.New()
 		var e interface{}
-		e, found = ds.Get("env", env_name)
+		e, found = ds.Get("env", envName)
 		if e != nil {
 			env = e.(*ChefEnvironment)
 		}
 	}
 	if !found {
-		err := util.Errorf("Cannot load environment %s", env_name)
+		err := util.Errorf("Cannot load environment %s", envName)
 		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
@@ -329,15 +327,15 @@ func (e *ChefEnvironment) Delete() error {
 
 // GetList gets a list of all environments on this server.
 func GetList() []string {
-	var env_list []string
+	var envList []string
 	if config.UsingDB() {
-		env_list = getEnvironmentList()
+		envList = getEnvironmentList()
 	} else {
 		ds := data_store.New()
-		env_list = ds.GetList("env")
-		env_list = append(env_list, "_default")
+		envList = ds.GetList("env")
+		envList = append(envList, "_default")
 	}
-	return env_list
+	return envList
 }
 
 // GetName returns the environment's name.
@@ -356,23 +354,23 @@ func (e *ChefEnvironment) cookbookList() []*cookbook.Cookbook {
 
 // AllCookbookHash returns a hash of the cookbooks and their versions available
 // to this environment.
-func (e *ChefEnvironment) AllCookbookHash(num_versions interface{}) map[string]interface{} {
-	cb_hash := make(map[string]interface{})
-	cb_list := e.cookbookList()
-	for _, cb := range cb_list {
+func (e *ChefEnvironment) AllCookbookHash(numVersions interface{}) map[string]interface{} {
+	cbHash := make(map[string]interface{})
+	cbList := e.cookbookList()
+	for _, cb := range cbList {
 		if cb == nil {
 			continue
 		}
-		cb_hash[cb.Name] = cb.ConstrainedInfoHash(num_versions, e.CookbookVersions[cb.Name])
+		cbHash[cb.Name] = cb.ConstrainedInfoHash(numVersions, e.CookbookVersions[cb.Name])
 	}
-	return cb_hash
+	return cbHash
 }
 
 // RecipeList gets a list of recipes available to this environment.
 func (e *ChefEnvironment) RecipeList() []string {
-	recipe_list := make(map[string]string)
-	cb_list := e.cookbookList()
-	for _, cb := range cb_list {
+	recipeList := make(map[string]string)
+	cbList := e.cookbookList()
+	for _, cb := range cbList {
 		if cb == nil {
 			continue
 		}
@@ -383,17 +381,17 @@ func (e *ChefEnvironment) RecipeList() []string {
 		rlist, _ := cbv.RecipeList()
 
 		for _, recipe := range rlist {
-			recipe_list[recipe] = recipe
+			recipeList[recipe] = recipe
 		}
 	}
-	sorted_recipes := make([]string, len(recipe_list))
+	sortedRecipes := make([]string, len(recipeList))
 	i := 0
-	for k := range recipe_list {
-		sorted_recipes[i] = k
+	for k := range recipeList {
+		sortedRecipes[i] = k
 		i++
 	}
-	sort.Strings(sorted_recipes)
-	return sorted_recipes
+	sort.Strings(sortedRecipes)
+	return sortedRecipes
 }
 
 /* Search indexing methods */
@@ -417,12 +415,12 @@ func (e *ChefEnvironment) Flatten() []string {
 
 // AllEnvironments returns a slice of all environments on this server.
 func AllEnvironments() []*ChefEnvironment {
-	environments := make([]*ChefEnvironment, 0)
+	var environments []*ChefEnvironment
 	if config.UsingDB() {
 		environments = allEnvironmentsSQL()
 	} else {
-		env_list := GetList()
-		for _, e := range env_list {
+		envList := GetList()
+		for _, e := range envList {
 			en, err := Get(e)
 			if err != nil {
 				continue

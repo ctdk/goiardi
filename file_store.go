@@ -26,7 +26,7 @@ import (
 	"net/http"
 )
 
-func file_store_handler(w http.ResponseWriter, r *http.Request) {
+func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 	/* We *don't* always set the the content-type to application/json here,
 	 * for obvious reasons. Still do for the PUT/POST though. */
 	chksum := r.URL.Path[12:]
@@ -37,39 +37,39 @@ func file_store_handler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		w.Header().Set("Content-Type", "application/x-binary")
-		file_store, err := filestore.Get(chksum)
+		fileStore, err := filestore.Get(chksum)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
-		w.Write(*file_store.Data)
+		w.Write(*fileStore.Data)
 	case "PUT", "POST": /* Seems like for file uploads we ought to
 		 * support POST too. */
 		w.Header().Set("Content-Type", "application/json")
 		/* Need to distinguish file already existing and some
 		 * sort of error with uploading the file. */
-		if file_store, _ := filestore.Get(chksum); file_store != nil {
-			file_err := fmt.Errorf("File with checksum %s already exists.", chksum)
+		if fileStore, _ := filestore.Get(chksum); fileStore != nil {
+			fileErr := fmt.Errorf("File with checksum %s already exists.", chksum)
 			/* Send status OK. It seems chef-pedant at least
 			 * tries to upload files twice for some reason.
 			 */
-			JsonErrorReport(w, r, file_err.Error(), http.StatusOK)
+			JsonErrorReport(w, r, fileErr.Error(), http.StatusOK)
 			return
 		}
-		file_store, err := filestore.New(chksum, r.Body, r.ContentLength)
+		fileStore, err := filestore.New(chksum, r.Body, r.ContentLength)
 		if err != nil {
 			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		err = file_store.Save()
+		err = fileStore.Save()
 		if err != nil {
 			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		file_response := make(map[string]string)
-		file_response[file_store.Chksum] = fmt.Sprintf("File with checksum %s uploaded.", file_store.Chksum)
+		fileResponse := make(map[string]string)
+		fileResponse[fileStore.Chksum] = fmt.Sprintf("File with checksum %s uploaded.", fileStore.Chksum)
 		enc := json.NewEncoder(w)
-		if err := enc.Encode(&file_response); err != nil {
+		if err := enc.Encode(&fileResponse); err != nil {
 			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 		}
 	/* Add DELETE later? */
