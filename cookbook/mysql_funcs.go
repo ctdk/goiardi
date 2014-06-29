@@ -34,12 +34,12 @@ func (c *Cookbook) saveCookbookMySQL() error {
 		tx.Rollback()
 		return err
 	}
-	c_id, err := res.LastInsertId()
+	cID, err := res.LastInsertId()
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
-	c.id = int32(c_id)
+	c.id = int32(cID)
 
 	tx.Commit()
 	return nil
@@ -53,21 +53,21 @@ func (cbv *CookbookVersion) updateCookbookVersionMySQL(defb, libb, attb, recb, p
 		return gerr
 	}
 
-	res, err := tx.Exec("INSERT INTO cookbook_versions (cookbook_id, major_ver, minor_ver, patch_ver, frozen, metadata, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id), frozen = ?, metadata = ?, definitions = ?, libraries = ?, attributes = ?, recipes = ?, providers = ?, resources = ?, templates = ?, root_files = ?, files = ?, updated_at = NOW()", cbv.cookbook_id, maj, min, patch, cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb, cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb)
+	res, err := tx.Exec("INSERT INTO cookbook_versions (cookbook_id, major_ver, minor_ver, patch_ver, frozen, metadata, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id), frozen = ?, metadata = ?, definitions = ?, libraries = ?, attributes = ?, recipes = ?, providers = ?, resources = ?, templates = ?, root_files = ?, files = ?, updated_at = NOW()", cbv.cookbookID, maj, min, patch, cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb, cbv.IsFrozen, metb, defb, libb, attb, recb, prob, resb, temb, roob, filb)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	c_id, err := res.LastInsertId()
+	cID, err := res.LastInsertId()
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	cbv.id = int32(c_id)
+	cbv.id = int32(cID)
 
 	tx.Commit()
 	return nil

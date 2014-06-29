@@ -15,15 +15,15 @@
  */
 
 /*
-Package data_store provides data store functionality. The data store is kept in
+Package datastore provides data store functionality. The data store is kept in
 memory, but optionally the data store may be saved to a file to provide a
 perisistent data store. This uses go-cache (https://github.com/pmylund/go-cache)
 for storing the data.
 
-The methods that set, get, and delete key/value pairs also take a `key_type`
+The methods that set, get, and delete key/value pairs also take a `keyType`
 argument that specifies what kind of object it is.
 */
-package data_store
+package datastore
 
 import (
 	"bytes"
@@ -42,16 +42,17 @@ import (
 	"sync"
 )
 
-// Main data store.
+// DataStore is the main data store struct, holding the key/value store and list
+// of objects.
 type DataStore struct {
 	dsc      *cache.Cache
-	obj_list map[string]map[string]bool
+	objList map[string]map[string]bool
 	m        sync.RWMutex
 }
 
 type dsFileStore struct {
 	Cache    []byte
-	Obj_list []byte
+	ObjList []byte
 }
 
 type dsItem struct {
@@ -63,28 +64,29 @@ var dataStoreCache = initDataStore()
 func initDataStore() *DataStore {
 	ds := new(DataStore)
 	ds.dsc = cache.New(0, 0)
-	ds.obj_list = make(map[string]map[string]bool)
+	ds.objList = make(map[string]map[string]bool)
 	return ds
 }
 
-// Create a new data store instance, or return an already created one.
+// New creates a new data store instance, or returns an already created one.
 func New() *DataStore {
 	return dataStoreCache
 }
 
-func (ds *DataStore) make_key(key_type string, key string) string {
-	var new_key []string
-	new_key = append(new_key, key_type)
-	new_key = append(new_key, key)
-	return strings.Join(new_key, ":")
+func (ds *DataStore) makeKey(keyType string, key string) string {
+	var newKey []string
+	newKey = append(newKey, keyType)
+	newKey = append(newKey, key)
+	return strings.Join(newKey, ":")
 }
 
-func (ds *DataStore) Set(key_type string, key string, val interface{}) {
-	ds_key := ds.make_key(key_type, key)
+// Set a value of the given type with the provided key. 
+func (ds *DataStore) Set(keyType string, key string, val interface{}) {
+	dsKey := ds.makeKey(keyType, key)
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	if config.Config.UseUnsafeMemStore {
-		ds.dsc.Set(ds_key, val, -1)
+		ds.dsc.Set(dsKey, val, -1)
 	} else {
 		valBuf := new(bytes.Buffer)
 		valItem := &dsItem{Item: val}
@@ -93,23 +95,24 @@ func (ds *DataStore) Set(key_type string, key string, val interface{}) {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		ds.dsc.Set(ds_key, valBuf.Bytes(), -1)
+		ds.dsc.Set(dsKey, valBuf.Bytes(), -1)
 	}
-	ds.addToList(key_type, key)
+	ds.addToList(keyType, key)
 }
 
-func (ds *DataStore) Get(key_type string, key string) (interface{}, bool) {
+// Get a value of the given type associated with the given key, if it exists.
+func (ds *DataStore) Get(keyType string, key string) (interface{}, bool) {
 	var val interface{}
 	var found bool
 
-	ds_key := ds.make_key(key_type, key)
+	dsKey := ds.makeKey(keyType, key)
 	ds.m.RLock()
 	defer ds.m.RUnlock()
 
 	if config.Config.UseUnsafeMemStore {
-		val, found = ds.dsc.Get(ds_key)
+		val, found = ds.dsc.Get(dsKey)
 	} else {
-		valEnc, f := ds.dsc.Get(ds_key)
+		valEnc, f := ds.dsc.Get(dsKey)
 		found = f
 
 		if valEnc != nil {
@@ -129,39 +132,40 @@ func (ds *DataStore) Get(key_type string, key string) (interface{}, bool) {
 	return val, found
 }
 
-func (ds *DataStore) Delete(key_type string, key string) {
-	ds_key := ds.make_key(key_type, key)
+// Delete a value from the data store.
+func (ds *DataStore) Delete(keyType string, key string) {
+	dsKey := ds.makeKey(keyType, key)
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	ds.dsc.Delete(ds_key)
-	ds.removeFromList(key_type, key)
+	ds.dsc.Delete(dsKey)
+	ds.removeFromList(keyType, key)
 }
 
 /* For the in-memory data store stuff, we need a convenient list of objects,
  * since it's not a database and we can't just pull that up. This won't be
  * useful normally. */
 
-func (ds *DataStore) addToList(key_type string, key string) {
-	if ds.obj_list[key_type] == nil {
-		ds.obj_list[key_type] = make(map[string]bool)
+func (ds *DataStore) addToList(keyType string, key string) {
+	if ds.objList[keyType] == nil {
+		ds.objList[keyType] = make(map[string]bool)
 	}
-	ds.obj_list[key_type][key] = true
+	ds.objList[keyType][key] = true
 }
 
-func (ds *DataStore) removeFromList(key_type string, key string) {
-	if ds.obj_list[key_type] != nil {
+func (ds *DataStore) removeFromList(keyType string, key string) {
+	if ds.objList[keyType] != nil {
 		/* If it's nil, we don't have to worry about deleting the key */
-		delete(ds.obj_list[key_type], key)
+		delete(ds.objList[keyType], key)
 	}
 }
 
-// Return a list of all objects of the given type.
-func (ds *DataStore) GetList(key_type string) []string {
-	j := make([]string, len(ds.obj_list[key_type]))
+// GetList returns a list of all objects of the given type.
+func (ds *DataStore) GetList(keyType string) []string {
+	j := make([]string, len(ds.objList[keyType]))
 	i := 0
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	for k, _ := range ds.obj_list[key_type] {
+	for k := range ds.objList[keyType] {
 		j[i] = k
 		i++
 	}
@@ -169,65 +173,68 @@ func (ds *DataStore) GetList(key_type string) []string {
 	return j
 }
 
-// Set a log_info in the data store. Unlike most of these objects, log infos
-// are stored and retrieved by id, since they have no useful names.
-func (ds *DataStore) SetLogInfo(obj interface{}, log_id ...int) error {
+// SetLogInfo sets a log_info in the data store. Unlike most of these objects, 
+// log infos are stored and retrieved by id, since they have no useful names.
+func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	ds_key := ds.make_key("log_info", "log_infos")
-	a, _ := ds.dsc.Get(ds_key)
+	dsKey := ds.makeKey("log_info", "log_infos")
+	a, _ := ds.dsc.Get(dsKey)
 	if a == nil {
 		a = make(map[int]interface{})
 	}
 	arr := a.(map[int]interface{})
-	var next_id int
-	if log_id != nil {
-		next_id = log_id[0]
+	var nextID int
+	if logID != nil {
+		nextID = logID[0]
 	} else {
-		next_id = getNextId(arr)
+		nextID = getNextID(arr)
 	}
-	arr[next_id] = obj
-	ds.dsc.Set(ds_key, arr, -1)
+	arr[nextID] = obj
+	ds.dsc.Set(dsKey, arr, -1)
 	return nil
 }
 
+// DeleteLogInfo deletes a logged event from the data store.
 func (ds *DataStore) DeleteLogInfo(id int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	ds_key := ds.make_key("log_info", "log_infos")
-	a, _ := ds.dsc.Get(ds_key)
+	dsKey := ds.makeKey("log_info", "log_infos")
+	a, _ := ds.dsc.Get(dsKey)
 	if a == nil {
 		a = make(map[int]interface{})
 	}
 	arr := a.(map[int]interface{})
 	delete(arr, id)
-	ds.dsc.Set(ds_key, arr, -1)
+	ds.dsc.Set(dsKey, arr, -1)
 	return nil
 }
 
+// PurgeLogInfoBefore purges all the logged events with an id less than the one
+// given from the data store.
 func (ds *DataStore) PurgeLogInfoBefore(id int) (int64, error) {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	ds_key := ds.make_key("log_info", "log_infos")
-	a, _ := ds.dsc.Get(ds_key)
+	dsKey := ds.makeKey("log_info", "log_infos")
+	a, _ := ds.dsc.Get(dsKey)
 	if a == nil {
 		a = make(map[int]interface{})
 	}
 	arr := a.(map[int]interface{})
-	new_logs := make(map[int]interface{})
-	var purged int64 = 0
+	newLogs := make(map[int]interface{})
+	var purged int64
 	for k, v := range arr {
 		if k > id {
-			new_logs[k] = v
+			newLogs[k] = v
 		} else {
 			purged++
 		}
 	}
-	ds.dsc.Set(ds_key, new_logs, -1)
+	ds.dsc.Set(dsKey, newLogs, -1)
 	return purged, nil
 }
 
-func getNextId(lis map[int]interface{}) int {
+func getNextID(lis map[int]interface{}) int {
 	if len(lis) == 0 {
 		return 1
 	}
@@ -239,12 +246,12 @@ func getNextId(lis map[int]interface{}) int {
 	return keys[0] + 1
 }
 
-// Get a log_info by id.
+// GetLogInfo gets a log_info by id.
 func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	ds_key := ds.make_key("log_info", "log_infos")
-	a, _ := ds.dsc.Get(ds_key)
+	dsKey := ds.makeKey("log_info", "log_infos")
+	a, _ := ds.dsc.Get(dsKey)
 	if a == nil {
 		err := fmt.Errorf("No log events stored")
 		return nil, err
@@ -258,12 +265,12 @@ func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 	return item, nil
 }
 
-// Get all the log infos currently stored
+// GetLogInfoList gets all the log infos currently stored.
 func (ds *DataStore) GetLogInfoList() map[int]interface{} {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	ds_key := ds.make_key("log_info", "log_infos")
-	a, _ := ds.dsc.Get(ds_key)
+	dsKey := ds.makeKey("log_info", "log_infos")
+	a, _ := ds.dsc.Get(dsKey)
 	if a == nil {
 		return nil
 	}
@@ -271,7 +278,7 @@ func (ds *DataStore) GetLogInfoList() map[int]interface{} {
 	return arr
 }
 
-// Freeze and save the data store to disk.
+// Save freezes and saves the data store to disk.
 func (ds *DataStore) Save(dsFile string) error {
 	if dsFile == "" {
 		err := fmt.Errorf("Yikes! Cannot save data store to disk because no file was specified.")
@@ -285,7 +292,7 @@ func (ds *DataStore) Save(dsFile string) error {
 
 	fstore := new(dsFileStore)
 	dscache := new(bytes.Buffer)
-	obj_list := new(bytes.Buffer)
+	objList := new(bytes.Buffer)
 	ds.m.RLock()
 	defer ds.m.RUnlock()
 
@@ -294,19 +301,19 @@ func (ds *DataStore) Save(dsFile string) error {
 		fp.Close()
 		return err
 	}
-	enc := gob.NewEncoder(obj_list)
+	enc := gob.NewEncoder(objList)
 	defer func() {
 		if x := recover(); x != nil {
 			err = fmt.Errorf("Something went wrong encoding the data store with Gob")
 		}
 	}()
-	err = enc.Encode(ds.obj_list)
+	err = enc.Encode(ds.objList)
 	if err != nil {
 		fp.Close()
 		return err
 	}
 	fstore.Cache = dscache.Bytes()
-	fstore.Obj_list = obj_list.Bytes()
+	fstore.ObjList = objList.Bytes()
 	enc = gob.NewEncoder(zfp)
 	err = enc.Encode(fstore)
 	zfp.Close()
@@ -333,9 +340,8 @@ func (ds *DataStore) Load(dsFile string) error {
 		// It's fine for the file not to exist on startup
 		if os.IsNotExist(err) {
 			return nil
-		} else {
-			return err
 		}
+		return err
 	}
 	zfp, zerr := zlib.NewReader(fp)
 	if zerr != nil {
@@ -355,7 +361,7 @@ func (ds *DataStore) Load(dsFile string) error {
 	}
 
 	dscache := bytes.NewBuffer(fstore.Cache)
-	obj_list := bytes.NewBuffer(fstore.Obj_list)
+	objList := bytes.NewBuffer(fstore.ObjList)
 
 	err = ds.dsc.Load(dscache)
 	if err != nil {
@@ -363,16 +369,17 @@ func (ds *DataStore) Load(dsFile string) error {
 		fp.Close()
 		return err
 	}
-	dec = gob.NewDecoder(obj_list)
-	err = dec.Decode(&ds.obj_list)
+	dec = gob.NewDecoder(objList)
+	err = dec.Decode(&ds.objList)
 	if err != nil {
-		log.Println("error at obj_list")
+		log.Println("error at objList")
 		fp.Close()
 		return err
 	}
 	return fp.Close()
 }
 
+// ChkNilArray examines an object, searching for empty slices.
 // When restoring an object from either the in-memory data store after it has
 // been saved to disk, or loading an object from the database with gob encoded
 // data structures, empty slices are encoded as "null" when they're sent out as
@@ -397,9 +404,9 @@ func ChkNilArray(obj interface{}) {
 	}
 }
 
-// Walk through the given map, searching for nil slices to create. This does
-// not handle all possible cases, but it *does* handle the cases found with the
-// chef objects in goiardi.
+// WalkMapForNil walks through the given map, searching for nil slices to create.
+// This does not handle all possible cases, but it *does* handle the cases found
+// with the chef objects in goiardi.
 func WalkMapForNil(r interface{}) interface{} {
 	switch m := r.(type) {
 	case map[string]interface{}:

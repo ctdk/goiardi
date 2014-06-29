@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package data_store
+package datastore
 
 import (
 	"encoding/gob"
@@ -26,13 +26,13 @@ import (
 
 type dsObj struct {
 	Name      string            `json:"name"`
-	JsonClass string            `json:"json_class"`
+	JSONClass string            `json:"json_class"`
 	ChefType  string            `json:"chef_type"`
 	TestMap   map[string]string `json:"testmap"`
 }
 
 func makeDsObj() *dsObj {
-	return &dsObj{Name: "baz", JsonClass: "Chef::DsObj", ChefType: "ds_obj"}
+	return &dsObj{Name: "baz", JSONClass: "Chef::DsObj", ChefType: "ds_obj"}
 }
 
 func TestNew(t *testing.T) {

@@ -15,7 +15,8 @@
  */
 
 // MySQL specific functions for goiardi database work.
-package data_store
+
+package datastore
 
 import (
 	"fmt"
@@ -34,13 +35,12 @@ func formatMysqlConStr(p interface{}) (string, error) {
 		dbname        string
 		extraParamStr string
 	)
-	extraParams := make([]string, 0)
+	var extraParams []string
 	if params.Dbname == "" {
 		err := fmt.Errorf("no database name specified")
 		return "", err
-	} else {
-		dbname = params.Dbname
 	}
+	dbname = params.Dbname
 	if params.Username != "" {
 		if params.Password != "" {
 			userpass = fmt.Sprintf("%s:%s@", params.Username, params.Password)

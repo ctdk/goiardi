@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package data_bag
+package databag
 
 import (
 	"database/sql"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"log"
 )
 
 // Functions for finding, saving, etc. data bags with an SQL database.
 
-func checkForDataBagSQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
-	_, err := data_store.CheckForOne(dbhandle, "data_bags", name)
+func checkForDataBagSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
+	_, err := datastore.CheckForOne(dbhandle, "data_bags", name)
 	if err == nil {
 		return true, nil
 	} else {
@@ -40,38 +40,38 @@ func checkForDataBagSQL(dbhandle data_store.Dbhandle, name string) (bool, error)
 }
 
 func getDataBagSQL(name string) (*DataBag, error) {
-	data_bag := new(DataBag)
+	dataBag := new(DataBag)
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT id, name FROM data_bags WHERE name = ?"
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT id, name FROM goiardi.data_bags WHERE name = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	err = stmt.QueryRow(name).Scan(&data_bag.id, &data_bag.Name)
+	err = stmt.QueryRow(name).Scan(&dataBag.id, &dataBag.Name)
 	if err != nil {
 		return nil, err
 	}
-	return data_bag, nil
+	return dataBag, nil
 }
 
-func (dbi *DataBagItem) fillDBItemFromMySQL(row data_store.ResRow) error {
+func (dbi *DataBagItem) fillDBItemFromMySQL(row datastore.ResRow) error {
 	var rawb []byte
-	err := row.Scan(&dbi.id, &dbi.data_bag_id, &dbi.Name, &dbi.origName, &dbi.DataBagName, &rawb)
+	err := row.Scan(&dbi.id, &dbi.dataBagID, &dbi.Name, &dbi.origName, &dbi.DataBagName, &rawb)
 	if err != nil {
 		return err
 	}
 	dbi.ChefType = "data_bag_item"
-	dbi.JsonClass = "Chef::DataBagItem"
-	err = data_store.DecodeBlob(rawb, &dbi.RawData)
+	dbi.JSONClass = "Chef::DataBagItem"
+	err = datastore.DecodeBlob(rawb, &dbi.RawData)
 	if err != nil {
 		return err
 	}
-	data_store.ChkNilArray(dbi)
+	datastore.ChkNilArray(dbi)
 	return nil
 }
 
@@ -83,7 +83,7 @@ func (db *DataBag) getDBItemSQL(db_item_name string) (*DataBagItem, error) {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM goiardi.data_bag_items dbi JOIN goiardi.data_bags db on dbi.data_bag_id = db.id WHERE dbi.orig_name = $1 AND dbi.data_bag_id = $2"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -97,11 +97,11 @@ func (db *DataBag) getDBItemSQL(db_item_name string) (*DataBagItem, error) {
 }
 
 func (dbi *DataBagItem) updateDBItemSQL() error {
-	rawb, rawerr := data_store.EncodeBlob(&dbi.RawData)
+	rawb, rawerr := datastore.EncodeBlob(&dbi.RawData)
 	if rawerr != nil {
 		return rawerr
 	}
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func (dbi *DataBagItem) updateDBItemSQL() error {
 }
 
 func (dbi *DataBagItem) deleteDBItemSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func (db *DataBag) allDBItemsSQL() (map[string]*DataBagItem, error) {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM goiardi.data_bag_items dbi JOIN goiardi.data_bags db on dbi.data_bag_id = db.id WHERE dbi.data_bag_id = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (db *DataBag) numDBItemsSQL() int {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT count(*) FROM goiardi.data_bag_items WHERE data_bag_id = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func (db *DataBag) listDBItemsSQL() []string {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT orig_name FROM goiardi.data_bag_items WHERE data_bag_id = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -241,7 +241,7 @@ func (db *DataBag) listDBItemsSQL() []string {
 }
 
 func (db *DataBag) deleteSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -282,7 +282,7 @@ func getListSQL() []string {
 		sqlStatement = "SELECT name FROM goiardi.data_bags"
 	}
 
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -318,7 +318,7 @@ func allDataBagsSQL() []*DataBag {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT id, name FROM goiardi.data_bags"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -331,16 +331,16 @@ func allDataBagsSQL() []*DataBag {
 		return dbags
 	}
 	for rows.Next() {
-		data_bag := new(DataBag)
-		err = rows.Scan(&data_bag.id, &data_bag.Name)
+		dataBag := new(DataBag)
+		err = rows.Scan(&dataBag.id, &dataBag.Name)
 		if err != nil {
 			log.Fatal(err)
 		}
-		data_bag.DataBagItems, err = data_bag.allDBItemsSQL()
+		dataBag.DataBagItems, err = dataBag.allDBItemsSQL()
 		if err != nil {
 			log.Fatal(err)
 		}
-		dbags = append(dbags, data_bag)
+		dbags = append(dbags, dataBag)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {

@@ -16,7 +16,8 @@
 
 // General functions for goiardi database connections, if running in that mode.
 // Database engine specific functions are in their respective source files.
-package data_store
+
+package datastore
 
 import (
 	"bytes"
@@ -25,18 +26,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
+	// just want the side effects
 	_ "github.com/go-sql-driver/mysql"
+	// just want the side effects
 	_ "github.com/lib/pq"
 	"strings"
 )
 
-// The database handle.
+// Dbh is the database handle, shared around.
 var Dbh *sql.DB
 
 // Format to use for dates and times for MySQL.
 const MySQLTimeFormat = "2006-01-02 15:04:05"
 
-// Interface for db handle types that can execute queries
+// Dbhandle is an interface for db handle types that can execute queries.
 type Dbhandle interface {
 	Prepare(query string) (*sql.Stmt, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
@@ -44,14 +47,14 @@ type Dbhandle interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 }
 
-// Interface for rows returned by Query, or a single row returned by QueryRow.
-// Used for passing in a db handle or a transaction to a function.
+// ResRow is an interface for rows returned by Query, or a single row returned by
+// QueryRow. Used for passing in a db handle or a transaction to a function.
 type ResRow interface {
 	Scan(dest ...interface{}) error
 }
 
-// Connect to a database with the database name and a map of connection options.
-// Currently supports MySQL.
+// ConnectDB connects to a database with the database name and a map of
+// connection options. Currently supports MySQL and PostgreSQL.
 func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	switch strings.ToLower(dbEngine) {
 	case "mysql", "postgres":
@@ -82,7 +85,7 @@ func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	}
 }
 
-// Encode an object to a JSON string.
+// EncodeToJSON encodes an object to a JSON string.
 func EncodeToJSON(obj interface{}) (string, error) {
 	buf := new(bytes.Buffer)
 	enc := json.NewEncoder(buf)
@@ -99,8 +102,9 @@ func EncodeToJSON(obj interface{}) (string, error) {
 	return buf.String(), nil
 }
 
-// Encode a slice or map of goiardi object data to save in the database. Pass
-// the object to be encoded in like data_store.EncodeBlob(&foo.Thing).
+// EncodeBlob encodes a slice or map of goiardi object data to save in the 
+// database. Pass the object to be encoded in like 
+// datastore.EncodeBlob(&foo.Thing).
 func EncodeBlob(obj interface{}) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	enc := gob.NewEncoder(buf)
@@ -117,10 +121,10 @@ func EncodeBlob(obj interface{}) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Decode the data encoded with EncodeBlob that was stored in the database so it
-// can be loaded back into a goiardi object. The 'obj' in the arguments *must*
-// be the address of the object receiving the blob of data (e.g.
-// data_store.DecodeBlob(data, &obj).
+// DecodeBlob decodes the data encoded with EncodeBlob that was stored in the 
+// database so it can be loaded back into a goiardi object. The 'obj' in the 
+// arguments *must* be the address of the object receiving the blob of data (e.g.
+// datastore.DecodeBlob(data, &obj).
 func DecodeBlob(data []byte, obj interface{}) error {
 	// hmmm
 	dbuf := bytes.NewBuffer(data)
@@ -132,11 +136,11 @@ func DecodeBlob(data []byte, obj interface{}) error {
 	return nil
 }
 
-// Check for one object of the given type identified by the given name. For this
+// CheckForOne object of the given type identified by the given name. For this
 // function to work, the underlying table MUST have its primary text identifier
 // be called "name".
 func CheckForOne(dbhandle Dbhandle, kind string, name string) (int32, error) {
-	var obj_id int32
+	var objID int32
 	var prepStatement string
 	if config.Config.UseMySQL {
 		prepStatement = fmt.Sprintf("SELECT id FROM %s WHERE name = ?", kind)
@@ -149,6 +153,6 @@ func CheckForOne(dbhandle Dbhandle, kind string, name string) (int32, error) {
 	}
 	defer stmt.Close()
 
-	err = stmt.QueryRow(name).Scan(&obj_id)
-	return obj_id, err
+	err = stmt.QueryRow(name).Scan(&objID)
+	return objID, err
 }

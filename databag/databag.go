@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-// Package data_bag provides a convenient way to store arbitrary data on the
+// Package databag provides a convenient way to store arbitrary data on the
 // server.
-package data_bag
+package databag
 
 import (
 	"database/sql"
@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 	"io"
@@ -34,27 +34,28 @@ import (
 	"strings"
 )
 
-// The overall data bag.
+// DataBag is the overall data bag.
 type DataBag struct {
 	Name         string
 	DataBagItems map[string]*DataBagItem
 	id           int32
 }
 
-// An item within a data bag.
+// DataBagItem is an individual item within a data bag.
 type DataBagItem struct {
 	Name        string                 `json:"name"`
 	ChefType    string                 `json:"chef_type"`
-	JsonClass   string                 `json:"json_class"`
+	JSONClass   string                 `json:"json_class"`
 	DataBagName string                 `json:"data_bag"`
 	RawData     map[string]interface{} `json:"raw_data"`
 	id          int32
-	data_bag_id int32
+	dataBagID int32
 	origName    string
 }
 
 /* Data bag functions and methods */
 
+// New creates an empty data bag, and kicks off adding it to the index.
 func New(name string) (*DataBag, util.Gerror) {
 	var found bool
 	var err util.Gerror
@@ -65,14 +66,14 @@ func New(name string) (*DataBag, util.Gerror) {
 
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForDataBagSQL(data_store.Dbh, name)
+		found, cerr = checkForDataBagSQL(datastore.Dbh, name)
 		if cerr != nil {
 			err = util.Errorf(cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
 			return nil, err
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		_, found = ds.Get("data_bag", name)
 	}
 	if found {
@@ -107,7 +108,7 @@ func Get(db_name string) (*DataBag, util.Gerror) {
 			return nil, gerr
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		d, found := ds.Get("data_bag", db_name)
 		if !found {
 			err := util.Errorf("Cannot load data bag %s", db_name)
@@ -117,7 +118,7 @@ func Get(db_name string) (*DataBag, util.Gerror) {
 		if d != nil {
 			data_bag = d.(*DataBag)
 			for _, v := range data_bag.DataBagItems {
-				z := data_store.WalkMapForNil(v.RawData)
+				z := datastore.WalkMapForNil(v.RawData)
 				v.RawData = z.(map[string]interface{})
 			}
 		}
@@ -131,7 +132,7 @@ func (db *DataBag) Save() error {
 	} else if config.Config.UsePostgreSQL {
 		return db.savePostgreSQL()
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Set("data_bag", db.Name, db)
 	}
 	return nil
@@ -144,7 +145,7 @@ func (db *DataBag) Delete() error {
 			return err
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		/* be thorough, and remove DBItems too */
 		for dbiName := range db.DataBagItems {
 			db.DeleteDBItem(dbiName)
@@ -161,7 +162,7 @@ func GetList() []string {
 	if config.UsingDB() {
 		db_list = getListSQL()
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		db_list = ds.GetList("data_bag")
 	}
 	return db_list
@@ -241,7 +242,7 @@ func (db *DataBag) NewDBItem(raw_dbag_item map[string]interface{}) (*DataBagItem
 		dbag_item = &DataBagItem{
 			Name:        dbi_full_name,
 			ChefType:    "data_bag_item",
-			JsonClass:   "Chef::DataBagItem",
+			JSONClass:   "Chef::DataBagItem",
 			DataBagName: db.Name,
 			RawData:     raw_dbag_item,
 		}

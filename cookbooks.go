@@ -29,29 +29,28 @@ import (
 	"sort"
 )
 
-func cookbook_handler(w http.ResponseWriter, r *http.Request) {
+func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	path_array := SplitPath(r.URL.Path)
-	cookbook_response := make(map[string]interface{})
+	pathArray := SplitPath(r.URL.Path)
+	cookbookResponse := make(map[string]interface{})
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 
-	// num_results := r.FormValue("num_versions")
-	var num_results string
+	var numResults string
 	r.ParseForm()
 	if nrs, found := r.Form["num_versions"]; found {
 		if len(nrs) < 0 {
-			JsonErrorReport(w, r, "invalid num_versions", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid num_versions", http.StatusBadRequest)
 			return
 		}
-		num_results = nrs[0]
-		err := util.ValidateNumVersions(num_results)
+		numResults = nrs[0]
+		err := util.ValidateNumVersions(numResults)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), err.Status())
+			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
 	}
@@ -62,14 +61,14 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	path_array_len := len(path_array)
+	pathArrayLen := len(pathArray)
 
 	/* 1 and 2 length path arrays only support GET */
-	if path_array_len < 3 && r.Method != "GET" {
-		JsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
+	if pathArrayLen < 3 && r.Method != "GET" {
+		jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 		return
-	} else if path_array_len < 3 && opUser.IsValidator() {
-		JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+	} else if pathArrayLen < 3 && opUser.IsValidator() {
+		jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 		return
 	}
 
@@ -82,42 +81,42 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request) {
 	 * validators shouldn't be able to do anything. *shrugs*
 	 */
 
-	if path_array_len == 1 {
+	if pathArrayLen == 1 {
 		/* list all cookbooks */
 		for _, cb := range cookbook.AllCookbooks() {
-			cookbook_response[cb.Name] = cb.InfoHash(num_results)
+			cookbookResponse[cb.Name] = cb.InfoHash(numResults)
 		}
-	} else if path_array_len == 2 {
+	} else if pathArrayLen == 2 {
 		/* info about a cookbook and all its versions */
-		cookbook_name := path_array[1]
+		cookbookName := pathArray[1]
 		/* Undocumented behavior - a cookbook name of _latest gets a
 		 * list of the latest versions of all the cookbooks, and _recipe
 		 * gets the recipes of the latest cookbooks. */
-		rlist := make([]string, 0)
-		if cookbook_name == "_latest" || cookbook_name == "_recipes" {
+		var rlist []string
+		if cookbookName == "_latest" || cookbookName == "_recipes" {
 			for _, cb := range cookbook.AllCookbooks() {
-				if cookbook_name == "_latest" {
-					cookbook_response[cb.Name] = util.CustomObjURL(cb, cb.LatestVersion().Version)
+				if cookbookName == "_latest" {
+					cookbookResponse[cb.Name] = util.CustomObjURL(cb, cb.LatestVersion().Version)
 				} else {
 					/* Damn it, this sends back an array of
 					 * all the recipes. Fill it in, and send
 					 * back the JSON ourselves. */
-					rlist_tmp, _ := cb.LatestVersion().RecipeList()
-					rlist = append(rlist, rlist_tmp...)
+					rlistTmp, _ := cb.LatestVersion().RecipeList()
+					rlist = append(rlist, rlistTmp...)
 				}
 				sort.Strings(rlist)
 			}
-			if cookbook_name == "_recipes" {
+			if cookbookName == "_recipes" {
 				enc := json.NewEncoder(w)
 				if err := enc.Encode(&rlist); err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				}
 				return
 			}
 		} else {
-			cb, err := cookbook.Get(cookbook_name)
+			cb, err := cookbook.Get(cookbookName)
 			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
 			/* Strange thing here. The API docs say if num_versions
@@ -125,67 +124,67 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request) {
 			 * spec indicates that if it's not set that all
 			 * cookbooks should be returned. Most places *except
 			 * here* that's the case, so it can't be changed in
-			 * infoHashBase. Explicitly set num_results to all
+			 * infoHashBase. Explicitly set numResults to all
 			 * here. */
-			if num_results == "" {
-				num_results = "all"
+			if numResults == "" {
+				numResults = "all"
 			}
-			cookbook_response[cookbook_name] = cb.InfoHash(num_results)
+			cookbookResponse[cookbookName] = cb.InfoHash(numResults)
 		}
-	} else if path_array_len == 3 {
+	} else if pathArrayLen == 3 {
 		/* get information about or manipulate a specific cookbook
 		 * version */
-		cookbook_name := path_array[1]
-		var cookbook_version string
+		cookbookName := pathArray[1]
+		var cookbookVersion string
 		var vererr util.Gerror
 		opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 		if oerr != nil {
-			JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 			return
 		}
-		if r.Method == "GET" && path_array[2] == "_latest" { // might be other special vers
-			cookbook_version = path_array[2]
+		if r.Method == "GET" && pathArray[2] == "_latest" { // might be other special vers
+			cookbookVersion = pathArray[2]
 		} else {
-			cookbook_version, vererr = util.ValidateAsVersion(path_array[2])
+			cookbookVersion, vererr = util.ValidateAsVersion(pathArray[2])
 			if vererr != nil {
-				vererr := util.Errorf("Invalid cookbook version '%s'.", path_array[2])
-				JsonErrorReport(w, r, vererr.Error(), vererr.Status())
+				vererr := util.Errorf("Invalid cookbook version '%s'.", pathArray[2])
+				jsonErrorReport(w, r, vererr.Error(), vererr.Status())
 				return
 			}
 		}
 		switch r.Method {
 		case "DELETE", "GET":
 			if opUser.IsValidator() {
-				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
-			cb, err := cookbook.Get(cookbook_name)
+			cb, err := cookbook.Get(cookbookName)
 			if err != nil {
 				if err.Status() == http.StatusNotFound {
-					msg := fmt.Sprintf("Cannot find a cookbook named %s with version %s", cookbook_name, cookbook_version)
-					JsonErrorReport(w, r, msg, err.Status())
+					msg := fmt.Sprintf("Cannot find a cookbook named %s with version %s", cookbookName, cookbookVersion)
+					jsonErrorReport(w, r, msg, err.Status())
 				} else {
-					JsonErrorReport(w, r, err.Error(), err.Status())
+					jsonErrorReport(w, r, err.Error(), err.Status())
 				}
 				return
 			}
-			cb_ver, err := cb.GetVersion(cookbook_version)
+			cbv, err := cb.GetVersion(cookbookVersion)
 			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
 			if r.Method == "DELETE" {
 				if !opUser.IsAdmin() {
-					JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+					jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 					return
 				}
-				err := cb.DeleteVersion(cookbook_version)
+				err := cb.DeleteVersion(cookbookVersion)
 				if err != nil {
-					JsonErrorReport(w, r, err.Error(), err.Status())
+					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-				if lerr := log_info.LogEvent(opUser, cb_ver, "delete"); lerr != nil {
-					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				if lerr := log_info.LogEvent(opUser, cbv, "delete"); lerr != nil {
+					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
 				/* If all versions are gone, remove the
@@ -193,7 +192,7 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request) {
 				 * behavior. */
 				if cb.NumVersions() == 0 {
 					if cerr := cb.Delete(); cerr != nil {
-						JsonErrorReport(w, r, cerr.Error(), http.StatusInternalServerError)
+						jsonErrorReport(w, r, cerr.Error(), http.StatusInternalServerError)
 						return
 					}
 				}
@@ -201,7 +200,7 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request) {
 				/* Special JSON rendition of the
 				 * cookbook with some but not all of
 				 * the fields. */
-				cookbook_response = cb_ver.ToJson(r.Method)
+				cookbookResponse = cbv.ToJson(r.Method)
 				/* Sometimes, but not always, chef needs
 				 * empty slices of maps for these
 				 * values. Arrrgh. */
@@ -217,20 +216,20 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request) {
 				if rs := r.Header.Get("X-Ops-Request-Source"); rs == "web" {
 					chkDiv := []string{"definitions", "libraries", "attributes", "providers", "resources", "templates", "root_files", "files"}
 					for _, cd := range chkDiv {
-						if cookbook_response[cd] == nil {
-							cookbook_response[cd] = make([]map[string]interface{}, 0)
+						if cookbookResponse[cd] == nil {
+							cookbookResponse[cd] = make([]map[string]interface{}, 0)
 						}
 					}
 				}
 			}
 		case "PUT":
 			if !opUser.IsAdmin() {
-				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
-			cbv_data, jerr := ParseObjJson(r.Body)
+			cbvData, jerr := ParseObjJson(r.Body)
 			if jerr != nil {
-				JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 				return
 			}
 			/* First, see if the cookbook already exists, &
@@ -238,39 +237,39 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request) {
 			 * specific version of the cookbook exists. If
 			 * so, update it, otherwise, create it and set
 			 * the latest version as needed. */
-			cb, err := cookbook.Get(cookbook_name)
+			cb, err := cookbook.Get(cookbookName)
 			if err != nil {
-				cb, err = cookbook.New(cookbook_name)
+				cb, err = cookbook.New(cookbookName)
 				if err != nil {
-					JsonErrorReport(w, r, err.Error(), err.Status())
+					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
 				/* save it so we get the id with mysql
 				 * for creating versions & such */
 				serr := cb.Save()
 				if serr != nil {
-					JsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
+					jsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
 					return
 				}
 				if lerr := log_info.LogEvent(opUser, cb, "create"); lerr != nil {
-					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
 			}
-			cbv, err := cb.GetVersion(cookbook_version)
+			cbv, err := cb.GetVersion(cookbookVersion)
 
 			/* Does the cookbook_name in the URL and what's
 			 * in the body match? */
-			switch t := cbv_data["cookbook_name"].(type) {
+			switch t := cbvData["cookbook_name"].(type) {
 			case string:
 				/* Only send this particular
 				 * error if the cookbook version
 				 * hasn't been created yet.
 				 * Instead we want a slightly
 				 * different version later. */
-				if t != cookbook_name && cbv == nil {
+				if t != cookbookName && cbv == nil {
 					terr := util.Errorf("Field 'name' invalid")
-					JsonErrorReport(w, r, terr.Error(), terr.Status())
+					jsonErrorReport(w, r, terr.Error(), terr.Status())
 					return
 				}
 			default:
@@ -282,7 +281,7 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request) {
 			}
 			if err != nil {
 				var nerr util.Gerror
-				cbv, nerr = cb.NewVersion(cookbook_version, cbv_data)
+				cbv, nerr = cb.NewVersion(cookbookVersion, cbvData)
 				if nerr != nil {
 					// If the new version failed to
 					// take, and there aren't any
@@ -291,28 +290,27 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request) {
 					if cb.NumVersions() == 0 {
 						cb.Delete()
 					}
-					JsonErrorReport(w, r, nerr.Error(), nerr.Status())
+					jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 					return
 				}
 				if lerr := log_info.LogEvent(opUser, cbv, "create"); lerr != nil {
-					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
 				w.WriteHeader(http.StatusCreated)
 			} else {
-				err := cbv.UpdateVersion(cbv_data, force)
+				err := cbv.UpdateVersion(cbvData, force)
 				if err != nil {
-					JsonErrorReport(w, r, err.Error(), err.Status())
+					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
-				} else {
-					err := cb.Save()
-					if err != nil {
-						JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-						return
-					}
+				}
+				err := cb.Save()
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+					return
 				}
 				if lerr := log_info.LogEvent(opUser, cbv, "modify"); lerr != nil {
-					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
 			}
@@ -320,19 +318,19 @@ func cookbook_handler(w http.ResponseWriter, r *http.Request) {
 			 * should have no response body, but in fact it
 			 * wants some (not all) of the cookbook version
 			 * data. */
-			cookbook_response = cbv.ToJson(r.Method)
+			cookbookResponse = cbv.ToJson(r.Method)
 		default:
-			JsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return
 		}
 	} else {
 		/* Say what? Bad request. */
-		JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+		jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 		return
 	}
 
 	enc := json.NewEncoder(w)
-	if err := enc.Encode(&cookbook_response); err != nil {
-		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	if err := enc.Encode(&cookbookResponse); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }

@@ -15,7 +15,8 @@
  */
 
 // Postgres specific functions for goiardi database work.
-package data_store
+
+package datastore
 
 import (
 	"fmt"
@@ -25,34 +26,34 @@ import (
 
 func formatPostgresqlConStr(p interface{}) string {
 	params := p.(config.PostgreSQLdb)
-	con_params := make([]string, 0)
+	var conParams []string
 
 	if params.Username != "" {
 		cu := fmt.Sprintf("user=%s", params.Username)
-		con_params = append(con_params, cu)
+		conParams = append(conParams, cu)
 	}
 	if params.Password != "" {
 		cp := fmt.Sprintf("password=%s", params.Password)
-		con_params = append(con_params, cp)
+		conParams = append(conParams, cp)
 	}
 	if params.Host != "" {
 		cp := fmt.Sprintf("host=%s", params.Host)
-		con_params = append(con_params, cp)
+		conParams = append(conParams, cp)
 	}
 	if params.Port != "" {
 		cp := fmt.Sprintf("port=%s", params.Port)
-		con_params = append(con_params, cp)
+		conParams = append(conParams, cp)
 	}
 	if params.Dbname != "" {
 		cp := fmt.Sprintf("dbname=%s", params.Dbname)
-		con_params = append(con_params, cp)
+		conParams = append(conParams, cp)
 	}
 	if params.SSLMode != "" {
 		cp := fmt.Sprintf("sslmode=%s", params.SSLMode)
-		con_params = append(con_params, cp)
+		conParams = append(conParams, cp)
 	}
 
-	constr := strings.Join(con_params, " ")
+	constr := strings.Join(conParams, " ")
 
 	return constr
 }

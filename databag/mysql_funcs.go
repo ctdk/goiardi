@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package data_bag
+package databag
 
 import (
 	"fmt"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 )
 
 // MySQL-specific functions for data bags & data bag items.
 
 func (db *DataBag) newDBItemMySQL(dbi_id string, raw_dbag_item map[string]interface{}) (*DataBagItem, error) {
-	rawb, rawerr := data_store.EncodeBlob(&raw_dbag_item)
+	rawb, rawerr := datastore.EncodeBlob(&raw_dbag_item)
 	if rawerr != nil {
 		return nil, rawerr
 	}
@@ -32,14 +32,14 @@ func (db *DataBag) newDBItemMySQL(dbi_id string, raw_dbag_item map[string]interf
 	dbi := &DataBagItem{
 		Name:        db.fullDBItemName(dbi_id),
 		ChefType:    "data_bag_item",
-		JsonClass:   "Chef::DataBagItem",
+		JSONClass:   "Chef::DataBagItem",
 		DataBagName: db.Name,
 		RawData:     raw_dbag_item,
 		origName:    dbi_id,
-		data_bag_id: db.id,
+		dataBagID: db.id,
 	}
 
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	// make sure this data bag didn't go away while we were doing something
 	// else
 	found, ferr := checkForDataBagSQL(tx, db.Name)
@@ -68,7 +68,7 @@ func (db *DataBag) newDBItemMySQL(dbi_id string, raw_dbag_item map[string]interf
 }
 
 func (db *DataBag) saveMySQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}

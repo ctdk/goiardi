@@ -46,7 +46,7 @@ func (cbv *CookbookVersion) updateCookbookVersionPostgreSQL(defb, libb, attb, re
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	err = tx.QueryRow("SELECT goiardi.merge_cookbook_versions($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", cbv.cookbook_id, cbv.IsFrozen, defb, libb, attb, recb, prob, resb, temb, roob, filb, metb, maj, min, patch).Scan(&cbv.id)
+	err = tx.QueryRow("SELECT goiardi.merge_cookbook_versions($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", cbv.cookbookID, cbv.IsFrozen, defb, libb, attb, recb, prob, resb, temb, roob, filb, metb, maj, min, patch).Scan(&cbv.id)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)

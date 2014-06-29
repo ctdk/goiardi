@@ -30,7 +30,7 @@ import (
 )
 
 func (c *Cookbook) numVersionsSQL() *int {
-	var cbv_count int
+	var cbvCount int
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT count(*) AS c FROM cookbook_versions cbv WHERE cbv.cookbook_id = ?"
@@ -43,28 +43,26 @@ func (c *Cookbook) numVersionsSQL() *int {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	err = stmt.QueryRow(c.id).Scan(&cbv_count)
+	err = stmt.QueryRow(c.id).Scan(&cbvCount)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			cbv_count = 0
+			cbvCount = 0
 		} else {
 			log.Fatal(err)
 		}
 	}
-	return &cbv_count
+	return &cbvCount
 }
 
 func checkForCookbookSQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
 	_, err := data_store.CheckForOne(dbhandle, "cookbooks", name)
 	if err == nil {
 		return true, nil
-	} else {
-		if err != sql.ErrNoRows {
-			return false, err
-		} else {
-			return false, nil
-		}
 	}
+	if err != sql.ErrNoRows {
+		return false, err
+	}
+	return false, nil
 }
 
 func (c *Cookbook) fillCookbookFromSQL(row data_store.ResRow) error {
@@ -225,7 +223,7 @@ func (cbv *CookbookVersion) updateCookbookVersionSQL() util.Gerror {
 }
 
 func allCookbooksSQL() []*Cookbook {
-	cookbooks := make([]*Cookbook, 0)
+	var cookbooks []*Cookbook
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT id, name FROM cookbooks"
@@ -293,7 +291,7 @@ func (c *Cookbook) deleteCookbookSQL() error {
 	/* First delete the hashes. This is a relatively unlikely
 	 * scenario, but it's best to make sure to reap any straggling
 	 * versions and file hashes. */
-	fileHashes := make([]string, 0)
+	var fileHashes []string
 	for _, cbv := range c.sortedVersions() {
 		fileHashes = append(fileHashes, cbv.fileHashes()...)
 	}
@@ -336,7 +334,7 @@ func (c *Cookbook) deleteCookbookSQL() error {
 }
 
 func getCookbookListSQL() []string {
-	cb_list := make([]string, 0)
+	var cbList []string
 
 	var sqlStatement string
 	if config.Config.UseMySQL {
@@ -350,26 +348,26 @@ func getCookbookListSQL() []string {
 			log.Fatal(err)
 		}
 		rows.Close()
-		return cb_list
+		return cbList
 	}
 	for rows.Next() {
-		var cb_name string
-		err = rows.Scan(&cb_name)
+		var cbName string
+		err = rows.Scan(&cbName)
 		if err != nil {
 			rows.Close()
 			log.Fatal(err)
 		}
-		cb_list = append(cb_list, cb_name)
+		cbList = append(cbList, cbName)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
-	return cb_list
+	return cbList
 }
 
 func (c *Cookbook) sortedCookbookVersionsSQL() []*CookbookVersion {
-	sorted := make([]*CookbookVersion, 0)
+	var sorted []*CookbookVersion
 
 	var sqlStatement string
 	if config.Config.UseMySQL {
