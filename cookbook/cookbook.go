@@ -35,7 +35,8 @@ import (
 	"strings"
 )
 
-// Make version strings with the format "x.y.z" sortable.
+// VersionStrings is a type to make version strings with the format "x.y.z" 
+// sortable.
 type VersionStrings []string
 
 // The Cookbook struct holds an array of cookbook versions, which is where the
@@ -57,7 +58,7 @@ type CookbookVersion struct {
 	Name         string                   `json:"name"`
 	Version      string                   `json:"version"`
 	ChefType     string                   `json:"chef_type"`
-	JsonClass    string                   `json:"json_class"`
+	JSONClass    string                   `json:"json_class"`
 	Definitions  []map[string]interface{} `json:"definitions"`
 	Libraries    []map[string]interface{} `json:"libraries"`
 	Attributes   []map[string]interface{} `json:"attributes"`
@@ -75,23 +76,27 @@ type CookbookVersion struct {
 
 /* Cookbook methods and functions */
 
+// GetName returns the name of the cookbook.
 func (c *Cookbook) GetName() string {
 	return c.Name
 }
 
+// URLType returns the first path element in a cookbook's URL.
 func (c *Cookbook) URLType() string {
 	return "cookbooks"
 }
 
+// GetName returns the name of the cookbook version.
 func (c *CookbookVersion) GetName() string {
 	return c.Name
 }
 
+// URLType returns the first path element in a cookbook version's URL.
 func (c *CookbookVersion) URLType() string {
 	return "cookbooks"
 }
 
-// Create a new cookbook.
+// New creates a new cookbook.
 func New(name string) (*Cookbook, util.Gerror) {
 	var found bool
 	if !util.ValidateEnvName(name) {
@@ -107,7 +112,7 @@ func New(name string) (*Cookbook, util.Gerror) {
 			return nil, err
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		_, found = ds.Get("cookbook", name)
 	}
 	if found {
@@ -121,7 +126,7 @@ func New(name string) (*Cookbook, util.Gerror) {
 	return cookbook, nil
 }
 
-// The number of versions this cookbook has.
+// NumVersions returns the number of versions this cookbook has.
 func (c *Cookbook) NumVersions() int {
 	if config.UsingDB() {
 		if c.numVersions == nil {
@@ -133,7 +138,7 @@ func (c *Cookbook) NumVersions() int {
 	}
 }
 
-// Return all the cookbooks that have been uploaded to this server.
+// AllCookbooks returns all the cookbooks that have been uploaded to this server.
 func AllCookbooks() (cookbooks []*Cookbook) {
 	if config.UsingDB() {
 		cookbooks = allCookbooksSQL()
@@ -208,6 +213,7 @@ func (c *Cookbook) Save() error {
 	return nil
 }
 
+// Delete a coookbook.
 func (c *Cookbook) Delete() error {
 	if config.UsingDB() {
 		return c.deleteCookbookSQL()
@@ -218,7 +224,7 @@ func (c *Cookbook) Delete() error {
 	return nil
 }
 
-// Get a list of all cookbooks on this server.
+// GetList gets a list of all cookbooks on this server.
 func GetList() []string {
 	if config.UsingDB() {
 		return getCookbookListSQL()
@@ -255,13 +261,14 @@ func (c *Cookbook) sortedVersions() []*CookbookVersion {
 	return sorted
 }
 
-// Update what the cookbook stores as the latest version available.
+// UpdateLatestVersion updates what the cookbook stores as the latest version
+// available.
 func (c *Cookbook) UpdateLatestVersion() {
 	c.latest = nil
 	c.LatestVersion()
 }
 
-// Get the latest version of this cookbook.
+// LatestVersion gets the latest version of this cookbook.
 func (c *Cookbook) LatestVersion() *CookbookVersion {
 	if c.latest == nil {
 		sorted := c.sortedVersions()
@@ -273,21 +280,21 @@ func (c *Cookbook) LatestVersion() *CookbookVersion {
 	return c.latest
 }
 
-// Gets num_results (or all if num_results is nil) versions of a cookbook,
+// InfoHash gets numResults (or all if numResults is nil) versions of a cookbook,
 // returning a hash describing the cookbook and the versions returned.
-func (c *Cookbook) InfoHash(num_results interface{}) map[string]interface{} {
-	return c.infoHashBase(num_results, "")
+func (c *Cookbook) InfoHash(numResults interface{}) map[string]interface{} {
+	return c.infoHashBase(numResults, "")
 }
 
-// Gets num_results (or all if num_results is nil) versions of a cookbook that
-// match the given constraint and returns a hash describing the cookbook and the
-// versions returned.
-func (c *Cookbook) ConstrainedInfoHash(num_results interface{}, constraint string) map[string]interface{} {
-	return c.infoHashBase(num_results, constraint)
+// ConstrainedInfoHash gets numResults (or all if numResults is nil) versions of
+// a cookbook that match the given constraint and returns a hash describing the 
+// cookbook and the versions returned.
+func (c *Cookbook) ConstrainedInfoHash(numResults interface{}, constraint string) map[string]interface{} {
+	return c.infoHashBase(numResults, constraint)
 }
 
-// For the given run list and environment constraints, return the cookbook
-// dependencies.
+// DependsCookbooks will, for the given run list and environment constraints,
+// return the cookbook dependencies.
 func DependsCookbooks(run_list []string, env_constraints map[string]string) (map[string]interface{}, error) {
 	cd_list := make(map[string][]string, len(run_list))
 	run_list_ref := make([]string, len(run_list))
@@ -407,7 +414,7 @@ func DependsCookbooks(run_list []string, env_constraints map[string]string) (map
 			err := fmt.Errorf("Unfortunately no version of %s could satisfy the requested constraints: %s", cname, strings.Join(traints, ", "))
 			return nil, err
 		} else {
-			gcbvJson := gcbv.ToJson("POST")
+			gcbvJSON := gcbv.ToJSON("POST")
 			/* Sigh. For some reason, *some* places want nothing
 			 * sent for cookbook information divisions like
 			 * attributes, libraries, providers, etc. However,
@@ -417,11 +424,11 @@ func DependsCookbooks(run_list []string, env_constraints map[string]string) (map
 			 * set them to an empty slice of maps if they're nil. */
 			chkDiv := []string{"definitions", "libraries", "attributes", "providers", "resources", "templates", "root_files", "files"}
 			for _, cd := range chkDiv {
-				if gcbvJson[cd] == nil {
-					gcbvJson[cd] = make([]map[string]interface{}, 0)
+				if gcbvJSON[cd] == nil {
+					gcbvJSON[cd] = make([]map[string]interface{}, 0)
 				}
 			}
-			cookbook_deps[gcbv.CookbookName] = gcbvJson
+			cookbook_deps[gcbv.CookbookName] = gcbvJSON
 		}
 	}
 
@@ -483,7 +490,7 @@ func splitConstraint(constraint string) (string, string, error) {
 	}
 }
 
-func (c *Cookbook) infoHashBase(num_results interface{}, constraint string) map[string]interface{} {
+func (c *Cookbook) infoHashBase(numResults interface{}, constraint string) map[string]interface{} {
 	cb_hash := make(map[string]interface{})
 	cb_hash["url"] = util.ObjURL(c)
 
@@ -497,9 +504,9 @@ func (c *Cookbook) infoHashBase(num_results interface{}, constraint string) map[
 	all_versions := false
 	//var cb_hash_len int
 
-	if num_results != "" && num_results != "all" {
-		num_versions, _ = strconv.Atoi(num_results.(string))
-	} else if num_results == "" {
+	if numResults != "" && numResults != "all" {
+		num_versions, _ = strconv.Atoi(numResults.(string))
+	} else if numResults == "" {
 		num_versions = 1
 	} else {
 		all_versions = true
@@ -551,8 +558,8 @@ VerLoop:
 	return cb_hash
 }
 
-// Returns the latest version of a cookbook that matches the given constraint.
-// If no constraint is given, returns the latest version.
+// LatestConstrained returns the latest version of a cookbook that matches the 
+// given constraint. If no constraint is given, returns the latest version.
 func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion {
 	if constraint == "" {
 		return c.LatestVersion()
@@ -580,7 +587,7 @@ func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion {
 
 /* CookbookVersion methods and functions */
 
-// Create a new version of the cookbook.
+// NewVersion creates a new version of the cookbook.
 func (c *Cookbook) NewVersion(cb_version string, cbv_data map[string]interface{}) (*CookbookVersion, util.Gerror) {
 	if _, err := c.GetVersion(cb_version); err == nil {
 		err := util.Errorf("Version %s of cookbook %s already exists, and shouldn't be created like this. Use UpdateVersion instead.", cb_version, c.Name)
@@ -592,7 +599,7 @@ func (c *Cookbook) NewVersion(cb_version string, cbv_data map[string]interface{}
 		Version:      cb_version,
 		Name:         fmt.Sprintf("%s-%s", c.Name, cb_version),
 		ChefType:     "cookbook_version",
-		JsonClass:    "Chef::CookbookVersion",
+		JSONClass:    "Chef::CookbookVersion",
 		IsFrozen:     false,
 		cookbook_id:  c.id, // should be ok even with in-mem
 	}
@@ -609,7 +616,7 @@ func (c *Cookbook) NewVersion(cb_version string, cbv_data map[string]interface{}
 	return cbv, nil
 }
 
-// Get a particular version of the cookbook.
+// GetVersion gets a particular version of the cookbook.
 func (c *Cookbook) GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
 	if cbVersion == "_latest" {
 		return c.LatestVersion(), nil
@@ -727,7 +734,7 @@ func (c *Cookbook) deleteHashes(file_hashes []string) {
 	filestore.DeleteHashes(file_hashes)
 }
 
-// Delete a particular version of a cookbook.
+// DeleteVersion deletes a particular version of a cookbook.
 func (c *Cookbook) DeleteVersion(cb_version string) util.Gerror {
 	/* Check for existence */
 	cbv, _ := c.GetVersion(cb_version)
@@ -754,7 +761,7 @@ func (c *Cookbook) DeleteVersion(cb_version string) util.Gerror {
 	return nil
 }
 
-// Update a specific version of a cookbook.
+// UpdateVersion updates a specific version of a cookbook.
 func (cbv *CookbookVersion) UpdateVersion(cbv_data map[string]interface{}, force string) util.Gerror {
 	/* Allow force to update a frozen cookbook */
 	if cbv.IsFrozen == true && force != "true" {
@@ -809,7 +816,7 @@ ValidElem:
 	cbv_data["json_class"], verr = util.ValidateAsFieldString(cbv_data["json_class"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' nil" {
-			cbv_data["json_class"] = cbv.JsonClass
+			cbv_data["json_class"] = cbv.JSONClass
 		} else {
 			verr = util.Errorf("Field 'json_class' invalid")
 			return verr
@@ -865,7 +872,7 @@ ValidElem:
 	/* Update the data */
 	/* With these next two, should we test for existence before setting? */
 	cbv.ChefType = cbv_data["chef_type"].(string)
-	cbv.JsonClass = cbv_data["json_class"].(string)
+	cbv.JSONClass = cbv_data["json_class"].(string)
 	cbv.Definitions = convertToCookbookDiv(cbv_data["definitions"])
 	cbv.Libraries = convertToCookbookDiv(cbv_data["libraries"])
 	cbv.Attributes = convertToCookbookDiv(cbv_data["attributes"])
@@ -931,50 +938,50 @@ func (cbv *CookbookVersion) fileHashes() []string {
 	return fhashes
 }
 
-// Helper function that coverts the internal representation of a cookbook
-// version to JSON in a way that knife and chef-client expect.
-func (cbv *CookbookVersion) ToJson(method string) map[string]interface{} {
-	toJson := make(map[string]interface{})
-	toJson["name"] = cbv.Name
-	toJson["cookbook_name"] = cbv.CookbookName
+// ToJSON is a helper function that coverts the internal representation of a 
+// cookbook version to JSON in a way that knife and chef-client expect.
+func (cbv *CookbookVersion) ToJSON(method string) map[string]interface{} {
+	toJSON := make(map[string]interface{})
+	toJSON["name"] = cbv.Name
+	toJSON["cookbook_name"] = cbv.CookbookName
 	if cbv.Version != "0.0.0" {
-		toJson["version"] = cbv.Version
+		toJSON["version"] = cbv.Version
 	}
-	toJson["chef_type"] = cbv.ChefType
-	toJson["json_class"] = cbv.JsonClass
-	toJson["frozen?"] = cbv.IsFrozen
-	toJson["recipes"] = cbv.Recipes
-	toJson["metadata"] = cbv.Metadata
+	toJSON["chef_type"] = cbv.ChefType
+	toJSON["json_class"] = cbv.JSONClass
+	toJSON["frozen?"] = cbv.IsFrozen
+	toJSON["recipes"] = cbv.Recipes
+	toJSON["metadata"] = cbv.Metadata
 
 	/* Only send the other fields if something exists in them */
 	/* Seriously, though, why *not* send the URL for the resources back
 	 * with PUT, but *DO* send it with everything else? */
 	if cbv.Providers != nil && len(cbv.Providers) != 0 {
-		toJson["providers"] = methodize(method, cbv.Providers)
+		toJSON["providers"] = methodize(method, cbv.Providers)
 	}
 	if cbv.Definitions != nil && len(cbv.Definitions) != 0 {
-		toJson["definitions"] = methodize(method, cbv.Definitions)
+		toJSON["definitions"] = methodize(method, cbv.Definitions)
 	}
 	if cbv.Libraries != nil && len(cbv.Libraries) != 0 {
-		toJson["libraries"] = methodize(method, cbv.Libraries)
+		toJSON["libraries"] = methodize(method, cbv.Libraries)
 	}
 	if cbv.Attributes != nil && len(cbv.Attributes) != 0 {
-		toJson["attributes"] = methodize(method, cbv.Attributes)
+		toJSON["attributes"] = methodize(method, cbv.Attributes)
 	}
 	if cbv.Resources != nil && len(cbv.Resources) != 0 {
-		toJson["resources"] = methodize(method, cbv.Resources)
+		toJSON["resources"] = methodize(method, cbv.Resources)
 	}
 	if cbv.Templates != nil && len(cbv.Templates) != 0 {
-		toJson["templates"] = methodize(method, cbv.Templates)
+		toJSON["templates"] = methodize(method, cbv.Templates)
 	}
 	if cbv.RootFiles != nil && len(cbv.RootFiles) != 0 {
-		toJson["root_files"] = methodize(method, cbv.RootFiles)
+		toJSON["root_files"] = methodize(method, cbv.RootFiles)
 	}
 	if cbv.Files != nil && len(cbv.Files) != 0 {
-		toJson["files"] = methodize(method, cbv.Files)
+		toJSON["files"] = methodize(method, cbv.Files)
 	}
 
-	return toJson
+	return toJSON
 }
 
 func methodize(method string, cb_thing []map[string]interface{}) []map[string]interface{} {
@@ -1028,7 +1035,7 @@ func delSliceElement(pos int, strs []string) []string {
 	return strs
 }
 
-// Provide a list of recipes in this cookbook version.
+// RecipeList provides a list of recipes in this cookbook version.
 func (cbv *CookbookVersion) RecipeList() ([]string, util.Gerror) {
 	recipe_meta := cbv.Recipes
 	recipes := make([]string, len(recipe_meta))
