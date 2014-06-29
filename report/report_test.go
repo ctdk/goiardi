@@ -26,17 +26,17 @@ import (
 
 func TestReportCreation(t *testing.T) {
 	uuid := "12b8be8d-a2ef-4fc6-88b3-4c18103b88df"
-	invalid_uid := "12b8be8d-a2ef-4fc6-88b3-4c18103b88zz"
+	invalidUUID := "12b8be8d-a2ef-4fc6-88b3-4c18103b88zz"
 	r, err := New(uuid, "node")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	if r.RunId != uuid {
-		t.Errorf("run ids are not identical: %s :: %s", r.RunId, uuid)
+	if r.RunID != uuid {
+		t.Errorf("run ids are not identical: %s :: %s", r.RunID, uuid)
 	}
-	_, err = New(invalid_uid, "node")
+	_, err = New(invalidUUID, "node")
 	if err == nil {
-		t.Errorf("%s created a report, but it shouldn't have", invalid_uid)
+		t.Errorf("%s created a report, but it shouldn't have", invalidUUID)
 	}
 	r.Delete()
 }
@@ -48,11 +48,11 @@ func TestReportUpdating(t *testing.T) {
 	update["resources"] = make([]interface{}, 0)
 	update["run_list"] = "[]"
 	update["data"] = make(map[string]interface{})
-	r, err := NewFromJson("node", create)
+	r, err := NewFromJSON("node", create)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	err = r.UpdateFromJson(update)
+	err = r.UpdateFromJSON(update)
 	if err != nil {
 		t.Errorf(err.Error())
 	}

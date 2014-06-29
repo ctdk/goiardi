@@ -22,21 +22,19 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"log"
 )
 
-func checkForNodeSQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
-	_, err := data_store.CheckForOne(data_store.Dbh, "nodes", name)
+func checkForNodeSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
+	_, err := datastore.CheckForOne(datastore.Dbh, "nodes", name)
 	if err == nil {
 		return true, nil
-	} else {
-		if err != sql.ErrNoRows {
-			return false, err
-		} else {
-			return false, nil
-		}
 	}
+	if err != sql.ErrNoRows {
+		return false, err
+	}
+	return false, nil
 }
 
 // Fill in a node from a row returned from the SQL server. Useful for the case
@@ -45,7 +43,7 @@ func checkForNodeSQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
 // if it's marginally acceptable in in-memory mode.
 //
 // NB: This does require the query to look like the one in Get().
-func (n *Node) fillNodeFromSQL(row data_store.ResRow) error {
+func (n *Node) fillNodeFromSQL(row datastore.ResRow) error {
 	var (
 		rl []byte
 		aa []byte
@@ -59,31 +57,31 @@ func (n *Node) fillNodeFromSQL(row data_store.ResRow) error {
 	}
 	n.ChefType = "node"
 	n.JsonClass = "Chef::Node"
-	err = data_store.DecodeBlob(rl, &n.RunList)
+	err = datastore.DecodeBlob(rl, &n.RunList)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(aa, &n.Automatic)
+	err = datastore.DecodeBlob(aa, &n.Automatic)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(na, &n.Normal)
+	err = datastore.DecodeBlob(na, &n.Normal)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(da, &n.Default)
+	err = datastore.DecodeBlob(da, &n.Default)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(oa, &n.Override)
+	err = datastore.DecodeBlob(oa, &n.Override)
 	if err != nil {
 		return err
 	}
-	data_store.ChkNilArray(n)
+	datastore.ChkNilArray(n)
 	return nil
 }
 
-func getSQL(node_name string) (*Node, error) {
+func getSQL(nodeName string) (*Node, error) {
 	node := new(Node)
 	var sqlStmt string
 	if config.Config.UseMySQL {
@@ -92,12 +90,12 @@ func getSQL(node_name string) (*Node, error) {
 		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from goiardi.nodes n where n.name = $1"
 	}
 
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(node_name)
+	row := stmt.QueryRow(nodeName)
 	err = node.fillNodeFromSQL(row)
 
 	if err != nil {
@@ -108,28 +106,28 @@ func getSQL(node_name string) (*Node, error) {
 
 func (n *Node) saveSQL() error {
 	// prepare the complex structures for saving
-	rlb, rlerr := data_store.EncodeBlob(&n.RunList)
+	rlb, rlerr := datastore.EncodeBlob(&n.RunList)
 	if rlerr != nil {
 		return rlerr
 	}
-	aab, aaerr := data_store.EncodeBlob(&n.Automatic)
+	aab, aaerr := datastore.EncodeBlob(&n.Automatic)
 	if aaerr != nil {
 		return aaerr
 	}
-	nab, naerr := data_store.EncodeBlob(&n.Normal)
+	nab, naerr := datastore.EncodeBlob(&n.Normal)
 	if naerr != nil {
 		return naerr
 	}
-	dab, daerr := data_store.EncodeBlob(&n.Default)
+	dab, daerr := datastore.EncodeBlob(&n.Default)
 	if daerr != nil {
 		return daerr
 	}
-	oab, oaerr := data_store.EncodeBlob(&n.Override)
+	oab, oaerr := datastore.EncodeBlob(&n.Override)
 	if oaerr != nil {
 		return oaerr
 	}
 
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -147,7 +145,7 @@ func (n *Node) saveSQL() error {
 }
 
 func (n *Node) deleteSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -171,50 +169,50 @@ func (n *Node) deleteSQL() error {
 }
 
 func getListSQL() []string {
-	node_list := make([]string, 0)
+	var nodeList []string
 	var sqlStmt string
 	if config.Config.UseMySQL {
 		sqlStmt = "SELECT name FROM nodes"
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "SELECT name FROM goiardi.nodes"
 	}
-	rows, err := data_store.Dbh.Query(sqlStmt)
+	rows, err := datastore.Dbh.Query(sqlStmt)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
 		}
 		rows.Close()
-		return node_list
+		return nodeList
 	}
 	for rows.Next() {
-		var node_name string
-		err = rows.Scan(&node_name)
+		var nodeName string
+		err = rows.Scan(&nodeName)
 		if err != nil {
 			log.Fatal(err)
 		}
-		node_list = append(node_list, node_name)
+		nodeList = append(nodeList, nodeName)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
-	return node_list
+	return nodeList
 }
 
-func getNodesInEnvSQL(env_name string) ([]*Node, error) {
-	nodes := make([]*Node, 0)
+func getNodesInEnvSQL(envName string) ([]*Node, error) {
+	var nodes []*Node
 	var sqlStmt string
 	if config.Config.UseMySQL {
 		sqlStmt = "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM nodes n WHERE n.chef_environment = ?"
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.nodes n WHERE n.chef_environment = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query(env_name)
+	rows, qerr := stmt.Query(envName)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return nodes, nil
@@ -238,7 +236,7 @@ func getNodesInEnvSQL(env_name string) ([]*Node, error) {
 }
 
 func allNodesSQL() []*Node {
-	nodes := make([]*Node, 0)
+	var nodes []*Node
 	var sqlStmt string
 	if config.Config.UseMySQL {
 		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n"
@@ -246,7 +244,7 @@ func allNodesSQL() []*Node {
 		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from goiardi.nodes n"
 	}
 
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		log.Fatal(err)
 	}

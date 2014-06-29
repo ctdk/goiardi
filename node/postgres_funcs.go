@@ -17,10 +17,10 @@
 package node
 
 import (
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 )
 
-func (n *Node) savePostgreSQL(tx data_store.Dbhandle, rlb, aab, nab, dab, oab []byte) error {
+func (n *Node) savePostgreSQL(tx datastore.Dbhandle, rlb, aab, nab, dab, oab []byte) error {
 	_, err := tx.Exec("SELECT goiardi.merge_nodes($1, $2, $3, $4, $5, $6, $7)", n.Name, n.ChefEnvironment, rlb, aab, nab, dab, oab)
 	if err != nil {
 		return err

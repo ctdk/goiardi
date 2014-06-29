@@ -19,10 +19,10 @@
 package node
 
 import (
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 )
 
-func (n *Node) saveMySQL(tx data_store.Dbhandle, rlb, aab, nab, dab, oab []byte) error {
+func (n *Node) saveMySQL(tx datastore.Dbhandle, rlb, aab, nab, dab, oab []byte) error {
 	_, err := tx.Exec("INSERT INTO nodes (name, chef_environment, run_list, automatic_attr, normal_attr, default_attr, override_attr, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE chef_environment = ?, run_list = ?, automatic_attr = ?, normal_attr = ?, default_attr = ?, override_attr = ?, updated_at = NOW()", n.Name, n.ChefEnvironment, rlb, aab, nab, dab, oab, n.ChefEnvironment, rlb, aab, nab, dab, oab)
 	if err != nil {
 		return err

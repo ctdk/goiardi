@@ -23,17 +23,18 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
+// Node is a basic Chef node, holding the run list and attributes of the node.
 type Node struct {
 	Name            string                 `json:"name"`
 	ChefEnvironment string                 `json:"chef_environment"`
 	RunList         []string               `json:"run_list"`
-	JsonClass       string                 `json:"json_class"`
+	JSONClass       string                 `json:"json_class"`
 	ChefType        string                 `json:"chef_type"`
 	Automatic       map[string]interface{} `json:"automatic"`
 	Normal          map[string]interface{} `json:"normal"`
@@ -41,6 +42,7 @@ type Node struct {
 	Override        map[string]interface{} `json:"override"`
 }
 
+// New makes a new node.
 func New(name string) (*Node, util.Gerror) {
 	/* check for an existing node with this name */
 	if !util.ValidateDBagName(name) {
@@ -52,14 +54,14 @@ func New(name string) (*Node, util.Gerror) {
 	if config.UsingDB() {
 		// will need redone if orgs ever get implemented
 		var err error
-		found, err = checkForNodeSQL(data_store.Dbh, name)
+		found, err = checkForNodeSQL(datastore.Dbh, name)
 		if err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
 			return nil, gerr
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		_, found = ds.Get("node", name)
 	}
 	if found {
@@ -73,7 +75,7 @@ func New(name string) (*Node, util.Gerror) {
 		Name:            name,
 		ChefEnvironment: "_default",
 		ChefType:        "node",
-		JsonClass:       "Chef::Node",
+		JSONClass:       "Chef::Node",
 		RunList:         []string{},
 		Automatic:       map[string]interface{}{},
 		Normal:          map[string]interface{}{},
@@ -83,29 +85,30 @@ func New(name string) (*Node, util.Gerror) {
 	return node, nil
 }
 
-// Create a new node from the uploaded JSON.
-func NewFromJson(json_node map[string]interface{}) (*Node, util.Gerror) {
-	node_name, nerr := util.ValidateAsString(json_node["name"])
+// NewFromJSON creates a new node from the uploaded JSON.
+func NewFromJSON(jsonNode map[string]interface{}) (*Node, util.Gerror) {
+	nodeName, nerr := util.ValidateAsString(jsonNode["name"])
 	if nerr != nil {
 		return nil, nerr
 	}
-	node, err := New(node_name)
+	node, err := New(nodeName)
 	if err != nil {
 		return nil, err
 	}
-	err = node.UpdateFromJson(json_node)
+	err = node.UpdateFromJSON(jsonNode)
 	if err != nil {
 		return nil, err
 	}
 	return node, nil
 }
 
-func Get(node_name string) (*Node, error) {
+// Get a node.
+func Get(nodeName string) (*Node, error) {
 	var node *Node
 	var found bool
 	if config.UsingDB() {
 		var err error
-		node, err = getSQL(node_name)
+		node, err = getSQL(nodeName)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -116,31 +119,31 @@ func Get(node_name string) (*Node, error) {
 			found = true
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		var n interface{}
-		n, found = ds.Get("node", node_name)
+		n, found = ds.Get("node", nodeName)
 		if n != nil {
 			node = n.(*Node)
 		}
 	}
 	if !found {
-		err := fmt.Errorf("node '%s' not found", node_name)
+		err := fmt.Errorf("node '%s' not found", nodeName)
 		return nil, err
 	}
 	return node, nil
 }
 
-// Update an existing node with the uploaded JSON.
-func (n *Node) UpdateFromJson(json_node map[string]interface{}) util.Gerror {
+// UpdateFromJSON updates an existing node with the uploaded JSON.
+func (n *Node) UpdateFromJSON(jsonNode map[string]interface{}) util.Gerror {
 	/* It's actually totally legitimate to save a node with a different
 	 * name than you started with, but we need to get/create a new node for
 	 * it is all. */
-	node_name, nerr := util.ValidateAsString(json_node["name"])
+	nodeName, nerr := util.ValidateAsString(jsonNode["name"])
 	if nerr != nil {
 		return nerr
 	}
-	if n.Name != node_name {
-		err := util.Errorf("Node name %s and %s from JSON do not match.", n.Name, node_name)
+	if n.Name != nodeName {
+		err := util.Errorf("Node name %s and %s from JSON do not match.", n.Name, nodeName)
 		return err
 	}
 
@@ -149,10 +152,10 @@ func (n *Node) UpdateFromJson(json_node map[string]interface{}) util.Gerror {
 	/* Look for invalid top level elements. *We* don't have to worry about
 		 * them, but chef-pedant cares (probably because Chef <=10 stores
 	 	 * json objects directly, dunno about Chef 11). */
-	valid_elements := []string{"name", "json_class", "chef_type", "chef_environment", "run_list", "override", "normal", "default", "automatic"}
+	validElements := []string{"name", "json_class", "chef_type", "chef_environment", "run_list", "override", "normal", "default", "automatic"}
 ValidElem:
-	for k, _ := range json_node {
-		for _, i := range valid_elements {
+	for k := range jsonNode {
+		for _, i := range validElements {
 			if k == i {
 				continue ValidElem
 			}
@@ -162,79 +165,80 @@ ValidElem:
 	}
 
 	var verr util.Gerror
-	json_node["run_list"], verr = util.ValidateRunList(json_node["run_list"])
+	jsonNode["run_list"], verr = util.ValidateRunList(jsonNode["run_list"])
 	if verr != nil {
 		return verr
 	}
 	attrs := []string{"normal", "automatic", "default", "override"}
 	for _, a := range attrs {
-		json_node[a], verr = util.ValidateAttributes(a, json_node[a])
+		jsonNode[a], verr = util.ValidateAttributes(a, jsonNode[a])
 		if verr != nil {
 			return verr
 		}
 	}
 
-	json_node["chef_environment"], verr = util.ValidateAsFieldString(json_node["chef_environment"])
+	jsonNode["chef_environment"], verr = util.ValidateAsFieldString(jsonNode["chef_environment"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' nil" {
-			json_node["chef_environment"] = n.ChefEnvironment
+			jsonNode["chef_environment"] = n.ChefEnvironment
 		} else {
 			return verr
 		}
 	} else {
-		if !util.ValidateEnvName(json_node["chef_environment"].(string)) {
+		if !util.ValidateEnvName(jsonNode["chef_environment"].(string)) {
 			verr = util.Errorf("Field 'chef_environment' invalid")
 			return verr
 		}
 	}
 
-	json_node["json_class"], verr = util.ValidateAsFieldString(json_node["json_class"])
+	jsonNode["json_class"], verr = util.ValidateAsFieldString(jsonNode["json_class"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' nil" {
-			json_node["json_class"] = n.JsonClass
+			jsonNode["json_class"] = n.JSONClass
 		} else {
 			return verr
 		}
 	} else {
-		if json_node["json_class"].(string) != "Chef::Node" {
+		if jsonNode["json_class"].(string) != "Chef::Node" {
 			verr = util.Errorf("Field 'json_class' invalid")
 			return verr
 		}
 	}
 
-	json_node["chef_type"], verr = util.ValidateAsFieldString(json_node["chef_type"])
+	jsonNode["chef_type"], verr = util.ValidateAsFieldString(jsonNode["chef_type"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' nil" {
-			json_node["chef_type"] = n.ChefType
+			jsonNode["chef_type"] = n.ChefType
 		} else {
 			return verr
 		}
 	} else {
-		if json_node["chef_type"].(string) != "node" {
+		if jsonNode["chef_type"].(string) != "node" {
 			verr = util.Errorf("Field 'chef_type' invalid")
 			return verr
 		}
 	}
 
 	/* and setting */
-	n.ChefEnvironment = json_node["chef_environment"].(string)
-	n.ChefType = json_node["chef_type"].(string)
-	n.JsonClass = json_node["json_class"].(string)
-	n.RunList = json_node["run_list"].([]string)
-	n.Normal = json_node["normal"].(map[string]interface{})
-	n.Automatic = json_node["automatic"].(map[string]interface{})
-	n.Default = json_node["default"].(map[string]interface{})
-	n.Override = json_node["override"].(map[string]interface{})
+	n.ChefEnvironment = jsonNode["chef_environment"].(string)
+	n.ChefType = jsonNode["chef_type"].(string)
+	n.JSONClass = jsonNode["json_class"].(string)
+	n.RunList = jsonNode["run_list"].([]string)
+	n.Normal = jsonNode["normal"].(map[string]interface{})
+	n.Automatic = jsonNode["automatic"].(map[string]interface{})
+	n.Default = jsonNode["default"].(map[string]interface{})
+	n.Override = jsonNode["override"].(map[string]interface{})
 	return nil
 }
 
+// Save the node.
 func (n *Node) Save() error {
 	if config.UsingDB() {
 		if err := n.saveSQL(); err != nil {
 			return err
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Set("node", n.Name, n)
 	}
 	/* TODO Later: excellent candidate for a goroutine */
@@ -242,81 +246,88 @@ func (n *Node) Save() error {
 	return nil
 }
 
+// Delete the node.
 func (n *Node) Delete() error {
 	if config.UsingDB() {
 		if err := n.deleteSQL(); err != nil {
 			return err
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Delete("node", n.Name)
 	}
 	indexer.DeleteItemFromCollection("node", n.Name)
 	return nil
 }
 
-// Get a list of the nodes on this server.
+// GetList gets a list of the nodes on this server.
 func GetList() []string {
-	var node_list []string
+	var nodeList []string
 	if config.UsingDB() {
-		node_list = getListSQL()
+		nodeList = getListSQL()
 	} else {
-		ds := data_store.New()
-		node_list = ds.GetList("node")
+		ds := datastore.New()
+		nodeList = ds.GetList("node")
 	}
-	return node_list
+	return nodeList
 }
 
-func GetFromEnv(env_name string) ([]*Node, error) {
+// GetFromEnv returns all nodes that belong to the given environment.
+func GetFromEnv(envName string) ([]*Node, error) {
 	if config.UsingDB() {
-		return getNodesInEnvSQL(env_name)
+		return getNodesInEnvSQL(envName)
 	}
-	env_nodes := make([]*Node, 0)
-	node_list := GetList()
-	for _, n := range node_list {
-		chef_node, _ := Get(n)
-		if chef_node == nil {
+	var envNodes []*Node
+	nodeList := GetList()
+	for _, n := range nodeList {
+		chefNode, _ := Get(n)
+		if chefNode == nil {
 			continue
 		}
-		if chef_node.ChefEnvironment == env_name {
-			env_nodes = append(env_nodes, chef_node)
+		if chefNode.ChefEnvironment == envName {
+			envNodes = append(envNodes, chefNode)
 		}
 	}
-	return env_nodes, nil
+	return envNodes, nil
 }
 
+// GetName returns the node's name.
 func (n *Node) GetName() string {
 	return n.Name
 }
 
+// URLType returns the base element of a node's URL.
 func (n *Node) URLType() string {
 	return "nodes"
 }
 
 /* Functions to support indexing */
 
-func (n *Node) DocId() string {
+// DocID returns the node's name.
+func (n *Node) DocID() string {
 	return n.Name
 }
 
+// Index tells the indexer where the node should go.
 func (n *Node) Index() string {
 	return "node"
 }
 
+// Flatten a node for indexing.
 func (n *Node) Flatten() []string {
 	flatten := util.FlattenObj(n)
 	indexified := util.Indexify(flatten)
 	return indexified
 }
 
-// Return all the nodes on the server
+// AllNodes returns all the nodes on the server
 func AllNodes() []*Node {
-	nodes := make([]*Node, 0)
+	var nodes []*Node
 	if config.UsingDB() {
 		nodes = allNodesSQL()
 	} else {
-		node_list := GetList()
-		for _, n := range node_list {
+		nodeList := GetList()
+		for _, n := range nodeList {
 			no, err := Get(n)
 			if err != nil {
 				continue

@@ -22,104 +22,103 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
-func node_handler(w http.ResponseWriter, r *http.Request) {
+func nodeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	node_name := r.URL.Path[7:]
+	nodeName := r.URL.Path[7:]
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 
 	/* So, what are we doing? Depends on the HTTP method, of course */
 	switch r.Method {
 	case "GET", "DELETE":
-		if opUser.IsValidator() || !opUser.IsAdmin() && r.Method == "DELETE" && !(opUser.IsClient() && opUser.(*client.Client).NodeName == node_name) {
-			JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+		if opUser.IsValidator() || !opUser.IsAdmin() && r.Method == "DELETE" && !(opUser.IsClient() && opUser.(*client.Client).NodeName == nodeName) {
+			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
-		chef_node, err := node.Get(node_name)
+		chefNode, err := node.Get(nodeName)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
 		enc := json.NewEncoder(w)
-		if err = enc.Encode(&chef_node); err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		if err = enc.Encode(&chefNode); err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if r.Method == "DELETE" {
-			err = chef_node.Delete()
+			err = chefNode.Delete()
 			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if lerr := log_info.LogEvent(opUser, chef_node, "delete"); lerr != nil {
-				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+			if lerr := loginfo.LogEvent(opUser, chefNode, "delete"); lerr != nil {
+				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
 		}
 	case "PUT":
-		if !opUser.IsAdmin() && !(opUser.IsClient() && opUser.(*client.Client).NodeName == node_name) {
-			JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+		if !opUser.IsAdmin() && !(opUser.IsClient() && opUser.(*client.Client).NodeName == nodeName) {
+			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
-		node_data, jerr := ParseObjJson(r.Body)
+		nodeData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
-			JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
 		}
-		chef_node, err := node.Get(node_name)
+		chefNode, err := node.Get(nodeName)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
-		/* If node_name and node_data["name"] don't match, we
+		/* If nodeName and nodeData["name"] don't match, we
 		 * need to make a new node. Make sure that node doesn't
 		 * exist. */
-		if _, found := node_data["name"]; !found {
-			node_data["name"] = node_name
+		if _, found := nodeData["name"]; !found {
+			nodeData["name"] = nodeName
 		}
-		json_name, sterr := util.ValidateAsString(node_data["name"])
+		jsonName, sterr := util.ValidateAsString(nodeData["name"])
 		if sterr != nil {
-			JsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
 			return
 		}
-		if node_name != json_name && json_name != "" {
-			JsonErrorReport(w, r, "Node name mismatch.", http.StatusBadRequest)
+		if nodeName != jsonName && jsonName != "" {
+			jsonErrorReport(w, r, "Node name mismatch.", http.StatusBadRequest)
 			return
-		} else {
-			if json_name == "" {
-				node_data["name"] = node_name
-			}
-			nerr := chef_node.UpdateFromJson(node_data)
-			if nerr != nil {
-				JsonErrorReport(w, r, nerr.Error(), nerr.Status())
-				return
-			}
 		}
-		err = chef_node.Save()
+		if jsonName == "" {
+			nodeData["name"] = nodeName
+		}
+		nerr := chefNode.UpdateFromJSON(nodeData)
+		if nerr != nil {
+			jsonErrorReport(w, r, nerr.Error(), nerr.Status())
+			return
+		}
+		err = chefNode.Save()
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if lerr := log_info.LogEvent(opUser, chef_node, "modify"); lerr != nil {
-			JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+		if lerr := loginfo.LogEvent(opUser, chefNode, "modify"); lerr != nil {
+			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
 		enc := json.NewEncoder(w)
-		if err = enc.Encode(&chef_node); err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		if err = enc.Encode(&chefNode); err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 		}
 	default:
-		JsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
 	}
 }

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package log_info
+package loginfo
 
-/* MySQL specific functions for log_info */
+/* MySQL specific functions for loginfo */
 
 import (
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"time"
 )
 
@@ -36,14 +36,14 @@ func (le *LogInfo) fillLogEventFromMySQL(row data_store.ResRow) error {
 	return nil
 }
 
-func (le *LogInfo) actualWriteEventMySQL(tx data_store.Dbhandle, actorId int32) error {
+func (le *LogInfo) actualWriteEventMySQL(tx data_store.Dbhandle, actorID int32) error {
 	var err error
 	if le.Id == 0 {
 		sqlStmt := "INSERT INTO log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-		_, err = tx.Exec(sqlStmt, actorId, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+		_, err = tx.Exec(sqlStmt, actorID, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
 	} else {
 		sqlStmt := "INSERT INTO log_infos (id, actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-		_, err = tx.Exec(sqlStmt, le.Id, actorId, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+		_, err = tx.Exec(sqlStmt, le.Id, actorID, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
 	}
 	return err
 }

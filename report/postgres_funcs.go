@@ -19,21 +19,21 @@ package report
 /* PostgreSQL funcs for reports */
 
 import (
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/lib/pq"
 )
 
-func (r *Report) fillReportFromPostgreSQL(row data_store.ResRow) error {
+func (r *Report) fillReportFromPostgreSQL(row datastore.ResRow) error {
 	var res, dat []byte
 	var st, et pq.NullTime
 	err := row.Scan(&r.RunId, &st, &et, &r.TotalResCount, &r.Status, &r.RunList, &res, &dat, &r.NodeName)
 	if err != nil {
 		return err
 	}
-	if err = data_store.DecodeBlob(res, &r.Resources); err != nil {
+	if err = datastore.DecodeBlob(res, &r.Resources); err != nil {
 		return err
 	}
-	if err = data_store.DecodeBlob(dat, &r.Data); err != nil {
+	if err = datastore.DecodeBlob(dat, &r.Data); err != nil {
 		return err
 	}
 	if st.Valid {
@@ -47,15 +47,15 @@ func (r *Report) fillReportFromPostgreSQL(row data_store.ResRow) error {
 }
 
 func (r *Report) savePostgreSQL() error {
-	res, reserr := data_store.EncodeBlob(&r.Resources)
+	res, reserr := datastore.EncodeBlob(&r.Resources)
 	if reserr != nil {
 		return reserr
 	}
-	dat, daterr := data_store.EncodeBlob(&r.Data)
+	dat, daterr := datastore.EncodeBlob(&r.Data)
 	if daterr != nil {
 		return daterr
 	}
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}

@@ -15,7 +15,8 @@
  */
 
 // Log info tests
-package log_info
+
+package loginfo
 
 import (
 	"github.com/ctdk/goiardi/client"

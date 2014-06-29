@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/user"
@@ -31,350 +31,350 @@ import (
 	"net/http"
 )
 
-func list_handler(w http.ResponseWriter, r *http.Request) {
+func listHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	path_array := SplitPath(r.URL.Path)
-	op := path_array[0]
-	var list_data map[string]string
+	pathArray := SplitPath(r.URL.Path)
+	op := pathArray[0]
+	var listData map[string]string
 	switch op {
 	case "nodes":
-		list_data = node_handling(w, r)
+		listData = nodeHandling(w, r)
 	case "clients":
-		list_data = client_handling(w, r)
+		listData = clientHandling(w, r)
 	case "users":
-		list_data = user_handling(w, r)
+		listData = userHandling(w, r)
 	case "roles":
-		list_data = role_handling(w, r)
+		listData = roleHandling(w, r)
 	default:
-		list_data = make(map[string]string)
-		list_data["huh"] = "not valid"
+		listData = make(map[string]string)
+		listData["huh"] = "not valid"
 	}
-	if list_data != nil {
+	if listData != nil {
 		enc := json.NewEncoder(w)
-		if err := enc.Encode(&list_data); err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		if err := enc.Encode(&listData); err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 		}
 	}
 }
 
-func node_handling(w http.ResponseWriter, r *http.Request) map[string]string {
+func nodeHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 	/* We're dealing with nodes, then. */
-	node_response := make(map[string]string)
+	nodeResponse := make(map[string]string)
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return nil
 	}
 	switch r.Method {
 	case "GET":
 		if opUser.IsValidator() {
-			JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil
 		}
-		node_list := node.GetList()
-		for _, k := range node_list {
-			item_url := fmt.Sprintf("/nodes/%s", k)
-			node_response[k] = util.CustomURL(item_url)
+		nodeList := node.GetList()
+		for _, k := range nodeList {
+			itemURL := fmt.Sprintf("/nodes/%s", k)
+			nodeResponse[k] = util.CustomURL(itemURL)
 		}
 	case "POST":
 		if opUser.IsValidator() {
-			JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil
 		}
-		node_data, jerr := ParseObjJson(r.Body)
+		nodeData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
-			JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return nil
 		}
-		node_name, sterr := util.ValidateAsString(node_data["name"])
+		nodeName, sterr := util.ValidateAsString(nodeData["name"])
 		if sterr != nil {
-			JsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
 			return nil
 		}
-		chef_node, _ := node.Get(node_name)
-		if chef_node != nil {
+		chefNode, _ := node.Get(nodeName)
+		if chefNode != nil {
 			httperr := fmt.Errorf("Node already exists")
-			JsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
+			jsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
 			return nil
 		}
 		var nerr util.Gerror
-		chef_node, nerr = node.NewFromJson(node_data)
+		chefNode, nerr = node.NewFromJson(nodeData)
 		if nerr != nil {
-			JsonErrorReport(w, r, nerr.Error(), nerr.Status())
+			jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 			return nil
 		}
-		err := chef_node.Save()
+		err := chefNode.Save()
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return nil
 		}
-		if lerr := log_info.LogEvent(opUser, chef_node, "create"); lerr != nil {
-			JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+		if lerr := loginfo.LogEvent(opUser, chefNode, "create"); lerr != nil {
+			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return nil
 		}
-		node_response["uri"] = util.ObjURL(chef_node)
+		nodeResponse["uri"] = util.ObjURL(chefNode)
 		w.WriteHeader(http.StatusCreated)
 	default:
-		JsonErrorReport(w, r, "Method not allowed for nodes", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "Method not allowed for nodes", http.StatusMethodNotAllowed)
 		return nil
 	}
-	return node_response
+	return nodeResponse
 }
 
-func client_handling(w http.ResponseWriter, r *http.Request) map[string]string {
-	client_response := make(map[string]string)
+func clientHandling(w http.ResponseWriter, r *http.Request) map[string]string {
+	clientResponse := make(map[string]string)
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return nil
 	}
 
 	switch r.Method {
 	case "GET":
-		client_list := client.GetList()
-		for _, k := range client_list {
+		clientList := client.GetList()
+		for _, k := range clientList {
 			/* Make sure it's a client and not a user. */
-			item_url := fmt.Sprintf("/clients/%s", k)
-			client_response[k] = util.CustomURL(item_url)
+			itemURL := fmt.Sprintf("/clients/%s", k)
+			clientResponse[k] = util.CustomURL(itemURL)
 		}
 	case "POST":
-		client_data, jerr := ParseObjJson(r.Body)
+		clientData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
-			JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return nil
 		}
-		if averr := util.CheckAdminPlusValidator(client_data); averr != nil {
-			JsonErrorReport(w, r, averr.Error(), averr.Status())
+		if averr := util.CheckAdminPlusValidator(clientData); averr != nil {
+			jsonErrorReport(w, r, averr.Error(), averr.Status())
 			return nil
 		}
 		if !opUser.IsAdmin() && !opUser.IsValidator() {
-			JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil
 		} else if !opUser.IsAdmin() && opUser.IsValidator() {
-			if aerr := opUser.CheckPermEdit(client_data, "admin"); aerr != nil {
-				JsonErrorReport(w, r, aerr.Error(), aerr.Status())
+			if aerr := opUser.CheckPermEdit(clientData, "admin"); aerr != nil {
+				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 				return nil
 			}
-			if verr := opUser.CheckPermEdit(client_data, "validator"); verr != nil {
-				JsonErrorReport(w, r, verr.Error(), verr.Status())
+			if verr := opUser.CheckPermEdit(clientData, "validator"); verr != nil {
+				jsonErrorReport(w, r, verr.Error(), verr.Status())
 				return nil
 			}
 
 		}
-		client_name, sterr := util.ValidateAsString(client_data["name"])
-		if sterr != nil || client_name == "" {
+		clientName, sterr := util.ValidateAsString(clientData["name"])
+		if sterr != nil || clientName == "" {
 			err := fmt.Errorf("Field 'name' missing")
-			JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 			return nil
 		}
 
-		chef_client, err := client.NewFromJson(client_data)
+		chefClient, err := client.NewFromJson(clientData)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), err.Status())
+			jsonErrorReport(w, r, err.Error(), err.Status())
 			return nil
 		}
 
-		if public_key, pkok := client_data["public_key"]; !pkok {
+		if publicKey, pkok := clientData["public_key"]; !pkok {
 			var perr error
-			if client_response["private_key"], perr = chef_client.GenerateKeys(); perr != nil {
-				JsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
+			if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
+				jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 				return nil
 			}
 		} else {
-			switch public_key := public_key.(type) {
+			switch publicKey := publicKey.(type) {
 			case string:
-				if pkok, pkerr := client.ValidatePublicKey(public_key); !pkok {
-					JsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
+				if pkok, pkerr := client.ValidatePublicKey(publicKey); !pkok {
+					jsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
 					return nil
 				}
-				chef_client.SetPublicKey(public_key)
+				chefClient.SetPublicKey(publicKey)
 			case nil:
 
 				var perr error
-				if client_response["private_key"], perr = chef_client.GenerateKeys(); perr != nil {
-					JsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
+				if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
+					jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 					return nil
 				}
 			default:
-				JsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
+				jsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
 				return nil
 			}
 		}
 		/* If we make it here, we want the public key in the
 		 * response. I think. */
-		client_response["public_key"] = chef_client.PublicKey()
+		clientResponse["public_key"] = chefClient.PublicKey()
 
-		chef_client.Save()
-		if lerr := log_info.LogEvent(opUser, chef_client, "create"); lerr != nil {
-			JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+		chefClient.Save()
+		if lerr := loginfo.LogEvent(opUser, chefClient, "create"); lerr != nil {
+			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return nil
 		}
-		client_response["uri"] = util.ObjURL(chef_client)
+		clientResponse["uri"] = util.ObjURL(chefClient)
 		w.WriteHeader(http.StatusCreated)
 	default:
-		JsonErrorReport(w, r, "Method not allowed for clients or users", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "Method not allowed for clients or users", http.StatusMethodNotAllowed)
 		return nil
 	}
-	return client_response
+	return clientResponse
 }
 
 // user handling
-func user_handling(w http.ResponseWriter, r *http.Request) map[string]string {
-	user_response := make(map[string]string)
+func userHandling(w http.ResponseWriter, r *http.Request) map[string]string {
+	userResponse := make(map[string]string)
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return nil
 	}
 
 	switch r.Method {
 	case "GET":
-		user_list := user.GetList()
-		for _, k := range user_list {
+		userList := user.GetList()
+		for _, k := range userList {
 			/* Make sure it's a client and not a user. */
-			item_url := fmt.Sprintf("/users/%s", k)
-			user_response[k] = util.CustomURL(item_url)
+			itemURL := fmt.Sprintf("/users/%s", k)
+			userResponse[k] = util.CustomURL(itemURL)
 		}
 	case "POST":
-		user_data, jerr := ParseObjJson(r.Body)
+		userData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
-			JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return nil
 		}
-		if averr := util.CheckAdminPlusValidator(user_data); averr != nil {
-			JsonErrorReport(w, r, averr.Error(), averr.Status())
+		if averr := util.CheckAdminPlusValidator(userData); averr != nil {
+			jsonErrorReport(w, r, averr.Error(), averr.Status())
 			return nil
 		}
 		if !opUser.IsAdmin() && !opUser.IsValidator() {
-			JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil
 		} else if !opUser.IsAdmin() && opUser.IsValidator() {
-			if aerr := opUser.CheckPermEdit(user_data, "admin"); aerr != nil {
-				JsonErrorReport(w, r, aerr.Error(), aerr.Status())
+			if aerr := opUser.CheckPermEdit(userData, "admin"); aerr != nil {
+				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 				return nil
 			}
-			if verr := opUser.CheckPermEdit(user_data, "validator"); verr != nil {
-				JsonErrorReport(w, r, verr.Error(), verr.Status())
+			if verr := opUser.CheckPermEdit(userData, "validator"); verr != nil {
+				jsonErrorReport(w, r, verr.Error(), verr.Status())
 				return nil
 			}
 
 		}
-		user_name, sterr := util.ValidateAsString(user_data["name"])
-		if sterr != nil || user_name == "" {
+		userName, sterr := util.ValidateAsString(userData["name"])
+		if sterr != nil || userName == "" {
 			err := fmt.Errorf("Field 'name' missing")
-			JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 			return nil
 		}
 
-		chef_user, err := user.NewFromJson(user_data)
+		chefUser, err := user.NewFromJson(userData)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), err.Status())
+			jsonErrorReport(w, r, err.Error(), err.Status())
 			return nil
 		}
 
-		if public_key, pkok := user_data["public_key"]; !pkok {
+		if publicKey, pkok := userData["public_key"]; !pkok {
 			var perr error
-			if user_response["private_key"], perr = chef_user.GenerateKeys(); perr != nil {
-				JsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
+			if userResponse["private_key"], perr = chefUser.GenerateKeys(); perr != nil {
+				jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 				return nil
 			}
 		} else {
-			switch public_key := public_key.(type) {
+			switch publicKey := publicKey.(type) {
 			case string:
-				if pkok, pkerr := user.ValidatePublicKey(public_key); !pkok {
-					JsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
+				if pkok, pkerr := user.ValidatePublicKey(publicKey); !pkok {
+					jsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
 					return nil
 				}
-				chef_user.SetPublicKey(public_key)
+				chefUser.SetPublicKey(publicKey)
 			case nil:
 
 				var perr error
-				if user_response["private_key"], perr = chef_user.GenerateKeys(); perr != nil {
-					JsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
+				if userResponse["private_key"], perr = chefUser.GenerateKeys(); perr != nil {
+					jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 					return nil
 				}
 			default:
-				JsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
+				jsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
 				return nil
 			}
 		}
 		/* If we make it here, we want the public key in the
 		 * response. I think. */
-		user_response["public_key"] = chef_user.PublicKey()
+		userResponse["public_key"] = chefUser.PublicKey()
 
-		chef_user.Save()
-		if lerr := log_info.LogEvent(opUser, chef_user, "create"); lerr != nil {
-			JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+		chefUser.Save()
+		if lerr := loginfo.LogEvent(opUser, chefUser, "create"); lerr != nil {
+			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return nil
 		}
-		user_response["uri"] = util.ObjURL(chef_user)
+		userResponse["uri"] = util.ObjURL(chefUser)
 		w.WriteHeader(http.StatusCreated)
 	default:
-		JsonErrorReport(w, r, "Method not allowed for clients or users", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "Method not allowed for clients or users", http.StatusMethodNotAllowed)
 		return nil
 	}
-	return user_response
+	return userResponse
 }
 
-func role_handling(w http.ResponseWriter, r *http.Request) map[string]string {
-	role_response := make(map[string]string)
+func roleHandling(w http.ResponseWriter, r *http.Request) map[string]string {
+	roleResponse := make(map[string]string)
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return nil
 	}
 	switch r.Method {
 	case "GET":
 		if opUser.IsValidator() {
-			JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil
 		}
-		role_list := role.GetList()
-		for _, k := range role_list {
-			item_url := fmt.Sprintf("/roles/%s", k)
-			role_response[k] = util.CustomURL(item_url)
+		roleList := role.GetList()
+		for _, k := range roleList {
+			itemURL := fmt.Sprintf("/roles/%s", k)
+			roleResponse[k] = util.CustomURL(itemURL)
 		}
 	case "POST":
 		if !opUser.IsAdmin() {
-			JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil
 		}
-		role_data, jerr := ParseObjJson(r.Body)
+		roleData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
-			JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return nil
 		}
-		if _, ok := role_data["name"].(string); !ok {
-			JsonErrorReport(w, r, "Role name missing", http.StatusBadRequest)
+		if _, ok := roleData["name"].(string); !ok {
+			jsonErrorReport(w, r, "Role name missing", http.StatusBadRequest)
 			return nil
 		}
-		chef_role, _ := role.Get(role_data["name"].(string))
-		if chef_role != nil {
+		chefRole, _ := role.Get(roleData["name"].(string))
+		if chefRole != nil {
 			httperr := fmt.Errorf("Role already exists")
-			JsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
+			jsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
 			return nil
 		}
 		var nerr util.Gerror
-		chef_role, nerr = role.NewFromJson(role_data)
+		chefRole, nerr = role.NewFromJson(roleData)
 		if nerr != nil {
-			JsonErrorReport(w, r, nerr.Error(), nerr.Status())
+			jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 			return nil
 		}
-		err := chef_role.Save()
+		err := chefRole.Save()
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return nil
 		}
-		if lerr := log_info.LogEvent(opUser, chef_role, "create"); lerr != nil {
-			JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+		if lerr := loginfo.LogEvent(opUser, chefRole, "create"); lerr != nil {
+			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return nil
 		}
-		role_response["uri"] = util.ObjURL(chef_role)
+		roleResponse["uri"] = util.ObjURL(chefRole)
 		w.WriteHeader(http.StatusCreated)
 	default:
-		JsonErrorReport(w, r, "Method not allowed for roles", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "Method not allowed for roles", http.StatusMethodNotAllowed)
 		return nil
 	}
-	return role_response
+	return roleResponse
 }

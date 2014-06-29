@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-/* Package log_info tracks changes to objects when they're saved, noting the actor performing the action, what kind of action it was, the time of the change, the type of object and its id, and a dump of the object's state. */
-package log_info
+/*
+Package loginfo tracks changes to objects when they're saved, noting the actor performing the action, what kind of action it was, the time of the change, the type of object and its id, and a dump of the object's state. */
+package loginfo
 
 import (
 	"database/sql"
@@ -23,7 +24,7 @@ import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"reflect"
 	"sort"
@@ -32,6 +33,7 @@ import (
 	"time"
 )
 
+// LogInfo holds log information about events. 
 type LogInfo struct {
 	Actor        actor.Actor `json:"-"`
 	ActorInfo    string      `json:"actor_info"`
@@ -41,47 +43,46 @@ type LogInfo struct {
 	ObjectType   string      `json:"object_type"`
 	ObjectName   string      `json:"object_name"`
 	ExtendedInfo string      `json:"extended_info"`
-	Id           int         `json:"id"`
+	ID           int         `json:"id"`
 }
 
-// Write an event of the action type, performed by the given actor, against the
-// given object.
+// LogEvent writes an event of the action type, performed by the given actor, 
+// against the given object.
 func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 	if !config.Config.LogEvents {
 		logger.Debugf("Not logging this event")
 		return nil
-	} else {
-		logger.Debugf("Logging event")
 	}
-	var actor_type string
+	logger.Debugf("Logging event")
+
+	var actorType string
 	if doer.IsUser() {
-		actor_type = "user"
+		actorType = "user"
 	} else {
-		actor_type = "client"
+		actorType = "client"
 	}
 	le := new(LogInfo)
 	le.Action = action
 	le.Actor = doer
-	le.ActorType = actor_type
+	le.ActorType = actorType
 	le.ObjectName = obj.GetName()
 	le.ObjectType = reflect.TypeOf(obj).String()
 	le.Time = time.Now()
-	ext_info, err := data_store.EncodeToJSON(obj)
+	extInfo, err := data_store.EncodeToJSON(obj)
 	if err != nil {
 		return err
 	}
-	le.ExtendedInfo = ext_info
-	actor_info, err := data_store.EncodeToJSON(doer)
+	le.ExtendedInfo = extInfo
+	actorInfo, err := data_store.EncodeToJSON(doer)
 	if err != nil {
 		return err
 	}
-	le.ActorInfo = actor_info
+	le.ActorInfo = actorInfo
 
 	if config.UsingDB() {
 		return le.writeEventSQL()
-	} else {
-		return le.writeEventInMem()
 	}
+	return le.writeEventInMem()
 }
 
 // Import a log info event from an export dump.
@@ -93,7 +94,7 @@ func Import(logData map[string]interface{}) error {
 	le.ObjectType = logData["object_type"].(string)
 	le.ObjectName = logData["object_name"].(string)
 	le.ExtendedInfo = logData["extended_info"].(string)
-	le.Id = int(logData["id"].(float64))
+	le.ID = int(logData["id"].(float64))
 	t, err := time.Parse(time.RFC3339, logData["time"].(string))
 	if err != nil {
 		return nil
@@ -102,9 +103,8 @@ func Import(logData map[string]interface{}) error {
 
 	if config.UsingDB() {
 		return le.importEventSQL()
-	} else {
-		return le.importEventInMem()
 	}
+	return le.importEventInMem()
 }
 
 func (le *LogInfo) writeEventInMem() error {
@@ -114,7 +114,7 @@ func (le *LogInfo) writeEventInMem() error {
 
 func (le *LogInfo) importEventInMem() error {
 	ds := data_store.New()
-	return ds.SetLogInfo(le, le.Id)
+	return ds.SetLogInfo(le, le.ID)
 }
 
 // Get a particular event by its id.
@@ -138,35 +138,35 @@ func Get(id int) (*LogInfo, error) {
 		}
 		if c != nil {
 			le = c.(*LogInfo)
-			le.Id = id
+			le.ID = id
 		}
 	}
 	return le, nil
 }
 
+// Delete a logged event.
 func (le *LogInfo) Delete() error {
 	if config.UsingDB() {
 		return le.deleteSQL()
-	} else {
-		ds := data_store.New()
-		ds.DeleteLogInfo(le.Id)
 	}
+	ds := data_store.New()
+	ds.DeleteLogInfo(le.ID)
 	return nil
 }
 
+// PurgeLogInfos removes all logged events before the given id.
 func PurgeLogInfos(id int) (int64, error) {
 	if config.UsingDB() {
 		return purgeSQL(id)
-	} else {
-		ds := data_store.New()
-		return ds.PurgeLogInfoBefore(id)
 	}
+	ds := data_store.New()
+	return ds.PurgeLogInfoBefore(id)
 }
 
-// Get a slice of the logged events. May be called with an offset and limit,
-// (in that order) but that is not required. The offset can be specified without
-// a limit, but a limit requires an offset (which can be 0). The map of search
-// params may be nil, but something must be present.
+// GetLogInfos gets a slice of the logged events. May be called with an offset
+// and limit, (in that order) but that is not required. The offset can be 
+// specified without a limit, but a limit requires an offset (which can be 0).
+// The map of search params may be nil, but something must be present.
 func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, error) {
 	// optional params
 	var from, until time.Time
@@ -202,61 +202,61 @@ func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, err
 	}
 	if config.UsingDB() {
 		return getLogInfoListSQL(searchParams, from, until, limits...)
-	} else {
-		var offset, limit int
-		if len(limits) > 0 {
-			offset = limits[0]
-			if len(limits) > 1 {
-				limit = limits[1]
-			}
-		} else {
-			offset = 0
-		}
-
-		ds := data_store.New()
-		arr := ds.GetLogInfoList()
-		lis := make([]*LogInfo, len(arr))
-		var keys []int
-		for k := range arr {
-			keys = append(keys, k)
-		}
-		sort.Sort(sort.Reverse(sort.IntSlice(keys)))
-		n := 0
-		for _, i := range keys {
-			k, ok := arr[i]
-			if ok {
-				item := k.(*LogInfo)
-				if item.checkTimeRange(from, until) && (searchParams["action"] == "" || searchParams["action"] == item.Action) && (searchParams["object_type"] == "" || searchParams["object_type"] == item.ObjectType) && (searchParams["object_name"] == "" || searchParams["object_name"] == item.ObjectName) && (searchParams["doer"] == "" || searchParams["doer"] == item.Actor.GetName()) {
-					item.Id = i
-					lis[n] = item
-					n++
-				}
-			}
-		}
-		if len(lis) == 0 {
-			return lis, nil
-		}
+	}
+	var offset, limit int
+	if len(limits) > 0 {
+		offset = limits[0]
 		if len(limits) > 1 {
-			limit = offset + limit
-			if limit > len(lis) {
-				limit = len(lis)
+			limit = limits[1]
+		}
+	} else {
+		offset = 0
+	}
+
+	ds := data_store.New()
+	arr := ds.GetLogInfoList()
+	lis := make([]*LogInfo, len(arr))
+	var keys []int
+	for k := range arr {
+		keys = append(keys, k)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
+	n := 0
+	for _, i := range keys {
+		k, ok := arr[i]
+		if ok {
+			item := k.(*LogInfo)
+			if item.checkTimeRange(from, until) && (searchParams["action"] == "" || searchParams["action"] == item.Action) && (searchParams["object_type"] == "" || searchParams["object_type"] == item.ObjectType) && (searchParams["object_name"] == "" || searchParams["object_name"] == item.ObjectName) && (searchParams["doer"] == "" || searchParams["doer"] == item.Actor.GetName()) {
+				item.ID = i
+				lis[n] = item
+				n++
 			}
-		} else {
+		}
+	}
+	if len(lis) == 0 {
+		return lis, nil
+	}
+	if len(limits) > 1 {
+		limit = offset + limit
+		if limit > len(lis) {
 			limit = len(lis)
 		}
-		if n < limit {
-			limit = n
-		}
-		return lis[offset:limit], nil
+	} else {
+		limit = len(lis)
 	}
+	if n < limit {
+		limit = n
+	}
+	return lis[offset:limit], nil
 }
 
-func (l *LogInfo) checkTimeRange(from, until time.Time) bool {
-	return l.Time.After(from) && l.Time.Before(until)
+func (le *LogInfo) checkTimeRange(from, until time.Time) bool {
+	return le.Time.After(from) && l.Time.Before(until)
 }
 
-// Return a list of all logged events in the database. Provides a wrapper around
-// GetLogInfos() for consistency with the other object types for exporting data.
+// AllLogInfos returns a list of all logged events in the database. Provides a
+// wrapper around GetLogInfos() for consistency with the other object types for
+// exporting data.
 func AllLogInfos() []*LogInfo {
 	l, _ := GetLogInfos(nil)
 	return l

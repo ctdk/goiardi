@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package log_info
+package loginfo
 
 /* Generic SQL functions for logging events */
 
@@ -24,7 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"io/ioutil"
 	"regexp"
 	"time"
@@ -35,13 +35,13 @@ func (le *LogInfo) writeEventSQL() error {
 	if err != nil {
 		return err
 	}
-	type_table := fmt.Sprintf("%ss", le.ActorType)
-	actor_id, err := data_store.CheckForOne(tx, type_table, le.Actor.GetName())
+	typeTable := fmt.Sprintf("%ss", le.ActorType)
+	actorID, err := data_store.CheckForOne(tx, typeTable, le.Actor.GetName())
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
-	err = le.actualWriteEventSQL(tx, actor_id)
+	err = le.actualWriteEventSQL(tx, actorID)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -55,7 +55,7 @@ func (le *LogInfo) importEventSQL() error {
 	if err != nil {
 		return err
 	}
-	type_table := fmt.Sprintf("%ss", le.ActorType)
+	typeTable := fmt.Sprintf("%ss", le.ActorType)
 
 	aiBuf := bytes.NewBuffer([]byte(le.ActorInfo))
 	aiRC := ioutil.NopCloser(aiBuf)
@@ -67,11 +67,11 @@ func (le *LogInfo) importEventSQL() error {
 		return err
 	}
 
-	actorId, err := data_store.CheckForOne(tx, type_table, doer["name"].(string))
+	actorID, err := data_store.CheckForOne(tx, typeTable, doer["name"].(string))
 	if err != nil {
-		actorId = -1
+		actorID = -1
 	}
-	err = le.actualWriteEventSQL(tx, actorId)
+	err = le.actualWriteEventSQL(tx, actorID)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -82,11 +82,11 @@ func (le *LogInfo) importEventSQL() error {
 
 // This has been broken out to a separate function to simplify importing data
 // from json export dumps.
-func (le *LogInfo) actualWriteEventSQL(tx data_store.Dbhandle, actorId int32) error {
+func (le *LogInfo) actualWriteEventSQL(tx data_store.Dbhandle, actorID int32) error {
 	if config.Config.UseMySQL {
-		return le.actualWriteEventMySQL(tx, actorId)
+		return le.actualWriteEventMySQL(tx, actorID)
 	} else if config.Config.UsePostgreSQL {
-		return le.actualWriteEventPostgreSQL(tx, actorId)
+		return le.actualWriteEventPostgreSQL(tx, actorID)
 	}
 	// otherwise, somehow
 	err := fmt.Errorf("Tried to write a log event with an unknown database")
@@ -162,14 +162,14 @@ func purgeSQL(id int) (int64, error) {
 		tx.Rollback()
 		return 0, err
 	}
-	rows_affected, _ := res.RowsAffected()
+	rowsAffected, _ := res.RowsAffected()
 	tx.Commit()
-	return rows_affected, nil
+	return rowsAffected, nil
 }
 
 func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, limits ...int) ([]*LogInfo, error) {
 	var offset int
-	var limit int64 = (1 << 63) - 1
+	var limit = (1 << 63) - 1
 	if len(limits) > 0 {
 		offset = limits[0]
 		if len(limits) > 1 {
@@ -178,7 +178,7 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 	} else {
 		offset = 0
 	}
-	logged_events := make([]*LogInfo, 0)
+	var loggedEvents []*LogInfo
 
 	var sqlStmt string
 	sqlArgs := []interface{}{from, until}
@@ -246,7 +246,7 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 	rows, qerr := stmt.Query(sqlArgs...)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
-			return logged_events, nil
+			return loggedEvents, nil
 		}
 		return nil, qerr
 	}
@@ -260,11 +260,11 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 		if err != nil {
 			return nil, err
 		}
-		logged_events = append(logged_events, le)
+		loggedEvents = append(loggedEvents, le)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	return logged_events, nil
+	return loggedEvents, nil
 }

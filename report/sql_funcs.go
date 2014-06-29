@@ -22,12 +22,12 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"log"
 	"time"
 )
 
-func checkForReportSQL(dbhandle data_store.Dbhandle, runId string) (bool, error) {
+func checkForReportSQL(dbhandle datastore.Dbhandle, runID string) (bool, error) {
 	var f int
 	var sqlStmt string
 	if config.Config.UseMySQL {
@@ -40,22 +40,20 @@ func checkForReportSQL(dbhandle data_store.Dbhandle, runId string) (bool, error)
 		return false, err
 	}
 	defer stmt.Close()
-	err = stmt.QueryRow(runId).Scan(&f)
+	err = stmt.QueryRow(runID).Scan(&f)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
-		} else {
-			return false, err
 		}
+			return false, err
 	}
 	if f > 0 {
 		return true, nil
-	} else {
-		return false, nil
 	}
+	return false, nil
 }
 
-func (r *Report) fillReportFromSQL(row data_store.ResRow) error {
+func (r *Report) fillReportFromSQL(row datastore.ResRow) error {
 	if config.Config.UseMySQL {
 		return r.fillReportFromMySQL(row)
 	} else if config.Config.UsePostgreSQL {
@@ -65,7 +63,7 @@ func (r *Report) fillReportFromSQL(row data_store.ResRow) error {
 	return nil
 }
 
-func getReportSQL(runId string) (*Report, error) {
+func getReportSQL(runID string) (*Report, error) {
 	r := new(Report)
 	var sqlStmt string
 	if config.Config.UseMySQL {
@@ -74,12 +72,12 @@ func getReportSQL(runId string) (*Report, error) {
 		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE run_id = $1"
 	}
 
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(runId)
+	row := stmt.QueryRow(runID)
 	err = r.fillReportFromSQL(row)
 	if err != nil {
 		return nil, err
@@ -88,7 +86,7 @@ func getReportSQL(runId string) (*Report, error) {
 }
 
 func (r *Report) deleteSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return nil
 	}
@@ -113,7 +111,7 @@ func (r *Report) deleteSQL() error {
 }
 
 func getListSQL() []string {
-	reportList := make([]string, 0)
+	var reportList []string
 
 	var sqlStmt string
 	if config.Config.UseMySQL {
@@ -122,7 +120,7 @@ func getListSQL() []string {
 		sqlStmt = "SELECT run_id FROM goiardi.reports"
 	}
 
-	rows, err := data_store.Dbh.Query(sqlStmt)
+	rows, err := datastore.Dbh.Query(sqlStmt)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
@@ -131,12 +129,12 @@ func getListSQL() []string {
 		return reportList
 	}
 	for rows.Next() {
-		var runId string
-		err = rows.Scan(&runId)
+		var runID string
+		err = rows.Scan(&runID)
 		if err != nil {
 			log.Fatal(err)
 		}
-		reportList = append(reportList, runId)
+		reportList = append(reportList, runID)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
@@ -146,7 +144,7 @@ func getListSQL() []string {
 }
 
 func getReportListSQL(from, until time.Time, retrows int, status string) ([]*Report, error) {
-	reports := make([]*Report, 0)
+	var reports []*Report
 	var sqlStmt string
 
 	if status == "" {
@@ -163,7 +161,7 @@ func getReportListSQL(from, until time.Time, retrows int, status string) ([]*Rep
 		}
 	}
 
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +197,7 @@ func getReportListSQL(from, until time.Time, retrows int, status string) ([]*Rep
 }
 
 func getNodeListSQL(nodeName string, from, until time.Time, retrows int, status string) ([]*Report, error) {
-	reports := make([]*Report, 0)
+	var reports []*Report
 
 	var sqlStmt string
 	if status == "" {
@@ -216,7 +214,7 @@ func getNodeListSQL(nodeName string, from, until time.Time, retrows int, status 
 		}
 	}
 
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +250,7 @@ func getNodeListSQL(nodeName string, from, until time.Time, retrows int, status 
 }
 
 func getReportsSQL() []*Report {
-	reports := make([]*Report, 0)
+	var reports []*Report
 
 	var sqlStmt string
 	if config.Config.UseMySQL {
@@ -261,7 +259,7 @@ func getReportsSQL() []*Report {
 		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports"
 	}
 
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		log.Fatal(err)
 	}
