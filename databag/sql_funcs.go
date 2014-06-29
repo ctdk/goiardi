@@ -30,13 +30,11 @@ func checkForDataBagSQL(dbhandle datastore.Dbhandle, name string) (bool, error) 
 	_, err := datastore.CheckForOne(dbhandle, "data_bags", name)
 	if err == nil {
 		return true, nil
-	} else {
-		if err != sql.ErrNoRows {
-			return false, err
-		} else {
-			return false, nil
-		}
 	}
+	if err != sql.ErrNoRows {
+		return false, err
+	}
+	return false, nil
 }
 
 func getDataBagSQL(name string) (*DataBag, error) {
@@ -75,7 +73,7 @@ func (dbi *DataBagItem) fillDBItemFromMySQL(row datastore.ResRow) error {
 	return nil
 }
 
-func (db *DataBag) getDBItemSQL(db_item_name string) (*DataBagItem, error) {
+func (db *DataBag) getDBItemSQL(dbItemName string) (*DataBagItem, error) {
 	dbi := new(DataBagItem)
 	var sqlStatement string
 	if config.Config.UseMySQL {
@@ -88,7 +86,7 @@ func (db *DataBag) getDBItemSQL(db_item_name string) (*DataBagItem, error) {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(db_item_name, db.id)
+	row := stmt.QueryRow(dbItemName, db.id)
 	err = dbi.fillDBItemFromMySQL(row)
 	if err != nil {
 		return nil, err
@@ -159,9 +157,8 @@ func (db *DataBag) allDBItemsSQL() (map[string]*DataBagItem, error) {
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return dbis, nil
-		} else {
-			return nil, qerr
 		}
+		return nil, qerr
 	}
 	for rows.Next() {
 		dbi := new(DataBagItem)
@@ -191,20 +188,20 @@ func (db *DataBag) numDBItemsSQL() int {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	var dbi_count int
-	err = stmt.QueryRow(db.id).Scan(&dbi_count)
+	var dbiCount int
+	err = stmt.QueryRow(db.id).Scan(&dbiCount)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			dbi_count = 0
+			dbiCount = 0
 		} else {
 			log.Fatal(err)
 		}
 	}
-	return dbi_count
+	return dbiCount
 }
 
 func (db *DataBag) listDBItemsSQL() []string {
-	dbi_list := make([]string, 0)
+	var dbiList []string
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT orig_name FROM data_bag_items WHERE data_bag_id = ?"
@@ -221,23 +218,23 @@ func (db *DataBag) listDBItemsSQL() []string {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
 		}
-		return dbi_list
+		return dbiList
 	}
 	for rows.Next() {
-		var dbi_name string
-		err = rows.Scan(&dbi_name)
+		var dbiName string
+		err = rows.Scan(&dbiName)
 		if err != nil {
 			rows.Close()
 			log.Fatal(err)
 		}
-		dbi_list = append(dbi_list, dbi_name)
+		dbiList = append(dbiList, dbiName)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
 
-	return dbi_list
+	return dbiList
 }
 
 func (db *DataBag) deleteSQL() error {
@@ -274,7 +271,7 @@ func (db *DataBag) deleteSQL() error {
 }
 
 func getListSQL() []string {
-	db_list := make([]string, 0)
+	var dbList []string
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT name FROM data_bags"
@@ -292,26 +289,26 @@ func getListSQL() []string {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
 		}
-		return db_list
+		return dbList
 	}
 	for rows.Next() {
-		var db_name string
-		err = rows.Scan(&db_name)
+		var dbName string
+		err = rows.Scan(&dbName)
 		if err != nil {
 			rows.Close()
 			log.Fatal(err)
 		}
-		db_list = append(db_list, db_name)
+		dbList = append(dbList, dbName)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
 
-	return db_list
+	return dbList
 }
 func allDataBagsSQL() []*DataBag {
-	dbags := make([]*DataBag, 0)
+	var dbags []*DataBag
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT id, name FROM data_bags"

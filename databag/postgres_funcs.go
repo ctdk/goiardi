@@ -22,19 +22,19 @@ import (
 
 // PostgreSQL-specific functions for data bags & data bag items.
 
-func (db *DataBag) newDBItemPostgreSQL(dbi_id string, raw_dbag_item map[string]interface{}) (*DataBagItem, error) {
-	rawb, rawerr := datastore.EncodeBlob(&raw_dbag_item)
+func (db *DataBag) newDBItemPostgreSQL(dbiID string, rawDbagItem map[string]interface{}) (*DataBagItem, error) {
+	rawb, rawerr := datastore.EncodeBlob(&rawDbagItem)
 	if rawerr != nil {
 		return nil, rawerr
 	}
 
 	dbi := &DataBagItem{
-		Name:        db.fullDBItemName(dbi_id),
+		Name:        db.fullDBItemName(dbiID),
 		ChefType:    "data_bag_item",
 		JSONClass:   "Chef::DataBagItem",
 		DataBagName: db.Name,
-		RawData:     raw_dbag_item,
-		origName:    dbi_id,
+		RawData:     rawDbagItem,
+		origName:    dbiID,
 		dataBagID: db.id,
 	}
 

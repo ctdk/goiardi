@@ -82,24 +82,25 @@ func New(name string) (*DataBag, util.Gerror) {
 		return nil, err
 	}
 
-	dbi_map := make(map[string]*DataBagItem)
-	data_bag := &DataBag{
+	dbiMap := make(map[string]*DataBagItem)
+	dataBag := &DataBag{
 		Name:         name,
-		DataBagItems: dbi_map,
+		DataBagItems: dbiMap,
 	}
 	indexer.CreateNewCollection(name)
-	return data_bag, nil
+	return dataBag, nil
 }
 
-func Get(db_name string) (*DataBag, util.Gerror) {
-	var data_bag *DataBag
+// Get a data bag.
+func Get(dbName string) (*DataBag, util.Gerror) {
+	var dataBag *DataBag
 	var err error
 	if config.UsingDB() {
-		data_bag, err = getDataBagSQL(db_name)
+		dataBag, err = getDataBagSQL(dbName)
 		if err != nil {
 			var gerr util.Gerror
 			if err == sql.ErrNoRows {
-				gerr = util.Errorf("Cannot load data bag %s", db_name)
+				gerr = util.Errorf("Cannot load data bag %s", dbName)
 				gerr.SetStatus(http.StatusNotFound)
 			} else {
 				gerr = util.Errorf(err.Error())
@@ -109,23 +110,24 @@ func Get(db_name string) (*DataBag, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		d, found := ds.Get("data_bag", db_name)
+		d, found := ds.Get("data_bag", dbName)
 		if !found {
-			err := util.Errorf("Cannot load data bag %s", db_name)
+			err := util.Errorf("Cannot load data bag %s", dbName)
 			err.SetStatus(http.StatusNotFound)
 			return nil, err
 		}
 		if d != nil {
-			data_bag = d.(*DataBag)
-			for _, v := range data_bag.DataBagItems {
+			dataBag = d.(*DataBag)
+			for _, v := range dataBag.DataBagItems {
 				z := datastore.WalkMapForNil(v.RawData)
 				v.RawData = z.(map[string]interface{})
 			}
 		}
 	}
-	return data_bag, nil
+	return dataBag, nil
 }
 
+// Save a data bag.
 func (db *DataBag) Save() error {
 	if config.Config.UseMySQL {
 		return db.saveMySQL()
@@ -138,6 +140,7 @@ func (db *DataBag) Save() error {
 	return nil
 }
 
+// Delete a data bag.
 func (db *DataBag) Delete() error {
 	if config.UsingDB() {
 		err := db.deleteSQL()
@@ -156,75 +159,74 @@ func (db *DataBag) Delete() error {
 	return nil
 }
 
-// Returns a list of data bags on the server.
+// GetList returns a list of data bags on the server.
 func GetList() []string {
-	var db_list []string
+	var dbList []string
 	if config.UsingDB() {
-		db_list = getListSQL()
+		dbList = getListSQL()
 	} else {
 		ds := datastore.New()
-		db_list = ds.GetList("data_bag")
+		dbList = ds.GetList("data_bag")
 	}
-	return db_list
+	return dbList
 }
 
+// GetName returns the data bag's name.
 func (db *DataBag) GetName() string {
 	return db.Name
 }
 
+// URLType returns the base element of a data bag's URL.
 func (db *DataBag) URLType() string {
 	return "data"
 }
 
-func (db *DataBagItem) GetName() string {
-	return db.DocId()
+// GetName returns the data bag item's identifier.
+func (dbi *DataBagItem) GetName() string {
+	return dbi.DocId()
 }
 
-func (db *DataBagItem) URLType() string {
+// URLType returns the base element of a data bag's URL.
+func (dbi *DataBagItem) URLType() string {
 	return "data"
 }
 
 /* Data bag item functions and methods */
 
-/* To do: Idle test; see if changes to the returned data bag item are reflected
- * in the one stored in the hash there */
-
-// Create a new data bag item in the associated data bag.
-func (db *DataBag) NewDBItem(raw_dbag_item map[string]interface{}) (*DataBagItem, util.Gerror) {
-	//dbi_id := raw_dbag_item["id"].(string)
-	var dbi_id string
-	var dbag_item *DataBagItem
-	switch t := raw_dbag_item["id"].(type) {
+// NewDBItem creates a new data bag item in the associated data bag.
+func (db *DataBag) NewDBItem(rawDbagItem map[string]interface{}) (*DataBagItem, util.Gerror) {
+	var dbiID string
+	var dbagItem *DataBagItem
+	switch t := rawDbagItem["id"].(type) {
 	case string:
 		if t == "" {
 			err := util.Errorf("Field 'id' missing")
 			return nil, err
-		} else {
-			dbi_id = t
 		}
+		dbiID = t
 	default:
 		err := util.Errorf("Field 'id' missing")
 		return nil, err
 	}
-	if err := validateDataBagName(dbi_id, true); err != nil {
+	if err := validateDataBagName(dbiID, true); err != nil {
 		return nil, err
 	}
-	dbi_full_name := fmt.Sprintf("data_bag_item_%s_%s", db.Name, dbi_id)
+	dbiFullName := fmt.Sprintf("data_bag_item_%s_%s", db.Name, dbiID)
 
 	if config.UsingDB() {
-		d, err := db.getDBItemSQL(dbi_id)
+		d, err := db.getDBItemSQL(dbiID)
 		if d != nil || (err != nil && err != sql.ErrNoRows) {
 			if err != nil {
 				logger.Debugf("Log real SQL error in NewDBItem: %s", err.Error())
 			}
-			gerr := util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
+			gerr := util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbiID, db.Name)
 			gerr.SetStatus(http.StatusConflict)
 			return nil, gerr
 		}
 		if config.Config.UseMySQL {
-			dbag_item, err = db.newDBItemMySQL(dbi_id, raw_dbag_item)
+			dbagItem, err = db.newDBItemMySQL(dbiID, rawDbagItem)
 		} else if config.Config.UsePostgreSQL {
-			dbag_item, err = db.newDBItemPostgreSQL(dbi_id, raw_dbag_item)
+			dbagItem, err = db.newDBItemPostgreSQL(dbiID, rawDbagItem)
 		}
 		if err != nil {
 			gerr := util.Errorf(err.Error())
@@ -233,20 +235,20 @@ func (db *DataBag) NewDBItem(raw_dbag_item map[string]interface{}) (*DataBagItem
 		}
 	} else {
 		/* Look for an existing dbag item with this name */
-		if d, _ := db.GetDBItem(dbi_id); d != nil {
-			gerr := util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbi_id, db.Name)
+		if d, _ := db.GetDBItem(dbiID); d != nil {
+			gerr := util.Errorf("Data Bag Item '%s' already exists in Data Bag '%s'.", dbiID, db.Name)
 			gerr.SetStatus(http.StatusConflict)
 			return nil, gerr
 		}
 		/* But should we store the raw data as a JSON string? */
-		dbag_item = &DataBagItem{
-			Name:        dbi_full_name,
+		dbagItem = &DataBagItem{
+			Name:        dbiFullName,
 			ChefType:    "data_bag_item",
 			JSONClass:   "Chef::DataBagItem",
 			DataBagName: db.Name,
-			RawData:     raw_dbag_item,
+			RawData:     rawDbagItem,
 		}
-		db.DataBagItems[dbi_id] = dbag_item
+		db.DataBagItems[dbiID] = dbagItem
 	}
 	err := db.Save()
 	if err != nil {
@@ -254,39 +256,40 @@ func (db *DataBag) NewDBItem(raw_dbag_item map[string]interface{}) (*DataBagItem
 		gerr.SetStatus(http.StatusInternalServerError)
 		return nil, gerr
 	}
-	indexer.IndexObj(dbag_item)
-	return dbag_item, nil
+	indexer.IndexObj(dbagItem)
+	return dbagItem, nil
 }
 
-// Updates a data bag item in this data bag.
-func (db *DataBag) UpdateDBItem(dbi_id string, raw_dbag_item map[string]interface{}) (*DataBagItem, error) {
-	db_item, err := db.GetDBItem(dbi_id)
+// UpdateDBItem updates a data bag item in this data bag.
+func (db *DataBag) UpdateDBItem(dbiID string, rawDbagItem map[string]interface{}) (*DataBagItem, error) {
+	dbItem, err := db.GetDBItem(dbiID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			err = fmt.Errorf("Cannot load data bag item %s for data bag %s", dbi_id, db.Name)
+			err = fmt.Errorf("Cannot load data bag item %s for data bag %s", dbiID, db.Name)
 		}
 		return nil, err
 	}
-	db_item.RawData = raw_dbag_item
+	dbItem.RawData = rawDbagItem
 	if config.UsingDB() {
-		err = db_item.updateDBItemSQL()
+		err = dbItem.updateDBItemSQL()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		db.DataBagItems[dbi_id] = db_item
+		db.DataBagItems[dbiID] = dbItem
 	}
 	err = db.Save()
 	if err != nil {
 		return nil, err
 	}
-	indexer.IndexObj(db_item)
-	return db_item, nil
+	indexer.IndexObj(dbItem)
+	return dbItem, nil
 }
 
-func (db *DataBag) DeleteDBItem(db_item_name string) error {
+// DeleteDBItem deletes a data bag item.
+func (db *DataBag) DeleteDBItem(dbItemName string) error {
 	if config.UsingDB() {
-		dbi, err := db.GetDBItem(db_item_name)
+		dbi, err := db.GetDBItem(dbItemName)
 		if err != nil {
 			return err
 		}
@@ -295,73 +298,73 @@ func (db *DataBag) DeleteDBItem(db_item_name string) error {
 			return err
 		}
 	} else {
-		delete(db.DataBagItems, db_item_name)
+		delete(db.DataBagItems, dbItemName)
 	}
 	err := db.Save()
 	if err != nil {
 		return err
 	}
-	indexer.DeleteItemFromCollection(db.Name, db_item_name)
+	indexer.DeleteItemFromCollection(db.Name, dbItemName)
 	return nil
 }
 
-func (db *DataBag) GetDBItem(db_item_name string) (*DataBagItem, error) {
+// GetDBItem gets a data bag item.
+func (db *DataBag) GetDBItem(dbItemName string) (*DataBagItem, error) {
 	if config.UsingDB() {
-		dbi, err := db.getDBItemSQL(db_item_name)
+		dbi, err := db.getDBItemSQL(dbItemName)
 		if err == sql.ErrNoRows {
-			err = fmt.Errorf("data bag item %s in %s not found", db_item_name, db.Name)
+			err = fmt.Errorf("data bag item %s in %s not found", dbItemName, db.Name)
 		}
 		return dbi, err
-	} else {
-		dbi, ok := db.DataBagItems[db_item_name]
-		if !ok {
-			err := fmt.Errorf("data bag item %s in %s not found", db_item_name, db.Name)
-			return nil, err
-		}
-		return dbi, nil
 	}
+	dbi, ok := db.DataBagItems[dbItemName]
+	if !ok {
+		err := fmt.Errorf("data bag item %s in %s not found", dbItemName, db.Name)
+		return nil, err
+	}
+	return dbi, nil
 }
 
+// AllDBItems returns a map of all the items in a data bag.
 func (db *DataBag) AllDBItems() (map[string]*DataBagItem, error) {
 	if config.UsingDB() {
 		return db.allDBItemsSQL()
-	} else {
-		return db.DataBagItems, nil
 	}
+	return db.DataBagItems, nil
 }
 
+// ListDBItems returns a list of items in a data bag.
 func (db *DataBag) ListDBItems() []string {
 	if config.UsingDB() {
 		return db.listDBItemsSQL()
-	} else {
-		dbis := make([]string, len(db.DataBagItems))
-		n := 0
-		for k := range db.DataBagItems {
-			dbis[n] = k
-			n++
-		}
-		return dbis
 	}
+	dbis := make([]string, len(db.DataBagItems))
+	n := 0
+	for k := range db.DataBagItems {
+		dbis[n] = k
+		n++
+	}
+	return dbis
 }
 
+// NumDBItems returns the number of items in a data bag.
 func (db *DataBag) NumDBItems() int {
 	if config.UsingDB() {
 		return db.numDBItemsSQL()
-	} else {
-		return len(db.DataBagItems)
 	}
+	return len(db.DataBagItems)
 }
 
-func (db *DataBag) fullDBItemName(db_item_name string) string {
-	return fmt.Sprintf("data_bag_item_%s_%s", db.Name, db_item_name)
+func (db *DataBag) fullDBItemName(dbItemName string) string {
+	return fmt.Sprintf("data_bag_item_%s_%s", db.Name, dbItemName)
 }
 
-// Extract the data bag item's raw data from the request saving it to the
-// server.
-func RawDataBagJson(data io.ReadCloser) map[string]interface{} {
-	raw_dbag_item := make(map[string]interface{})
-	json.NewDecoder(data).Decode(&raw_dbag_item)
-	var raw_data map[string]interface{}
+// RawDataBagJSON extract the data bag item's raw data from the request, saving
+// it to the server.
+func RawDataBagJSON(data io.ReadCloser) map[string]interface{} {
+	rawDbagItem := make(map[string]interface{})
+	json.NewDecoder(data).Decode(&rawDbagItem)
+	var rawData map[string]interface{}
 
 	/* The way data can come from knife may
 	 * not be entirely consistent. Use
@@ -370,12 +373,12 @@ func RawDataBagJson(data io.ReadCloser) map[string]interface{} {
 	 * the raw data without the other chef
 	 * stuff added. */
 
-	if _, ok := raw_dbag_item["raw_data"]; ok {
-		raw_data = raw_dbag_item["raw_data"].(map[string]interface{})
+	if _, ok := rawDbagItem["raw_data"]; ok {
+		rawData = rawDbagItem["raw_data"].(map[string]interface{})
 	} else {
-		raw_data = raw_dbag_item
+		rawData = rawDbagItem
 	}
-	return raw_data
+	return rawData
 }
 
 func validateDataBagName(name string, dbi bool) util.Gerror {
@@ -393,7 +396,9 @@ func validateDataBagName(name string, dbi bool) util.Gerror {
 }
 
 /* Indexing functions for data bag items */
-func (dbi *DataBagItem) DocId() string {
+
+// DocID returns the id of the data bag item for the indexer.
+func (dbi *DataBagItem) DocID() string {
 	switch did := dbi.RawData["id"].(type) {
 	case string:
 		return did
@@ -403,10 +408,13 @@ func (dbi *DataBagItem) DocId() string {
 	}
 }
 
+// Index returns the name of the data bag this data bag item belongs to, so it's
+// placed in the correct index.
 func (dbi *DataBagItem) Index() string {
 	return dbi.DataBagName
 }
 
+// Flatten a data bag item out so it's suitable for indexing.
 func (dbi *DataBagItem) Flatten() []string {
 	flatten := make(map[string]interface{})
 	for key, v := range dbi.RawData {
@@ -419,20 +427,20 @@ func (dbi *DataBagItem) Flatten() []string {
 	return indexified
 }
 
-// Return all data bags on this server, and all their items.
+// AllDataBags returns all data bags on this server, and all their items.
 func AllDataBags() []*DataBag {
-	data_bags := make([]*DataBag, 0)
+	var dataBags []*DataBag
 	if config.UsingDB() {
-		data_bags = allDataBagsSQL()
+		dataBags = allDataBagsSQL()
 	} else {
-		dbag_list := GetList()
-		for _, d := range dbag_list {
+		dbagList := GetList()
+		for _, d := range dbagList {
 			db, err := Get(d)
 			if err != nil {
 				continue
 			}
-			data_bags = append(data_bags, db)
+			dataBags = append(dataBags, db)
 		}
 	}
-	return data_bags
+	return dataBags
 }
