@@ -22,11 +22,11 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"log"
 )
 
-func (s *Sandbox) fillSandboxFromSQL(row data_store.ResRow) error {
+func (s *Sandbox) fillSandboxFromSQL(row datastore.ResRow) error {
 	if config.Config.UseMySQL {
 		return s.fillSandboxFromMySQL(row)
 	} else if config.Config.UsePostgreSQL {
@@ -35,7 +35,7 @@ func (s *Sandbox) fillSandboxFromSQL(row data_store.ResRow) error {
 	return nil
 }
 
-func getSQL(sandbox_id string) (*Sandbox, error) {
+func getSQL(sandboxID string) (*Sandbox, error) {
 	sandbox := new(Sandbox)
 	var sqlStmt string
 	if config.Config.UseMySQL {
@@ -43,12 +43,12 @@ func getSQL(sandbox_id string) (*Sandbox, error) {
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "SELECT sbox_id, creation_time, checksums, completed FROM goiardi.sandboxes WHERE sbox_id = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(sandbox_id)
+	row := stmt.QueryRow(sandboxID)
 	err = sandbox.fillSandboxFromSQL(row)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func getSQL(sandbox_id string) (*Sandbox, error) {
 }
 
 func (s *Sandbox) deleteSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -80,45 +80,45 @@ func (s *Sandbox) deleteSQL() error {
 }
 
 func getListSQL() []string {
-	sandbox_list := make([]string, 0)
+	var sandboxList []string
 	var sqlStmt string
 	if config.Config.UseMySQL {
 		sqlStmt = "SELECT sbox_id FROM sandboxes"
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "SELECT sbox_id FROM goiardi.sandboxes"
 	}
-	rows, err := data_store.Dbh.Query(sqlStmt)
+	rows, err := datastore.Dbh.Query(sqlStmt)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
 		}
 		rows.Close()
-		return sandbox_list
+		return sandboxList
 	}
 	for rows.Next() {
-		var sbox_id string
-		err = rows.Scan(&sbox_id)
+		var sandboxID string
+		err = rows.Scan(&sandboxID)
 		if err != nil {
 			log.Fatal(err)
 		}
-		sandbox_list = append(sandbox_list, sbox_id)
+		sandboxList = append(sandboxList, sandboxID)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
-	return sandbox_list
+	return sandboxList
 }
 
 func allSandboxesSQL() []*Sandbox {
-	sandboxes := make([]*Sandbox, 0)
+	var sandboxes []*Sandbox
 	var sqlStmt string
 	if config.Config.UseMySQL {
 		sqlStmt = "SELECT sbox_id, creation_time, checksums, completed FROM sandboxes"
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "SELECT sbox_id, creation_time, checksums, completed FROM goiardi.sandboxes"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		log.Fatal(err)
 	}

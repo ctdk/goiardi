@@ -19,24 +19,22 @@ package user
 import (
 	"database/sql"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"log"
 )
 
-func checkForUserSQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
-	_, err := data_store.CheckForOne(dbhandle, "users", name)
+func checkForUserSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
+	_, err := datastore.CheckForOne(dbhandle, "users", name)
 	if err == nil {
 		return true, nil
-	} else {
-		if err != sql.ErrNoRows {
-			return false, err
-		} else {
-			return false, nil
-		}
 	}
+	if err != sql.ErrNoRows {
+		return false, err
+	}
+	return false, nil
 }
 
-func (u *User) fillUserFromSQL(row data_store.ResRow) error {
+func (u *User) fillUserFromSQL(row datastore.ResRow) error {
 	var email sql.NullString
 	err := row.Scan(&u.Username, &u.Name, &u.Admin, &u.pubKey, &email, &u.passwd, &u.salt)
 	if err != nil {
@@ -58,7 +56,7 @@ func getUserSQL(name string) (*User, error) {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "select name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users WHERE name = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +70,7 @@ func getUserSQL(name string) (*User, error) {
 }
 
 func (u *User) deleteSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -97,7 +95,7 @@ func numAdminsSQL() int {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT count(*) FROM goiardi.users WHERE admin = TRUE"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -110,39 +108,39 @@ func numAdminsSQL() int {
 }
 
 func getListSQL() []string {
-	var user_list []string
+	var userList []string
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT name FROM users"
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT name FROM goiardi.users"
 	}
-	rows, err := data_store.Dbh.Query(sqlStatement)
+	rows, err := datastore.Dbh.Query(sqlStatement)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
 		}
 		rows.Close()
-		return user_list
+		return userList
 	}
-	user_list = make([]string, 0)
+	userList = make([]string, 0)
 	for rows.Next() {
-		var user_name string
-		err = rows.Scan(&user_name)
+		var userName string
+		err = rows.Scan(&userName)
 		if err != nil {
 			log.Fatal(err)
 		}
-		user_list = append(user_list, user_name)
+		userList = append(userList, userName)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
-	return user_list
+	return userList
 }
 
 func allUsersSQL() []*User {
-	users := make([]*User, 0)
+	var users []*User
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT name, displayname, admin, public_key, email, passwd, salt FROM users"
@@ -150,7 +148,7 @@ func allUsersSQL() []*User {
 		sqlStatement = "SELECT name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users"
 	}
 
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}

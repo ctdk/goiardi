@@ -19,22 +19,22 @@ package sandbox
 /* MySQL functions for sandboxes */
 
 import (
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"time"
 )
 
-func (s *Sandbox) fillSandboxFromMySQL(row data_store.ResRow) error {
+func (s *Sandbox) fillSandboxFromMySQL(row datastore.ResRow) error {
 	var csb []byte
 	var tb []byte
 	err := row.Scan(&s.Id, &tb, &csb, &s.Completed)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(csb, &s.Checksums)
+	err = datastore.DecodeBlob(csb, &s.Checksums)
 	if err != nil {
 		return err
 	}
-	s.CreationTime, err = time.Parse(data_store.MySQLTimeFormat, string(tb))
+	s.CreationTime, err = time.Parse(datastore.MySQLTimeFormat, string(tb))
 	if err != nil {
 		return err
 	}
@@ -42,15 +42,15 @@ func (s *Sandbox) fillSandboxFromMySQL(row data_store.ResRow) error {
 }
 
 func (s *Sandbox) saveMySQL() error {
-	ckb, ckerr := data_store.EncodeBlob(&s.Checksums)
+	ckb, ckerr := datastore.EncodeBlob(&s.Checksums)
 	if ckerr != nil {
 		return ckerr
 	}
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("INSERT INTO sandboxes (sbox_id, creation_time, checksums, completed) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE checksums = ?, completed = ?", s.Id, s.CreationTime.UTC().Format(data_store.MySQLTimeFormat), ckb, s.Completed, ckb, s.Completed)
+	_, err = tx.Exec("INSERT INTO sandboxes (sbox_id, creation_time, checksums, completed) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE checksums = ?, completed = ?", s.Id, s.CreationTime.UTC().Format(datastore.MySQLTimeFormat), ckb, s.Completed, ckb, s.Completed)
 	if err != nil {
 		tx.Rollback()
 		return err

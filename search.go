@@ -24,7 +24,7 @@ import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
-	"github.com/ctdk/goiardi/data_bag"
+	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
@@ -36,17 +36,17 @@ import (
 	"strconv"
 )
 
-func search_handler(w http.ResponseWriter, r *http.Request) {
+func searchHandler(w http.ResponseWriter, r *http.Request) {
 	/* ... and we need search to run the environment tests, so here we
 	 * go. */
 	w.Header().Set("Content-Type", "application/json")
-	search_response := make(map[string]interface{})
-	path_array := SplitPath(r.URL.Path)
-	path_array_len := len(path_array)
+	searchResponse := make(map[string]interface{})
+	pathArray := SplitPath(r.URL.Path)
+	pathArrayLen := len(pathArray)
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 
@@ -60,11 +60,11 @@ func search_handler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	if q, found := r.Form["q"]; found {
 		if len(q) < 0 {
-			JsonErrorReport(w, r, "No query string specified for search", http.StatusBadRequest)
+			jsonErrorReport(w, r, "No query string specified for search", http.StatusBadRequest)
 			return
 		}
 		paramQuery = q[0]
-	} else if path_array_len != 1 {
+	} else if pathArrayLen != 1 {
 		/* default to "*:*" for a search term */
 		paramQuery = "*:*"
 	}
@@ -92,43 +92,43 @@ func search_handler(w http.ResponseWriter, r *http.Request) {
 		start = 0
 	}
 
-	if path_array_len == 1 {
+	if pathArrayLen == 1 {
 		/* base end points */
 		switch r.Method {
 		case "GET":
 			if opUser.IsValidator() {
-				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
 			searchEndpoints := search.GetEndpoints()
 			for _, s := range searchEndpoints {
-				search_response[s] = util.CustomURL(fmt.Sprintf("/search/%s", s))
+				searchResponse[s] = util.CustomURL(fmt.Sprintf("/search/%s", s))
 			}
 		default:
-			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+			jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-	} else if path_array_len == 2 {
+	} else if pathArrayLen == 2 {
 		switch r.Method {
 		case "GET", "POST":
 			if opUser.IsValidator() {
-				JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
 			/* start figuring out what comes in POSTS now,
 			 * so the partial search tests don't complain
 			 * anymore. */
-			var partial_data map[string]interface{}
+			var partialData map[string]interface{}
 			if r.Method == "POST" {
 				var perr error
-				partial_data, perr = ParseObjJson(r.Body)
+				partialData, perr = parseObjJSON(r.Body)
 				if perr != nil {
-					JsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
+					jsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
 					return
 				}
 			}
 
-			idx := path_array[1]
+			idx := pathArray[1]
 			rObjs, err := search.Search(idx, paramQuery)
 
 			if err != nil {
@@ -137,7 +137,7 @@ func search_handler(w http.ResponseWriter, r *http.Request) {
 				if re.MatchString(err.Error()) {
 					statusCode = http.StatusNotFound
 				}
-				JsonErrorReport(w, r, err.Error(), statusCode)
+				jsonErrorReport(w, r, err.Error(), statusCode)
 				return
 			}
 
@@ -162,17 +162,17 @@ func search_handler(w http.ResponseWriter, r *http.Request) {
 			/* If we're doing partial search, tease out the
 			 * fields we want. */
 			if r.Method == "POST" {
-				res, err = partialSearchFormat(res, partial_data)
+				res, err = partialSearchFormat(res, partialData)
 				if err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+					jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 					return
 				}
 				for x, z := range res {
 					tmpRes := make(map[string]interface{})
 					switch ro := rObjs[x].(type) {
-					case *data_bag.DataBagItem:
-						dbi_url := fmt.Sprintf("/data/%s/%s", ro.DataBagName, ro.RawData["id"].(string))
-						tmpRes["url"] = util.CustomURL(dbi_url)
+					case *databag.DataBagItem:
+						dbiURL := fmt.Sprintf("/data/%s/%s", ro.DataBagName, ro.RawData["id"].(string))
+						tmpRes["url"] = util.CustomURL(dbiURL)
 					default:
 						tmpRes["url"] = util.ObjURL(rObjs[x].(util.GoiardiObj))
 					}
@@ -187,37 +187,37 @@ func search_handler(w http.ResponseWriter, r *http.Request) {
 				end = len(res)
 			}
 			res = res[start:end]
-			search_response["total"] = len(res)
-			search_response["start"] = start
-			search_response["rows"] = res
+			searchResponse["total"] = len(res)
+			searchResponse["start"] = start
+			searchResponse["rows"] = res
 		default:
-			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+			jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 	} else {
 		/* Say what? Bad request. */
-		JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+		jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 		return
 	}
 
 	enc := json.NewEncoder(w)
-	if err := enc.Encode(&search_response); err != nil {
-		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	if err := enc.Encode(&searchResponse); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 func reindexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	reindex_response := make(map[string]interface{})
+	reindexResponse := make(map[string]interface{})
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 	switch r.Method {
 	case "POST":
 		if !opUser.IsAdmin() {
-			JsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return
 		}
 		reindexObjs := make([]indexer.Indexable, 0, 100)
@@ -242,9 +242,9 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 		defaultEnv, _ := environment.Get("_default")
 		reindexObjs = append(reindexObjs, defaultEnv)
 		// data bags have to be done separately
-		dbags := data_bag.GetList()
+		dbags := databag.GetList()
 		for _, db := range dbags {
-			dbag, err := data_bag.Get(db)
+			dbag, err := databag.Get(db)
 			if err != nil {
 				continue
 			}
@@ -263,14 +263,14 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 			reindexObjs = append(reindexObjs, dbis...)
 		}
 		indexer.ReIndex(reindexObjs)
-		reindex_response["reindex"] = "OK"
+		reindexResponse["reindex"] = "OK"
 	default:
-		JsonErrorReport(w, r, "Method not allowed. If you're trying to do something with a data bag named 'reindex', it's not going to work I'm afraid.", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "Method not allowed. If you're trying to do something with a data bag named 'reindex', it's not going to work I'm afraid.", http.StatusMethodNotAllowed)
 		return
 	}
 	enc := json.NewEncoder(w)
-	if err := enc.Encode(&reindex_response); err != nil {
-		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	if err := enc.Encode(&reindexResponse); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -354,12 +354,10 @@ func walk(v interface{}, keys []string) interface{} {
 		if _, found := v[keys[0]]; found {
 			if len(keys) > 1 {
 				return walk(v[keys[0]], keys[1:])
-			} else {
-				return v[keys[0]]
 			}
-		} else {
-			return nil
+			return v[keys[0]]
 		}
+		return nil
 	case map[string]string:
 		return v[keys[0]]
 	case map[string][]string:
@@ -367,8 +365,7 @@ func walk(v interface{}, keys []string) interface{} {
 	default:
 		if len(keys) == 1 {
 			return v
-		} else {
-			return nil
 		}
+		return nil
 	}
 }

@@ -29,15 +29,16 @@ import (
 	"net/url"
 )
 
-// Holds a parsed query and query chain to run against the index.
+// SolrQuery holds a parsed query and query chain to run against the index. It's
+// called SolrQuery because the search queries use a subset of Solr's syntax.
 type SolrQuery struct {
 	queryChain Queryable
 	idxName    string
 	docs       map[string]*indexer.IdxDoc
 }
 
-// Parse the given query string and search the given index for any matching
-// results.
+// Search parses the given query string and search the given index for any 
+// matching results.
 func Search(idx string, q string) ([]indexer.Indexable, error) {
 	/* Eventually we'll want more prep. To start, look right in the index */
 	query, qerr := url.QueryUnescape(q)
@@ -149,14 +150,16 @@ func (sq *SolrQuery) results() []string {
 	return results
 }
 
-// Get a list from the indexer of all the endpoints available to search.
+// GetEndpoints gets a list from the indexer of all the endpoints available to
+// search, namely the defaults (node, role, client, environment) and any data
+// bags.
 func GetEndpoints() []string {
 	endpoints := indexer.Endpoints()
 	return endpoints
 }
 
 func getResults(variety string, toGet []string) []indexer.Indexable {
-	results := make([]indexer.Indexable, 0)
+	var results []indexer.Indexable
 	switch variety {
 	case "node":
 		for _, n := range toGet {

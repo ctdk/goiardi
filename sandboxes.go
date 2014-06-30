@@ -26,100 +26,100 @@ import (
 	"net/http"
 )
 
-func sandbox_handler(w http.ResponseWriter, r *http.Request) {
+func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	path_array := SplitPath(r.URL.Path)
-	sbox_response := make(map[string]interface{})
+	pathArray := SplitPath(r.URL.Path)
+	sboxResponse := make(map[string]interface{})
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 
 	switch r.Method {
 	case "POST":
-		if len(path_array) != 1 {
-			JsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
+		if len(pathArray) != 1 {
+			jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 			return
 		}
 		if !opUser.IsAdmin() {
-			JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return
 		}
-		json_req, jerr := ParseObjJson(r.Body)
+		jsonReq, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
-			JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
 		}
-		sbox_hash, ok := json_req["checksums"].(map[string]interface{})
+		sboxHash, ok := jsonReq["checksums"].(map[string]interface{})
 		if !ok {
-			JsonErrorReport(w, r, "Field 'checksums' missing", http.StatusBadRequest)
+			jsonErrorReport(w, r, "Field 'checksums' missing", http.StatusBadRequest)
 			return
-		} else if len(sbox_hash) == 0 {
-			JsonErrorReport(w, r, "Bad checksums!", http.StatusBadRequest)
+		} else if len(sboxHash) == 0 {
+			jsonErrorReport(w, r, "Bad checksums!", http.StatusBadRequest)
 			return
 		} else {
-			for _, j := range sbox_hash {
+			for _, j := range sboxHash {
 				if j != nil {
-					JsonErrorReport(w, r, "Bad checksums!", http.StatusBadRequest)
+					jsonErrorReport(w, r, "Bad checksums!", http.StatusBadRequest)
 					return
 				}
 			}
 		}
-		sbox, err := sandbox.New(sbox_hash)
+		sbox, err := sandbox.New(sboxHash)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 			return
 		}
 		err = sbox.Save()
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		/* If we're here, make the slightly weird response. */
-		sbox_response["uri"] = util.ObjURL(sbox)
-		sbox_response["sandbox_id"] = sbox.Id
-		sbox_response["checksums"] = sbox.UploadChkList()
+		sboxResponse["uri"] = util.ObjURL(sbox)
+		sboxResponse["sandboxID"] = sbox.ID
+		sboxResponse["checksums"] = sbox.UploadChkList()
 		w.WriteHeader(http.StatusCreated)
 	case "PUT":
-		if len(path_array) != 2 {
-			JsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
+		if len(pathArray) != 2 {
+			jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 			return
 		}
 		if !opUser.IsAdmin() {
-			JsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return
 		}
 
-		sandbox_id := path_array[1]
+		sandboxID := pathArray[1]
 
-		json_req, jerr := ParseObjJson(r.Body)
+		jsonReq, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
-			JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
 		}
-		sbox_commit, ok := json_req["is_completed"].(bool)
+		sboxCommit, ok := jsonReq["is_completed"].(bool)
 		if !ok {
-			JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 			return
 		}
 
-		sbox, err := sandbox.Get(sandbox_id)
+		sbox, err := sandbox.Get(sandboxID)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
 
 		if err = sbox.IsComplete(); err == nil {
-			sbox.Completed = sbox_commit
+			sbox.Completed = sboxCommit
 			err = sbox.Save()
 			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
 		} else {
-			JsonErrorReport(w, r, err.Error(), http.StatusServiceUnavailable)
+			jsonErrorReport(w, r, err.Error(), http.StatusServiceUnavailable)
 			return
 		}
 
@@ -128,17 +128,17 @@ func sandbox_handler(w http.ResponseWriter, r *http.Request) {
 		 * behavior from chef-zero, and it's not real clear what
 		 * it wants from the checksums array. Still, we need to
 		 * give it what it wants. Ask about this later. */
-		sbox_response["guid"] = sbox.Id
-		sbox_response["name"] = sbox.Id
-		sbox_response["is_completed"] = sbox.Completed
-		sbox_response["create_time"] = sbox.CreationTime.UTC().Format("2006-01-02T15:04:05+00:00")
-		sbox_response["checksums"] = sbox.Checksums
+		sboxResponse["guid"] = sbox.ID
+		sboxResponse["name"] = sbox.ID
+		sboxResponse["is_completed"] = sbox.Completed
+		sboxResponse["create_time"] = sbox.CreationTime.UTC().Format("2006-01-02T15:04:05+00:00")
+		sboxResponse["checksums"] = sbox.Checksums
 	default:
-		JsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
 		return
 	}
 	enc := json.NewEncoder(w)
-	if err := enc.Encode(&sbox_response); err != nil {
-		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	if err := enc.Encode(&sboxResponse); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }

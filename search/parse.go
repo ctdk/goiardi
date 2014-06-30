@@ -18,6 +18,7 @@
 //located in search-parse.peg.go. To have changes to seach-parse.peg reflected
 //in search-parse.peg.go, install peg from https://github.com/pointlander/peg
 //and run 'peg -switch -inline search-parse.peg'.
+
 package search
 
 import (
@@ -25,9 +26,14 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 )
 
+// Op is a search operator
 type Op uint8
+// Field is a field in a document or object to search for, like when searching
+// for clients with "field:*".
 type Field string
+// Term is a basic search term string.
 type Term string
+// RangeTerm is a string, but describes a range to search over, like 1-10.
 type RangeTerm string
 
 func (t Term) String() string {
@@ -38,6 +44,7 @@ func (f Field) String() string {
 	return string(f)
 }
 
+// Define the various search operations.
 const (
 	OpNotAnOp Op = iota
 	OpUnaryNot
@@ -55,13 +62,13 @@ const (
 	OpEndExcl
 )
 
-// Hold parsed tokens from the solr query
+// Token is a parsed token from the solr query.
 type Token struct {
 	QueryChain Queryable
 	Latest     Queryable
 }
 
-// An individual query term and its operator.
+// QueryTerm is an individual query term and its operator.
 type QueryTerm struct {
 	term      Term
 	mod       Op
@@ -69,8 +76,8 @@ type QueryTerm struct {
 	fuzzparam string
 }
 
-// The no frills basic query type, without groups or ranges. Can contain regexp
-// terms, however.
+// BasicQuery is the no frills basic query type, without groups or ranges. 
+// Can contain regexp terms, however.
 type BasicQuery struct {
 	field    Field
 	term     QueryTerm
@@ -79,7 +86,7 @@ type BasicQuery struct {
 	complete bool
 }
 
-// Query grouped results.
+// GroupedQuery is for a query with grouped results.
 type GroupedQuery struct {
 	field    Field
 	terms    []QueryTerm
@@ -88,7 +95,7 @@ type GroupedQuery struct {
 	complete bool
 }
 
-// Query a range of values.
+// RangeQuery is for a Query a range of values.
 type RangeQuery struct {
 	field     Field
 	start     RangeTerm
@@ -99,7 +106,7 @@ type RangeQuery struct {
 	complete  bool
 }
 
-// Subquery's really just a marker in the chain of queries. Later it will be
+// SubQuery is really just a marker in the chain of queries. Later it will be
 // processed by itself though.
 type SubQuery struct {
 	start    bool
@@ -109,8 +116,8 @@ type SubQuery struct {
 	next     Queryable
 }
 
-// Interface of methods all the query chain types have to be able to implement
-// to search the index.
+// Queryable defines an interface of methods all the query chain types have to 
+// be able to implement to search the index.
 type Queryable interface {
 	// Search the index for the given term.
 	SearchIndex(string) (map[string]*indexer.IdxDoc, error)
@@ -138,7 +145,7 @@ type Queryable interface {
 	AddFuzzParam(string)
 }
 
-type GroupQueryHolder struct {
+type groupQueryHolder struct {
 	op  Op
 	res map[string]*indexer.IdxDoc
 }
@@ -151,12 +158,11 @@ func (q *BasicQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, er
 	if q.field == "" {
 		res, err := indexer.SearchText(idxName, string(q.term.term), notop)
 		return res, err
-	} else {
-		searchTerm := fmt.Sprintf("%s:%s", q.field, q.term.term)
-		res, err := indexer.SearchIndex(idxName, searchTerm, notop)
-
-		return res, err
 	}
+	searchTerm := fmt.Sprintf("%s:%s", q.field, q.term.term)
+	res, err := indexer.SearchIndex(idxName, searchTerm, notop)
+
+	return res, err
 }
 
 func (q *BasicQuery) AddOp(o Op) {
@@ -307,7 +313,7 @@ func (q *RangeQuery) AddFuzzParam(s string) {
 }
 
 func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
-	tmpRes := make([]GroupQueryHolder, len(q.terms))
+	tmpRes := make([]groupQueryHolder, len(q.terms))
 	for i, v := range q.terms {
 		tmpRes[i].op = v.mod
 		notop := false

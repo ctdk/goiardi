@@ -19,13 +19,13 @@ package user
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
 func (u *User) saveMySQL() util.Gerror {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		return gerr
@@ -49,31 +49,30 @@ func (u *User) saveMySQL() util.Gerror {
 	return nil
 }
 
-func (u *User) renameMySQL(new_name string) util.Gerror {
-	tx, err := data_store.Dbh.Begin()
+func (u *User) renameMySQL(newName string) util.Gerror {
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	if err = chkForClient(tx, new_name); err != nil {
+	if err = chkForClient(tx, newName); err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	found, err := checkForUserSQL(data_store.Dbh, new_name)
+	found, err := checkForUserSQL(datastore.Dbh, newName)
 	if found || err != nil {
 		tx.Rollback()
 		if found && err == nil {
-			gerr := util.Errorf("User %s already exists, cannot rename %s", new_name, u.Username)
+			gerr := util.Errorf("User %s already exists, cannot rename %s", newName, u.Username)
 			gerr.SetStatus(http.StatusConflict)
 			return gerr
-		} else {
-			gerr := util.Errorf(err.Error())
-			gerr.SetStatus(http.StatusInternalServerError)
-			return gerr
 		}
+		gerr := util.Errorf(err.Error())
+		gerr.SetStatus(http.StatusInternalServerError)
+		return gerr
 	}
-	_, err = tx.Exec("UPDATE users SET name = ? WHERE name = ?", new_name, u.Username)
+	_, err = tx.Exec("UPDATE users SET name = ? WHERE name = ?", newName, u.Username)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())
@@ -84,12 +83,12 @@ func (u *User) renameMySQL(new_name string) util.Gerror {
 	return nil
 }
 
-func chkForClient(handle data_store.Dbhandle, name string) error {
-	var user_id int32
-	err := handle.QueryRow("SELECT id FROM clients WHERE name = ?", name).Scan(&user_id)
+func chkForClient(handle datastore.Dbhandle, name string) error {
+	var userID int32
+	err := handle.QueryRow("SELECT id FROM clients WHERE name = ?", name).Scan(&userID)
 	if err != sql.ErrNoRows {
 		if err == nil {
-			err = fmt.Errorf("a client with id %d named %s was found that would conflict with this user", user_id, name)
+			err = fmt.Errorf("a client with id %d named %s was found that would conflict with this user", userID, name)
 		}
 	} else {
 		err = nil

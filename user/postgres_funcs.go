@@ -19,21 +19,21 @@ package user
 // Postgres specific functions for users
 
 import (
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"strings"
 )
 
-var defaultOrgId int = 1
+var defaultOrgID = 1
 
 func (u *User) savePostgreSQL() util.Gerror {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.CastErr(err)
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_users($1, $2, $3, $4, $5, $6, $7, $8)", u.Username, u.Name, u.Email, u.Admin, u.pubKey, u.passwd, u.salt, defaultOrgId)
+	_, err = tx.Exec("SELECT goiardi.merge_users($1, $2, $3, $4, $5, $6, $7, $8)", u.Username, u.Name, u.Email, u.Admin, u.pubKey, u.passwd, u.salt, defaultOrgID)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)
@@ -46,13 +46,13 @@ func (u *User) savePostgreSQL() util.Gerror {
 	return nil
 }
 
-func (u *User) renamePostgreSQL(new_name string) util.Gerror {
-	tx, err := data_store.Dbh.Begin()
+func (u *User) renamePostgreSQL(newName string) util.Gerror {
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.rename_user($1, $2, $3)", u.Username, new_name, defaultOrgId)
+	_, err = tx.Exec("SELECT goiardi.rename_user($1, $2, $3)", u.Username, newName, defaultOrgID)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())

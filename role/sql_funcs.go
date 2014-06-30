@@ -22,24 +22,22 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"log"
 )
 
-func checkForRoleSQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
-	_, err := data_store.CheckForOne(dbhandle, "roles", name)
+func checkForRoleSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
+	_, err := datastore.CheckForOne(dbhandle, "roles", name)
 	if err == nil {
 		return true, nil
-	} else {
-		if err != sql.ErrNoRows {
-			return false, err
-		} else {
-			return false, nil
-		}
 	}
+	if err != sql.ErrNoRows {
+		return false, err
+	}
+	return false, nil
 }
 
-func (r *Role) fillRoleFromSQL(row data_store.ResRow) error {
+func (r *Role) fillRoleFromSQL(row datastore.ResRow) error {
 	var (
 		rl []byte
 		er []byte
@@ -52,28 +50,28 @@ func (r *Role) fillRoleFromSQL(row data_store.ResRow) error {
 	}
 	r.ChefType = "role"
 	r.JsonClass = "Chef::Role"
-	err = data_store.DecodeBlob(rl, &r.RunList)
+	err = datastore.DecodeBlob(rl, &r.RunList)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(er, &r.EnvRunLists)
+	err = datastore.DecodeBlob(er, &r.EnvRunLists)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(da, &r.Default)
+	err = datastore.DecodeBlob(da, &r.Default)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(oa, &r.Override)
+	err = datastore.DecodeBlob(oa, &r.Override)
 	if err != nil {
 		return err
 	}
-	data_store.ChkNilArray(r)
+	datastore.ChkNilArray(r)
 
 	return nil
 }
 
-func getSQL(role_name string) (*Role, error) {
+func getSQL(roleName string) (*Role, error) {
 	role := new(Role)
 	var sqlStmt string
 	if config.Config.UseMySQL {
@@ -81,12 +79,12 @@ func getSQL(role_name string) (*Role, error) {
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM goiardi.roles WHERE name = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(role_name)
+	row := stmt.QueryRow(roleName)
 	err = role.fillRoleFromSQL(row)
 	if err != nil {
 		return nil, err
@@ -95,7 +93,7 @@ func getSQL(role_name string) (*Role, error) {
 }
 
 func (r *Role) deleteSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -118,45 +116,45 @@ func (r *Role) deleteSQL() error {
 }
 
 func getListSQL() []string {
-	role_list := make([]string, 0)
+	var roleList []string
 	var sqlStmt string
 	if config.Config.UseMySQL {
 		sqlStmt = "SELECT name FROM roles"
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "SELECT name FROM goiardi.roles"
 	}
-	rows, err := data_store.Dbh.Query(sqlStmt)
+	rows, err := datastore.Dbh.Query(sqlStmt)
 	if err != nil {
 		rows.Close()
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
 		}
-		return role_list
+		return roleList
 	}
 	for rows.Next() {
-		var role_name string
-		err = rows.Scan(&role_name)
+		var roleName string
+		err = rows.Scan(&roleName)
 		if err != nil {
 			log.Fatal(err)
 		}
-		role_list = append(role_list, role_name)
+		roleList = append(roleList, roleName)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
-	return role_list
+	return roleList
 }
 
 func allRolesSQL() []*Role {
-	roles := make([]*Role, 0)
+	var roles []*Role
 	var sqlStmt string
 	if config.Config.UseMySQL {
 		sqlStmt = "SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM roles"
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM goiardi.roles"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		log.Fatal(err)
 	}

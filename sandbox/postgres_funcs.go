@@ -19,16 +19,16 @@ package sandbox
 /* PostgreSQL functions for sandboxes */
 
 import (
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 )
 
-func (s *Sandbox) fillSandboxFromPostgreSQL(row data_store.ResRow) error {
+func (s *Sandbox) fillSandboxFromPostgreSQL(row datastore.ResRow) error {
 	var csb []byte
 	err := row.Scan(&s.Id, &s.CreationTime, &csb, &s.Completed)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(csb, &s.Checksums)
+	err = datastore.DecodeBlob(csb, &s.Checksums)
 	if err != nil {
 		return err
 	}
@@ -36,11 +36,11 @@ func (s *Sandbox) fillSandboxFromPostgreSQL(row data_store.ResRow) error {
 }
 
 func (s *Sandbox) savePostgreSQL() error {
-	ckb, ckerr := data_store.EncodeBlob(&s.Checksums)
+	ckb, ckerr := datastore.EncodeBlob(&s.Checksums)
 	if ckerr != nil {
 		return ckerr
 	}
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
