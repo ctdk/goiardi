@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-// Users and clients ended up having to be split apart after all, once adding
-// the SQL backing started falling into place. Users are very similar to
-// clients, except that they are unique across the whole server and can log in
-// via the web interface, while clients are only unique across an organization
-// and cannot log in over the web. Basically, users are generally for something
-// you would do, while a client would be associated with a specific node.
+// Package user is the result of users and clients ended up having to be split 
+// apart after all, once adding the SQL backing started falling into place. 
+// Users are very similar to clients, except that they are unique across the 
+// whole server and can log in via the web interface, while clients are only 
+// unique across an organization and cannot log in over the web. Basically, 
+// users are generally for something you would do, while a client would be 
+// associated with a specific node.
 //
 // Note: At this time, organizations are not implemented, so the difference
 // between clients and users is a little less stark.
@@ -30,13 +31,15 @@ import (
 	"database/sql"
 	"encoding/gob"
 	"fmt"
-	"github.com/ctdk/goiardi/chef_crypto"
+	"github.com/ctdk/goiardi/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/data_store"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
+// User is, uh, a user. It's very similar to a Client, but subtly different, as
+// explained elsewhere.
 type User struct {
 	Username string `json:"username"`
 	Name     string `json:"name"`
@@ -57,7 +60,7 @@ type privUser struct {
 	Salt      *[]byte `json:"salt"`
 }
 
-// Create a new API user.
+// New creates a new API user.
 func New(name string) (*User, util.Gerror) {
 	var found bool
 	var err util.Gerror
@@ -83,7 +86,7 @@ func New(name string) (*User, util.Gerror) {
 		return nil, err
 	}
 
-	salt, saltErr := chef_crypto.GenerateSalt()
+	salt, saltErr := chefcrypto.GenerateSalt()
 	if saltErr != nil {
 		err := util.Errorf(saltErr.Error())
 		return nil, err
@@ -99,7 +102,7 @@ func New(name string) (*User, util.Gerror) {
 	return user, nil
 }
 
-// Gets a user.
+// Get a user.
 func Get(name string) (*User, util.Gerror) {
 	var user *User
 	if config.UsingDB() {
@@ -154,7 +157,7 @@ func (u *User) Save() util.Gerror {
 	return nil
 }
 
-// Deletes a user, but will refuse to do so and give an error if it is the last
+// Delete a user, but will refuse to do so and give an error if it is the last
 // administrator user.
 func (u *User) Delete() util.Gerror {
 	if u.isLastAdmin() {
@@ -174,10 +177,10 @@ func (u *User) Delete() util.Gerror {
 	return nil
 }
 
-// Renames a user. Save() must be called after this method is used. Will not
+// Rename a user. Save() must be called after this method is used. Will not
 // rename the last administrator user.
-func (u *User) Rename(new_name string) util.Gerror {
-	if err := validateUserName(new_name); err != nil {
+func (u *User) Rename(newName string) util.Gerror {
+	if err := validateUserName(newName); err != nil {
 		return err
 	}
 	if u.isLastAdmin() {
@@ -187,72 +190,73 @@ func (u *User) Rename(new_name string) util.Gerror {
 	}
 	if config.UsingDB() {
 		if config.Config.UseMySQL {
-			if err := u.renameMySQL(new_name); err != nil {
+			if err := u.renameMySQL(newName); err != nil {
 				return err
 			}
 		} else if config.Config.UsePostgreSQL {
-			if err := u.renamePostgreSQL(new_name); err != nil {
+			if err := u.renamePostgreSQL(newName); err != nil {
 				return err
 			}
 		}
 	} else {
 		ds := data_store.New()
-		if err := chkInMemClient(new_name); err != nil {
+		if err := chkInMemClient(newName); err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusConflict)
 			return gerr
 		}
-		if _, found := ds.Get("user", new_name); found {
-			err := util.Errorf("User %s already exists, cannot rename %s", new_name, u.Username)
+		if _, found := ds.Get("user", newName); found {
+			err := util.Errorf("User %s already exists, cannot rename %s", newName, u.Username)
 			err.SetStatus(http.StatusConflict)
 			return err
 		}
 		ds.Delete("client", u.Username)
 	}
-	u.Username = new_name
+	u.Username = newName
 	return nil
 }
 
-// Build a new user from a JSON object.
-func NewFromJson(json_user map[string]interface{}) (*User, util.Gerror) {
-	user_name, nerr := util.ValidateAsString(json_user["name"])
+// NewFromJSON builds a new user from a JSON object.
+func NewFromJSON(jsonUser map[string]interface{}) (*User, util.Gerror) {
+	userName, nerr := util.ValidateAsString(jsonUser["name"])
 	if nerr != nil {
 		return nil, nerr
 	}
-	user, err := New(user_name)
+	user, err := New(userName)
 	if err != nil {
 		return nil, err
 	}
 	// check if the password is supplied if this is a user, and fail if
 	// it isn't.
-	if _, ok := json_user["password"]; !ok {
+	if _, ok := jsonUser["password"]; !ok {
 		err := util.Errorf("Field 'password' missing")
 		return nil, err
 	}
-	err = user.UpdateFromJson(json_user)
+	err = user.UpdateFromJSON(jsonUser)
 	if err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
-// Update a user from a JSON object, carrying out a bunch of validations inside.
-func (u *User) UpdateFromJson(json_user map[string]interface{}) util.Gerror {
-	user_name, nerr := util.ValidateAsString(json_user["name"])
+// UpdateFromJSON updates a user from a JSON object, carrying out a bunch of 
+// validations inside.
+func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
+	userName, nerr := util.ValidateAsString(jsonUser["name"])
 	if nerr != nil {
 		return nerr
 	}
-	if u.Username != user_name {
-		err := util.Errorf("User name %s and %s from JSON do not match", u.Username, user_name)
+	if u.Username != userName {
+		err := util.Errorf("User name %s and %s from JSON do not match", u.Username, userName)
 		return err
 	}
 
 	/* Validations. */
 	/* Invalid top level elements */
-	valid_elements := []string{"username", "name", "org_name", "public_key", "private_key", "admin", "password", "email", "salt"}
+	validElements := []string{"username", "name", "org_name", "public_key", "private_key", "admin", "password", "email", "salt"}
 ValidElem:
-	for k, _ := range json_user {
-		for _, i := range valid_elements {
+	for k := range jsonUser {
+		for _, i := range validElements {
 			if k == i {
 				continue ValidElem
 			}
@@ -264,7 +268,7 @@ ValidElem:
 
 	// Check the password first. If it's bad, bail before touching anything
 	// else.
-	if passwd, ok := json_user["password"]; ok {
+	if passwd, ok := jsonUser["password"]; ok {
 		passwd, verr = util.ValidateAsString(passwd)
 		if verr != nil {
 			return verr
@@ -277,9 +281,9 @@ ValidElem:
 		}
 	}
 
-	if admin_val, ok := json_user["admin"]; ok {
+	if adminVal, ok := jsonUser["admin"]; ok {
 		var ab bool
-		if ab, verr = util.ValidateAsBool(admin_val); verr != nil {
+		if ab, verr = util.ValidateAsBool(adminVal); verr != nil {
 			// NOTE: may need to tweak this error message depending
 			// if this is a user or a client
 			verr = util.Errorf("Field 'admin' invalid")
@@ -297,37 +301,37 @@ ValidElem:
 	return nil
 }
 
-// Utility function to directly set a password hash. Only especially useful when
-// importing user data with the -m/--import flags, since it's still hashed with
-// the user's salt.
+// SetPasswdHash is a utility function to directly set a password hash. Only
+// especially useful when importing user data with the -m/--import flags, since
+// it's still hashed with the user's salt.
 func (u *User) SetPasswdHash(pwhash string) {
 	if pwhash != "" {
 		u.passwd = pwhash
 	}
 }
 
-// Returns a list of users.
+// GetList returns a list of users.
 func GetList() []string {
-	var user_list []string
+	var userList []string
 	if config.UsingDB() {
-		user_list = getListSQL()
+		userList = getListSQL()
 	} else {
 		ds := data_store.New()
-		user_list = ds.GetList("user")
+		userList = ds.GetList("user")
 	}
-	return user_list
+	return userList
 }
 
-// Convert the user to a JSON object, massaging it as needed to keep the chef
-// client happy (be it knife, chef-pedant, etc.) NOTE: There may be a more
-// idiomatic way to do this.
-func (u *User) ToJson() map[string]interface{} {
-	toJson := make(map[string]interface{})
-	toJson["name"] = u.Name
-	toJson["admin"] = u.Admin
-	toJson["public_key"] = u.PublicKey()
+// ToJSON converts the user to a JSON object, massaging it as needed to keep 
+// the chef client happy (be it knife, chef-pedant, etc.) NOTE: There may be a 
+// more idiomatic way to do this.
+func (u *User) ToJSON() map[string]interface{} {
+	toJSON := make(map[string]interface{})
+	toJSON["name"] = u.Name
+	toJSON["admin"] = u.Admin
+	toJSON["public_key"] = u.PublicKey()
 
-	return toJson
+	return toJSON
 }
 
 func (u *User) isLastAdmin() bool {
@@ -336,8 +340,8 @@ func (u *User) isLastAdmin() bool {
 		if config.UsingDB() {
 			numAdmins = numAdminsSQL()
 		} else {
-			user_list := GetList()
-			for _, u := range user_list {
+			userList := GetList()
+			for _, u := range userList {
 				u1, _ := Get(u)
 				if u1 != nil && u1.Admin {
 					numAdmins++
@@ -351,30 +355,31 @@ func (u *User) isLastAdmin() bool {
 	return false
 }
 
-// Generate a new set of RSA keys for the user. The new private key is saved
-// with the user object, the public key is given to the user and not saved on
-// the server at all.
+// GenerateKeys generates a new set of RSA keys for the user. The new private
+// key is saved with the user object, the public key is given to the user and 
+// not saved on the server at all.
 func (u *User) GenerateKeys() (string, error) {
-	priv_pem, pub_pem, err := chef_crypto.GenerateRSAKeys()
+	privPem, pubPem, err := chefcrypto.GenerateRSAKeys()
 	if err != nil {
 		return "", err
 	}
-	u.pubKey = pub_pem
-	return priv_pem, nil
+	u.pubKey = pubPem
+	return privPem, nil
 }
 
-// Checks that the provided public key is valid. Wrapper around
-// chef_crypto.ValidatePublicKey(), but with a different error type.
+// ValidatePublicKey checks that the provided public key is valid. Wrapper 
+// around chefcrypto.ValidatePublicKey(), but with a different error type.
 func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
-	ok, pkerr := chef_crypto.ValidatePublicKey(publicKey)
+	ok, pkerr := chefcrypto.ValidatePublicKey(publicKey)
 	var err util.Gerror
 	if !ok {
-		err = util.Errorf(pkerr.Error())
+		err = util.CastErr(pkerr)
 	}
 	return ok, err
 }
 
-// Is the user an admin? If use-auth is false, this always returns true.
+// IsAdmin returns true if the user is an admin. If use-auth is false, this 
+// always returns true.
 func (u *User) IsAdmin() bool {
 	if !config.Config.UseAuth {
 		return true
@@ -382,13 +387,14 @@ func (u *User) IsAdmin() bool {
 	return u.Admin
 }
 
-// Users are never validators, so always return false. This is true even if
-// auth mode is not on.
+// IsValidator always returns false, since users are never validators. This is 
+// true even if auth mode is not on.
 func (u *User) IsValidator() bool {
 	return false
 }
 
-// Is the actor in question the same client or user as the caller?
+// IsSelf returns true if the actor in question s the same client or user as the
+// caller. Always returns true if use-auth is false.
 func (u *User) IsSelf(other interface{}) bool {
 	if !config.Config.UseAuth {
 		return true
@@ -401,20 +407,22 @@ func (u *User) IsSelf(other interface{}) bool {
 	return false
 }
 
+// IsUser returns true for users.
 func (u *User) IsUser() bool {
 	return true
 }
 
+// IsClient returns false for users.
 func (u *User) IsClient() bool {
 	return false
 }
 
-// Return the user's public key. Part of the Actor interface.
+// PublicKey returns the user's public key. Part of the Actor interface.
 func (u *User) PublicKey() string {
 	return u.pubKey
 }
 
-// Set the user's public key. Part of the Actor interface.
+// SetPublicKey does what it says on the tin. Part of the Actor interface.
 func (u *User) SetPublicKey(pk interface{}) error {
 	switch pk := pk.(type) {
 	case string:
@@ -430,11 +438,13 @@ func (u *User) SetPublicKey(pk interface{}) error {
 	return nil
 }
 
-func (u *User) CheckPermEdit(user_data map[string]interface{}, perm string) util.Gerror {
+// CheckPermEdit checks to see if the user is trying to edit admin and
+// validator attributes, and if it has permissions to do so.
+func (u *User) CheckPermEdit(userData map[string]interface{}, perm string) util.Gerror {
 	gerr := util.Errorf("You are not allowed to take this action.")
 	gerr.SetStatus(http.StatusForbidden)
 
-	if av, ok := user_data[perm]; ok {
+	if av, ok := userData[perm]; ok {
 		if a, _ := util.ValidateAsBool(av); a {
 			return gerr
 		}
@@ -442,7 +452,8 @@ func (u *User) CheckPermEdit(user_data map[string]interface{}, perm string) util
 	return nil
 }
 
-// Validate and set the user's password. Will not set a password for a client.
+// SetPasswd validates and sets the user's password. Will not set a password for
+// a client.
 func (u *User) SetPasswd(password string) util.Gerror {
 	if len(password) < 6 {
 		err := util.Errorf("Password must have at least 6 characters")
@@ -450,7 +461,7 @@ func (u *User) SetPasswd(password string) util.Gerror {
 	}
 	/* If those validations pass, set the password */
 	var perr error
-	u.passwd, perr = chef_crypto.HashPasswd(password, u.salt)
+	u.passwd, perr = chefcrypto.HashPasswd(password, u.salt)
 	if perr != nil {
 		err := util.Errorf(perr.Error())
 		return err
@@ -458,9 +469,10 @@ func (u *User) SetPasswd(password string) util.Gerror {
 	return nil
 }
 
-// Check the provided password to see if it matches the stored password hash.
+// CheckPasswd checks the provided password to see if it matches the stored 
+// password hash.
 func (u *User) CheckPasswd(password string) util.Gerror {
-	h, perr := chef_crypto.HashPasswd(password, u.salt)
+	h, perr := chefcrypto.HashPasswd(password, u.salt)
 	if perr != nil {
 		err := util.Errorf(perr.Error())
 		return err
@@ -481,10 +493,12 @@ func validateUserName(name string) util.Gerror {
 	return nil
 }
 
+// GetName returns the user's name.
 func (u *User) GetName() string {
 	return u.Username
 }
 
+// URLType returns the base element of a user's URL.
 func (u *User) URLType() string {
 	return "users"
 }
@@ -515,14 +529,14 @@ func (u *User) GobDecode(b []byte) error {
 	return nil
 }
 
-// Return all the users on this server.
+// AllUsers returns all the users on this server.
 func AllUsers() []*User {
-	users := make([]*User, 0)
+	var users []*User
 	if config.UsingDB() {
 		users = allUsersSQL()
 	} else {
-		user_list := GetList()
-		for _, u := range user_list {
+		userList := GetList()
+		for _, u := range userList {
 			us, err := Get(u)
 			if err != nil {
 				continue
@@ -533,7 +547,7 @@ func AllUsers() []*User {
 	return users
 }
 
-// Return all users, in a fashion suitable for exporing
+// ExportAllUsers return all users, in a fashion suitable for exporting.
 func ExportAllUsers() []interface{} {
 	users := AllUsers()
 	export := make([]interface{}, len(users))
