@@ -19,27 +19,27 @@ package role
 /* MySQL funcs for roles */
 
 import (
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 )
 
 func (r *Role) saveMySQL() error {
-	rlb, rlerr := data_store.EncodeBlob(&r.RunList)
+	rlb, rlerr := datastore.EncodeBlob(&r.RunList)
 	if rlerr != nil {
 		return rlerr
 	}
-	erb, ererr := data_store.EncodeBlob(&r.EnvRunLists)
+	erb, ererr := datastore.EncodeBlob(&r.EnvRunLists)
 	if ererr != nil {
 		return ererr
 	}
-	dab, daerr := data_store.EncodeBlob(&r.Default)
+	dab, daerr := datastore.EncodeBlob(&r.Default)
 	if daerr != nil {
 		return daerr
 	}
-	oab, oaerr := data_store.EncodeBlob(&r.Override)
+	oab, oaerr := datastore.EncodeBlob(&r.Override)
 	if oaerr != nil {
 		return oaerr
 	}
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
