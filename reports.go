@@ -46,7 +46,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: some params for time ranges exist and need to be handled
 	// properly
 
-	pathArray := SplitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)
 	pathArrayLen := len(pathArray)
 	reportResponse := make(map[string]interface{})
 

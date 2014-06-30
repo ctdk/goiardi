@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"sort"
@@ -31,7 +31,7 @@ import (
 
 func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	pathArray := SplitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)
 	cookbookResponse := make(map[string]interface{})
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
@@ -183,7 +183,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-				if lerr := log_info.LogEvent(opUser, cbv, "delete"); lerr != nil {
+				if lerr := loginfo.LogEvent(opUser, cbv, "delete"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -200,7 +200,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				/* Special JSON rendition of the
 				 * cookbook with some but not all of
 				 * the fields. */
-				cookbookResponse = cbv.ToJson(r.Method)
+				cookbookResponse = cbv.ToJSON(r.Method)
 				/* Sometimes, but not always, chef needs
 				 * empty slices of maps for these
 				 * values. Arrrgh. */
@@ -251,7 +251,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := log_info.LogEvent(opUser, cb, "create"); lerr != nil {
+				if lerr := loginfo.LogEvent(opUser, cb, "create"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -293,7 +293,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 					return
 				}
-				if lerr := log_info.LogEvent(opUser, cbv, "create"); lerr != nil {
+				if lerr := loginfo.LogEvent(opUser, cbv, "create"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -304,12 +304,12 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-				err := cb.Save()
-				if err != nil {
-					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				gerr := cb.Save()
+				if gerr != nil {
+					jsonErrorReport(w, r, gerr.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := log_info.LogEvent(opUser, cbv, "modify"); lerr != nil {
+				if lerr := loginfo.LogEvent(opUser, cbv, "modify"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -318,7 +318,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			 * should have no response body, but in fact it
 			 * wants some (not all) of the cookbook version
 			 * data. */
-			cookbookResponse = cbv.ToJson(r.Method)
+			cookbookResponse = cbv.ToJSON(r.Method)
 		default:
 			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return

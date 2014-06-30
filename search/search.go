@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/client"
-	"github.com/ctdk/goiardi/data_bag"
+	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
@@ -187,7 +187,7 @@ func getResults(variety string, toGet []string) []indexer.Indexable {
 		}
 	default: // It's a data bag
 		/* These may require further processing later. */
-		dbag, _ := data_bag.Get(variety)
+		dbag, _ := databag.Get(variety)
 		if dbag != nil {
 			for _, k := range toGet {
 				dbi, err := dbag.GetDBItem(k)

@@ -24,7 +24,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/environment"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
@@ -34,7 +34,7 @@ import (
 
 func environmentHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	accErr := CheckAccept(w, r, "application/json")
+	accErr := checkAccept(w, r, "application/json")
 	if accErr != nil {
 		jsonErrorReport(w, r, accErr.Error(), http.StatusNotAcceptable)
 		return
@@ -46,7 +46,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pathArray := SplitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)
 	envResponse := make(map[string]interface{})
 	var numResults string
 	r.ParseForm()
@@ -97,7 +97,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			var eerr util.Gerror
-			chefEnv, eerr = environment.NewFromJson(envData)
+			chefEnv, eerr = environment.NewFromJSON(envData)
 			if eerr != nil {
 				jsonErrorReport(w, r, eerr.Error(), eerr.Status())
 				return
@@ -106,7 +106,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 				return
 			}
-			if lerr := log_info.LogEvent(opUser, chefEnv, "create"); lerr != nil {
+			if lerr := loginfo.LogEvent(opUser, chefEnv, "create"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -181,7 +181,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				var eerr util.Gerror
-				env, eerr = environment.NewFromJson(envData)
+				env, eerr = environment.NewFromJSON(envData)
 				if eerr != nil {
 					jsonErrorReport(w, r, eerr.Error(), eerr.Status())
 					return
@@ -195,7 +195,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				if jsonName == "" {
 					envData["name"] = envName
 				}
-				if err := env.UpdateFromJson(envData); err != nil {
+				if err := env.UpdateFromJSON(envData); err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
@@ -204,7 +204,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
-			if lerr := log_info.LogEvent(opUser, env, "modify"); lerr != nil {
+			if lerr := loginfo.LogEvent(opUser, env, "modify"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -223,7 +223,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if lerr := log_info.LogEvent(opUser, env, "delete"); lerr != nil {
+			if lerr := loginfo.LogEvent(opUser, env, "delete"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -347,7 +347,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				runList = role.EnvRunLists[envName]
 			}
-			envResponse["run_list"] = run_list
+			envResponse["run_list"] = runList
 		} else if op == "cookbooks" {
 			cb, err := cookbook.Get(opName)
 			if err != nil {

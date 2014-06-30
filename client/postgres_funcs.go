@@ -17,14 +17,14 @@
 package client
 
 import (
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"strings"
 )
 
 func (c *Client) savePostgreSQL() util.Gerror {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.CastErr(err)
 		return gerr
@@ -43,7 +43,7 @@ func (c *Client) savePostgreSQL() util.Gerror {
 }
 
 func (c *Client) renamePostgreSQL(newName string) util.Gerror {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		return gerr

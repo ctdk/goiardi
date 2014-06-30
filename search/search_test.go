@@ -20,7 +20,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/ctdk/goiardi/client"
-	"github.com/ctdk/goiardi/data_bag"
+	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
@@ -46,10 +46,10 @@ var client1 *client.Client
 var client2 *client.Client
 var client3 *client.Client
 var client4 *client.Client
-var dbag1 *data_bag.DataBag
-var dbag2 *data_bag.DataBag
-var dbag3 *data_bag.DataBag
-var dbag4 *data_bag.DataBag
+var dbag1 *databag.DataBag
+var dbag2 *databag.DataBag
+var dbag3 *databag.DataBag
+var dbag4 *databag.DataBag
 
 func makeSearchItems() int {
 	/* Gotta populate the search index */
@@ -57,12 +57,12 @@ func makeSearchItems() int {
 	roles := make([]*role.Role, 4)
 	envs := make([]*environment.ChefEnvironment, 4)
 	clients := make([]*client.Client, 4)
-	dbags := make([]*data_bag.DataBag, 4)
+	dbags := make([]*databag.DataBag, 4)
 	gob.Register(new(node.Node))
 	gob.Register(new(role.Role))
 	gob.Register(new(environment.ChefEnvironment))
 	gob.Register(new(client.Client))
-	gob.Register(new(data_bag.DataBag))
+	gob.Register(new(databag.DataBag))
 
 	for i := 0; i < 4; i++ {
 		nodes[i], _ = node.New(fmt.Sprintf("node%d", i))
@@ -73,7 +73,7 @@ func makeSearchItems() int {
 		envs[i].Save()
 		clients[i], _ = client.New(fmt.Sprintf("client%d", i))
 		clients[i].Save()
-		dbags[i], _ = data_bag.New(fmt.Sprintf("data_bag%d", i))
+		dbags[i], _ = databag.New(fmt.Sprintf("databag%d", i))
 		dbags[i].Save()
 		dbi := make(map[string]interface{})
 		dbi["id"] = fmt.Sprintf("dbi%d", i)
@@ -173,14 +173,14 @@ func TestSearchClientAll(t *testing.T) {
 }
 
 func TestSearchDbag(t *testing.T) {
-	d, _ := Search("data_bag1", "foo:dbag_item_1")
+	d, _ := Search("databag1", "foo:dbag_item_1")
 	if len(d) == 0 {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchDbagAll(t *testing.T) {
-	d, _ := Search("data_bag1", "*:*")
+	d, _ := Search("databag1", "*:*")
 	if len(d) != 1 {
 		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(d))
 	}

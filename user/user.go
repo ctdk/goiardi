@@ -33,7 +33,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/chefcrypto"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
@@ -66,14 +66,14 @@ func New(name string) (*User, util.Gerror) {
 	var err util.Gerror
 	if config.UsingDB() {
 		var uerr error
-		found, uerr = checkForUserSQL(data_store.Dbh, name)
+		found, uerr = checkForUserSQL(datastore.Dbh, name)
 		if uerr != nil {
 			err = util.Errorf(uerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
 			return nil, err
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		_, found = ds.Get("user", name)
 	}
 	if found {
@@ -120,7 +120,7 @@ func Get(name string) (*User, util.Gerror) {
 			return nil, gerr
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		u, found := ds.Get("user", name)
 		if !found {
 			err := util.Errorf("User %s not found", name)
@@ -151,7 +151,7 @@ func (u *User) Save() util.Gerror {
 			gerr.SetStatus(http.StatusConflict)
 			return gerr
 		}
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Set("user", u.Username, u)
 	}
 	return nil
@@ -171,7 +171,7 @@ func (u *User) Delete() util.Gerror {
 			return gerr
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Delete("user", u.Username)
 	}
 	return nil
@@ -199,7 +199,7 @@ func (u *User) Rename(newName string) util.Gerror {
 			}
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		if err := chkInMemClient(newName); err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusConflict)
@@ -316,7 +316,7 @@ func GetList() []string {
 	if config.UsingDB() {
 		userList = getListSQL()
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		userList = ds.GetList("user")
 	}
 	return userList
@@ -559,7 +559,7 @@ func ExportAllUsers() []interface{} {
 
 func chkInMemClient(name string) error {
 	var err error
-	ds := data_store.New()
+	ds := datastore.New()
 	if _, found := ds.Get("clients", name); found {
 		err = fmt.Errorf("a client named %s was found that would conflict with this user", name)
 	}

@@ -53,27 +53,27 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 			/* Send status OK. It seems chef-pedant at least
 			 * tries to upload files twice for some reason.
 			 */
-			JsonErrorReport(w, r, fileErr.Error(), http.StatusOK)
+			jsonErrorReport(w, r, fileErr.Error(), http.StatusOK)
 			return
 		}
 		fileStore, err := filestore.New(chksum, r.Body, r.ContentLength)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		err = fileStore.Save()
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		fileResponse := make(map[string]string)
 		fileResponse[fileStore.Chksum] = fmt.Sprintf("File with checksum %s uploaded.", fileStore.Chksum)
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(&fileResponse); err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 		}
 	/* Add DELETE later? */
 	default:
-		JsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
 	}
 }

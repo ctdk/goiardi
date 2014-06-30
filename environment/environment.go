@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/cookbook"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
@@ -57,14 +57,14 @@ func New(name string) (*ChefEnvironment, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var eerr error
-		found, eerr = checkForEnvironmentSQL(data_store.Dbh, name)
+		found, eerr = checkForEnvironmentSQL(datastore.Dbh, name)
 		if eerr != nil {
 			err := util.CastErr(eerr)
 			err.SetStatus(http.StatusInternalServerError)
 			return nil, err
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		_, found = ds.Get("env", name)
 	}
 	if found || name == "_default" {
@@ -229,7 +229,7 @@ func Get(envName string) (*ChefEnvironment, util.Gerror) {
 			found = true
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		var e interface{}
 		e, found = ds.Get("env", envName)
 		if e != nil {
@@ -256,7 +256,7 @@ func MakeDefaultEnvironment() {
 		// easier to do with the in-memory mode.
 		de = defaultEnvironment()
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		// only create the new default environment if we don't already have one
 		// saved
 		if _, found := ds.Get("env", "_default"); found {
@@ -299,7 +299,7 @@ func (e *ChefEnvironment) Save() util.Gerror {
 			return err
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Set("env", e.Name, e)
 	}
 	indexer.IndexObj(e)
@@ -318,7 +318,7 @@ func (e *ChefEnvironment) Delete() error {
 			return nil
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Delete("env", e.Name)
 	}
 	indexer.DeleteItemFromCollection("environment", e.Name)
@@ -331,7 +331,7 @@ func GetList() []string {
 	if config.UsingDB() {
 		envList = getEnvironmentList()
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		envList = ds.GetList("env")
 		envList = append(envList, "_default")
 	}

@@ -28,7 +28,7 @@ import (
 
 func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	pathArray := SplitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)
 	sboxResponse := make(map[string]interface{})
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {

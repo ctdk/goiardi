@@ -24,7 +24,7 @@ import (
 
 func (s *Sandbox) fillSandboxFromPostgreSQL(row datastore.ResRow) error {
 	var csb []byte
-	err := row.Scan(&s.Id, &s.CreationTime, &csb, &s.Completed)
+	err := row.Scan(&s.ID, &s.CreationTime, &csb, &s.Completed)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (s *Sandbox) savePostgreSQL() error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_sandboxes($1, $2, $3, $4)", s.Id, s.CreationTime, ckb, s.Completed)
+	_, err = tx.Exec("SELECT goiardi.merge_sandboxes($1, $2, $3, $4)", s.ID, s.CreationTime, ckb, s.Completed)
 	if err != nil {
 		tx.Rollback()
 		return err

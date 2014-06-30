@@ -21,13 +21,13 @@ package filestore
 import (
 	"database/sql"
 	"github.com/ctdk/goas/v2/logger"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"log"
 	"strings"
 )
 
 func (f *FileStore) savePostgreSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func deleteHashesPostgreSQL(fileHashes []string) {
 	if len(fileHashes) == 0 {
 		return // nothing to do
 	}
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		log.Fatal(err)
 	}

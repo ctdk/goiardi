@@ -32,7 +32,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"io"
 	"os"
 	"path"
@@ -98,7 +98,7 @@ func Get(chksum string) (*FileStore, error) {
 			found = true
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		var f interface{}
 		f, found = ds.Get("filestore", chksum)
 		if f != nil {
@@ -155,7 +155,7 @@ func (f *FileStore) Save() error {
 			return nil
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Set("filestore", f.Chksum, f)
 	}
 	if config.Config.LocalFstoreDir != "" {
@@ -181,7 +181,7 @@ func (f *FileStore) Delete() error {
 			return err
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Delete("filestore", f.Chksum)
 	}
 
@@ -200,7 +200,7 @@ func GetList() []string {
 	if config.UsingDB() {
 		fileList = getListSQL()
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		fileList = ds.GetList("filestore")
 	}
 	return fileList

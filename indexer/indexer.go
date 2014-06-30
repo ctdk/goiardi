@@ -126,7 +126,8 @@ func (i *Index) deleteItem(idxName string, doc string) error {
 }
 
 func (i *Index) search(idx string, term string, notop bool) (map[string]*IdxDoc, error) {
-	if idc, found := i.idxmap[idx]; !found {
+	idc, found := i.idxmap[idx]
+	if !found {
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
 		return nil, err
 	}
@@ -139,7 +140,8 @@ func (i *Index) search(idx string, term string, notop bool) (map[string]*IdxDoc,
 }
 
 func (i *Index) searchText(idx string, term string, notop bool) (map[string]*IdxDoc, error) {
-	if idc, found := i.idxmap[idx]; !found {
+	idc, found := i.idxmap[idx]; 
+	if !found {
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
 		return nil, err
 	}
@@ -148,7 +150,8 @@ func (i *Index) searchText(idx string, term string, notop bool) (map[string]*Idx
 }
 
 func (i *Index) searchRange(idx string, field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error) {
-	if idc, found := i.idxmap[idx]; !found {
+	idc, found := i.idxmap[idx]
+	if !found {
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
 		return nil, err
 	}
@@ -174,12 +177,12 @@ func (i *Index) endpoints() []string {
 /* IdxCollection methods */
 
 func (ic *IdxCollection) addDoc(object Indexable) {
-	if _, found := ic.docs[object.DocId()]; !found {
+	if _, found := ic.docs[object.DocID()]; !found {
 		ic.m.Lock()
-		ic.docs[object.DocId()] = new(IdxDoc)
+		ic.docs[object.DocID()] = new(IdxDoc)
 		ic.m.Unlock()
 	}
-	ic.docs[object.DocId()].update(object)
+	ic.docs[object.DocID()].update(object)
 }
 
 func (ic *IdxCollection) delDoc(doc string) {

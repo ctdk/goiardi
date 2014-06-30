@@ -22,14 +22,14 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	path := SplitPath(r.URL.Path)
+	path := splitPath(r.URL.Path)
 	clientName := path[1]
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
@@ -50,11 +50,11 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		/* Docs were incorrect. It does want the body of the
 		 * deleted object. */
-		jsonClient := chefClient.ToJson()
+		jsonClient := chefClient.ToJSON()
 
 		/* Log the delete event before deleting the client, in
 		 * case the client is deleting itself. */
-		if lerr := log_info.LogEvent(opUser, chefClient, "delete"); lerr != nil {
+		if lerr := loginfo.LogEvent(opUser, chefClient, "delete"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -86,14 +86,14 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		 * and clientname, and it wants chef_type and
 		 * json_class
 		 */
-		jsonClient := chefClient.ToJson()
+		jsonClient := chefClient.ToJSON()
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(&jsonClient); err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "PUT":
-		clientData, jerr := ParseObjJson(r.Body)
+		clientData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
@@ -142,9 +142,9 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		/* If clientName and clientData["name"] aren't the
 		 * same, we're renaming. Check the new name doesn't
 		 * already exist. */
-		jsonClient := chefClient.ToJson()
+		jsonClient := chefClient.ToJSON()
 		if clientName != jsonName {
-			if lerr := log_info.LogEvent(opUser, chefClient, "modify"); lerr != nil {
+			if lerr := loginfo.LogEvent(opUser, chefClient, "modify"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -155,7 +155,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			w.WriteHeader(http.StatusCreated)
 		}
-		if uerr := chefClient.UpdateFromJson(clientData); uerr != nil {
+		if uerr := chefClient.UpdateFromJSON(clientData); uerr != nil {
 			jsonErrorReport(w, r, uerr.Error(), uerr.Status())
 			return
 		}
@@ -198,7 +198,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		chefClient.Save()
-		if lerr := log_info.LogEvent(opUser, chefClient, "modify"); lerr != nil {
+		if lerr := loginfo.LogEvent(opUser, chefClient, "modify"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}

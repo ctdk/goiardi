@@ -22,7 +22,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"log"
 )
 
@@ -34,7 +34,7 @@ func getSQL(chksum string) (*FileStore, error) {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT checksum FROM goiardi.file_checksums WHERE checksum = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func getSQL(chksum string) (*FileStore, error) {
 }
 
 func (f *FileStore) deleteSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func getListSQL() []string {
 		sqlStatement = "SELECT checksum FROM goiardi.file_checksums"
 	}
 
-	stmt, perr := data_store.Dbh.Prepare(sqlStatement)
+	stmt, perr := datastore.Dbh.Prepare(sqlStatement)
 	if perr != nil {
 		if perr != sql.ErrNoRows {
 			log.Fatal(perr)
@@ -112,7 +112,7 @@ func allFilestoresSQL() []*FileStore {
 		sqlStatement = "SELECT checksum FROM goiardi.file_checksums"
 	}
 
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}

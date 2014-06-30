@@ -98,7 +98,8 @@ func ValidateAsVersion(ver interface{}) (string, Gerror) {
 				if n > len(inspectVer) || inspectVer[n] == "" && n == 4 {
 					break
 				}
-				if v, err := strconv.ParseInt(inspectVer[n], 10, 64); err != nil {
+				v, err := strconv.ParseInt(inspectVer[n], 10, 64)
+				if err != nil {
 					verr := Errorf(err.Error())
 					return "", verr
 				}
@@ -333,7 +334,8 @@ func ValidateRunList(rl interface{}) ([]string, Gerror) {
 	switch rl := rl.(type) {
 	case []string:
 		for i, r := range rl {
-			if j, err := validateRLItem(r); err != nil {
+			j, err := validateRLItem(r)
+			if err != nil {
 				return nil, err
 			}
 			if j == "" {

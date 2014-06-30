@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
@@ -105,7 +105,7 @@ func New(name string) (*Cookbook, util.Gerror) {
 	}
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForCookbookSQL(data_store.Dbh, name)
+		found, cerr = checkForCookbookSQL(datastore.Dbh, name)
 		if cerr != nil {
 			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
@@ -178,7 +178,7 @@ func Get(name string) (*Cookbook, util.Gerror) {
 			found = true
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		var c interface{}
 		c, found = ds.Get("cookbook", name)
 		if c != nil {
@@ -187,7 +187,7 @@ func Get(name string) (*Cookbook, util.Gerror) {
 		/* hrm. */
 		if cookbook != nil && config.Config.UseUnsafeMemStore {
 			for _, v := range cookbook.Versions {
-				data_store.ChkNilArray(v)
+				datastore.ChkNilArray(v)
 			}
 		}
 	}
@@ -206,7 +206,7 @@ func (c *Cookbook) Save() error {
 	} else if config.Config.UsePostgreSQL {
 		return c.saveCookbookPostgreSQL()
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Set("cookbook", c.Name, c)
 	}
 	return nil
@@ -217,7 +217,7 @@ func (c *Cookbook) Delete() error {
 	if config.UsingDB() {
 		return c.deleteCookbookSQL()
 	}
-	ds := data_store.New()
+	ds := datastore.New()
 	ds.Delete("cookbook", c.Name)
 	return nil
 }
@@ -227,7 +227,7 @@ func GetList() []string {
 	if config.UsingDB() {
 		return getCookbookListSQL()
 	}
-	ds := data_store.New()
+	ds := datastore.New()
 	cbList := ds.GetList("cookbook")
 	return cbList
 }
@@ -244,7 +244,7 @@ func (c *Cookbook) sortedVersions() []*CookbookVersion {
 	for k, cbv := range c.Versions {
 		keys[u] = k
 		u++
-		data_store.ChkNilArray(cbv)
+		datastore.ChkNilArray(cbv)
 	}
 	sort.Sort(sort.Reverse(keys))
 
@@ -272,7 +272,7 @@ func (c *Cookbook) LatestVersion() *CookbookVersion {
 		sorted := c.sortedVersions()
 		c.latest = sorted[0]
 		if c.latest != nil {
-			data_store.ChkNilArray(c.latest)
+			datastore.ChkNilArray(c.latest)
 		}
 	}
 	return c.latest
@@ -455,9 +455,9 @@ func (cbv *CookbookVersion) resolveDependencies(cdList map[string][]string) erro
 					if err != nil {
 						return err
 					}
-					stat := verConstraintCheck(deb_cbv.Version, ver, op)
+					stat := verConstraintCheck(debCbv.Version, ver, op)
 					if stat != "ok" {
-						err := fmt.Errorf("Oh no! Cookbook %s (ver %s) depends on a version of cookbook %s matching the constraint '%s', but that constraint conflicts with the previous constraint of '%s'. Bailing, sorry.", cbv.CookbookName, cbv.Version, deb_cbv.CookbookName, c, dcon)
+						err := fmt.Errorf("Oh no! Cookbook %s (ver %s) depends on a version of cookbook %s matching the constraint '%s', but that constraint conflicts with the previous constraint of '%s'. Bailing, sorry.", cbv.CookbookName, cbv.Version, debCbv.CookbookName, c, dcon)
 						return err
 					}
 				}
@@ -641,7 +641,7 @@ func (c *Cookbook) GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) 
 	} else {
 		cbv, found = c.Versions[cbVersion]
 		if cbv != nil {
-			data_store.ChkNilArray(cbv)
+			datastore.ChkNilArray(cbv)
 			if cbv.Recipes == nil {
 				cbv.Recipes = make([]map[string]interface{}, 0)
 			}

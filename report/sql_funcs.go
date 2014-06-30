@@ -98,11 +98,11 @@ func (r *Report) deleteSQL() error {
 		sqlStmt = "DELETE FROM goiardi.reports WHERE run_id = $1"
 	}
 
-	_, err = tx.Exec(sqlStmt, r.RunId)
+	_, err = tx.Exec(sqlStmt, r.RunID)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
-			err = fmt.Errorf("deleting report %s had an error '%s', and then rolling back the transaction gave another error '%s'", r.RunId, err.Error(), terr.Error())
+			err = fmt.Errorf("deleting report %s had an error '%s', and then rolling back the transaction gave another error '%s'", r.RunID, err.Error(), terr.Error())
 		}
 		return err
 	}

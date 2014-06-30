@@ -19,13 +19,13 @@
 package cookbook
 
 import (
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
 func (c *Cookbook) saveCookbookPostgreSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func (c *Cookbook) saveCookbookPostgreSQL() error {
 }
 
 func (cbv *CookbookVersion) updateCookbookVersionPostgreSQL(defb, libb, attb, recb, prob, resb, temb, roob, filb, metb []byte, maj, min, patch int64) util.Gerror {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		gerr.SetStatus(http.StatusInternalServerError)

@@ -20,14 +20,14 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"log"
 )
 
 /* General SQL functions for environments */
 
-func checkForEnvironmentSQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
-	_, err := data_store.CheckForOne(dbhandle, "environments", name)
+func checkForEnvironmentSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
+	_, err := datastore.CheckForOne(dbhandle, "environments", name)
 	if err == nil {
 		return true, nil
 	}
@@ -43,7 +43,7 @@ func checkForEnvironmentSQL(dbhandle data_store.Dbhandle, name string) (bool, er
 // As there, the SQL query that made the row needs to have the same number &
 // order of columns as the one in Get(), even if the WHERE clause is different
 // or omitted.
-func (e *ChefEnvironment) fillEnvFromSQL(row data_store.ResRow) error {
+func (e *ChefEnvironment) fillEnvFromSQL(row datastore.ResRow) error {
 	var (
 		da []byte
 		oa []byte
@@ -54,20 +54,20 @@ func (e *ChefEnvironment) fillEnvFromSQL(row data_store.ResRow) error {
 		return err
 	}
 	e.ChefType = "environment"
-	e.JsonClass = "Chef::Environment"
-	err = data_store.DecodeBlob(da, &e.Default)
+	e.JSONClass = "Chef::Environment"
+	err = datastore.DecodeBlob(da, &e.Default)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(oa, &e.Override)
+	err = datastore.DecodeBlob(oa, &e.Override)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(cv, &e.CookbookVersions)
+	err = datastore.DecodeBlob(cv, &e.CookbookVersions)
 	if err != nil {
 		return err
 	}
-	data_store.ChkNilArray(e)
+	datastore.ChkNilArray(e)
 	return nil
 }
 
@@ -79,7 +79,7 @@ func getEnvironmentSQL(envName string) (*ChefEnvironment, error) {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT name, description, default_attr, override_attr, cookbook_vers FROM goiardi.environments WHERE name = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (e *ChefEnvironment) deleteEnvironmentSQL() error {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "DELETE FROM goiardi.environments WHERE name = $1"
 	}
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func getEnvironmentList() []string {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT name FROM goiardi.environments"
 	}
-	rows, err := data_store.Dbh.Query(sqlStatement)
+	rows, err := datastore.Dbh.Query(sqlStatement)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
@@ -154,7 +154,7 @@ func allEnvironmentsSQL() []*ChefEnvironment {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT name, description, default_attr, override_attr, cookbook_vers FROM goiardi.environments WHERE name <> '_default'"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}

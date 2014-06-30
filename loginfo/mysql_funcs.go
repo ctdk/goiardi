@@ -23,27 +23,27 @@ import (
 	"time"
 )
 
-func (le *LogInfo) fillLogEventFromMySQL(row data_store.ResRow) error {
+func (le *LogInfo) fillLogEventFromMySQL(row datastore.ResRow) error {
 	var tb []byte
-	err := row.Scan(&le.Id, &le.ActorType, &le.ActorInfo, &tb, &le.Action, &le.ObjectType, &le.ObjectName, &le.ExtendedInfo)
+	err := row.Scan(&le.ID, &le.ActorType, &le.ActorInfo, &tb, &le.Action, &le.ObjectType, &le.ObjectName, &le.ExtendedInfo)
 	if err != nil {
 		return err
 	}
-	le.Time, err = time.Parse(data_store.MySQLTimeFormat, string(tb))
+	le.Time, err = time.Parse(datastore.MySQLTimeFormat, string(tb))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (le *LogInfo) actualWriteEventMySQL(tx data_store.Dbhandle, actorID int32) error {
+func (le *LogInfo) actualWriteEventMySQL(tx datastore.Dbhandle, actorID int32) error {
 	var err error
-	if le.Id == 0 {
-		sqlStmt := "INSERT INTO log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	if le.ID == 0 {
+		sqlStmt := "INSERT INTO loginfos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 		_, err = tx.Exec(sqlStmt, actorID, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
 	} else {
-		sqlStmt := "INSERT INTO log_infos (id, actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-		_, err = tx.Exec(sqlStmt, le.Id, actorID, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+		sqlStmt := "INSERT INTO loginfos (id, actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		_, err = tx.Exec(sqlStmt, le.ID, actorID, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
 	}
 	return err
 }

@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"strconv"
@@ -113,12 +113,12 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
 		}
-		var leList []*log_info.LogInfo
+		var leList []*loginfo.LogInfo
 		var err error
 		if limitFound {
-			leList, err = log_info.GetLogInfos(searchParams, offset, limit)
+			leList, err = loginfo.GetLogInfos(searchParams, offset, limit)
 		} else {
-			leList, err = log_info.GetLogInfos(searchParams, offset)
+			leList, err = loginfo.GetLogInfos(searchParams, offset)
 		}
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
@@ -128,7 +128,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 		for i, v := range leList {
 			leResp[i] = make(map[string]interface{})
 			leResp[i]["event"] = v
-			leURL := fmt.Sprintf("/events/%d", v.Id)
+			leURL := fmt.Sprintf("/events/%d", v.ID)
 			leResp[i]["url"] = util.CustomURL(leURL)
 		}
 		enc := json.NewEncoder(w)
@@ -141,7 +141,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
 		}
-		purged, err := log_info.PurgeLogInfos(purgeFrom)
+		purged, err := loginfo.PurgeLogInfos(purgeFrom)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 		}
@@ -178,7 +178,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
 		}
-		le, err := log_info.Get(eventID)
+		le, err := loginfo.Get(eventID)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
@@ -193,7 +193,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
 		}
-		le, err := log_info.Get(eventID)
+		le, err := loginfo.Get(eventID)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return

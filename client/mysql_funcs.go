@@ -19,13 +19,13 @@ package client
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
 func (c *Client) saveMySQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (c *Client) saveMySQL() error {
 }
 
 func (c *Client) renameMySQL(newName string) util.Gerror {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		return gerr
@@ -58,7 +58,7 @@ func (c *Client) renameMySQL(newName string) util.Gerror {
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	found, err := checkForClientSQL(data_store.Dbh, newName)
+	found, err := checkForClientSQL(datastore.Dbh, newName)
 	if found || err != nil {
 		tx.Rollback()
 		if found && err == nil {
@@ -81,7 +81,7 @@ func (c *Client) renameMySQL(newName string) util.Gerror {
 	return nil
 }
 
-func chkForUser(handle data_store.Dbhandle, name string) error {
+func chkForUser(handle datastore.Dbhandle, name string) error {
 	var userID int32
 	err := handle.QueryRow("SELECT id FROM users WHERE name = ?", name).Scan(&userID)
 	if err != sql.ErrNoRows {

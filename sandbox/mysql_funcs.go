@@ -26,7 +26,7 @@ import (
 func (s *Sandbox) fillSandboxFromMySQL(row datastore.ResRow) error {
 	var csb []byte
 	var tb []byte
-	err := row.Scan(&s.Id, &tb, &csb, &s.Completed)
+	err := row.Scan(&s.ID, &tb, &csb, &s.Completed)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (s *Sandbox) saveMySQL() error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("INSERT INTO sandboxes (sbox_id, creation_time, checksums, completed) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE checksums = ?, completed = ?", s.Id, s.CreationTime.UTC().Format(datastore.MySQLTimeFormat), ckb, s.Completed, ckb, s.Completed)
+	_, err = tx.Exec("INSERT INTO sandboxes (sbox_id, creation_time, checksums, completed) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE checksums = ?, completed = ?", s.ID, s.CreationTime.UTC().Format(datastore.MySQLTimeFormat), ckb, s.Completed, ckb, s.Completed)
 	if err != nil {
 		tx.Rollback()
 		return err

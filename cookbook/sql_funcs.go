@@ -22,7 +22,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"log"
 	"net/http"
@@ -37,7 +37,7 @@ func (c *Cookbook) numVersionsSQL() *int {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT count(*) AS c FROM goiardi.cookbook_versions cbv WHERE cbv.cookbook_id = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 
 	if err != nil {
 		log.Fatal(err)
@@ -54,8 +54,8 @@ func (c *Cookbook) numVersionsSQL() *int {
 	return &cbvCount
 }
 
-func checkForCookbookSQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
-	_, err := data_store.CheckForOne(dbhandle, "cookbooks", name)
+func checkForCookbookSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
+	_, err := datastore.CheckForOne(dbhandle, "cookbooks", name)
 	if err == nil {
 		return true, nil
 	}
@@ -65,7 +65,7 @@ func checkForCookbookSQL(dbhandle data_store.Dbhandle, name string) (bool, error
 	return false, nil
 }
 
-func (c *Cookbook) fillCookbookFromSQL(row data_store.ResRow) error {
+func (c *Cookbook) fillCookbookFromSQL(row datastore.ResRow) error {
 	err := row.Scan(&c.id, &c.Name)
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func (c *Cookbook) fillCookbookFromSQL(row data_store.ResRow) error {
 	return nil
 }
 
-func (cbv *CookbookVersion) fillCookbookVersionFromSQL(row data_store.ResRow) error {
+func (cbv *CookbookVersion) fillCookbookVersionFromSQL(row datastore.ResRow) error {
 	var (
 		defb  []byte
 		libb  []byte
@@ -89,7 +89,7 @@ func (cbv *CookbookVersion) fillCookbookVersionFromSQL(row data_store.ResRow) er
 		minor int64
 		patch int64
 	)
-	err := row.Scan(&cbv.id, &cbv.cookbook_id, &defb, &libb, &attb, &recb, &prob, &resb, &temb, &roob, &filb, &metb, &major, &minor, &patch, &cbv.IsFrozen, &cbv.CookbookName)
+	err := row.Scan(&cbv.id, &cbv.cookbookID, &defb, &libb, &attb, &recb, &prob, &resb, &temb, &roob, &filb, &metb, &major, &minor, &patch, &cbv.IsFrozen, &cbv.CookbookName)
 	if err != nil {
 		return err
 	}
@@ -99,112 +99,112 @@ func (cbv *CookbookVersion) fillCookbookVersionFromSQL(row data_store.ResRow) er
 	cbv.Version = fmt.Sprintf("%d.%d.%d", major, minor, patch)
 	cbv.Name = fmt.Sprintf("%s-%s", cbv.CookbookName, cbv.Version)
 	cbv.ChefType = "cookbook_version"
-	cbv.JsonClass = "Chef::CookbookVersion"
+	cbv.JSONClass = "Chef::CookbookVersion"
 
 	/* TODO: experiment some more with getting this done with
 	 * pointers. */
-	err = data_store.DecodeBlob(metb, &cbv.Metadata)
+	err = datastore.DecodeBlob(metb, &cbv.Metadata)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(defb, &cbv.Definitions)
+	err = datastore.DecodeBlob(defb, &cbv.Definitions)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(libb, &cbv.Libraries)
+	err = datastore.DecodeBlob(libb, &cbv.Libraries)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(attb, &cbv.Attributes)
+	err = datastore.DecodeBlob(attb, &cbv.Attributes)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(recb, &cbv.Recipes)
+	err = datastore.DecodeBlob(recb, &cbv.Recipes)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(prob, &cbv.Providers)
+	err = datastore.DecodeBlob(prob, &cbv.Providers)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(temb, &cbv.Templates)
+	err = datastore.DecodeBlob(temb, &cbv.Templates)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(resb, &cbv.Resources)
+	err = datastore.DecodeBlob(resb, &cbv.Resources)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(roob, &cbv.RootFiles)
+	err = datastore.DecodeBlob(roob, &cbv.RootFiles)
 	if err != nil {
 		return err
 	}
-	err = data_store.DecodeBlob(filb, &cbv.Files)
+	err = datastore.DecodeBlob(filb, &cbv.Files)
 	if err != nil {
 		return err
 	}
-	data_store.ChkNilArray(cbv)
+	datastore.ChkNilArray(cbv)
 
 	return nil
 }
 
 func (cbv *CookbookVersion) updateCookbookVersionSQL() util.Gerror {
 	// Preparing the complex data structures to be saved
-	defb, deferr := data_store.EncodeBlob(cbv.Definitions)
+	defb, deferr := datastore.EncodeBlob(cbv.Definitions)
 	if deferr != nil {
 		gerr := util.Errorf(deferr.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	libb, liberr := data_store.EncodeBlob(cbv.Libraries)
+	libb, liberr := datastore.EncodeBlob(cbv.Libraries)
 	if liberr != nil {
 		gerr := util.Errorf(liberr.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	attb, atterr := data_store.EncodeBlob(cbv.Attributes)
+	attb, atterr := datastore.EncodeBlob(cbv.Attributes)
 	if atterr != nil {
 		gerr := util.Errorf(atterr.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	recb, recerr := data_store.EncodeBlob(cbv.Recipes)
+	recb, recerr := datastore.EncodeBlob(cbv.Recipes)
 	if recerr != nil {
 		gerr := util.Errorf(recerr.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	prob, proerr := data_store.EncodeBlob(cbv.Providers)
+	prob, proerr := datastore.EncodeBlob(cbv.Providers)
 	if proerr != nil {
 		gerr := util.Errorf(proerr.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	resb, reserr := data_store.EncodeBlob(cbv.Resources)
+	resb, reserr := datastore.EncodeBlob(cbv.Resources)
 	if reserr != nil {
 		gerr := util.Errorf(reserr.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	temb, temerr := data_store.EncodeBlob(cbv.Templates)
+	temb, temerr := datastore.EncodeBlob(cbv.Templates)
 	if temerr != nil {
 		gerr := util.Errorf(temerr.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	roob, rooerr := data_store.EncodeBlob(cbv.RootFiles)
+	roob, rooerr := datastore.EncodeBlob(cbv.RootFiles)
 	if rooerr != nil {
 		gerr := util.Errorf(rooerr.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	filb, filerr := data_store.EncodeBlob(cbv.Files)
+	filb, filerr := datastore.EncodeBlob(cbv.Files)
 	if filerr != nil {
 		gerr := util.Errorf(filerr.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	metb, meterr := data_store.EncodeBlob(cbv.Metadata)
+	metb, meterr := datastore.EncodeBlob(cbv.Metadata)
 	if meterr != nil {
 		gerr := util.Errorf(meterr.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
@@ -230,7 +230,7 @@ func allCookbooksSQL() []*Cookbook {
 	} else {
 		sqlStatement = "SELECT id, name FROM goiardi.cookbooks"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -266,7 +266,7 @@ func getCookbookSQL(name string) (*Cookbook, error) {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT id, name FROM goiardi.cookbooks WHERE name = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +283,7 @@ func getCookbookSQL(name string) (*Cookbook, error) {
 }
 
 func (c *Cookbook) deleteCookbookSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func getCookbookListSQL() []string {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT name FROM goiardi.cookbooks"
 	}
-	rows, err := data_store.Dbh.Query(sqlStatement)
+	rows, err := datastore.Dbh.Query(sqlStatement)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
@@ -375,7 +375,7 @@ func (c *Cookbook) sortedCookbookVersionsSQL() []*CookbookVersion {
 	} else {
 		sqlStatement = "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 
 	if err != nil {
 		log.Fatal(err)
@@ -418,7 +418,7 @@ func (c *Cookbook) getCookbookVersionSQL(cbVersion string) (*CookbookVersion, er
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 AND major_ver = $2 AND minor_ver = $3 AND patch_ver = $4"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -433,7 +433,7 @@ func (c *Cookbook) getCookbookVersionSQL(cbVersion string) (*CookbookVersion, er
 }
 
 func (cbv *CookbookVersion) deleteCookbookVersionSQL() util.Gerror {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		gerr.SetStatus(http.StatusInternalServerError)

@@ -31,12 +31,12 @@ import (
 )
 
 func (le *LogInfo) writeEventSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
 	typeTable := fmt.Sprintf("%ss", le.ActorType)
-	actorID, err := data_store.CheckForOne(tx, typeTable, le.Actor.GetName())
+	actorID, err := datastore.CheckForOne(tx, typeTable, le.Actor.GetName())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -51,7 +51,7 @@ func (le *LogInfo) writeEventSQL() error {
 }
 
 func (le *LogInfo) importEventSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (le *LogInfo) importEventSQL() error {
 		return err
 	}
 
-	actorID, err := data_store.CheckForOne(tx, typeTable, doer["name"].(string))
+	actorID, err := datastore.CheckForOne(tx, typeTable, doer["name"].(string))
 	if err != nil {
 		actorID = -1
 	}
@@ -82,7 +82,7 @@ func (le *LogInfo) importEventSQL() error {
 
 // This has been broken out to a separate function to simplify importing data
 // from json export dumps.
-func (le *LogInfo) actualWriteEventSQL(tx data_store.Dbhandle, actorID int32) error {
+func (le *LogInfo) actualWriteEventSQL(tx datastore.Dbhandle, actorID int32) error {
 	if config.Config.UseMySQL {
 		return le.actualWriteEventMySQL(tx, actorID)
 	} else if config.Config.UsePostgreSQL {
@@ -98,12 +98,12 @@ func getLogEventSQL(id int) (*LogInfo, error) {
 
 	var sqlStmt string
 	if config.Config.UseMySQL {
-		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos WHERE id = ?"
+		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM loginfos WHERE id = ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos WHERE id = $1"
+		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.loginfos WHERE id = $1"
 	}
 
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
@@ -123,19 +123,19 @@ func getLogEventSQL(id int) (*LogInfo, error) {
 }
 
 func (le *LogInfo) deleteSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
 
 	var sqlStmt string
 	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM log_infos WHERE id = ?"
+		sqlStmt = "DELETE FROM loginfos WHERE id = ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.log_infos WHERE id = $1"
+		sqlStmt = "DELETE FROM goiardi.loginfos WHERE id = $1"
 	}
 
-	_, err = tx.Exec(sqlStmt, le.Id)
+	_, err = tx.Exec(sqlStmt, le.ID)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -145,16 +145,16 @@ func (le *LogInfo) deleteSQL() error {
 }
 
 func purgeSQL(id int) (int64, error) {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return 0, err
 	}
 
 	var sqlStmt string
 	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM log_infos WHERE id <= ?"
+		sqlStmt = "DELETE FROM loginfos WHERE id <= ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.log_infos WHERE id <= $1"
+		sqlStmt = "DELETE FROM goiardi.loginfos WHERE id <= $1"
 	}
 
 	res, err := tx.Exec(sqlStmt, id)
@@ -169,7 +169,7 @@ func purgeSQL(id int) (int64, error) {
 
 func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, limits ...int) ([]*LogInfo, error) {
 	var offset int
-	var limit = (1 << 63) - 1
+	var limit int64 = (1 << 63) - 1
 	if len(limits) > 0 {
 		offset = limits[0]
 		if len(limits) > 1 {
@@ -183,7 +183,7 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 	var sqlStmt string
 	sqlArgs := []interface{}{from, until}
 	if config.Config.UseMySQL {
-		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos li JOIN users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
+		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM loginfos li JOIN users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
 		if action, ok := searchParams["action"]; ok {
 			sqlStmt = sqlStmt + " AND action = ?"
 			sqlArgs = append(sqlArgs, action)
@@ -205,7 +205,7 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 		}
 		sqlStmt = sqlStmt + " ORDER BY id DESC LIMIT ?, ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos li JOIN goiardi.users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
+		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.loginfos li JOIN goiardi.users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
 		if action, ok := searchParams["action"]; ok {
 			sqlStmt = sqlStmt + " AND action = ?"
 			sqlArgs = append(sqlArgs, action)
@@ -238,7 +238,7 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 	sqlArgs = append(sqlArgs, offset)
 	sqlArgs = append(sqlArgs, limit)
 
-	stmt, err := data_store.Dbh.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}

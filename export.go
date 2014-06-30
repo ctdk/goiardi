@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"
-	"github.com/ctdk/goiardi/data_bag"
+	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/filestore"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
@@ -61,10 +61,10 @@ func exportAll(fileName string) error {
 	// ... and march through everything.
 	exportedData.Data["client"] = client.ExportAllClients()
 	exportedData.Data["cookbook"] = exportTransformSlice(cookbook.AllCookbooks())
-	exportedData.Data["data_bag"] = exportTransformSlice(data_bag.AllDataBags())
+	exportedData.Data["databag"] = exportTransformSlice(databag.AllDataBags())
 	exportedData.Data["environment"] = exportTransformSlice(environment.AllEnvironments())
 	exportedData.Data["filestore"] = exportTransformSlice(filestore.AllFilestores())
-	exportedData.Data["log_info"] = exportTransformSlice(log_info.AllLogInfos())
+	exportedData.Data["loginfo"] = exportTransformSlice(loginfo.AllLogInfos())
 	exportedData.Data["node"] = exportTransformSlice(node.AllNodes())
 	exportedData.Data["report"] = exportTransformSlice(report.AllReports())
 	exportedData.Data["role"] = exportTransformSlice(role.AllRoles())
@@ -100,7 +100,7 @@ func exportTransformSlice(data interface{}) []interface{} {
 		for i, v := range data {
 			exp[i] = v
 		}
-	case []*data_bag.DataBag:
+	case []*databag.DataBag:
 		exp = make([]interface{}, len(data))
 		for i, v := range data {
 			exp[i] = v
@@ -115,7 +115,7 @@ func exportTransformSlice(data interface{}) []interface{} {
 		for i, v := range data {
 			exp[i] = v
 		}
-	case []*log_info.LogInfo:
+	case []*loginfo.LogInfo:
 		exp = make([]interface{}, len(data))
 		for i, v := range data {
 			exp[i] = v

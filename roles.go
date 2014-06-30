@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/environment"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
@@ -41,7 +41,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 	 * /roles/NAME/environments and /roles/NAME/environments/NAME, so we'll
 	 * split up the whole path to get those values. */
 
-	pathArray := SplitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)
 	roleName := pathArray[1]
 
 	chefRole, err := role.Get(roleName)
@@ -69,7 +69,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := log_info.LogEvent(opUser, chefRole, "delete"); lerr != nil {
+				if lerr := loginfo.LogEvent(opUser, chefRole, "delete"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -99,7 +99,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 			if jsonName == "" {
 				roleData["name"] = roleName
 			}
-			nerr := chefRole.UpdateFromJson(roleData)
+			nerr := chefRole.UpdateFromJSON(roleData)
 			if nerr != nil {
 				jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 				return
@@ -110,7 +110,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if lerr := log_info.LogEvent(opUser, chefRole, "modify"); lerr != nil {
+			if lerr := loginfo.LogEvent(opUser, chefRole, "modify"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}

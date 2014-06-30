@@ -68,12 +68,12 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 	le.ObjectName = obj.GetName()
 	le.ObjectType = reflect.TypeOf(obj).String()
 	le.Time = time.Now()
-	extInfo, err := data_store.EncodeToJSON(obj)
+	extInfo, err := datastore.EncodeToJSON(obj)
 	if err != nil {
 		return err
 	}
 	le.ExtendedInfo = extInfo
-	actorInfo, err := data_store.EncodeToJSON(doer)
+	actorInfo, err := datastore.EncodeToJSON(doer)
 	if err != nil {
 		return err
 	}
@@ -108,12 +108,12 @@ func Import(logData map[string]interface{}) error {
 }
 
 func (le *LogInfo) writeEventInMem() error {
-	ds := data_store.New()
+	ds := datastore.New()
 	return ds.SetLogInfo(le)
 }
 
 func (le *LogInfo) importEventInMem() error {
-	ds := data_store.New()
+	ds := datastore.New()
 	return ds.SetLogInfo(le, le.ID)
 }
 
@@ -131,7 +131,7 @@ func Get(id int) (*LogInfo, error) {
 			return nil, err
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		c, err := ds.GetLogInfo(id)
 		if err != nil {
 			return nil, err
@@ -149,7 +149,7 @@ func (le *LogInfo) Delete() error {
 	if config.UsingDB() {
 		return le.deleteSQL()
 	}
-	ds := data_store.New()
+	ds := datastore.New()
 	ds.DeleteLogInfo(le.ID)
 	return nil
 }
@@ -159,7 +159,7 @@ func PurgeLogInfos(id int) (int64, error) {
 	if config.UsingDB() {
 		return purgeSQL(id)
 	}
-	ds := data_store.New()
+	ds := datastore.New()
 	return ds.PurgeLogInfoBefore(id)
 }
 
@@ -213,7 +213,7 @@ func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, err
 		offset = 0
 	}
 
-	ds := data_store.New()
+	ds := datastore.New()
 	arr := ds.GetLogInfoList()
 	lis := make([]*LogInfo, len(arr))
 	var keys []int
@@ -251,7 +251,7 @@ func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, err
 }
 
 func (le *LogInfo) checkTimeRange(from, until time.Time) bool {
-	return le.Time.After(from) && l.Time.Before(until)
+	return le.Time.After(from) && le.Time.Before(until)
 }
 
 // AllLogInfos returns a list of all logged events in the database. Provides a

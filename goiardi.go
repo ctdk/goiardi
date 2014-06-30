@@ -29,12 +29,12 @@ import (
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/cookbook"
-	"github.com/ctdk/goiardi/data_bag"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/databag"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/indexer"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
@@ -58,9 +58,9 @@ func main() {
 	if config.Config.UseMySQL || config.Config.UsePostgreSQL {
 		var derr error
 		if config.Config.UseMySQL {
-			data_store.Dbh, derr = data_store.ConnectDB("mysql", config.Config.MySQL)
+			datastore.Dbh, derr = datastore.ConnectDB("mysql", config.Config.MySQL)
 		} else if config.Config.UsePostgreSQL {
-			data_store.Dbh, derr = data_store.ConnectDB("postgres", config.Config.PostgreSQL)
+			datastore.Dbh, derr = datastore.ConnectDB("postgres", config.Config.PostgreSQL)
 		}
 		if derr != nil {
 			logger.Criticalf(derr.Error())
@@ -69,7 +69,7 @@ func main() {
 	}
 
 	gobRegister()
-	ds := data_store.New()
+	ds := datastore.New()
 	if config.Config.FreezeData {
 		if config.Config.DataStoreFile != "" {
 			uerr := ds.Load(config.Config.DataStoreFile)
@@ -106,7 +106,7 @@ func main() {
 		}
 		if config.Config.FreezeData {
 			if config.Config.DataStoreFile != "" {
-				ds := data_store.New()
+				ds := datastore.New()
 				if err := ds.Save(config.Config.DataStoreFile); err != nil {
 					logger.Errorf(err.Error())
 				}
@@ -116,7 +116,7 @@ func main() {
 			}
 		}
 		if config.Config.UseMySQL {
-			data_store.Dbh.Close()
+			datastore.Dbh.Close()
 		}
 		fmt.Println("All done.")
 		os.Exit(0)
@@ -191,7 +191,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	/* Make configurable, I guess, but Chef wants it to be 1000000 */
-	if !strings.HasPrefix(r.URL.Path, "/file_store") && r.ContentLength > config.Config.JsonReqMaxSize {
+	if !strings.HasPrefix(r.URL.Path, "/file_store") && r.ContentLength > config.Config.JSONReqMaxSize {
 		http.Error(w, "Content-length too long!", http.StatusRequestEntityTooLarge)
 		return
 	} else if r.ContentLength > config.Config.ObjMaxSize {
@@ -371,7 +371,7 @@ func handleSignals() {
 				logger.Infof("cleaning up...")
 				if config.Config.FreezeData {
 					if config.Config.DataStoreFile != "" {
-						ds := data_store.New()
+						ds := datastore.New()
 						if err := ds.Save(config.Config.DataStoreFile); err != nil {
 							logger.Errorf(err.Error())
 						}
@@ -381,7 +381,7 @@ func handleSignals() {
 					}
 				}
 				if config.Config.UseMySQL {
-					data_store.Dbh.Close()
+					datastore.Dbh.Close()
 				}
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
@@ -397,7 +397,7 @@ func gobRegister() {
 	gob.Register(e)
 	c := new(cookbook.Cookbook)
 	gob.Register(c)
-	d := new(data_bag.DataBag)
+	d := new(databag.DataBag)
 	gob.Register(d)
 	f := new(filestore.FileStore)
 	gob.Register(f)
@@ -429,13 +429,13 @@ func gobRegister() {
 	gob.Register(cc)
 	uu := new(user.User)
 	gob.Register(uu)
-	li := new(log_info.LogInfo)
+	li := new(loginfo.LogInfo)
 	gob.Register(li)
 	mis := map[int]interface{}{}
 	gob.Register(mis)
 	cbv := new(cookbook.CookbookVersion)
 	gob.Register(cbv)
-	dbi := new(data_bag.DataBagItem)
+	dbi := new(databag.DataBagItem)
 	gob.Register(dbi)
 	rp := new(report.Report)
 	gob.Register(rp)
@@ -443,7 +443,7 @@ func gobRegister() {
 
 func setSaveTicker() {
 	if config.Config.FreezeData {
-		ds := data_store.New()
+		ds := datastore.New()
 		ticker := time.NewTicker(time.Second * time.Duration(config.Config.FreezeInterval))
 		go func() {
 			for _ = range ticker.C {
@@ -469,9 +469,9 @@ func setLogEventPurgeTicker() {
 		ticker := time.NewTicker(time.Second * time.Duration(60))
 		go func() {
 			for _ = range ticker.C {
-				les, _ := log_info.GetLogInfos(nil, 0, 1)
+				les, _ := loginfo.GetLogInfos(nil, 0, 1)
 				if len(les) != 0 {
-					p, err := log_info.PurgeLogInfos(les[0].Id - config.Config.LogEventKeep)
+					p, err := loginfo.PurgeLogInfos(les[0].ID - config.Config.LogEventKeep)
 					if err != nil {
 						logger.Errorf(err.Error())
 					}

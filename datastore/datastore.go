@@ -173,12 +173,12 @@ func (ds *DataStore) GetList(keyType string) []string {
 	return j
 }
 
-// SetLogInfo sets a log_info in the data store. Unlike most of these objects, 
+// SetLogInfo sets a loginfo in the data store. Unlike most of these objects, 
 // log infos are stored and retrieved by id, since they have no useful names.
 func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	dsKey := ds.makeKey("log_info", "log_infos")
+	dsKey := ds.makeKey("loginfo", "loginfos")
 	a, _ := ds.dsc.Get(dsKey)
 	if a == nil {
 		a = make(map[int]interface{})
@@ -199,7 +199,7 @@ func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
 func (ds *DataStore) DeleteLogInfo(id int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	dsKey := ds.makeKey("log_info", "log_infos")
+	dsKey := ds.makeKey("loginfo", "loginfos")
 	a, _ := ds.dsc.Get(dsKey)
 	if a == nil {
 		a = make(map[int]interface{})
@@ -215,7 +215,7 @@ func (ds *DataStore) DeleteLogInfo(id int) error {
 func (ds *DataStore) PurgeLogInfoBefore(id int) (int64, error) {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	dsKey := ds.makeKey("log_info", "log_infos")
+	dsKey := ds.makeKey("loginfo", "loginfos")
 	a, _ := ds.dsc.Get(dsKey)
 	if a == nil {
 		a = make(map[int]interface{})
@@ -246,11 +246,11 @@ func getNextID(lis map[int]interface{}) int {
 	return keys[0] + 1
 }
 
-// GetLogInfo gets a log_info by id.
+// GetLogInfo gets a loginfo by id.
 func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	dsKey := ds.makeKey("log_info", "log_infos")
+	dsKey := ds.makeKey("loginfo", "loginfos")
 	a, _ := ds.dsc.Get(dsKey)
 	if a == nil {
 		err := fmt.Errorf("No log events stored")
@@ -269,7 +269,7 @@ func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 func (ds *DataStore) GetLogInfoList() map[int]interface{} {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	dsKey := ds.makeKey("log_info", "log_infos")
+	dsKey := ds.makeKey("loginfo", "loginfos")
 	a, _ := ds.dsc.Get(dsKey)
 	if a == nil {
 		return nil

@@ -40,7 +40,8 @@ func parseObjJSON(data io.ReadCloser) (map[string]interface{}, error) {
 func checkAttrs(objData map[string]interface{}) (map[string]interface{}, error) {
 	/* If this kind of object comes with a run_list, process it */
 	if _, ok := objData["run_list"]; ok {
-		if rl, err := chkRunList(objData["run_list"]); err != nil {
+		rl, err := chkRunList(objData["run_list"])
+		if err != nil {
 			return nil, err
 		}
 		objData["run_list"] = rl
@@ -80,7 +81,7 @@ func checkAttrs(objData map[string]interface{}) (map[string]interface{}, error) 
 }
 
 func splitPath(path string) []string {
-	sp = strings.Split(path[1:], "/")
+	sp := strings.Split(path[1:], "/")
 	return sp
 }
 

@@ -27,7 +27,7 @@ import (
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/filestore"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
@@ -58,7 +58,8 @@ func importAll(fileName string) error {
 		// load clients
 		logger.Infof("Loading clients")
 		for _, v := range exportedData.Data["client"] {
-			if c, err := client.NewFromJSON(v.(map[string]interface{})); err != nil {
+			c, err := client.NewFromJSON(v.(map[string]interface{}))
+			if err != nil {
 				return err
 			}
 			c.SetPublicKey(v.(map[string]interface{})["public_key"])
@@ -73,7 +74,8 @@ func importAll(fileName string) error {
 		for _, v := range exportedData.Data["user"] {
 			pwhash, _ := v.(map[string]interface{})["password"].(string)
 			v.(map[string]interface{})["password"] = ""
-			if u, err := user.NewFromJSON(v.(map[string]interface{})); err != nil {
+			u, err := user.NewFromJSON(v.(map[string]interface{}))
+			if err != nil {
 				return err
 			}
 			u.SetPasswdHash(pwhash)
@@ -105,7 +107,8 @@ func importAll(fileName string) error {
 		// load cookbooks
 		logger.Infof("Loading cookbooks")
 		for _, v := range exportedData.Data["cookbook"] {
-			if cb, err := cookbook.New(v.(map[string]interface{})["Name"].(string)); err != nil {
+			cb, err := cookbook.New(v.(map[string]interface{})["Name"].(string))
+			if err != nil {
 				return err
 			}
 			gerr := cb.Save()
@@ -127,7 +130,8 @@ func importAll(fileName string) error {
 		// load data bags
 		logger.Infof("Loading data bags")
 		for _, v := range exportedData.Data["data_bag"] {
-			if dbag, err := data_bag.New(v.(map[string]interface{})["Name"].(string)); err != nil {
+			dbag, err := databag.New(v.(map[string]interface{})["Name"].(string))
+			if err != nil {
 				return err
 			}
 			gerr := dbag.Save()
@@ -153,7 +157,8 @@ func importAll(fileName string) error {
 				return nil
 			}
 			if envData["name"].(string) != "_default" {
-				if e, err := environment.NewFromJSON(envData); err != nil {
+				e, err := environment.NewFromJSON(envData)
+				if err != nil {
 					return err
 				}
 				gerr := e.Save()
@@ -170,7 +175,8 @@ func importAll(fileName string) error {
 			if cerr != nil {
 				return nil
 			}
-			if n, err := node.NewFromJSON(nodeData); err != nil {
+			n, err := node.NewFromJSON(nodeData)
+			if err != nil {
 				return err
 			}
 			gerr := n.Save()
@@ -186,7 +192,8 @@ func importAll(fileName string) error {
 			if cerr != nil {
 				return nil
 			}
-			if r, err := role.NewFromJSON(roleData); err != nil {
+			r, err := role.NewFromJSON(roleData)
+			if err != nil {
 				return err
 			}
 			gerr := r.Save()
@@ -210,16 +217,16 @@ func importAll(fileName string) error {
 			for i, c := range sbck {
 				sbChecksums[i] = c.(string)
 			}
-			sbox := &sandbox.Sandbox{Id: sbid, CreationTime: sbTime, Completed: sbcomplete, Checksums: sbChecksums}
+			sbox := &sandbox.Sandbox{ID: sbid, CreationTime: sbTime, Completed: sbcomplete, Checksums: sbChecksums}
 			if err = sbox.Save(); err != nil {
 				return err
 			}
 		}
 
-		// load log_infos
-		logger.Infof("Loading log_info")
-		for _, v := range exportedData.Data["log_info"] {
-			if err := log_info.Import(v.(map[string]interface{})); err != nil {
+		// load loginfos
+		logger.Infof("Loading loginfo")
+		for _, v := range exportedData.Data["loginfo"] {
+			if err := loginfo.Import(v.(map[string]interface{})); err != nil {
 				return err
 			}
 		}
@@ -243,7 +250,8 @@ func importAll(fileName string) error {
 				}
 				v.(map[string]interface{})["end_time"] = t.Format(report.ReportTimeFormat)
 			}
-			if r, err := report.NewFromJSON(nodeName, v.(map[string]interface{})); err != nil {
+			r, err := report.NewFromJSON(nodeName, v.(map[string]interface{}))
+			if err != nil {
 				return err
 			}
 			gerr := r.Save()
@@ -254,7 +262,7 @@ func importAll(fileName string) error {
 			if err := r.UpdateFromJSON(v.(map[string]interface{})); err != nil {
 				return err
 			}
-			gerr := r.Save()
+			gerr = r.Save()
 			if gerr != nil {
 				return gerr
 			}

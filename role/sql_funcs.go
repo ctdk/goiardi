@@ -49,7 +49,7 @@ func (r *Role) fillRoleFromSQL(row datastore.ResRow) error {
 		return err
 	}
 	r.ChefType = "role"
-	r.JsonClass = "Chef::Role"
+	r.JSONClass = "Chef::Role"
 	err = datastore.DecodeBlob(rl, &r.RunList)
 	if err != nil {
 		return err

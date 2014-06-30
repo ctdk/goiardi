@@ -56,7 +56,7 @@ func (n *Node) fillNodeFromSQL(row datastore.ResRow) error {
 		return err
 	}
 	n.ChefType = "node"
-	n.JsonClass = "Chef::Node"
+	n.JSONClass = "Chef::Node"
 	err = datastore.DecodeBlob(rl, &n.RunList)
 	if err != nil {
 		return err

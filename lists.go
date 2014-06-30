@@ -34,7 +34,7 @@ import (
 func listHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	pathArray := SplitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)
 	op := pathArray[0]
 	var listData map[string]string
 	switch op {
@@ -99,7 +99,7 @@ func nodeHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			return nil
 		}
 		var nerr util.Gerror
-		chefNode, nerr = node.NewFromJson(nodeData)
+		chefNode, nerr = node.NewFromJSON(nodeData)
 		if nerr != nil {
 			jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 			return nil
@@ -169,7 +169,7 @@ func clientHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			return nil
 		}
 
-		chefClient, err := client.NewFromJson(clientData)
+		chefClient, err := client.NewFromJSON(clientData)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return nil
@@ -267,7 +267,7 @@ func userHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			return nil
 		}
 
-		chefUser, err := user.NewFromJson(userData)
+		chefUser, err := user.NewFromJSON(userData)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return nil
@@ -356,7 +356,7 @@ func roleHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			return nil
 		}
 		var nerr util.Gerror
-		chefRole, nerr = role.NewFromJson(roleData)
+		chefRole, nerr = role.NewFromJSON(roleData)
 		if nerr != nil {
 			jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 			return nil

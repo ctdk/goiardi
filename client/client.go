@@ -33,7 +33,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/chefcrypto"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
@@ -89,14 +89,14 @@ func New(clientname string) (*Client, util.Gerror) {
 	var err util.Gerror
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForClientSQL(data_store.Dbh, clientname)
+		found, cerr = checkForClientSQL(datastore.Dbh, clientname)
 		if cerr != nil {
 			err := util.Errorf(err.Error())
 			err.SetStatus(http.StatusInternalServerError)
 			return nil, err
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		_, found = ds.Get("client", clientname)
 	}
 	if found {
@@ -140,7 +140,7 @@ func Get(clientname string) (*Client, util.Gerror) {
 			return nil, gerr
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		c, found := ds.Get("client", clientname)
 		if !found {
 			gerr := util.Errorf("Client %s not found", clientname)
@@ -171,7 +171,7 @@ func (c *Client) Save() error {
 		if err := chkInMemUser(c.Name); err != nil {
 			return err
 		}
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Set("client", c.Name, c)
 	}
 	indexer.IndexObj(c)
@@ -194,7 +194,7 @@ func (c *Client) Delete() error {
 			return err
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Delete("client", c.Name)
 	}
 	indexer.DeleteItemFromCollection("client", c.Name)
@@ -264,7 +264,7 @@ func (c *Client) Rename(newName string) util.Gerror {
 			gerr.SetStatus(http.StatusConflict)
 			return gerr
 		}
-		ds := data_store.New()
+		ds := datastore.New()
 		if _, found := ds.Get("client", newName); found {
 			err := util.Errorf("Client %s already exists, cannot rename %s", newName, c.Name)
 			err.SetStatus(http.StatusConflict)
@@ -399,7 +399,7 @@ func GetList() []string {
 	if config.UsingDB() {
 		clientList = getListSQL()
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		clientList = ds.GetList("client")
 	}
 	return clientList
@@ -602,7 +602,7 @@ func ExportAllClients() []interface{} {
 
 func chkInMemUser(name string) error {
 	var err error
-	ds := data_store.New()
+	ds := datastore.New()
 	if _, found := ds.Get("users", name); found {
 		err = fmt.Errorf("a user named %s was found that would conflict with this client", name)
 	}

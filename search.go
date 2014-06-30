@@ -41,7 +41,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	 * go. */
 	w.Header().Set("Content-Type", "application/json")
 	searchResponse := make(map[string]interface{})
-	pathArray := SplitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)
 	pathArrayLen := len(pathArray)
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
@@ -148,7 +148,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 					jc := map[string]interface{}{
 						"name":       r.Name,
 						"chef_type":  r.ChefType,
-						"json_class": r.JsonClass,
+						"json_class": r.JSONClass,
 						"admin":      r.Admin,
 						"public_key": r.PublicKey(),
 						"validator":  r.Validator,

@@ -183,7 +183,7 @@ func (db *DataBag) URLType() string {
 
 // GetName returns the data bag item's identifier.
 func (dbi *DataBagItem) GetName() string {
-	return dbi.DocId()
+	return dbi.DocID()
 }
 
 // URLType returns the base element of a data bag's URL.

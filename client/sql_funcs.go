@@ -19,12 +19,12 @@ package client
 import (
 	"database/sql"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"log"
 )
 
-func checkForClientSQL(dbhandle data_store.Dbhandle, name string) (bool, error) {
-	_, err := data_store.CheckForOne(dbhandle, "clients", name)
+func checkForClientSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
+	_, err := datastore.CheckForOne(dbhandle, "clients", name)
 	if err == nil {
 		return true, nil
 	}
@@ -34,13 +34,13 @@ func checkForClientSQL(dbhandle data_store.Dbhandle, name string) (bool, error) 
 	return false, nil
 }
 
-func (c *Client) fillClientFromSQL(row data_store.ResRow) error {
+func (c *Client) fillClientFromSQL(row datastore.ResRow) error {
 	err := row.Scan(&c.Name, &c.NodeName, &c.Validator, &c.Admin, &c.Orgname, &c.pubKey, &c.Certificate)
 	if err != nil {
 		return err
 	}
 	c.ChefType = "client"
-	c.JsonClass = "Chef::ApiClient"
+	c.JSONClass = "Chef::ApiClient"
 	return nil
 }
 
@@ -52,7 +52,7 @@ func getClientSQL(name string) (*Client, error) {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "select c.name, nodename, validator, admin, o.name, public_key, certificate FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE c.name = $1"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func getClientSQL(name string) (*Client, error) {
 }
 
 func (c *Client) deleteSQL() error {
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func numAdminsSQL() int {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT count(*) FROM goiardi.clients WHERE admin = TRUE"
 	}
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func getListSQL() []string {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT name FROM goiardi.clients"
 	}
-	rows, err := data_store.Dbh.Query(sqlStatement)
+	rows, err := datastore.Dbh.Query(sqlStatement)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
@@ -142,7 +142,7 @@ func allClientsSQL() []*Client {
 		sqlStatement = "SELECT c.name, nodename, validator, admin, o.name, public_key, certificate FROM goiardi.clients c JOIN goiardi.organizations o ON c.organization_id = o.id"
 	}
 
-	stmt, err := data_store.Dbh.Prepare(sqlStatement)
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}

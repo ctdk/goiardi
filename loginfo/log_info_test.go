@@ -21,7 +21,7 @@ package loginfo
 import (
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"testing"
 	"time"
 )
@@ -34,7 +34,7 @@ func TestLogEvent(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	ds := data_store.New()
+	ds := datastore.New()
 	arr := ds.GetLogInfoList()
 	if len(arr) != 1 {
 		t.Errorf("Too many (or not enough) log events: %d found", len(arr))

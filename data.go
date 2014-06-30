@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/databag"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
@@ -31,7 +31,7 @@ import (
 func dataHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	pathArray := SplitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)
 
 	dbResponse := make(map[string]interface{})
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
@@ -49,7 +49,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			/* The list */
-			dbList := databagGetList()
+			dbList := databag.GetList()
 			for _, k := range dbList {
 				dbResponse[k] = util.CustomURL(fmt.Sprintf("/data/%s", k))
 			}
@@ -74,13 +74,13 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, "Field 'name' missing", http.StatusBadRequest)
 				return
 			}
-			chefDbag, _ := databagGet(dbData["name"].(string))
+			chefDbag, _ := databag.Get(dbData["name"].(string))
 			if chefDbag != nil {
 				httperr := fmt.Errorf("Data bag %s already exists.", dbData["name"].(string))
 				jsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
 				return
 			}
-			chefDbag, nerr := databagNew(dbData["name"].(string))
+			chefDbag, nerr := databag.New(dbData["name"].(string))
 			if nerr != nil {
 				jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 				return
@@ -90,7 +90,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
 				return
 			}
-			if lerr := log_info.LogEvent(opUser, chefDbag, "create"); lerr != nil {
+			if lerr := loginfo.LogEvent(opUser, chefDbag, "create"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -124,7 +124,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
-		chefDbag, err := databagGet(dbName)
+		chefDbag, err := databag.Get(dbName)
 		if err != nil {
 			var errMsg string
 			status := err.Status()
@@ -168,18 +168,18 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := log_info.LogEvent(opUser, chefDbag, "delete"); lerr != nil {
+				if lerr := loginfo.LogEvent(opUser, chefDbag, "delete"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
 			case "POST":
-				rawData := databagRawDataBagJson(r.Body)
+				rawData := databag.RawDataBagJSON(r.Body)
 				dbitem, nerr := chefDbag.NewDBItem(rawData)
 				if nerr != nil {
 					jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 					return
 				}
-				if lerr := log_info.LogEvent(opUser, dbitem, "create"); lerr != nil {
+				if lerr := loginfo.LogEvent(opUser, dbitem, "create"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -242,13 +242,13 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := log_info.LogEvent(opUser, dbi, "delete"); lerr != nil {
+				if lerr := loginfo.LogEvent(opUser, dbi, "delete"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
 				return
 			case "PUT":
-				rawData := databagRawDataBagJson(r.Body)
+				rawData := databag.RawDataBagJSON(r.Body)
 				if rawID, ok := rawData["id"]; ok {
 					switch rawID := rawID.(type) {
 					case string:
@@ -266,7 +266,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := log_info.LogEvent(opUser, dbitem, "modify"); lerr != nil {
+				if lerr := loginfo.LogEvent(opUser, dbitem, "modify"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}

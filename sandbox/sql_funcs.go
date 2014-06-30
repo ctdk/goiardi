@@ -67,11 +67,11 @@ func (s *Sandbox) deleteSQL() error {
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "DELETE FROM goiardi.sandboxes WHERE sbox_id = $1"
 	}
-	_, err = tx.Exec(sqlStmt, s.Id)
+	_, err = tx.Exec(sqlStmt, s.ID)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
-			err = fmt.Errorf("deleting sandbox %s had an error '%s', and then rolling back the transaction gave another error '%s'", s.Id, err.Error(), terr.Error())
+			err = fmt.Errorf("deleting sandbox %s had an error '%s', and then rolling back the transaction gave another error '%s'", s.ID, err.Error(), terr.Error())
 		}
 		return err
 	}

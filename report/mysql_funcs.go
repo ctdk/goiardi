@@ -26,7 +26,7 @@ import (
 func (r *Report) fillReportFromMySQL(row datastore.ResRow) error {
 	var res, dat []byte
 	var st, et mysql.NullTime
-	err := row.Scan(&r.RunId, &st, &et, &r.TotalResCount, &r.Status, &r.RunList, &res, &dat, &r.NodeName)
+	err := row.Scan(&r.RunID, &st, &et, &r.TotalResCount, &r.Status, &r.RunList, &res, &dat, &r.NodeName)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (r *Report) saveMySQL() error {
 	// leverage more of each database's capabilities. Thus, here we shall
 	// do the very MySQL-specific INSERT ... ON DUPLICATE KEY UPDATE
 	// syntax.
-	_, err = tx.Exec("INSERT INTO reports (run_id, node_name, start_time, end_time, total_res_count, status, run_list, resources, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE start_time = ?, end_time = ?, total_res_count = ?, status = ?, run_list = ?, resources = ?, data = ?, updated_at = NOW()", r.RunId, r.NodeName, r.StartTime, r.EndTime, r.TotalResCount, r.Status, r.RunList, res, dat, r.StartTime, r.EndTime, r.TotalResCount, r.Status, r.RunList, res, dat)
+	_, err = tx.Exec("INSERT INTO reports (run_id, node_name, start_time, end_time, total_res_count, status, run_list, resources, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE start_time = ?, end_time = ?, total_res_count = ?, status = ?, run_list = ?, resources = ?, data = ?, updated_at = NOW()", r.RunID, r.NodeName, r.StartTime, r.EndTime, r.TotalResCount, r.Status, r.RunList, res, dat, r.StartTime, r.EndTime, r.TotalResCount, r.Status, r.RunList, res, dat)
 	if err != nil {
 		tx.Rollback()
 		return err

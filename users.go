@@ -29,7 +29,7 @@ import (
 
 func userHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	path := SplitPath(r.URL.Path)
+	path := splitPath(r.URL.Path)
 	userName := path[1]
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
@@ -50,7 +50,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		/* Docs were incorrect. It does want the body of the
 		 * deleted object. */
-		jsonUser := chefUser.ToJson()
+		jsonUser := chefUser.ToJSON()
 
 		/* Log the delete event *before* deleting the user, in
 		 * case the user is deleting itself. */
@@ -85,14 +85,14 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		 * and clientname, and it wants chef_type and
 		 * json_class
 		 */
-		jsonUser := chefUser.ToJson()
+		jsonUser := chefUser.ToJSON()
 		enc := json.NewEncoder(w)
 		if encerr := enc.Encode(&jsonUser); encerr != nil {
 			jsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "PUT":
-		userData, jerr := ParseObjJson(r.Body)
+		userData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
@@ -131,7 +131,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		/* If userName and userData["name"] aren't the
 		 * same, we're renaming. Check the new name doesn't
 		 * already exist. */
-		jsonUser := chefUser.ToJson()
+		jsonUser := chefUser.ToJSON()
 		delete(jsonUser, "public_key")
 		if userName != jsonName {
 			err := chefUser.Rename(jsonName)
@@ -141,7 +141,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			w.WriteHeader(http.StatusCreated)
 		}
-		if uerr := chefUser.UpdateFromJson(userData); uerr != nil {
+		if uerr := chefUser.UpdateFromJSON(userData); uerr != nil {
 			jsonErrorReport(w, r, uerr.Error(), uerr.Status())
 			return
 		}

@@ -19,25 +19,25 @@ package environment
 /* Postgres specific functions for environments */
 
 import (
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 )
 
 func (e *ChefEnvironment) saveEnvironmentPostgreSQL() util.Gerror {
-	dab, daerr := data_store.EncodeBlob(&e.Default)
+	dab, daerr := datastore.EncodeBlob(&e.Default)
 	if daerr != nil {
 		return util.CastErr(daerr)
 	}
-	oab, oaerr := data_store.EncodeBlob(&e.Override)
+	oab, oaerr := datastore.EncodeBlob(&e.Override)
 	if oaerr != nil {
 		return util.CastErr(oaerr)
 	}
-	cvb, cverr := data_store.EncodeBlob(&e.CookbookVersions)
+	cvb, cverr := datastore.EncodeBlob(&e.CookbookVersions)
 	if cverr != nil {
 		return util.CastErr(cverr)
 	}
 
-	tx, err := data_store.Dbh.Begin()
+	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.CastErr(err)
 		return gerr
