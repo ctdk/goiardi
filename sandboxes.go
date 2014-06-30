@@ -79,7 +79,7 @@ func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 
 		/* If we're here, make the slightly weird response. */
 		sboxResponse["uri"] = util.ObjURL(sbox)
-		sboxResponse["sandboxID"] = sbox.ID
+		sboxResponse["sandbox_id"] = sbox.ID
 		sboxResponse["checksums"] = sbox.UploadChkList()
 		w.WriteHeader(http.StatusCreated)
 	case "PUT":
