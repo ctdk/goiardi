@@ -92,7 +92,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 		/* Undocumented behavior - a cookbook name of _latest gets a
 		 * list of the latest versions of all the cookbooks, and _recipe
 		 * gets the recipes of the latest cookbooks. */
-		var rlist []string
+		rlist := make([]string, 0)
 		if cookbookName == "_latest" || cookbookName == "_recipes" {
 			for _, cb := range cookbook.AllCookbooks() {
 				if cookbookName == "_latest" {
@@ -101,7 +101,10 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					/* Damn it, this sends back an array of
 					 * all the recipes. Fill it in, and send
 					 * back the JSON ourselves. */
-					rlistTmp, _ := cb.LatestVersion().RecipeList()
+					rlistTmp, err := cb.LatestVersion().RecipeList()
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), err.Status())
+					}
 					rlist = append(rlist, rlistTmp...)
 				}
 				sort.Strings(rlist)

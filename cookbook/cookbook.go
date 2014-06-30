@@ -914,7 +914,8 @@ func convertToCookbookDiv(div interface{}) []map[string]interface{} {
 func (cbv *CookbookVersion) fileHashes() []string {
 	/* Hmm. Weird as it seems, we seem to want length to be zero here so
 	 * we can happily append. Otherwise we'll end up with a nil element. */
-	var fhashes []string
+	//var fhashes []string
+	fhashes := make([]string, 0)
 	fhashes = append(fhashes, getAttrHashes(cbv.Definitions)...)
 	fhashes = append(fhashes, getAttrHashes(cbv.Libraries)...)
 	fhashes = append(fhashes, getAttrHashes(cbv.Attributes)...)
@@ -944,7 +945,12 @@ func (cbv *CookbookVersion) ToJSON(method string) map[string]interface{} {
 	toJSON["chef_type"] = cbv.ChefType
 	toJSON["json_class"] = cbv.JSONClass
 	toJSON["frozen?"] = cbv.IsFrozen
-	toJSON["recipes"] = cbv.Recipes
+	// hmm.
+	if cbv.Recipes != nil {
+		toJSON["recipes"] = cbv.Recipes
+	} else {
+		toJSON["recipes"] = make([]map[string]interface{},0)
+	}
 	toJSON["metadata"] = cbv.Metadata
 
 	/* Only send the other fields if something exists in them */
