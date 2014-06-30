@@ -39,10 +39,10 @@ func (le *LogInfo) fillLogEventFromMySQL(row datastore.ResRow) error {
 func (le *LogInfo) actualWriteEventMySQL(tx datastore.Dbhandle, actorID int32) error {
 	var err error
 	if le.ID == 0 {
-		sqlStmt := "INSERT INTO loginfos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+		sqlStmt := "INSERT INTO log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 		_, err = tx.Exec(sqlStmt, actorID, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
 	} else {
-		sqlStmt := "INSERT INTO loginfos (id, actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		sqlStmt := "INSERT INTO log_infos (id, actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
 		_, err = tx.Exec(sqlStmt, le.ID, actorID, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
 	}
 	return err

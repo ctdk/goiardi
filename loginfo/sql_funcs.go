@@ -98,9 +98,9 @@ func getLogEventSQL(id int) (*LogInfo, error) {
 
 	var sqlStmt string
 	if config.Config.UseMySQL {
-		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM loginfos WHERE id = ?"
+		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos WHERE id = ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.loginfos WHERE id = $1"
+		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos WHERE id = $1"
 	}
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
@@ -130,9 +130,9 @@ func (le *LogInfo) deleteSQL() error {
 
 	var sqlStmt string
 	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM loginfos WHERE id = ?"
+		sqlStmt = "DELETE FROM log_infos WHERE id = ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.loginfos WHERE id = $1"
+		sqlStmt = "DELETE FROM goiardi.log_infos WHERE id = $1"
 	}
 
 	_, err = tx.Exec(sqlStmt, le.ID)
@@ -152,9 +152,9 @@ func purgeSQL(id int) (int64, error) {
 
 	var sqlStmt string
 	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM loginfos WHERE id <= ?"
+		sqlStmt = "DELETE FROM log_infos WHERE id <= ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.loginfos WHERE id <= $1"
+		sqlStmt = "DELETE FROM goiardi.log_infos WHERE id <= $1"
 	}
 
 	res, err := tx.Exec(sqlStmt, id)
@@ -183,7 +183,7 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 	var sqlStmt string
 	sqlArgs := []interface{}{from, until}
 	if config.Config.UseMySQL {
-		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM loginfos li JOIN users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
+		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos li JOIN users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
 		if action, ok := searchParams["action"]; ok {
 			sqlStmt = sqlStmt + " AND action = ?"
 			sqlArgs = append(sqlArgs, action)
@@ -205,7 +205,7 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 		}
 		sqlStmt = sqlStmt + " ORDER BY id DESC LIMIT ?, ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.loginfos li JOIN goiardi.users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
+		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos li JOIN goiardi.users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
 		if action, ok := searchParams["action"]; ok {
 			sqlStmt = sqlStmt + " AND action = ?"
 			sqlArgs = append(sqlArgs, action)
