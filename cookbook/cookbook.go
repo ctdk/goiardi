@@ -914,7 +914,6 @@ func convertToCookbookDiv(div interface{}) []map[string]interface{} {
 func (cbv *CookbookVersion) fileHashes() []string {
 	/* Hmm. Weird as it seems, we seem to want length to be zero here so
 	 * we can happily append. Otherwise we'll end up with a nil element. */
-	//var fhashes []string
 	fhashes := make([]string, 0)
 	fhashes = append(fhashes, getAttrHashes(cbv.Definitions)...)
 	fhashes = append(fhashes, getAttrHashes(cbv.Libraries)...)
