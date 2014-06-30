@@ -86,26 +86,25 @@ func ValidateAsFieldString(str interface{}) (string, Gerror) {
 func ValidateAsVersion(ver interface{}) (string, Gerror) {
 	switch ver := ver.(type) {
 	case string:
-		valid_ver := regexp.MustCompile(`^(\d+)\.(\d+)(\.?)(\d+)?$`)
-		inspect_ver := valid_ver.FindStringSubmatch(ver)
+		validVer := regexp.MustCompile(`^(\d+)\.(\d+)(\.?)(\d+)?$`)
+		inspectVer := validVer.FindStringSubmatch(ver)
 
-		if inspect_ver != nil && ver != "0.0" {
+		if inspectVer != nil && ver != "0.0" {
 			nums := []int{1, 2, 4}
 			for _, n := range nums {
 				/* #4 might not exist, but 1 and 2 must.
 				 * The regexp doesn't match if they
 				 * don't. */
-				if n > len(inspect_ver) || inspect_ver[n] == "" && n == 4 {
+				if n > len(inspectVer) || inspectVer[n] == "" && n == 4 {
 					break
 				}
-				if v, err := strconv.ParseInt(inspect_ver[n], 10, 64); err != nil {
+				if v, err := strconv.ParseInt(inspectVer[n], 10, 64); err != nil {
 					verr := Errorf(err.Error())
 					return "", verr
-				} else {
-					if v < 0 {
-						verr := Errorf("Invalid version number")
-						return "", verr
-					}
+				}
+				if v < 0 {
+					verr := Errorf("Invalid version number")
+					return "", verr
 				}
 			}
 		} else {
@@ -128,8 +127,8 @@ func ValidateAttributes(key string, attrs interface{}) (map[string]interface{}, 
 		return attrs, nil
 	case nil:
 		/* Separate to do more validations above */
-		nil_attrs := make(map[string]interface{})
-		return nil_attrs, nil
+		nilAttrs := make(map[string]interface{})
+		return nilAttrs, nil
 	default:
 		err := Errorf("Field '%s' is not a hash", key)
 		return nil, err
@@ -139,7 +138,7 @@ func ValidateAttributes(key string, attrs interface{}) (map[string]interface{}, 
 func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]interface{}, Gerror) {
 	switch div := div.(type) {
 	case []interface{}:
-		d := make([]map[string]interface{}, 0)
+		var d []map[string]interface{}
 		err := Errorf("Invalid element in array value of '%s'.", dname)
 
 		for _, v := range div {
@@ -162,8 +161,8 @@ func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]inter
 						}
 						return nil, merr
 					}
-					item_url := fmt.Sprintf("/file_store/%s", chksum)
-					v["url"] = CustomURL(item_url)
+					itemURL := fmt.Sprintf("/file_store/%s", chksum)
+					v["url"] = CustomURL(itemURL)
 					d = append(d, v)
 				}
 			default:
@@ -185,8 +184,8 @@ func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]inter
 func ValidateNumVersions(nr string) Gerror {
 	/* Just see if it fits the bill for what we want. */
 	if nr != "all" && nr != "" {
-		valid_nr := regexp.MustCompile(`^\d+`)
-		m := valid_nr.MatchString(nr)
+		validNr := regexp.MustCompile(`^\d+`)
+		m := validNr.MatchString(nr)
 		if !m {
 			err := Errorf("Invalid num_versions")
 			return err
@@ -316,16 +315,15 @@ func ValidateAsConstraint(t interface{}) (bool, Gerror) {
 	switch t := t.(type) {
 	case string:
 		cr := regexp.MustCompile(`^([<>=~]{1,2}) (.*)`)
-		c_item := cr.FindStringSubmatch(t)
-		if c_item != nil {
-			ver := c_item[2]
+		cItem := cr.FindStringSubmatch(t)
+		if cItem != nil {
+			ver := cItem[2]
 			if _, verr := ValidateAsVersion(ver); verr != nil {
 				return false, verr
 			}
 			return true, nil
-		} else {
-			return false, err
 		}
+		return false, err
 	default:
 		return false, err
 	}
@@ -337,13 +335,12 @@ func ValidateRunList(rl interface{}) ([]string, Gerror) {
 		for i, r := range rl {
 			if j, err := validateRLItem(r); err != nil {
 				return nil, err
-			} else {
-				if j == "" {
-					err := Errorf("Field 'run_list' is not a valid run list")
-					return nil, err
-				}
-				rl[i] = j
 			}
+			if j == "" {
+				err := Errorf("Field 'run_list' is not a valid run list")
+				return nil, err
+			}
+			rl[i] = j
 		}
 
 		/* Remove dupes */
@@ -359,8 +356,8 @@ func ValidateRunList(rl interface{}) ([]string, Gerror) {
 		return result, nil
 	case nil:
 		/* separate to do more validations above */
-		nil_rl := make([]string, 0)
-		return nil_rl, nil
+		var nilRl []string
+		return nilRl, nil
 	default:
 		err := Errorf("Not a proper runlist []string")
 		return nil, err
@@ -376,25 +373,25 @@ func validateRLItem(item string) (string, Gerror) {
 	}
 
 	/* first checks */
-	valid_rl := regexp.MustCompile("[^A-Za-z0-9_\\[\\]@\\.:-]")
-	m := valid_rl.MatchString(item)
+	validRl := regexp.MustCompile("[^A-Za-z0-9_\\[\\]@\\.:-]")
+	m := validRl.MatchString(item)
 
 	if m {
 		return "", err
 	}
 
 	inspectRegexp := regexp.MustCompile(`^(\w+)\[(.*?)\]$`)
-	inspect_item := inspectRegexp.FindStringSubmatch(item)
+	inspectItem := inspectRegexp.FindStringSubmatch(item)
 
-	if inspect_item != nil {
-		rl_type := inspect_item[1]
-		rl_item := inspect_item[2]
-		if rl_type == "role" {
-			if !validateRoleName(rl_item) {
+	if inspectItem != nil {
+		rlType := inspectItem[1]
+		rlItem := inspectItem[2]
+		if rlType == "role" {
+			if !validateRoleName(rlItem) {
 				return "", err
 			}
-		} else if rl_type == "recipe" {
-			if !validateRecipeName(rl_item) {
+		} else if rlType == "recipe" {
+			if !validateRecipeName(rlItem) {
 				return "", err
 			}
 		} else {
@@ -412,14 +409,14 @@ func validateRLItem(item string) (string, Gerror) {
 }
 
 func validateRoleName(name string) bool {
-	valid_role := regexp.MustCompile("[^A-Za-z0-9_-]")
-	m := valid_role.MatchString(name)
+	validRole := regexp.MustCompile("[^A-Za-z0-9_-]")
+	m := validRole.MatchString(name)
 	return !m
 }
 
 func validateRecipeName(name string) bool {
-	first_valid := regexp.MustCompile("[^A-Za-z0-9_@\\.:-]")
-	m := first_valid.MatchString(name)
+	firstValid := regexp.MustCompile("[^A-Za-z0-9_@\\.:-]")
+	m := firstValid.MatchString(name)
 	if m {
 		return false
 	}
@@ -429,23 +426,24 @@ func validateRecipeName(name string) bool {
 		h := strings.Split(name, "@")
 		name = h[0]
 		version := h[1]
-		valid_ver := regexp.MustCompile(`^\d+\.\d+(\.\d+)?$`)
-		if !valid_ver.MatchString(version) {
+		validVer := regexp.MustCompile(`^\d+\.\d+(\.\d+)?$`)
+		if !validVer.MatchString(version) {
 			return false
 		}
 	}
 	return true
 }
 
-// Check that client/user json is not trying to set admin and validator at the
-// same time. This has to be checked separately to make chef-pedent happy.
-func CheckAdminPlusValidator(json_actor map[string]interface{}) Gerror {
+// CheckAdminPlusValidator checks that client/user json is not trying to set
+// admin and validator at the same time. This has to be checked separately to 
+// make chef-pedent happy.
+func CheckAdminPlusValidator(jsonActor map[string]interface{}) Gerror {
 	var ab, vb bool
-	if admin_val, ok := json_actor["admin"]; ok {
-		ab, _ = ValidateAsBool(admin_val)
+	if adminVal, ok := jsonActor["admin"]; ok {
+		ab, _ = ValidateAsBool(adminVal)
 	}
-	if validator_val, ok := json_actor["validator"]; ok {
-		vb, _ = ValidateAsBool(validator_val)
+	if validatorVal, ok := jsonActor["validator"]; ok {
+		vb, _ = ValidateAsBool(validatorVal)
 	}
 	if ab && vb {
 		err := Errorf("Client can be either an admin or a validator, but not both.")

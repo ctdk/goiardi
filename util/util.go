@@ -33,8 +33,8 @@ import (
 	"strings"
 )
 
-// Anything that implements these functions is a goiardi/chef object, like a
-// cookbook, role, etc., and will be able to use these common functions.
+// GoiardiObj is an interface for helping goiardi/chef objects, like cookbooks,
+// roles, etc., be able to easily make URLs and be identified by name.
 type GoiardiObj interface {
 	GetName() string
 	URLType() string
@@ -45,7 +45,7 @@ type gerror struct {
 	status int
 }
 
-// An error type that includes an http status code (defaults to
+// Gerror is an error type that includes an http status code (defaults to
 // http.BadRequest).
 type Gerror interface {
 	String() string
@@ -54,23 +54,24 @@ type Gerror interface {
 	SetStatus(int)
 }
 
+// New makes a new Gerror. Usually you want Errorf.
 func New(text string) Gerror {
 	return &gerror{msg: text,
 		status: http.StatusBadRequest,
 	}
 }
 
-// Create a new Gerror, with a formatted error string.
+// Errorf creates a new Gerror, with a formatted error string.
 func Errorf(format string, a ...interface{}) Gerror {
 	return New(fmt.Sprintf(format, a...))
 }
 
-// Easily cast a different kind of error to a Gerror
+// CastErr will easily cast a different kind of error to a Gerror.
 func CastErr(err error) Gerror {
 	return Errorf(err.Error())
 }
 
-// Returns the Gerror error message.
+// Error returns the Gerror error message.
 func (e *gerror) Error() string {
 	return e.msg
 }
@@ -89,20 +90,20 @@ func (e *gerror) Status() int {
 	return e.status
 }
 
-// Craft a URL
+// ObjURL crafts a URL for an object.
 func ObjURL(obj GoiardiObj) string {
-	base_url := config.ServerBaseURL()
-	full_url := fmt.Sprintf("%s/%s/%s", base_url, obj.URLType(), obj.GetName())
-	return full_url
+	baseURL := config.ServerBaseURL()
+	fullURL := fmt.Sprintf("%s/%s/%s", baseURL, obj.URLType(), obj.GetName())
+	return fullURL
 }
 
-// Craft a URL for a Goiardi object with additional path elements
+// CustomObjURL crafts a URL for a Goiardi object with additional path elements.
 func CustomObjURL(obj GoiardiObj, path string) string {
 	chkPath(&path)
 	return fmt.Sprintf("%s%s", ObjURL(obj), path)
 }
 
-// Craft a URL from the provided path, without providing an object.
+// CustomURL crafts a URL from the provided path, without providing an object.
 func CustomURL(path string) string {
 	chkPath(&path)
 	return fmt.Sprintf("%s%s", config.ServerBaseURL(), path)
@@ -114,9 +115,9 @@ func chkPath(p *string) {
 	}
 }
 
-// Flatten an object and expand its keys into a map[string]string so it's
-// suitable for indexing, either with solr (eventually) or with the whipped up
-// replacement for local mode. Objects fed into this function *must* have the
+// FlattenObj flattens an object and expand its keys into a map[string]string so
+// it's suitable for indexing, either with solr (eventually) or with the whipped
+// up replacement for local mode. Objects fed into this function *must* have the
 // "json" tag set for their struct members.
 func FlattenObj(obj interface{}) map[string]interface{} {
 	expanded := make(map[string]interface{})
@@ -139,9 +140,9 @@ func FlattenObj(obj interface{}) map[string]interface{} {
 	return expanded
 }
 
-// Turn an object into a map[string]interface{}. Useful for when you have a
-// slice of objects that you need to trim, mutilate, fold, etc. before returning
-// them as JSON.
+// MapifyObject turns an object into a map[string]interface{}. Useful for when 
+// you have a slice of objects that you need to trim, mutilate, fold, etc. 
+// before returning them as JSON.
 func MapifyObject(obj interface{}) map[string]interface{} {
 	mapified := make(map[string]interface{})
 	s := reflect.ValueOf(obj).Elem()
@@ -156,10 +157,10 @@ func MapifyObject(obj interface{}) map[string]interface{} {
 	return mapified
 }
 
-// Given a flattened object, prepares it for indexing by turning it into a
-// sorted slice of strings formatted like "key:value".
+// Indexify prepares a flattened object for indexing by turning it into a sorted
+// slice of strings formatted like "key:value".
 func Indexify(flattened map[string]interface{}) []string {
-	readyToIndex := make([]string, 0)
+	var readyToIndex []string
 	for k, v := range flattened {
 		switch v := v.(type) {
 		case string:
@@ -188,7 +189,7 @@ func escapeStr(s string) string {
 	return s
 }
 
-// Merge disparate data structures into a flat hash.
+// DeepMerge merges disparate data structures into a flat hash.
 func DeepMerge(key string, source interface{}) map[string]interface{} {
 	merger := make(map[string]interface{})
 	switch v := source.(type) {
@@ -254,8 +255,8 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 		 * into their own separate indexes as well. */
 		if key == "run_list" {
 			roleMatch := regexp.MustCompile(`^(recipe|role)\[(.*)\]`)
-			roles := make([]string, 0)
-			recipes := make([]string, 0)
+			var roles []string
+			var recipes []string
 			for _, w := range v {
 				rItem := roleMatch.FindStringSubmatch(stringify(w))
 				if rItem != nil {
