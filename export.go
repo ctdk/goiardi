@@ -48,6 +48,7 @@ type ExportData struct {
 
 // Major version number of the export file format.
 const ExportMajorVersion = 1
+
 // Minor version number of the export file format.
 const ExportMinorVersion = 0
 

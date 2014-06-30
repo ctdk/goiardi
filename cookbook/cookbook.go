@@ -35,7 +35,7 @@ import (
 	"strings"
 )
 
-// VersionStrings is a type to make version strings with the format "x.y.z" 
+// VersionStrings is a type to make version strings with the format "x.y.z"
 // sortable.
 type VersionStrings []string
 
@@ -285,7 +285,7 @@ func (c *Cookbook) InfoHash(numResults interface{}) map[string]interface{} {
 }
 
 // ConstrainedInfoHash gets numResults (or all if numResults is nil) versions of
-// a cookbook that match the given constraint and returns a hash describing the 
+// a cookbook that match the given constraint and returns a hash describing the
 // cookbook and the versions returned.
 func (c *Cookbook) ConstrainedInfoHash(numResults interface{}, constraint string) map[string]interface{} {
 	return c.infoHashBase(numResults, constraint)
@@ -553,7 +553,7 @@ VerLoop:
 	return cbHash
 }
 
-// LatestConstrained returns the latest version of a cookbook that matches the 
+// LatestConstrained returns the latest version of a cookbook that matches the
 // given constraint. If no constraint is given, returns the latest version.
 func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion {
 	if constraint == "" {
@@ -932,7 +932,7 @@ func (cbv *CookbookVersion) fileHashes() []string {
 	return fhashes
 }
 
-// ToJSON is a helper function that coverts the internal representation of a 
+// ToJSON is a helper function that coverts the internal representation of a
 // cookbook version to JSON in a way that knife and chef-client expect.
 func (cbv *CookbookVersion) ToJSON(method string) map[string]interface{} {
 	toJSON := make(map[string]interface{})

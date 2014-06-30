@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-// Package user is the result of users and clients ended up having to be split 
-// apart after all, once adding the SQL backing started falling into place. 
-// Users are very similar to clients, except that they are unique across the 
-// whole server and can log in via the web interface, while clients are only 
-// unique across an organization and cannot log in over the web. Basically, 
-// users are generally for something you would do, while a client would be 
+// Package user is the result of users and clients ended up having to be split
+// apart after all, once adding the SQL backing started falling into place.
+// Users are very similar to clients, except that they are unique across the
+// whole server and can log in via the web interface, while clients are only
+// unique across an organization and cannot log in over the web. Basically,
+// users are generally for something you would do, while a client would be
 // associated with a specific node.
 //
 // Note: At this time, organizations are not implemented, so the difference
@@ -239,7 +239,7 @@ func NewFromJSON(jsonUser map[string]interface{}) (*User, util.Gerror) {
 	return user, nil
 }
 
-// UpdateFromJSON updates a user from a JSON object, carrying out a bunch of 
+// UpdateFromJSON updates a user from a JSON object, carrying out a bunch of
 // validations inside.
 func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
 	userName, nerr := util.ValidateAsString(jsonUser["name"])
@@ -322,8 +322,8 @@ func GetList() []string {
 	return userList
 }
 
-// ToJSON converts the user to a JSON object, massaging it as needed to keep 
-// the chef client happy (be it knife, chef-pedant, etc.) NOTE: There may be a 
+// ToJSON converts the user to a JSON object, massaging it as needed to keep
+// the chef client happy (be it knife, chef-pedant, etc.) NOTE: There may be a
 // more idiomatic way to do this.
 func (u *User) ToJSON() map[string]interface{} {
 	toJSON := make(map[string]interface{})
@@ -356,7 +356,7 @@ func (u *User) isLastAdmin() bool {
 }
 
 // GenerateKeys generates a new set of RSA keys for the user. The new private
-// key is saved with the user object, the public key is given to the user and 
+// key is saved with the user object, the public key is given to the user and
 // not saved on the server at all.
 func (u *User) GenerateKeys() (string, error) {
 	privPem, pubPem, err := chefcrypto.GenerateRSAKeys()
@@ -367,7 +367,7 @@ func (u *User) GenerateKeys() (string, error) {
 	return privPem, nil
 }
 
-// ValidatePublicKey checks that the provided public key is valid. Wrapper 
+// ValidatePublicKey checks that the provided public key is valid. Wrapper
 // around chefcrypto.ValidatePublicKey(), but with a different error type.
 func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
 	ok, pkerr := chefcrypto.ValidatePublicKey(publicKey)
@@ -378,7 +378,7 @@ func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
 	return ok, err
 }
 
-// IsAdmin returns true if the user is an admin. If use-auth is false, this 
+// IsAdmin returns true if the user is an admin. If use-auth is false, this
 // always returns true.
 func (u *User) IsAdmin() bool {
 	if !config.Config.UseAuth {
@@ -387,7 +387,7 @@ func (u *User) IsAdmin() bool {
 	return u.Admin
 }
 
-// IsValidator always returns false, since users are never validators. This is 
+// IsValidator always returns false, since users are never validators. This is
 // true even if auth mode is not on.
 func (u *User) IsValidator() bool {
 	return false
@@ -469,7 +469,7 @@ func (u *User) SetPasswd(password string) util.Gerror {
 	return nil
 }
 
-// CheckPasswd checks the provided password to see if it matches the stored 
+// CheckPasswd checks the provided password to see if it matches the stored
 // password hash.
 func (u *User) CheckPasswd(password string) util.Gerror {
 	h, perr := chefcrypto.HashPasswd(password, u.salt)

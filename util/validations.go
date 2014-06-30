@@ -437,7 +437,7 @@ func validateRecipeName(name string) bool {
 }
 
 // CheckAdminPlusValidator checks that client/user json is not trying to set
-// admin and validator at the same time. This has to be checked separately to 
+// admin and validator at the same time. This has to be checked separately to
 // make chef-pedent happy.
 func CheckAdminPlusValidator(jsonActor map[string]interface{}) Gerror {
 	var ab, vb bool

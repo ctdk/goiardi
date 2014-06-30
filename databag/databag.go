@@ -49,7 +49,7 @@ type DataBagItem struct {
 	DataBagName string                 `json:"data_bag"`
 	RawData     map[string]interface{} `json:"raw_data"`
 	id          int32
-	dataBagID int32
+	dataBagID   int32
 	origName    string
 }
 

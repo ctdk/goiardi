@@ -339,7 +339,7 @@ The data returned by an event should look something like this:
 	}
 
 The easiest way to use the event log is with the knife-goiardi-event-log knife
-plugin. It's available on rubygems, or at github at 
+plugin. It's available on rubygems, or at github at
 https://github.com/ctdk/knife-goiardi-event-log.
 
 Reporting
@@ -357,7 +357,7 @@ successful, failed, or started but haven't completed yet. Valid values for the
 
 To use reporting, you'll either need the Chef knife-reporting plugin, or use the
 knife-goiardi-reporting plugin that supports querying runs by status. It's
-available on rubygems, or on github at 
+available on rubygems, or on github at
 https://github.com/ctdk/knife-goiardi-reporting.
 
 As this is an experimental feature, it may not work entirely correctly. Bug

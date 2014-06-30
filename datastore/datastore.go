@@ -45,13 +45,13 @@ import (
 // DataStore is the main data store struct, holding the key/value store and list
 // of objects.
 type DataStore struct {
-	dsc      *cache.Cache
+	dsc     *cache.Cache
 	objList map[string]map[string]bool
-	m        sync.RWMutex
+	m       sync.RWMutex
 }
 
 type dsFileStore struct {
-	Cache    []byte
+	Cache   []byte
 	ObjList []byte
 }
 
@@ -80,7 +80,7 @@ func (ds *DataStore) makeKey(keyType string, key string) string {
 	return strings.Join(newKey, ":")
 }
 
-// Set a value of the given type with the provided key. 
+// Set a value of the given type with the provided key.
 func (ds *DataStore) Set(keyType string, key string, val interface{}) {
 	dsKey := ds.makeKey(keyType, key)
 	ds.m.Lock()
@@ -173,7 +173,7 @@ func (ds *DataStore) GetList(keyType string) []string {
 	return j
 }
 
-// SetLogInfo sets a loginfo in the data store. Unlike most of these objects, 
+// SetLogInfo sets a loginfo in the data store. Unlike most of these objects,
 // log infos are stored and retrieved by id, since they have no useful names.
 func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
 	ds.m.Lock()

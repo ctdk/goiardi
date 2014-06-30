@@ -40,8 +40,8 @@ import (
 
 /* Local filestorage struct. Add fields as needed. */
 
-// FileStore is an individual file in the filestore. Note that there is no 
-// actual name for the file used, but it is identified by the file's checksum. 
+// FileStore is an individual file in the filestore. Note that there is no
+// actual name for the file used, but it is identified by the file's checksum.
 // The file's data is stored as a pointer to an array of bytes.
 type FileStore struct {
 	Chksum string
@@ -50,8 +50,8 @@ type FileStore struct {
 
 /* New, for this, includes giving it the file data */
 
-// New creates a new filestore item with the given checksum, io.ReadCloser 
-// holding the file's data, and the length of the file. If the file data's 
+// New creates a new filestore item with the given checksum, io.ReadCloser
+// holding the file's data, and the length of the file. If the file data's
 // checksum does not match the provided checksum an error will be trhown.
 func New(chksum string, data io.ReadCloser, dataLength int64) (*FileStore, error) {
 	if _, err := Get(chksum); err == nil {

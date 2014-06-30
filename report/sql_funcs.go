@@ -45,7 +45,7 @@ func checkForReportSQL(dbhandle datastore.Dbhandle, runID string) (bool, error) 
 		if err == sql.ErrNoRows {
 			return false, nil
 		}
-			return false, err
+		return false, err
 	}
 	if f > 0 {
 		return true, nil

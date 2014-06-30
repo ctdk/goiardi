@@ -35,7 +35,7 @@ func (db *DataBag) newDBItemPostgreSQL(dbiID string, rawDbagItem map[string]inte
 		DataBagName: db.Name,
 		RawData:     rawDbagItem,
 		origName:    dbiID,
-		dataBagID: db.id,
+		dataBagID:   db.id,
 	}
 
 	tx, err := datastore.Dbh.Begin()

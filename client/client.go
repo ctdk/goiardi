@@ -293,7 +293,7 @@ func NewFromJSON(jsonActor map[string]interface{}) (*Client, util.Gerror) {
 	return client, nil
 }
 
-// UpdateFromJSON updates a client/user from a json object. Does a bunch of 
+// UpdateFromJSON updates a client/user from a json object. Does a bunch of
 // validations inside rather than in the handler.
 func (c *Client) UpdateFromJSON(jsonActor map[string]interface{}) util.Gerror {
 	actorName, nerr := util.ValidateAsString(jsonActor["name"])
@@ -458,7 +458,7 @@ func (c *Client) Flatten() []string {
 /* Permission functions. Later role-based perms may be implemented, but for now
  * it's just the basic admin/validator/user perms */
 
-// IsAdmin returns true if the client is an admin. If use-auth is false, this 
+// IsAdmin returns true if the client is an admin. If use-auth is false, this
 // always returns true.
 func (c *Client) IsAdmin() bool {
 	if !useAuth() {

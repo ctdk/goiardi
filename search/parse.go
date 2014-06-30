@@ -28,11 +28,14 @@ import (
 
 // Op is a search operator
 type Op uint8
+
 // Field is a field in a document or object to search for, like when searching
 // for clients with "field:*".
 type Field string
+
 // Term is a basic search term string.
 type Term string
+
 // RangeTerm is a string, but describes a range to search over, like 1-10.
 type RangeTerm string
 
@@ -76,7 +79,7 @@ type QueryTerm struct {
 	fuzzparam string
 }
 
-// BasicQuery is the no frills basic query type, without groups or ranges. 
+// BasicQuery is the no frills basic query type, without groups or ranges.
 // Can contain regexp terms, however.
 type BasicQuery struct {
 	field    Field
@@ -116,7 +119,7 @@ type SubQuery struct {
 	next     Queryable
 }
 
-// Queryable defines an interface of methods all the query chain types have to 
+// Queryable defines an interface of methods all the query chain types have to
 // be able to implement to search the index.
 type Queryable interface {
 	// Search the index for the given term.

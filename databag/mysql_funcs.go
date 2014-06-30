@@ -36,7 +36,7 @@ func (db *DataBag) newDBItemMySQL(dbiID string, rawDbagItem map[string]interface
 		DataBagName: db.Name,
 		RawData:     rawDbagItem,
 		origName:    dbiID,
-		dataBagID: db.id,
+		dataBagID:   db.id,
 	}
 
 	tx, err := datastore.Dbh.Begin()

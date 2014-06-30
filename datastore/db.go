@@ -102,8 +102,8 @@ func EncodeToJSON(obj interface{}) (string, error) {
 	return buf.String(), nil
 }
 
-// EncodeBlob encodes a slice or map of goiardi object data to save in the 
-// database. Pass the object to be encoded in like 
+// EncodeBlob encodes a slice or map of goiardi object data to save in the
+// database. Pass the object to be encoded in like
 // datastore.EncodeBlob(&foo.Thing).
 func EncodeBlob(obj interface{}) ([]byte, error) {
 	buf := new(bytes.Buffer)
@@ -121,8 +121,8 @@ func EncodeBlob(obj interface{}) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// DecodeBlob decodes the data encoded with EncodeBlob that was stored in the 
-// database so it can be loaded back into a goiardi object. The 'obj' in the 
+// DecodeBlob decodes the data encoded with EncodeBlob that was stored in the
+// database so it can be loaded back into a goiardi object. The 'obj' in the
 // arguments *must* be the address of the object receiving the blob of data (e.g.
 // datastore.DecodeBlob(data, &obj).
 func DecodeBlob(data []byte, obj interface{}) error {

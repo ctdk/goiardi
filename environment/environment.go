@@ -96,7 +96,7 @@ func NewFromJSON(jsonEnv map[string]interface{}) (*ChefEnvironment, util.Gerror)
 	return env, nil
 }
 
-// UpdateFromJSON updates an existing environment from JSON uploaded to the 
+// UpdateFromJSON updates an existing environment from JSON uploaded to the
 // server.
 func (e *ChefEnvironment) UpdateFromJSON(jsonEnv map[string]interface{}) util.Gerror {
 	if e.Name != jsonEnv["name"].(string) {

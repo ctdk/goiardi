@@ -76,7 +76,7 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 	if xopssign == "" {
 		gerr := util.Errorf("missing X-Ops-Sign header")
 		return gerr
-	} 
+	}
 	re := regexp.MustCompile(`version=(\d+\.\d+)`)
 	shaRe := regexp.MustCompile(`algorithm=(\w+)`)
 	if verChk := re.FindStringSubmatch(xopssign); verChk != nil {

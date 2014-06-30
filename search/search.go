@@ -37,7 +37,7 @@ type SolrQuery struct {
 	docs       map[string]*indexer.IdxDoc
 }
 
-// Search parses the given query string and search the given index for any 
+// Search parses the given query string and search the given index for any
 // matching results.
 func Search(idx string, q string) ([]indexer.Indexable, error) {
 	/* Eventually we'll want more prep. To start, look right in the index */

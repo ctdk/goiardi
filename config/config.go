@@ -98,8 +98,8 @@ type PostgreSQLdb struct {
 }
 
 // Options holds options set from the command line, which are then merged with
-// the options in Conf. Configurations from the command line are preferred to 
-// those set in the config file. 
+// the options in Conf. Configurations from the command line are preferred to
+// those set in the config file.
 type Options struct {
 	Version           bool   `short:"v" long:"version" description:"Print version info."`
 	Verbose           []bool `short:"V" long:"verbose" description:"Show verbose debug information. Repeat for more verbosity."`
@@ -459,7 +459,7 @@ func ServerBaseURL() string {
 	return url
 }
 
-// UsingDB returns true if we're using any db engine, false if using the 
+// UsingDB returns true if we're using any db engine, false if using the
 // in-memory data store.
 func UsingDB() bool {
 	return Config.UseMySQL || Config.UsePostgreSQL

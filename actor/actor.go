@@ -42,7 +42,7 @@ type Actor interface {
 	CheckPermEdit(map[string]interface{}, string) util.Gerror
 }
 
-// GetReqUser gets the actor making the request. If use-auth is not on, always 
+// GetReqUser gets the actor making the request. If use-auth is not on, always
 // returns the admin user.
 func GetReqUser(name string) (Actor, util.Gerror) {
 	/* If UseAuth is turned off, use the automatically created admin user */

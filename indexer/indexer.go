@@ -35,7 +35,7 @@ import (
 	"sync"
 )
 
-// Indexable is an interface that provides all the information necessary to 
+// Indexable is an interface that provides all the information necessary to
 // index an object. All objects that will be indexed need to implement this.
 type Indexable interface {
 	DocID() string
@@ -66,7 +66,7 @@ type IdxDoc struct {
 
 // Create a new index collection.
 
-// CreateNewCollection creates an index for data bags when they are created, 
+// CreateNewCollection creates an index for data bags when they are created,
 // rather than when the first data bag item is uploaded
 func CreateNewCollection(idxName string) {
 	indexMap.createCollection(idxName)
@@ -140,7 +140,7 @@ func (i *Index) search(idx string, term string, notop bool) (map[string]*IdxDoc,
 }
 
 func (i *Index) searchText(idx string, term string, notop bool) (map[string]*IdxDoc, error) {
-	idc, found := i.idxmap[idx]; 
+	idc, found := i.idxmap[idx]
 	if !found {
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
 		return nil, err
@@ -410,7 +410,7 @@ func IndexObj(object Indexable) {
 	go indexMap.saveIndex(object)
 }
 
-// SearchIndex searches for a string in the given index. Returns a slice of 
+// SearchIndex searches for a string in the given index. Returns a slice of
 // names of matching objects, or an error on failure.
 func SearchIndex(idxName string, term string, notop bool) (map[string]*IdxDoc, error) {
 	res, err := indexMap.search(idxName, term, notop)
@@ -544,7 +544,7 @@ func (i *Index) load(idxFile string) error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
-		} 
+		}
 		return err
 	}
 	zfp, zerr := zlib.NewReader(fp)

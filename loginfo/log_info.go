@@ -33,7 +33,7 @@ import (
 	"time"
 )
 
-// LogInfo holds log information about events. 
+// LogInfo holds log information about events.
 type LogInfo struct {
 	Actor        actor.Actor `json:"-"`
 	ActorInfo    string      `json:"actor_info"`
@@ -46,7 +46,7 @@ type LogInfo struct {
 	ID           int         `json:"id"`
 }
 
-// LogEvent writes an event of the action type, performed by the given actor, 
+// LogEvent writes an event of the action type, performed by the given actor,
 // against the given object.
 func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 	if !config.Config.LogEvents {
@@ -164,7 +164,7 @@ func PurgeLogInfos(id int) (int64, error) {
 }
 
 // GetLogInfos gets a slice of the logged events. May be called with an offset
-// and limit, (in that order) but that is not required. The offset can be 
+// and limit, (in that order) but that is not required. The offset can be
 // specified without a limit, but a limit requires an offset (which can be 0).
 // The map of search params may be nil, but something must be present.
 func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, error) {

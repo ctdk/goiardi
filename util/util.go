@@ -140,8 +140,8 @@ func FlattenObj(obj interface{}) map[string]interface{} {
 	return expanded
 }
 
-// MapifyObject turns an object into a map[string]interface{}. Useful for when 
-// you have a slice of objects that you need to trim, mutilate, fold, etc. 
+// MapifyObject turns an object into a map[string]interface{}. Useful for when
+// you have a slice of objects that you need to trim, mutilate, fold, etc.
 // before returning them as JSON.
 func MapifyObject(obj interface{}) map[string]interface{} {
 	mapified := make(map[string]interface{})

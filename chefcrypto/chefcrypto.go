@@ -87,8 +87,8 @@ func ValidatePublicKey(publicKey interface{}) (bool, error) {
 	}
 }
 
-// HeaderDecrypt decrypts the encrypted header with the client or user's public 
-// key for validating requests. This function is informed by chef-golang's 
+// HeaderDecrypt decrypts the encrypted header with the client or user's public
+// key for validating requests. This function is informed by chef-golang's
 // privateDecrypt function.
 func HeaderDecrypt(pkPem string, data string) ([]byte, error) {
 	block, _ := pem.Decode([]byte(pkPem))

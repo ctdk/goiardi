@@ -187,7 +187,7 @@ func GetList() []string {
 	return sandboxList
 }
 
-// UploadChkList builds the list of file checksums and whether or not they need 
+// UploadChkList builds the list of file checksums and whether or not they need
 // to be uploaded. If they do, the upload URL is also provided.
 func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 	/* Uh... */
