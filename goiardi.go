@@ -55,7 +55,7 @@ func main() {
 	config.ParseConfigOptions()
 
 	/* Here goes nothing, db... */
-	if config.Config.UseMySQL || config.Config.UsePostgreSQL {
+	if config.UsingDB() {
 		var derr error
 		if config.Config.UseMySQL {
 			datastore.Dbh, derr = datastore.ConnectDB("mysql", config.Config.MySQL)
@@ -115,7 +115,7 @@ func main() {
 				logger.Errorf(err.Error())
 			}
 		}
-		if config.Config.UseMySQL {
+		if config.UsingDB() {
 			datastore.Dbh.Close()
 		}
 		fmt.Println("All done.")
@@ -380,7 +380,7 @@ func handleSignals() {
 						logger.Errorf(err.Error())
 					}
 				}
-				if config.Config.UseMySQL {
+				if config.UsingDB() {
 					datastore.Dbh.Close()
 				}
 				os.Exit(0)

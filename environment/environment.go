@@ -248,7 +248,7 @@ func Get(envName string) (*ChefEnvironment, util.Gerror) {
 // MakeDefaultEnvironment creates the default environment on startup.
 func MakeDefaultEnvironment() {
 	var de *ChefEnvironment
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		// The default environment is pre-created in the db schema when
 		// it's loaded. Re-indexing the default environment doesn't
 		// hurt anything though, so just get the usual default env and
