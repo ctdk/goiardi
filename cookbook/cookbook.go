@@ -948,7 +948,7 @@ func (cbv *CookbookVersion) ToJSON(method string) map[string]interface{} {
 	if cbv.Recipes != nil {
 		toJSON["recipes"] = cbv.Recipes
 	} else {
-		toJSON["recipes"] = make([]map[string]interface{},0)
+		toJSON["recipes"] = make([]map[string]interface{}, 0)
 	}
 	toJSON["metadata"] = cbv.Metadata
 
