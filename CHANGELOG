@@ -9,7 +9,7 @@
 * Switch the logger to a fork that can be built and used with Windows that
   excludes syslog when building on Windows.
 * Add basic syslog support.
-* Authenication protocol version 1.2 now supported.
+* Authentication protocol version 1.2 now supported.
 * Add a 'status' param to reporting, so a list of reports return by 'knife
   runs' can be narrowed by the status of the chef run (started, success, and
   failure).
