@@ -13,6 +13,10 @@ hostname = "moomernoo.local"
 # Where to send log data instead of stdout
 log-file = "/tmp/goiardi.log"
 
+# Or log to syslog. log-file, syslog, or neither can be used, but you cannot use
+# both.
+syslog = false
+
 # Log level. Options are "debug", "info", "warning", "error", and "critical".
 # May be specified on the command line with one or more -V flags.
 log-level = "error"
@@ -25,6 +29,13 @@ data-file = "/tmp/goiardi-data.bin"
 # How often to save the index and data files from the background. Not
 # particularly useful without setting index-file and data-file
 freeze-interval = 120
+
+# Use the faster, but less safe, old method of storing data in the in-memory data
+# store with pointers, rather than encoding the data with gob and giving a new 
+# copy of the object to each requestor. If this is enabled goiardi will run 
+# faster in in-memory mode, but one goroutine could change an object while it's 
+# being used by another. Has no effect when using an SQL backend.
+# use-unsafe-mem-store = false
 
 # Time slew: the time difference allowed between the server's clock and the time
 # in the X-Ops-Timestamp header. Formatted like 5m, 150s, etc. Defaults to 15m.
@@ -99,3 +110,18 @@ use-mysql = false
 		tls = "false"
 		foo = "bar"
 
+use-postgres = false
+
+# PostgreSQL options. If "use-postgres" is set to true on the command line or in
+# the configuration file, connect to postgres with the options in [postgres].
+# These options are all strings. See 
+# http://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters for details
+# on the connection parameters. All of these parameters are technically optional,
+# although chances are pretty good that you'd want to set at least some of them.
+[postgresql]
+	username = "foo"
+	password = "s3kr1t"
+	host = "localhost"
+	port = "5432"
+	dbname = "mydb"
+	sslmode = "disable"

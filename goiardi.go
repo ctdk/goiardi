@@ -20,44 +20,48 @@
 package main
 
 import (
-	"net/http"
-	"path"
-	"github.com/ctdk/goiardi/config"
+	"compress/gzip"
+	"encoding/gob"
+	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/authentication"
 	"github.com/ctdk/goiardi/client"
-	"github.com/ctdk/goiardi/environment"
-	"github.com/ctdk/goiardi/data_store"
-	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/cookbook"
-	"github.com/ctdk/goiardi/data_bag"
+	"github.com/ctdk/goiardi/databag"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/filestore"
+	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
-	"github.com/ctdk/goiardi/log_info"
-	"github.com/ctdk/goiardi/report"
-	"fmt"
+	"github.com/ctdk/goiardi/user"
+	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
-	"encoding/gob"
-	"time"
-	"github.com/ctdk/goiardi/authentication"
+	"path"
 	"strings"
-	"github.com/tideland/goas/v2/logger"
-	"compress/gzip"
+	"syscall"
+	"time"
 )
 
-type InterceptHandler struct {} // Doesn't need to do anything, just sit there.
+type interceptHandler struct{} // Doesn't need to do anything, just sit there.
 
-func main(){
+func main() {
 	config.ParseConfigOptions()
 
 	/* Here goes nothing, db... */
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var derr error
-		data_store.Dbh, derr = data_store.ConnectDB("mysql", config.Config.MySQL)
+		if config.Config.UseMySQL {
+			datastore.Dbh, derr = datastore.ConnectDB("mysql", config.Config.MySQL)
+		} else if config.Config.UsePostgreSQL {
+			datastore.Dbh, derr = datastore.ConnectDB("postgres", config.Config.PostgreSQL)
+		}
 		if derr != nil {
 			logger.Criticalf(derr.Error())
 			os.Exit(1)
@@ -65,7 +69,7 @@ func main(){
 	}
 
 	gobRegister()
-	ds := data_store.New()
+	ds := datastore.New()
 	if config.Config.FreezeData {
 		if config.Config.DataStoreFile != "" {
 			uerr := ds.Load(config.Config.DataStoreFile)
@@ -102,7 +106,7 @@ func main(){
 		}
 		if config.Config.FreezeData {
 			if config.Config.DataStoreFile != "" {
-				ds := data_store.New()
+				ds := datastore.New()
 				if err := ds.Save(config.Config.DataStoreFile); err != nil {
 					logger.Errorf(err.Error())
 				}
@@ -111,8 +115,8 @@ func main(){
 				logger.Errorf(err.Error())
 			}
 		}
-		if config.Config.UseMySQL {
-			data_store.Dbh.Close()
+		if config.UsingDB() {
+			datastore.Dbh.Close()
 		}
 		fmt.Println("All done.")
 		os.Exit(0)
@@ -124,41 +128,41 @@ func main(){
 	handleSignals()
 
 	/* Register the various handlers, found in their own source files. */
-	http.HandleFunc("/authenticate_user", authenticate_user_handler)
-	http.HandleFunc("/clients", list_handler)
-	http.HandleFunc("/clients/", client_handler)
-	http.HandleFunc("/cookbooks", cookbook_handler)
-	http.HandleFunc("/cookbooks/", cookbook_handler)
-	http.HandleFunc("/data", data_handler)
-	http.HandleFunc("/data/", data_handler)
-	http.HandleFunc("/environments", environment_handler)
-	http.HandleFunc("/environments/", environment_handler)
-	http.HandleFunc("/nodes", list_handler)
-	http.HandleFunc("/nodes/", node_handler)
-	http.HandleFunc("/principals/", principal_handler)
-	http.HandleFunc("/roles", list_handler)
-	http.HandleFunc("/roles/", role_handler)
-	http.HandleFunc("/sandboxes", sandbox_handler)
-	http.HandleFunc("/sandboxes/", sandbox_handler)
-	http.HandleFunc("/search", search_handler)
-	http.HandleFunc("/search/", search_handler)
+	http.HandleFunc("/authenticate_user", authenticateUserHandler)
+	http.HandleFunc("/clients", listHandler)
+	http.HandleFunc("/clients/", clientHandler)
+	http.HandleFunc("/cookbooks", cookbookHandler)
+	http.HandleFunc("/cookbooks/", cookbookHandler)
+	http.HandleFunc("/data", dataHandler)
+	http.HandleFunc("/data/", dataHandler)
+	http.HandleFunc("/environments", environmentHandler)
+	http.HandleFunc("/environments/", environmentHandler)
+	http.HandleFunc("/nodes", listHandler)
+	http.HandleFunc("/nodes/", nodeHandler)
+	http.HandleFunc("/principals/", principalHandler)
+	http.HandleFunc("/roles", listHandler)
+	http.HandleFunc("/roles/", roleHandler)
+	http.HandleFunc("/sandboxes", sandboxHandler)
+	http.HandleFunc("/sandboxes/", sandboxHandler)
+	http.HandleFunc("/search", searchHandler)
+	http.HandleFunc("/search/", searchHandler)
 	http.HandleFunc("/search/reindex", reindexHandler)
-	http.HandleFunc("/users", list_handler)
-	http.HandleFunc("/users/", user_handler)
-	http.HandleFunc("/file_store/", file_store_handler)
-	http.HandleFunc("/events", event_list_handler)
-	http.HandleFunc("/events/", event_handler)
-	http.HandleFunc("/reports/", report_handler)
+	http.HandleFunc("/users", listHandler)
+	http.HandleFunc("/users/", userHandler)
+	http.HandleFunc("/file_store/", fileStoreHandler)
+	http.HandleFunc("/events", eventListHandler)
+	http.HandleFunc("/events/", eventHandler)
+	http.HandleFunc("/reports/", reportHandler)
 
 	/* TODO: figure out how to handle the root & not found pages */
-	http.HandleFunc("/", root_handler)
+	http.HandleFunc("/", rootHandler)
 
-	listen_addr := config.ListenAddr()
+	listenAddr := config.ListenAddr()
 	var err error
 	if config.Config.UseSSL {
-		err = http.ListenAndServeTLS(listen_addr, config.Config.SslCert, config.Config.SslKey, &InterceptHandler{})
+		err = http.ListenAndServeTLS(listenAddr, config.Config.SSLCert, config.Config.SSLKey, &interceptHandler{})
 	} else {
-		err = http.ListenAndServe(listen_addr, &InterceptHandler{})
+		err = http.ListenAndServe(listenAddr, &interceptHandler{})
 	}
 	if err != nil {
 		logger.Criticalf("ListenAndServe: %s", err.Error())
@@ -166,28 +170,28 @@ func main(){
 	}
 }
 
-func root_handler(w http.ResponseWriter, r *http.Request){
+func rootHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: make root do something useful
 	return
 }
 
-func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
+func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* knife sometimes sends URL paths that start with //. Redirecting
-	 * worked for GETs, but since it was breaking POSTs and screwing with 
+	 * worked for GETs, but since it was breaking POSTs and screwing with
 	 * GETs with query params, we just clean up the path and move on. */
 
 	/* log the URL */
 	// TODO: set this to verbosity level 4 or so
 	logger.Debugf("Serving %s -- %s\n", r.URL.Path, r.Method)
 
-	if r.Method != "CONNECT" { 
-		if p := cleanPath(r.URL.Path); p != r.URL.Path{
+	if r.Method != "CONNECT" {
+		if p := cleanPath(r.URL.Path); p != r.URL.Path {
 			r.URL.Path = p
 		}
 	}
 
 	/* Make configurable, I guess, but Chef wants it to be 1000000 */
-	if !strings.HasPrefix(r.URL.Path, "/file_store") && r.ContentLength > config.Config.JsonReqMaxSize {
+	if !strings.HasPrefix(r.URL.Path, "/file_store") && r.ContentLength > config.Config.JSONReqMaxSize {
 		http.Error(w, "Content-length too long!", http.StatusRequestEntityTooLarge)
 		return
 	} else if r.ContentLength > config.Config.ObjMaxSize {
@@ -198,40 +202,40 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("X-Goiardi", "yes")
 	w.Header().Set("X-Goiardi-Version", config.Version)
 	w.Header().Set("X-Chef-Version", config.ChefVersion)
-	api_info := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
-	w.Header().Set("X-Ops-API-Info", api_info)
+	apiInfo := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
+	w.Header().Set("X-Ops-API-Info", apiInfo)
 
-	user_id := r.Header.Get("X-OPS-USERID")
+	userID := r.Header.Get("X-OPS-USERID")
 	if rs := r.Header.Get("X-Ops-Request-Source"); rs == "web" {
 		/* If use-auth is on and disable-webui is on, and this is a
 		 * webui connection, it needs to fail. */
 		if config.Config.DisableWebUI {
 			w.Header().Set("Content-Type", "application/json")
 			logger.Warningf("Attempting to log in through webui, but webui is disabled")
-			JsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
+			jsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
 			return
 		}
 
 		/* Check that the user in question with the web request exists.
 		 * If not, fail. */
-		if _, uherr := actor.GetReqUser(user_id); uherr != nil {
+		if _, uherr := actor.GetReqUser(userID); uherr != nil {
 			w.Header().Set("Content-Type", "application/json")
-			logger.Warningf("Attempting to use invalid user %s through X-Ops-Request-Source = web", user_id)
-			JsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
+			logger.Warningf("Attempting to use invalid user %s through X-Ops-Request-Source = web", userID)
+			jsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
 			return
 		}
-		user_id = "chef-webui"
+		userID = "chef-webui"
 	}
 	/* Only perform the authorization check if that's configured. Bomb with
 	 * an error if the check of the headers, timestamps, etc. fails. */
 	/* No clue why /principals doesn't require authorization. Hrmph. */
 	if config.Config.UseAuth && !strings.HasPrefix(r.URL.Path, "/file_store") && !(strings.HasPrefix(r.URL.Path, "/principals") && r.Method == "GET") {
-		herr := authentication.CheckHeader(user_id, r)
+		herr := authentication.CheckHeader(userID, r)
 		if herr != nil {
 			w.Header().Set("Content-Type", "application/json")
 			logger.Errorf("Authorization failure: %s\n", herr.Error())
 			//http.Error(w, herr.Error(), herr.Status())
-			JsonErrorReport(w, r, herr.Error(), herr.Status())
+			jsonErrorReport(w, r, herr.Error(), herr.Status())
 			return
 		}
 	}
@@ -242,7 +246,7 @@ func (h *InterceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			logger.Errorf("Failure decompressing gzipped request body: %s\n", err.Error())
-			JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 			return
 		}
 		r.Body = reader
@@ -259,7 +263,7 @@ func cleanPath(p string) string {
 	if p[0] != '/' {
 		p = "/" + p
 	}
-        np := path.Clean(p)
+	np := path.Clean(p)
 	// path.Clean removes trailing slash except for root;
 	// put the trailing slash back if necessary.
 	if p[len(p)-1] == '/' && np != "/" {
@@ -290,7 +294,7 @@ func createDefaultActors() {
 					os.Exit(1)
 				}
 			}
-			
+
 			webui.Save()
 		}
 	}
@@ -341,7 +345,10 @@ func createDefaultActors() {
 					os.Exit(1)
 				}
 			}
-			admin.Save()
+			if aerr := admin.Save(); aerr != nil {
+				logger.Criticalf(aerr.Error())
+				os.Exit(1)
+			}
 		}
 	}
 
@@ -358,13 +365,13 @@ func handleSignals() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 
 	// if we receive a SIGINT or SIGTERM, do cleanup here.
-	go func(){
+	go func() {
 		for sig := range c {
-			if sig == os.Interrupt || sig == syscall.SIGTERM{
+			if sig == os.Interrupt || sig == syscall.SIGTERM {
 				logger.Infof("cleaning up...")
 				if config.Config.FreezeData {
 					if config.Config.DataStoreFile != "" {
-						ds := data_store.New()
+						ds := datastore.New()
 						if err := ds.Save(config.Config.DataStoreFile); err != nil {
 							logger.Errorf(err.Error())
 						}
@@ -373,8 +380,8 @@ func handleSignals() {
 						logger.Errorf(err.Error())
 					}
 				}
-				if config.Config.UseMySQL {
-					data_store.Dbh.Close()
+				if config.UsingDB() {
+					datastore.Dbh.Close()
 				}
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
@@ -390,7 +397,7 @@ func gobRegister() {
 	gob.Register(e)
 	c := new(cookbook.Cookbook)
 	gob.Register(c)
-	d := new(data_bag.DataBag)
+	d := new(databag.DataBag)
 	gob.Register(d)
 	f := new(filestore.FileStore)
 	gob.Register(f)
@@ -402,7 +409,7 @@ func gobRegister() {
 	gob.Register(s)
 	m := make(map[string]interface{})
 	gob.Register(m)
-	si := make([]interface{},0)
+	var si []interface{}
 	gob.Register(si)
 	i := new(indexer.Index)
 	ic := new(indexer.IdxCollection)
@@ -410,11 +417,11 @@ func gobRegister() {
 	gob.Register(i)
 	gob.Register(ic)
 	gob.Register(id)
-	ss := make([]string, 0)
+	var ss []string
 	gob.Register(ss)
 	ms := make(map[string]string)
 	gob.Register(ms)
-	smsi := make([]map[string]interface{},0)
+	var smsi []map[string]interface{}
 	gob.Register(smsi)
 	msss := make(map[string][]string)
 	gob.Register(msss)
@@ -422,13 +429,13 @@ func gobRegister() {
 	gob.Register(cc)
 	uu := new(user.User)
 	gob.Register(uu)
-	li := new(log_info.LogInfo)
+	li := new(loginfo.LogInfo)
 	gob.Register(li)
 	mis := map[int]interface{}{}
 	gob.Register(mis)
 	cbv := new(cookbook.CookbookVersion)
 	gob.Register(cbv)
-	dbi := new(data_bag.DataBagItem)
+	dbi := new(databag.DataBagItem)
 	gob.Register(dbi)
 	rp := new(report.Report)
 	gob.Register(rp)
@@ -436,9 +443,9 @@ func gobRegister() {
 
 func setSaveTicker() {
 	if config.Config.FreezeData {
-		ds := data_store.New()
+		ds := datastore.New()
 		ticker := time.NewTicker(time.Second * time.Duration(config.Config.FreezeInterval))
-		go func(){
+		go func() {
 			for _ = range ticker.C {
 				if config.Config.DataStoreFile != "" {
 					logger.Infof("Automatically saving data store...")
@@ -462,9 +469,9 @@ func setLogEventPurgeTicker() {
 		ticker := time.NewTicker(time.Second * time.Duration(60))
 		go func() {
 			for _ = range ticker.C {
-				les := log_info.GetLogInfos(0, 1)
+				les, _ := loginfo.GetLogInfos(nil, 0, 1)
 				if len(les) != 0 {
-					p, err := log_info.PurgeLogInfos(les[0].Id - config.Config.LogEventKeep)
+					p, err := loginfo.PurgeLogInfos(les[0].ID - config.Config.LogEventKeep)
 					if err != nil {
 						logger.Errorf(err.Error())
 					}

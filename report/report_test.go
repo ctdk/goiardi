@@ -17,49 +17,51 @@
 package report
 
 import (
-	"testing"
+	"encoding/gob"
 	"fmt"
 	"github.com/ctdk/goiardi/node"
+	"testing"
 	"time"
 )
 
-func TestReportCreation(t *testing.T){
+func TestReportCreation(t *testing.T) {
 	uuid := "12b8be8d-a2ef-4fc6-88b3-4c18103b88df"
-	invalid_uid := "12b8be8d-a2ef-4fc6-88b3-4c18103b88zz"
+	invalidUUID := "12b8be8d-a2ef-4fc6-88b3-4c18103b88zz"
 	r, err := New(uuid, "node")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	if r.RunId != uuid {
-		t.Errorf("run ids are not identical: %s :: %s", r.RunId, uuid)
+	if r.RunID != uuid {
+		t.Errorf("run ids are not identical: %s :: %s", r.RunID, uuid)
 	}
-	_, err = New(invalid_uid, "node")
+	_, err = New(invalidUUID, "node")
 	if err == nil {
-		t.Errorf("%s created a report, but it shouldn't have")
+		t.Errorf("%s created a report, but it shouldn't have", invalidUUID)
 	}
 	r.Delete()
 }
 
-func TestReportUpdating(t *testing.T){
-	create := map[string]interface{}{"action":"start","run_id":"12b8be8d-a2ef-4fc6-88b3-4c18103b88df","start_time":"2014-05-10 01:05:42 +0000"}
+func TestReportUpdating(t *testing.T) {
+	create := map[string]interface{}{"action": "start", "run_id": "12b8be8d-a2ef-4fc6-88b3-4c18103b88df", "start_time": "2014-05-10 01:05:42 +0000"}
 	//update := map[string]interface{}{"action":"end","resources":[],"status":"success","run_list":[],"total_res_count":"0","data":{},"start_time":"2014-05-10 01:05:42 +0000","end_time":"2014-05-10 01:05:42 +0000"}
-	update := map[string]interface{}{"action":"end", "status":"success", "start_time":"2014-05-10 01:05:42 +0000","end_time":"2014-05-10 01:05:42 +0000", "total_res_count":"0"  }
-	update["resources"] = make([]interface{},0)
+	update := map[string]interface{}{"action": "end", "status": "success", "start_time": "2014-05-10 01:05:42 +0000", "end_time": "2014-05-10 01:05:42 +0000", "total_res_count": "0"}
+	update["resources"] = make([]interface{}, 0)
 	update["run_list"] = "[]"
 	update["data"] = make(map[string]interface{})
-	r, err := NewFromJson("node", create)
+	r, err := NewFromJSON("node", create)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	err = r.UpdateFromJson(update)
+	err = r.UpdateFromJSON(update)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 	r.Delete()
 }
 
-func TestReportListing(t *testing.T){
+func TestReportListing(t *testing.T) {
 	uuid := "12b8be8d-a2ef-4fc6-88b3-4c18103b88d%d"
+	gob.Register(new(Report))
 	for i := 0; i < 3; i++ {
 		u := fmt.Sprintf(uuid, i)
 		r, _ := New(u, "node")
@@ -78,13 +80,29 @@ func TestReportListing(t *testing.T){
 		r.StartTime = time.Now()
 		r.Save()
 	}
-	from := time.Now().Add(-(time.Duration(24 * 90) * time.Hour))
+	from := time.Now().Add(-(time.Duration(24*90) * time.Hour))
 	until := time.Now()
-	ns, nerr := GetNodeList(n.Name, from, until, 100)
+	ns, nerr := GetNodeList(n.Name, from, until, 100, "")
 	if nerr != nil {
 		t.Errorf(nerr.Error())
 	}
 	if len(ns) != 2 {
 		t.Errorf("expected 2 items from node 'node2', got %d", len(ns))
+	}
+
+	zs, rerr := GetReportList(from, until, 100, "started")
+	if rerr != nil {
+		t.Errorf(rerr.Error())
+	}
+	rs = GetList()
+	if len(zs) != len(rs) {
+		t.Errorf("Searching on 'started' status here should have returned everything but it didn't")
+	}
+	zs, rerr = GetReportList(from, until, 100, "success")
+	if rerr != nil {
+		t.Errorf(rerr.Error())
+	}
+	if len(zs) != 0 {
+		t.Errorf("Searching for successful runs should have returned zero results, but returned %d instead", len(zs))
 	}
 }

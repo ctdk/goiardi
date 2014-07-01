@@ -19,10 +19,10 @@
 package user
 
 import (
-	"testing"
 	"bytes"
-	"fmt"
 	"encoding/gob"
+	"fmt"
+	"testing"
 )
 
 func TestNewUser(t *testing.T) {
@@ -57,7 +57,7 @@ func TestSetPasswd(t *testing.T) {
 	}
 }
 
-func TestGobEncodeDecode(t *testing.T){
+func TestGobEncodeDecode(t *testing.T) {
 	c, _ := New("footged")
 	saved := new(bytes.Buffer)
 	var err error

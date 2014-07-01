@@ -21,115 +21,140 @@
 package config
 
 import (
-	"github.com/jessevdk/go-flags"
-	"github.com/BurntSushi/toml"
-	"os"
-	"log"
 	"fmt"
-	"time"
-	"path"
-	"github.com/tideland/goas/v2/logger"
-	"strings"
+	"github.com/BurntSushi/toml"
+	"github.com/ctdk/goas/v2/logger"
+	"github.com/jessevdk/go-flags"
+	"log"
 	"net"
+	"os"
+	"path"
 	"strconv"
+	"strings"
+	"time"
 )
 
-/* Master struct for configuration. */
+// Conf is the master struct for holding configuration options.
 type Conf struct {
-	Ipaddress string
-	Port int
-	Hostname string
-	ConfFile string `toml:"conf-file"`
-	IndexFile string `toml:"index-file"`
-	DataStoreFile string `toml:"data-file"`
-	DebugLevel int `toml:"debug-level"`
-	LogLevel string `toml:"log-level"`
-	FreezeInterval int `toml:"freeze-interval"`
-	FreezeData bool `toml:"freeze-data"`
-	LogFile string `toml:"log-file"`
-	UseAuth bool `toml:"use-auth"`
-	TimeSlew string `toml:"time-slew"`
-	TimeSlewDur time.Duration
-	ConfRoot string `toml:"conf-root"`
-	UseSSL bool `toml:"use-ssl"`
-	SslCert string `toml:"ssl-cert"`
-	SslKey string `toml:"ssl-key"`
-	HttpsUrls bool `toml:"https-urls"`
-	DisableWebUI bool `toml:"disable-webui"`
-	UseMySQL bool `toml:"use-mysql"`
-	MySQL MySQLdb `toml:"mysql"`
-	LocalFstoreDir string `toml:"local-filestore-dir"`
-	LogEvents bool `toml:"log-events"`
-	LogEventKeep int `toml:"log-event-keep"`
-	DoExport bool
-	DoImport bool
-	ImpExFile string
-	ObjMaxSize int64 `toml:"obj-max-size"`
-	JsonReqMaxSize int64 `toml:"json-req-max-size"`
+	Ipaddress         string
+	Port              int
+	Hostname          string
+	ConfFile          string `toml:"conf-file"`
+	IndexFile         string `toml:"index-file"`
+	DataStoreFile     string `toml:"data-file"`
+	DebugLevel        int    `toml:"debug-level"`
+	LogLevel          string `toml:"log-level"`
+	FreezeInterval    int    `toml:"freeze-interval"`
+	FreezeData        bool   `toml:"freeze-data"`
+	LogFile           string `toml:"log-file"`
+	SysLog            bool   `toml:"syslog"`
+	UseAuth           bool   `toml:"use-auth"`
+	TimeSlew          string `toml:"time-slew"`
+	TimeSlewDur       time.Duration
+	ConfRoot          string       `toml:"conf-root"`
+	UseSSL            bool         `toml:"use-ssl"`
+	SSLCert           string       `toml:"ssl-cert"`
+	SSLKey            string       `toml:"ssl-key"`
+	HTTPSUrls         bool         `toml:"https-urls"`
+	DisableWebUI      bool         `toml:"disable-webui"`
+	UseMySQL          bool         `toml:"use-mysql"`
+	MySQL             MySQLdb      `toml:"mysql"`
+	UsePostgreSQL     bool         `toml:"use-postgresql"`
+	PostgreSQL        PostgreSQLdb `toml:"postgresql"`
+	LocalFstoreDir    string       `toml:"local-filestore-dir"`
+	LogEvents         bool         `toml:"log-events"`
+	LogEventKeep      int          `toml:"log-event-keep"`
+	DoExport          bool
+	DoImport          bool
+	ImpExFile         string
+	ObjMaxSize        int64 `toml:"obj-max-size"`
+	JSONReqMaxSize    int64 `toml:"json-req-max-size"`
+	UseUnsafeMemStore bool  `toml:"use-unsafe-mem-store"`
 }
-var LogLevelNames = map[string]int{ "debug": 4, "info": 3, "warning": 2, "error": 1, "critical": 0 }
 
-// MySQL connection options
+// LogLevelNames give convenient, easier to remember than number name for the
+// different levels of logging.
+var LogLevelNames = map[string]int{"debug": 4, "info": 3, "warning": 2, "error": 1, "critical": 0}
+
+// MySQLdb holds MySQL connection options.
 type MySQLdb struct {
-	Username string
-	Password string
-	Protocol string
-	Address string
-	Port string
-	Dbname string
+	Username    string
+	Password    string
+	Protocol    string
+	Address     string
+	Port        string
+	Dbname      string
 	ExtraParams map[string]string `toml:"extra_params"`
 }
 
-/* Struct for command line options. */
+// PostgreSQLdb holds Postgres connection options.
+type PostgreSQLdb struct {
+	Username string
+	Password string
+	Host     string
+	Port     string
+	Dbname   string
+	SSLMode  string
+}
+
+// Options holds options set from the command line, which are then merged with
+// the options in Conf. Configurations from the command line are preferred to
+// those set in the config file.
 type Options struct {
-	Version bool `short:"v" long:"version" description:"Print version info."`
-	Verbose []bool `short:"V" long:"verbose" description:"Show verbose debug information. Repeat for more verbosity."`
-	ConfFile string `short:"c" long:"config" description:"Specify a config file to use."`
-	Ipaddress string `short:"I" long:"ipaddress" description:"Listen on a specific IP address."`
-	Hostname string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel."`
-	Port int `short:"P" long:"port" description:"Port to listen on. If port is set to 443, SSL will be activated. (default: 4545)"`
-	IndexFile string `short:"i" long:"index-file" description:"File to save search index data to."`
-	DataStoreFile string `short:"D" long:"data-file" description:"File to save data store data to."`
-	FreezeInterval int `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk (requires -i/--index-file and -D/--data-file options to be set). (Default 300 seconds/5 minutes.)"`
-	LogFile string `short:"L" long:"log-file" description:"Log to file X"`
-	TimeSlew string `long:"time-slew" description:"Time difference allowed between the server's clock at the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m."`
-	ConfRoot string `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set."`
-	UseAuth bool `short:"A" long:"use-auth" description:"Use authentication. Default: false."`
-	UseSSL bool `long:"use-ssl" description:"Use SSL for connections. If --port is set to 433, this will automatically be turned on. If it is set to 80, it will automatically be turned off. Default: off. Requires --ssl-cert and --ssl-key."`
-	SslCert string `long:"ssl-cert" description:"SSL certificate file. If a relative path, will be set relative to --conf-root."`
-	SslKey string `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root."`
-	HttpsUrls bool `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP."`
-	DisableWebUI bool `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface."`
-	UseMySQL bool `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file."`
-	LocalFstoreDir string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* for SQL mode."`
-	LogEvents bool `long:"log-events" description:"Log changes to chef objects."`
-	LogEventKeep int `short:"K" long:"log-event-keep" description:"Number of events to keep in the event log. If set, the event log will be checked periodically and pruned to this number of entries."`
-	Export string `short:"x" long:"export" description:"Export all server data to the given file, exiting afterwards. Should be used with caution. Cannot be used at the same time as -m/--import."`
-	Import string `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Cannot be used at the same time as -x/--export."`
-	ObjMaxSize int64 `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)."`
-	JsonReqMaxSize int64 `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000."`
+	Version           bool   `short:"v" long:"version" description:"Print version info."`
+	Verbose           []bool `short:"V" long:"verbose" description:"Show verbose debug information. Repeat for more verbosity."`
+	ConfFile          string `short:"c" long:"config" description:"Specify a config file to use."`
+	Ipaddress         string `short:"I" long:"ipaddress" description:"Listen on a specific IP address."`
+	Hostname          string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel."`
+	Port              int    `short:"P" long:"port" description:"Port to listen on. If port is set to 443, SSL will be activated. (default: 4545)"`
+	IndexFile         string `short:"i" long:"index-file" description:"File to save search index data to."`
+	DataStoreFile     string `short:"D" long:"data-file" description:"File to save data store data to."`
+	FreezeInterval    int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk (requires -i/--index-file and -D/--data-file options to be set). (Default 300 seconds/5 minutes.)"`
+	LogFile           string `short:"L" long:"log-file" description:"Log to file X"`
+	SysLog            bool   `short:"s" long:"syslog" description:"Log to syslog rather than a log file. Incompatible with -L/--log-file."`
+	TimeSlew          string `long:"time-slew" description:"Time difference allowed between the server's clock at the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m."`
+	ConfRoot          string `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set."`
+	UseAuth           bool   `short:"A" long:"use-auth" description:"Use authentication. Default: false."`
+	UseSSL            bool   `long:"use-ssl" description:"Use SSL for connections. If --port is set to 433, this will automatically be turned on. If it is set to 80, it will automatically be turned off. Default: off. Requires --ssl-cert and --ssl-key."`
+	SSLCert           string `long:"ssl-cert" description:"SSL certificate file. If a relative path, will be set relative to --conf-root."`
+	SSLKey            string `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root."`
+	HTTPSUrls         bool   `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP."`
+	DisableWebUI      bool   `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface."`
+	UseMySQL          bool   `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file."`
+	UsePostgreSQL     bool   `long:"use-postgresql" description:"Use a PostgreSQL database for data storage. Configure database options in the config file."`
+	LocalFstoreDir    string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* for SQL mode."`
+	LogEvents         bool   `long:"log-events" description:"Log changes to chef objects."`
+	LogEventKeep      int    `short:"K" long:"log-event-keep" description:"Number of events to keep in the event log. If set, the event log will be checked periodically and pruned to this number of entries."`
+	Export            string `short:"x" long:"export" description:"Export all server data to the given file, exiting afterwards. Should be used with caution. Cannot be used at the same time as -m/--import."`
+	Import            string `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Cannot be used at the same time as -x/--export."`
+	ObjMaxSize        int64  `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)."`
+	JSONReqMaxSize    int64  `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000."`
+	UseUnsafeMemStore bool   `long:"use-unsafe-mem-store" description:"Use the faster, but less safe, old method of storing data in the in-memory data store with pointers, rather than encoding the data with gob and giving a new copy of the object to each requestor. If this is enabled goiardi will run faster in in-memory mode, but one goroutine could change an object while it's being used by another. Has no effect when using an SQL backend."`
 }
 
 // The goiardi version.
-const Version = "0.5.2"
+const Version = "0.6.0"
+
 // The chef version we're at least aiming for, even if it's not complete yet.
-const ChefVersion = "11.0.11"
+const ChefVersion = "11.1.3"
 
 /* The general plan is to read the command-line options, then parse the config
- * file, fill in the config struct with those values, then apply the 
+ * file, fill in the config struct with those values, then apply the
  * command-line options to the config struct. We read the cli options first so
  * we know to look for a different config file if needed, but otherwise the
  * command line options override what's in the config file. */
 
-func InitConfig() *Conf { return &Conf{ } }
+func initConfig() *Conf { return &Conf{} }
 
-// Conf struct with the options specified on the command line or in the config
+// Config struct with the options specified on the command line or in the config
 // file.
-var Config = InitConfig()
+var Config = initConfig()
 
-// Read and apply arguments from the command line.
+// ParseConfigOptions reads and applies arguments from the command line and the
+// configuration file, merging them together as needed, with command line options
+// taking precedence over options in the config file.
 func ParseConfigOptions() error {
-	var opts = &Options{ }
+	var opts = &Options{}
 	_, err := flags.Parse(opts)
 
 	if err != nil {
@@ -150,7 +175,7 @@ func ParseConfigOptions() error {
 	 * config file options. */
 	if opts.ConfFile != "" {
 		if _, err := toml.DecodeFile(opts.ConfFile, Config); err != nil {
-			panic(err)
+			log.Println(err)
 			os.Exit(1)
 		}
 		Config.ConfFile = opts.ConfFile
@@ -169,7 +194,7 @@ func ParseConfigOptions() error {
 		Config.DoImport = true
 		Config.ImpExFile = opts.Import
 	}
-	
+
 	if opts.Hostname != "" {
 		Config.Hostname = opts.Hostname
 	} else {
@@ -195,30 +220,44 @@ func ParseConfigOptions() error {
 		Config.UseMySQL = opts.UseMySQL
 	}
 
-	if Config.DataStoreFile != "" && Config.UseMySQL {
-		err := fmt.Errorf("The MySQL and data store options may not be specified together.")
+	// Use Postgres?
+	if opts.UsePostgreSQL {
+		Config.UsePostgreSQL = opts.UsePostgreSQL
+	}
+
+	if Config.UseMySQL && Config.UsePostgreSQL {
+		err := fmt.Errorf("The MySQL and Postgres options cannot be used together.")
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || Config.UseMySQL) && Config.IndexFile != "")) {
-		err := fmt.Errorf("-i and -D must either both be specified, or not specified.")
+	if Config.DataStoreFile != "" && (Config.UseMySQL || Config.UsePostgreSQL) {
+		err := fmt.Errorf("The MySQL or Postgres and data store options may not be specified together.")
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	if Config.UseMySQL && Config.IndexFile == "" {
-		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL backend.")
+	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || (Config.UseMySQL || Config.UsePostgreSQL)) && Config.IndexFile != "")) {
+		err := fmt.Errorf("-i and -D must either both be specified, or not specified")
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	if Config.IndexFile != "" && (Config.DataStoreFile != "" || Config.UseMySQL) {
+	if (Config.UseMySQL || Config.UsePostgreSQL) && Config.IndexFile == "" {
+		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend.")
+		log.Println(err)
+		os.Exit(1)
+	}
+
+	if Config.IndexFile != "" && (Config.DataStoreFile != "" || (Config.UseMySQL || Config.UsePostgreSQL)) {
 		Config.FreezeData = true
 	}
 
 	if opts.LogFile != "" {
 		Config.LogFile = opts.LogFile
+	}
+	if opts.SysLog {
+		Config.SysLog = opts.SysLog
 	}
 	if Config.LogFile != "" {
 		lfp, lerr := os.Create(Config.LogFile)
@@ -234,20 +273,29 @@ func ParseConfigOptions() error {
 	if Config.LogLevel != "" {
 		if lev, ok := LogLevelNames[strings.ToLower(Config.LogLevel)]; ok && Config.DebugLevel == 0 {
 			Config.DebugLevel = lev
-		} 
+		}
 	}
 	if Config.DebugLevel > 4 {
 		Config.DebugLevel = 4
 	}
 
-	Config.DebugLevel = int(logger.LevelCritical) - Config.DebugLevel 
+	Config.DebugLevel = int(logger.LevelCritical) - Config.DebugLevel
 	logger.SetLevel(logger.LogLevel(Config.DebugLevel))
-	debug_level := map[int]string { 0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical" }
-	log.Printf("Logging at %s level", debug_level[Config.DebugLevel])
-	logger.SetLogger(logger.NewGoLogger())
+	debugLevel := map[int]string{0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical"}
+	log.Printf("Logging at %s level", debugLevel[Config.DebugLevel])
+	if Config.SysLog {
+		sl, err := logger.NewSysLogger("goiardi")
+		if err != nil {
+			log.Println(err.Error())
+			os.Exit(1)
+		}
+		logger.SetLogger(sl)
+	} else {
+		logger.SetLogger(logger.NewGoLogger())
+	}
 
 	/* Database options */
-	
+
 	// Don't bother setting a default mysql port if mysql isn't used
 	if Config.UseMySQL {
 		if Config.MySQL.Port == "" {
@@ -255,10 +303,17 @@ func ParseConfigOptions() error {
 		}
 	}
 
+	// set default Postgres options
+	if Config.UsePostgreSQL {
+		if Config.PostgreSQL.Port == "" {
+			Config.PostgreSQL.Port = "5432"
+		}
+	}
+
 	if opts.LocalFstoreDir != "" {
 		Config.LocalFstoreDir = opts.LocalFstoreDir
 	}
-	if Config.LocalFstoreDir == "" && Config.UseMySQL {
+	if Config.LocalFstoreDir == "" && (Config.UseMySQL || Config.UsePostgreSQL) {
 		logger.Criticalf("local-filestore-dir must be set when running goiardi in SQL mode")
 		os.Exit(1)
 	}
@@ -276,7 +331,7 @@ func ParseConfigOptions() error {
 	/* Root directory for certs and the like */
 	if opts.ConfRoot != "" {
 		Config.ConfRoot = opts.ConfRoot
-	} 
+	}
 
 	if Config.ConfRoot == "" {
 		if Config.ConfFile != "" {
@@ -297,14 +352,14 @@ func ParseConfigOptions() error {
 	if opts.UseSSL {
 		Config.UseSSL = opts.UseSSL
 	}
-	if opts.SslCert != "" {
-		Config.SslCert = opts.SslCert
+	if opts.SSLCert != "" {
+		Config.SSLCert = opts.SSLCert
 	}
-	if opts.SslKey != "" {
-		Config.SslKey = opts.SslKey
+	if opts.SSLKey != "" {
+		Config.SSLKey = opts.SSLKey
 	}
-	if opts.HttpsUrls {
-		Config.HttpsUrls = opts.HttpsUrls
+	if opts.HTTPSUrls {
+		Config.HTTPSUrls = opts.HTTPSUrls
 	}
 	// SSL setup
 	if Config.Port == 80 {
@@ -313,21 +368,19 @@ func ParseConfigOptions() error {
 		Config.UseSSL = true
 	}
 	if Config.UseSSL {
-		if Config.SslCert == "" || Config.SslKey == "" {
+		if Config.SSLCert == "" || Config.SSLKey == "" {
 			logger.Criticalf("SSL mode requires specifying both a certificate and a key file.")
 			os.Exit(1)
 		}
 		/* If the SSL cert and key are not absolute files, join them
 		 * with the conf root */
-		if !path.IsAbs(Config.SslCert) {
-			Config.SslCert = path.Join(Config.ConfRoot, Config.SslCert)
+		if !path.IsAbs(Config.SSLCert) {
+			Config.SSLCert = path.Join(Config.ConfRoot, Config.SSLCert)
 		}
-		if !path.IsAbs(Config.SslKey) {
-			Config.SslKey = path.Join(Config.ConfRoot, Config.SslKey)
+		if !path.IsAbs(Config.SSLKey) {
+			Config.SSLKey = path.Join(Config.ConfRoot, Config.SSLKey)
 		}
 	}
-
-
 
 	if opts.TimeSlew != "" {
 		Config.TimeSlew = opts.TimeSlew
@@ -345,7 +398,7 @@ func ParseConfigOptions() error {
 
 	if opts.UseAuth {
 		Config.UseAuth = opts.UseAuth
-	} 
+	}
 
 	if opts.DisableWebUI {
 		Config.DisableWebUI = opts.DisableWebUI
@@ -363,42 +416,51 @@ func ParseConfigOptions() error {
 	if opts.ObjMaxSize != 0 {
 		Config.ObjMaxSize = opts.ObjMaxSize
 	}
-	if opts.JsonReqMaxSize != 0 {
-		Config.JsonReqMaxSize = opts.JsonReqMaxSize
+	if opts.JSONReqMaxSize != 0 {
+		Config.JSONReqMaxSize = opts.JSONReqMaxSize
 	}
 	if Config.ObjMaxSize == 0 {
 		Config.ObjMaxSize = 10485760
 	}
-	if Config.JsonReqMaxSize == 0 {
-		Config.JsonReqMaxSize = 1000000
+	if Config.JSONReqMaxSize == 0 {
+		Config.JSONReqMaxSize = 1000000
+	}
+
+	if opts.UseUnsafeMemStore {
+		Config.UseUnsafeMemStore = opts.UseUnsafeMemStore
 	}
 
 	return nil
 }
 
-// The address and port goiardi is configured to listen on.
+// ListenAddr builds the address and port goiardi is configured to listen on.
 func ListenAddr() string {
-	listen_addr := net.JoinHostPort(Config.Ipaddress, strconv.Itoa(Config.Port))
-	return listen_addr
+	listenAddr := net.JoinHostPort(Config.Ipaddress, strconv.Itoa(Config.Port))
+	return listenAddr
 }
 
-// The hostname and port goiardi is configured to use.
+// ServerHostname returns the hostname and port goiardi is configured to use.
 func ServerHostname() string {
 	if !(Config.Port == 80 || Config.Port == 443) {
 		return net.JoinHostPort(Config.Hostname, strconv.Itoa(Config.Port))
-	} else {
-		return Config.Hostname
 	}
+	return Config.Hostname
 }
 
-// The base URL
+// ServerBaseURL returns the base scheme+hostname portion of a goiardi URL.
 func ServerBaseURL() string {
 	var urlScheme string
-	if Config.UseSSL || Config.HttpsUrls {
+	if Config.UseSSL || Config.HTTPSUrls {
 		urlScheme = "https"
 	} else {
 		urlScheme = "http"
 	}
 	url := fmt.Sprintf("%s://%s", urlScheme, ServerHostname())
 	return url
+}
+
+// UsingDB returns true if we're using any db engine, false if using the
+// in-memory data store.
+func UsingDB() bool {
+	return Config.UseMySQL || Config.UsePostgreSQL
 }

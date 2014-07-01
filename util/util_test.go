@@ -17,15 +17,15 @@
 package util
 
 import (
-	"testing"
 	"net/http"
+	"testing"
 )
 
 type testObj struct {
-	Name string `json:"name"`
-	UrlType string `json:"url_type"`
-	Normal map[string]interface{} `json:"normal"`
-	RunList []string `json:"run_list"`
+	Name    string                 `json:"name"`
+	URLType string                 `json:"url_type"`
+	Normal  map[string]interface{} `json:"normal"`
+	RunList []string               `json:"run_list"`
 }
 
 func (to *testObj) GetName() string {
@@ -33,45 +33,45 @@ func (to *testObj) GetName() string {
 }
 
 func (to *testObj) URLType() string {
-	return to.UrlType
+	return to.URLType
 }
 
 // The strange URLs are because the config doesn't get parsed here, so it ends
 // up using the really-really default settings.
 
-func TestObjURL(t *testing.T){
-	obj := &testObj{ Name: "foo", UrlType: "bar" }
+func TestObjURL(t *testing.T) {
+	obj := &testObj{Name: "foo", URLType: "bar"}
 	url := ObjURL(obj)
-	expectedUrl := "http://:0/bar/foo"
-	if url != expectedUrl {
-		t.Errorf("expected %s, got %s", expectedUrl, url)
+	expectedURL := "http://:0/bar/foo"
+	if url != expectedURL {
+		t.Errorf("expected %s, got %s", expectedURL, url)
 	}
 }
 
-func TestCustomObjUrl(t *testing.T){
-	obj := &testObj{ Name: "foo", UrlType: "bar" }
+func TestCustomObjURL(t *testing.T) {
+	obj := &testObj{Name: "foo", URLType: "bar"}
 	url := CustomObjURL(obj, "/baz")
-	expectedUrl := "http://:0/bar/foo/baz"
-	if url != expectedUrl {
-		t.Errorf("expected %s, got %s", expectedUrl, url)
+	expectedURL := "http://:0/bar/foo/baz"
+	if url != expectedURL {
+		t.Errorf("expected %s, got %s", expectedURL, url)
 	}
 }
 
-func TestCustomURL(t *testing.T){
-	initUrl := "/foo/bar"
-	url := CustomURL(initUrl)
-	expectedUrl := "http://:0/foo/bar"
-	if url != expectedUrl {
-		t.Errorf("expected %s, got %s", expectedUrl, url)
+func TestCustomURL(t *testing.T) {
+	initURL := "/foo/bar"
+	url := CustomURL(initURL)
+	expectedURL := "http://:0/foo/bar"
+	if url != expectedURL {
+		t.Errorf("expected %s, got %s", expectedURL, url)
 	}
-	initUrl = "foo/bar"
-	url = CustomURL(initUrl)
-	if url != expectedUrl {
-		t.Errorf("expected %s, got %s", expectedUrl, url)
+	initURL = "foo/bar"
+	url = CustomURL(initURL)
+	if url != expectedURL {
+		t.Errorf("expected %s, got %s", expectedURL, url)
 	}
 }
 
-func TestGerror(t *testing.T){
+func TestGerror(t *testing.T) {
 	errmsg := "foo bar"
 	err := Errorf(errmsg)
 	if err.Error() != errmsg {
@@ -86,16 +86,16 @@ func TestGerror(t *testing.T){
 	}
 }
 
-func TestFlatten(t *testing.T){
-	rl := []string{ "recipe[foo]", "role[bar]" }
+func TestFlatten(t *testing.T) {
+	rl := []string{"recipe[foo]", "role[bar]"}
 	normmap := make(map[string]interface{})
 	normmap["foo"] = "bar"
 	normmap["baz"] = "buz"
-	normmap["slice"] = []string{ "fee", "fie", "fo" }
+	normmap["slice"] = []string{"fee", "fie", "fo"}
 	normmap["map"] = make(map[string]interface{})
 	normmap["map"].(map[string]interface{})["first"] = "mook"
 	normmap["map"].(map[string]interface{})["second"] = "nork"
-	obj := &testObj{ Name: "foo", UrlType: "bar", RunList: rl, Normal: normmap }
+	obj := &testObj{Name: "foo", URLType: "bar", RunList: rl, Normal: normmap}
 	flattened := FlattenObj(obj)
 	if _, ok := flattened["name"]; !ok {
 		t.Errorf("obj name was not flattened correctly")
@@ -128,16 +128,16 @@ func TestFlatten(t *testing.T){
 	}
 }
 
-func TestMapify(t *testing.T){
-	rl := []string{ "recipe[foo]", "role[bar]" }
+func TestMapify(t *testing.T) {
+	rl := []string{"recipe[foo]", "role[bar]"}
 	normmap := make(map[string]interface{})
 	normmap["foo"] = "bar"
 	normmap["baz"] = "buz"
-	normmap["slice"] = []string{ "fee", "fie", "fo" }
+	normmap["slice"] = []string{"fee", "fie", "fo"}
 	normmap["map"] = make(map[string]interface{})
 	normmap["map"].(map[string]interface{})["first"] = "mook"
 	normmap["map"].(map[string]interface{})["second"] = "nork"
-	obj := &testObj{ Name: "foo", UrlType: "bar", RunList: rl, Normal: normmap }
+	obj := &testObj{Name: "foo", URLType: "bar", RunList: rl, Normal: normmap}
 	mapify := MapifyObject(obj)
 	if mapify["name"].(string) != obj.Name {
 		t.Errorf("Mapify names didn't match, expecte %s, got %v", obj.Name, mapify["name"])
@@ -150,16 +150,16 @@ func TestMapify(t *testing.T){
 	}
 }
 
-func TestIndexify(t *testing.T){
-	rl := []string{ "recipe[foo]", "role[bar]" }
+func TestIndexify(t *testing.T) {
+	rl := []string{"recipe[foo]", "role[bar]"}
 	normmap := make(map[string]interface{})
 	normmap["foo"] = "bar"
 	normmap["baz"] = "buz"
-	normmap["slice"] = []string{ "fee", "fie", "fo" }
+	normmap["slice"] = []string{"fee", "fie", "fo"}
 	normmap["map"] = make(map[string]interface{})
 	normmap["map"].(map[string]interface{})["first"] = "mook"
 	normmap["map"].(map[string]interface{})["second"] = "nork"
-	obj := &testObj{ Name: "foo", UrlType: "bar", RunList: rl, Normal: normmap }
+	obj := &testObj{Name: "foo", URLType: "bar", RunList: rl, Normal: normmap}
 	flatten := FlattenObj(obj)
 	indexificate := Indexify(flatten)
 	if indexificate[0] != "baz:buz" {
@@ -167,13 +167,13 @@ func TestIndexify(t *testing.T){
 	}
 }
 
-func TestValidateName(t *testing.T){
+func TestValidateName(t *testing.T) {
 	goodName := "foo-bar.baz"
 	badName := "FAh!!"
-	if !ValidateName(goodName){
+	if !ValidateName(goodName) {
 		t.Errorf("%s should have passed name validation, but didn't", goodName)
 	}
-	if ValidateName(badName){
+	if ValidateName(badName) {
 		t.Errorf("%s should not have passed name validation, but somehow did", badName)
 	}
 }
@@ -181,45 +181,45 @@ func TestValidateName(t *testing.T){
 func TestValidateUserName(t *testing.T) {
 	goodName := "foo"
 	badName := "USERNAME"
-	if !ValidateUserName(goodName){
+	if !ValidateUserName(goodName) {
 		t.Errorf("%s should have passed user name validation, but didn't", goodName)
 	}
-	if ValidateUserName(badName){
+	if ValidateUserName(badName) {
 		t.Errorf("%s should not have passed user name validation, but somehow did", badName)
 	}
 }
 
-func TestValidateDBagName(t *testing.T){
+func TestValidateDBagName(t *testing.T) {
 	goodName := "foo-bar"
 	badName := "FaH!!"
-	if !ValidateName(goodName){
+	if !ValidateName(goodName) {
 		t.Errorf("%s should have passed data bag name validation, but didn't", goodName)
 	}
-	if ValidateName(badName){
+	if ValidateName(badName) {
 		t.Errorf("%s should not have passed data bag name validation, but somehow did", badName)
 	}
 }
 
-func TestValidateEnvName(t *testing.T){
+func TestValidateEnvName(t *testing.T) {
 	goodName := "foo-bar"
 	badName := "FAh!!"
-	if !ValidateName(goodName){
+	if !ValidateName(goodName) {
 		t.Errorf("%s should have passed env name validation, but didn't", goodName)
 	}
-	if ValidateName(badName){
+	if ValidateName(badName) {
 		t.Errorf("%s should not have passed env name validation, but somehow did", badName)
 	}
 }
 
 // A lot of the validations get taken care of with chef pedant, honestly
-func TestValidateAsVersion(t *testing.T){
+func TestValidateAsVersion(t *testing.T) {
 	goodVersion := "1.0.0"
 	goodVersion2 := "1.0"
 	badVer1 := "1"
 	badVer2 := "foo"
 	var badVer3 interface{}
 	badVer3 = nil
-	
+
 	if _, err := ValidateAsVersion(goodVersion); err != nil {
 		t.Errorf("%s should have passed version validation, but didn't", goodVersion)
 	}
@@ -234,7 +234,7 @@ func TestValidateAsVersion(t *testing.T){
 	}
 	if v, err := ValidateAsVersion(badVer3); err != nil {
 		t.Errorf("nil should have passed version validation, but did")
-	} else if v != "0.0.0"{
+	} else if v != "0.0.0" {
 		t.Errorf("Should have come back as 0.0.0, but it came back as %v", v)
 	}
 }

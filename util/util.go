@@ -27,25 +27,25 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"net/http"
 	"reflect"
-	"strconv"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
-// Anything that implements these functions is a goiardi/chef object, like a
-// cookbook, role, etc., and will be able to use these common functions.
+// GoiardiObj is an interface for helping goiardi/chef objects, like cookbooks,
+// roles, etc., be able to easily make URLs and be identified by name.
 type GoiardiObj interface {
 	GetName() string
 	URLType() string
 }
 
 type gerror struct {
-	msg string
+	msg    string
 	status int
 }
 
-// An error type that includes an http status code (defaults to 
+// Gerror is an error type that includes an http status code (defaults to
 // http.BadRequest).
 type Gerror interface {
 	String() string
@@ -54,23 +54,24 @@ type Gerror interface {
 	SetStatus(int)
 }
 
+// New makes a new Gerror. Usually you want Errorf.
 func New(text string) Gerror {
-	return &gerror{msg: text, 
-		status: http.StatusBadRequest, 
-		}
+	return &gerror{msg: text,
+		status: http.StatusBadRequest,
+	}
 }
 
-// Create a new Gerror, with a formatted error string.
+// Errorf creates a new Gerror, with a formatted error string.
 func Errorf(format string, a ...interface{}) Gerror {
 	return New(fmt.Sprintf(format, a...))
 }
 
-// Easily cast a different kind of error to a Gerror
+// CastErr will easily cast a different kind of error to a Gerror.
 func CastErr(err error) Gerror {
 	return Errorf(err.Error())
 }
 
-// Returns the Gerror error message.
+// Error returns the Gerror error message.
 func (e *gerror) Error() string {
 	return e.msg
 }
@@ -89,34 +90,34 @@ func (e *gerror) Status() int {
 	return e.status
 }
 
-// Craft a URL
+// ObjURL crafts a URL for an object.
 func ObjURL(obj GoiardiObj) string {
-	base_url := config.ServerBaseURL()
-	full_url := fmt.Sprintf("%s/%s/%s", base_url, obj.URLType(), obj.GetName())
-	return full_url
+	baseURL := config.ServerBaseURL()
+	fullURL := fmt.Sprintf("%s/%s/%s", baseURL, obj.URLType(), obj.GetName())
+	return fullURL
 }
 
-// Craft a URL for a Goiardi object with additional path elements
+// CustomObjURL crafts a URL for a Goiardi object with additional path elements.
 func CustomObjURL(obj GoiardiObj, path string) string {
 	chkPath(&path)
 	return fmt.Sprintf("%s%s", ObjURL(obj), path)
 }
 
-// Craft a URL from the provided path, without providing an object.
+// CustomURL crafts a URL from the provided path, without providing an object.
 func CustomURL(path string) string {
 	chkPath(&path)
 	return fmt.Sprintf("%s%s", config.ServerBaseURL(), path)
 }
 
-func chkPath(p *string){
+func chkPath(p *string) {
 	if (*p)[0] != '/' {
 		*p = fmt.Sprintf("/%s", *p)
 	}
 }
 
-// Flatten an object and expand its keys into a map[string]string so it's 
-// suitable for indexing, either with solr (eventually) or with the whipped up
-// replacement for local mode. Objects fed into this function *must* have the
+// FlattenObj flattens an object and expand its keys into a map[string]string so
+// it's suitable for indexing, either with solr (eventually) or with the whipped
+// up replacement for local mode. Objects fed into this function *must* have the
 // "json" tag set for their struct members.
 func FlattenObj(obj interface{}) map[string]interface{} {
 	expanded := make(map[string]interface{})
@@ -139,9 +140,9 @@ func FlattenObj(obj interface{}) map[string]interface{} {
 	return expanded
 }
 
-// Turn an object into a map[string]interface{}. Useful for when you have a
-// slice of objects that you need to trim, mutilate, fold, etc. before returning
-// them as JSON.
+// MapifyObject turns an object into a map[string]interface{}. Useful for when
+// you have a slice of objects that you need to trim, mutilate, fold, etc.
+// before returning them as JSON.
 func MapifyObject(obj interface{}) map[string]interface{} {
 	mapified := make(map[string]interface{})
 	s := reflect.ValueOf(obj).Elem()
@@ -156,25 +157,25 @@ func MapifyObject(obj interface{}) map[string]interface{} {
 	return mapified
 }
 
-// Given a flattened object, prepares it for indexing by turning it into a 
-// sorted slice of strings formatted like "key:value".
+// Indexify prepares a flattened object for indexing by turning it into a sorted
+// slice of strings formatted like "key:value".
 func Indexify(flattened map[string]interface{}) []string {
-	readyToIndex := make([]string, 0)
+	var readyToIndex []string
 	for k, v := range flattened {
 		switch v := v.(type) {
-			case string:
-				v = escapeStr(v)
-				line := fmt.Sprintf("%s:%s", k, v)
+		case string:
+			v = escapeStr(v)
+			line := fmt.Sprintf("%s:%s", k, v)
+			readyToIndex = append(readyToIndex, line)
+		case []string:
+			for _, w := range v {
+				w = escapeStr(w)
+				line := fmt.Sprintf("%s:%s", k, w)
 				readyToIndex = append(readyToIndex, line)
-			case []string:
-				for _, w := range v {
-					w = escapeStr(w)
-					line := fmt.Sprintf("%s:%s", k, w)
-					readyToIndex = append(readyToIndex, line)
-				}
-			default:
-				err := fmt.Errorf("We should never have been able to reach this state. Key %s had a value %v of type %T", k, v, v)
-				panic(err)
+			}
+		default:
+			err := fmt.Errorf("We should never have been able to reach this state. Key %s had a value %v of type %T", k, v, v)
+			panic(err)
 		}
 	}
 	sort.Strings(readyToIndex)
@@ -188,121 +189,121 @@ func escapeStr(s string) string {
 	return s
 }
 
-// Merge disparate data structures into a flat hash.
+// DeepMerge merges disparate data structures into a flat hash.
 func DeepMerge(key string, source interface{}) map[string]interface{} {
 	merger := make(map[string]interface{})
 	switch v := source.(type) {
-		case map[string]interface{}:
-			/* We also need to get things like 
-			 * "default_attributes:key" indexed. */
-			topLev := make([]string, len(v))
-			n := 0
-			for k, u := range v {
-				if key != "" {
-					topLev[n] = k
-					n++
-				}
-				var nkey string
-				if key == "" {
-					nkey = k
-				} else {
-					nkey = fmt.Sprintf("%s_%s", key, k)
-				}
-				nm := DeepMerge(nkey, u)
-				for j, q := range nm {
-					merger[j] = q
-				}
-			}
+	case map[string]interface{}:
+		/* We also need to get things like
+		 * "default_attributes:key" indexed. */
+		topLev := make([]string, len(v))
+		n := 0
+		for k, u := range v {
 			if key != "" {
-				merger[key] = topLev
+				topLev[n] = k
+				n++
 			}
-		case map[string]string:
-			/* We also need to get things like 
-			 * "default_attributes:key" indexed. */
-			topLev := make([]string, len(v))
-			n := 0
-			for k, u := range v {
-				if key != "" {
-					topLev[n] = k
-					n++
-				}
-				var nkey string
-				if key == "" {
-					nkey = k
-				} else {
-					nkey = fmt.Sprintf("%s_%s", key, k)
-				}
-				merger[nkey] = u
+			var nkey string
+			if key == "" {
+				nkey = k
+			} else {
+				nkey = fmt.Sprintf("%s_%s", key, k)
 			}
+			nm := DeepMerge(nkey, u)
+			for j, q := range nm {
+				merger[j] = q
+			}
+		}
+		if key != "" {
+			merger[key] = topLev
+		}
+	case map[string]string:
+		/* We also need to get things like
+		 * "default_attributes:key" indexed. */
+		topLev := make([]string, len(v))
+		n := 0
+		for k, u := range v {
 			if key != "" {
-				merger[key] = topLev
+				topLev[n] = k
+				n++
 			}
+			var nkey string
+			if key == "" {
+				nkey = k
+			} else {
+				nkey = fmt.Sprintf("%s_%s", key, k)
+			}
+			merger[nkey] = u
+		}
+		if key != "" {
+			merger[key] = topLev
+		}
 
-		case []interface{}:
-			km := make([]string, len(v))
-			for i, w := range v {
-				km[i] = stringify(w)
+	case []interface{}:
+		km := make([]string, len(v))
+		for i, w := range v {
+			km[i] = stringify(w)
+		}
+		merger[key] = km
+	case []string:
+		km := make([]string, len(v))
+		for i, w := range v {
+			km[i] = stringify(w)
+		}
+		merger[key] = km
+		/* If this is the run list, break recipes and roles out
+		 * into their own separate indexes as well. */
+		if key == "run_list" {
+			roleMatch := regexp.MustCompile(`^(recipe|role)\[(.*)\]`)
+			var roles []string
+			var recipes []string
+			for _, w := range v {
+				rItem := roleMatch.FindStringSubmatch(stringify(w))
+				if rItem != nil {
+					rType := rItem[1]
+					rThing := rItem[2]
+					if rType == "role" {
+						roles = append(roles, rThing)
+					} else if rType == "recipe" {
+						recipes = append(recipes, rThing)
+					}
+				}
 			}
-			merger[key] = km
-		case []string:
-			km := make([]string, len(v))
-			for i, w := range v {
-				km[i] = stringify(w)
+			if len(roles) > 0 {
+				merger["role"] = roles
 			}
-			merger[key] = km
-			/* If this is the run list, break recipes and roles out
-			 * into their own separate indexes as well. */
-			if key == "run_list" {
-				roleMatch := regexp.MustCompile(`^(recipe|role)\[(.*)\]`)
-				roles := make([]string, 0)
-				recipes := make([]string, 0)
-				for _, w := range v {
-					rItem := roleMatch.FindStringSubmatch(stringify(w))
-					if rItem != nil {
-						rType := rItem[1]
-						rThing := rItem[2]
-						if rType == "role" {
-							roles = append(roles, rThing)
-						} else if rType == "recipe" {
-							recipes = append(recipes, rThing)
-						}
-					} 
-				}
-				if len(roles) > 0 {
-					merger["role"] = roles
-				}
-				if len(recipes) > 0 {
-					merger["recipe"] = recipes
-				}
-			} 
-		default:
-			merger[key] = stringify(v)
+			if len(recipes) > 0 {
+				merger["recipe"] = recipes
+			}
+		}
+	default:
+		merger[key] = stringify(v)
 	}
 	return merger
 }
 
-func stringify(source interface{}) string{
+func stringify(source interface{}) string {
 	switch s := source.(type) {
-		case string:
-			return s
-		case uint8, uint16, uint32, uint64:
-			n := reflect.ValueOf(s).Uint()
-			str := strconv.FormatUint(n, 10)
-			return str
-		case int8, int16, int32, int64:
-			n := reflect.ValueOf(s).Int()
-			str := strconv.FormatInt(n, 10)
-			return str
-		case float32, float64:
-			n := reflect.ValueOf(s).Float()
-			str := strconv.FormatFloat(n, 'f', -1, 64)
-			return str
-		case bool:
-			str := strconv.FormatBool(s)
-			return str
-		default:
-			/* Just send back whatever %v gives */
-			str := fmt.Sprintf("%v", s)
-			return str
+	case string:
+		return s
+	case uint8, uint16, uint32, uint64:
+		n := reflect.ValueOf(s).Uint()
+		str := strconv.FormatUint(n, 10)
+		return str
+	case int8, int16, int32, int64:
+		n := reflect.ValueOf(s).Int()
+		str := strconv.FormatInt(n, 10)
+		return str
+	case float32, float64:
+		n := reflect.ValueOf(s).Float()
+		str := strconv.FormatFloat(n, 'f', -1, 64)
+		return str
+	case bool:
+		str := strconv.FormatBool(s)
+		return str
+	default:
+		/* Just send back whatever %v gives */
+		str := fmt.Sprintf("%v", s)
+		return str
 	}
 }

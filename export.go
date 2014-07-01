@@ -18,12 +18,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"
-	"github.com/ctdk/goiardi/data_bag"
+	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/filestore"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
@@ -31,19 +32,24 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"os"
 	"time"
-	"fmt"
 )
 
+// ExportData is a struct describing the container holding the exported data (or
+// the data file to import. It contains the major and minor version numbers, the
+// time the dump was created, and a map holding all of the data objects.
 type ExportData struct {
 	MajorVersion int
 	MinorVersion int
-	CreatedTime time.Time
+	CreatedTime  time.Time
 	// It's a map of interfaces because the object structs may change
 	// between releases.
 	Data map[string][]interface{}
 }
 
+// Major version number of the export file format.
 const ExportMajorVersion = 1
+
+// Minor version number of the export file format.
 const ExportMinorVersion = 0
 
 // Export all data to a json file. This can help with upgrading goiardi if save
@@ -51,15 +57,15 @@ const ExportMinorVersion = 0
 // data between different backends.
 
 func exportAll(fileName string) error {
-	exportedData := &ExportData{ MajorVersion: ExportMajorVersion, MinorVersion: ExportMinorVersion, CreatedTime: time.Now() }
+	exportedData := &ExportData{MajorVersion: ExportMajorVersion, MinorVersion: ExportMinorVersion, CreatedTime: time.Now()}
 	exportedData.Data = make(map[string][]interface{})
 	// ... and march through everything.
 	exportedData.Data["client"] = client.ExportAllClients()
 	exportedData.Data["cookbook"] = exportTransformSlice(cookbook.AllCookbooks())
-	exportedData.Data["data_bag"] = exportTransformSlice(data_bag.AllDataBags())
+	exportedData.Data["databag"] = exportTransformSlice(databag.AllDataBags())
 	exportedData.Data["environment"] = exportTransformSlice(environment.AllEnvironments())
 	exportedData.Data["filestore"] = exportTransformSlice(filestore.AllFilestores())
-	exportedData.Data["log_info"] = exportTransformSlice(log_info.AllLogInfos())
+	exportedData.Data["loginfo"] = exportTransformSlice(loginfo.AllLogInfos())
 	exportedData.Data["node"] = exportTransformSlice(node.AllNodes())
 	exportedData.Data["report"] = exportTransformSlice(report.AllReports())
 	exportedData.Data["role"] = exportTransformSlice(role.AllRoles())
@@ -80,64 +86,64 @@ func exportAll(fileName string) error {
 func exportTransformSlice(data interface{}) []interface{} {
 	var exp []interface{}
 	switch data := data.(type) {
-		case []*client.Client:
-			exp = make([]interface{}, len(data))
-			for i, v := range data {
-				exp[i] = v
-			}
-		case []*user.User:
-			exp = make([]interface{}, len(data))
-			for i, v := range data {
-				exp[i] = v
-			}
-		case []*cookbook.Cookbook:
-			exp = make([]interface{}, len(data))
-			for i, v := range data {
-				exp[i] = v
-			}
-		case []*data_bag.DataBag:
-			exp = make([]interface{}, len(data))
-			for i, v := range data {
-				exp[i] = v
-			}
-		case []*environment.ChefEnvironment:
-			exp = make([]interface{}, len(data))
-			for i, v := range data {
-				exp[i] = v
-			}
-		case []*filestore.FileStore:
-			exp = make([]interface{}, len(data))
-			for i, v := range data {
-				exp[i] = v
-			}
-		case []*log_info.LogInfo:
-			exp = make([]interface{}, len(data))
-			for i, v := range data {
-				exp[i] = v
-			}
-		case []*node.Node:
-			exp = make([]interface{}, len(data))
-			for i, v := range data {
-				exp[i] = v
-			}
-		case []*report.Report:
-			exp = make([]interface{}, len(data))
-			for i, v := range data {
-				exp[i] = v
-			}
-		case []*role.Role:
-			exp = make([]interface{}, len(data))
-			for i, v := range data {
-				exp[i] = v
-			}
-		case []*sandbox.Sandbox:
-			exp = make([]interface{}, len(data))
-			for i, v := range data {
-				exp[i] = v
-			}
-		default:
-			msg := fmt.Sprintf("Type %t was passed in, but that isn't handled with export.", data)
-			panic(msg)
+	case []*client.Client:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*user.User:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*cookbook.Cookbook:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*databag.DataBag:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*environment.ChefEnvironment:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*filestore.FileStore:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*loginfo.LogInfo:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*node.Node:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*report.Report:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*role.Role:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*sandbox.Sandbox:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	default:
+		msg := fmt.Sprintf("Type %t was passed in, but that isn't handled with export.", data)
+		panic(msg)
 	}
 	return exp
 }

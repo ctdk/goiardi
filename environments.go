@@ -19,365 +19,361 @@
 package main
 
 import (
-	"github.com/ctdk/goiardi/environment"
-	"github.com/ctdk/goiardi/cookbook"
-	"github.com/ctdk/goiardi/node"
-	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/role"
-	"github.com/ctdk/goiardi/log_info"
-	"net/http"
-	"fmt"
 	"encoding/json"
-	"strings"
+	"fmt"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/cookbook"
+	"github.com/ctdk/goiardi/environment"
+	"github.com/ctdk/goiardi/loginfo"
+	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/role"
+	"github.com/ctdk/goiardi/util"
+	"net/http"
+	"strings"
 )
 
-func environment_handler(w http.ResponseWriter, r *http.Request){
+func environmentHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	accErr := CheckAccept(w, r, "application/json")
+	accErr := checkAccept(w, r, "application/json")
 	if accErr != nil {
-		JsonErrorReport(w, r, accErr.Error(), http.StatusNotAcceptable)
+		jsonErrorReport(w, r, accErr.Error(), http.StatusNotAcceptable)
 		return
 	}
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		JsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 
-	path_array := SplitPath(r.URL.Path)
-	env_response := make(map[string]interface{})
-	// num_results := r.FormValue("num_versions")
-	var num_results string
+	pathArray := splitPath(r.URL.Path)
+	envResponse := make(map[string]interface{})
+	var numResults string
 	r.ParseForm()
 	if nrs, found := r.Form["num_versions"]; found {
 		if len(nrs) < 0 {
-			JsonErrorReport(w, r, "invalid num_versions", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid num_versions", http.StatusBadRequest)
 			return
 		}
-		num_results = nrs[0]
-		err := util.ValidateNumVersions(num_results)
+		numResults = nrs[0]
+		err := util.ValidateNumVersions(numResults)
 		if err != nil {
-			JsonErrorReport(w, r, "You have requested an invalid number of versions (x >= 0 || 'all')", err.Status())
+			jsonErrorReport(w, r, "You have requested an invalid number of versions (x >= 0 || 'all')", err.Status())
 			return
 		}
 	}
 
-	path_array_len := len(path_array)
+	pathArrayLen := len(pathArray)
 
-	if path_array_len == 1 {
+	if pathArrayLen == 1 {
 		switch r.Method {
-			case "GET":
-				if opUser.IsValidator() {
-					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-					return
-				}
-				env_list := environment.GetList()
-				for _, env := range env_list {
-					item_url := fmt.Sprintf("/environments/%s", env)
-					env_response[env] = util.CustomURL(item_url)
-				}
-			case "POST":
+		case "GET":
+			if opUser.IsValidator() {
+				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				return
+			}
+			envList := environment.GetList()
+			for _, env := range envList {
+				envResponse[env] = util.CustomURL(fmt.Sprintf("/environments/%s", env))
+			}
+		case "POST":
+			if !opUser.IsAdmin() {
+				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				return
+			}
+			envData, jerr := parseObjJSON(r.Body)
+			if jerr != nil {
+				jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return
+			}
+			if _, ok := envData["name"].(string); !ok || envData["name"].(string) == "" {
+				jsonErrorReport(w, r, "Environment name missing", http.StatusBadRequest)
+				return
+			}
+			chefEnv, _ := environment.Get(envData["name"].(string))
+			if chefEnv != nil {
+				httperr := fmt.Errorf("Environment already exists")
+				jsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
+				return
+			}
+			var eerr util.Gerror
+			chefEnv, eerr = environment.NewFromJSON(envData)
+			if eerr != nil {
+				jsonErrorReport(w, r, eerr.Error(), eerr.Status())
+				return
+			}
+			if err := chefEnv.Save(); err != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if lerr := loginfo.LogEvent(opUser, chefEnv, "create"); lerr != nil {
+				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				return
+			}
+			envResponse["uri"] = util.ObjURL(chefEnv)
+			w.WriteHeader(http.StatusCreated)
+		default:
+			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+			return
+		}
+	} else if pathArrayLen == 2 {
+		/* All of the 2 element operations return the environment
+		 * object, so we do the json encoding in this block and return
+		 * out. */
+		envName := pathArray[1]
+		env, err := environment.Get(envName)
+		delEnv := false /* Set this to delete the environment after
+		 * sending the json. */
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			return
+		}
+		switch r.Method {
+		case "GET", "DELETE":
+			/* We don't actually have to do much here. */
+			if r.Method == "DELETE" {
 				if !opUser.IsAdmin() {
-					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+					jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 					return
 				}
-				env_data, jerr := ParseObjJson(r.Body)
-				if jerr != nil {
-					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				if envName == "_default" {
+					jsonErrorReport(w, r, "The '_default' environment cannot be modified.", http.StatusMethodNotAllowed)
 					return
 				}
-				if _, ok := env_data["name"].(string); !ok || env_data["name"].(string) == "" {
-					JsonErrorReport(w, r, "Environment name missing", http.StatusBadRequest)
+				delEnv = true
+			} else {
+				if opUser.IsValidator() {
+					jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 					return
 				}
-				chef_env, _ := environment.Get(env_data["name"].(string))
-				if chef_env != nil {
-					httperr := fmt.Errorf("Environment already exists")
-					JsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
+			}
+		case "PUT":
+			if !opUser.IsAdmin() {
+				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				return
+			}
+			envData, jerr := parseObjJSON(r.Body)
+			if jerr != nil {
+				jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return
+			}
+			if envData == nil {
+				jsonErrorReport(w, r, "No environment data in body at all!", http.StatusBadRequest)
+				return
+			}
+			if _, ok := envData["name"]; !ok {
+				//envData["name"] = envName
+				jsonErrorReport(w, r, "Environment name missing", http.StatusBadRequest)
+				return
+			}
+			jsonName, sterr := util.ValidateAsString(envData["name"])
+			if sterr != nil {
+				jsonErrorReport(w, r, sterr.Error(), sterr.Status())
+				return
+			} else if jsonName == "" {
+				jsonErrorReport(w, r, "Environment name missing", http.StatusBadRequest)
+				return
+			}
+			if envName != envData["name"].(string) {
+				env, err = environment.Get(envData["name"].(string))
+				if err == nil {
+					jsonErrorReport(w, r, "Environment already exists", http.StatusConflict)
 					return
 				}
 				var eerr util.Gerror
-				chef_env, eerr = environment.NewFromJson(env_data)
+				env, eerr = environment.NewFromJSON(envData)
 				if eerr != nil {
-					JsonErrorReport(w, r, eerr.Error(), eerr.Status())
+					jsonErrorReport(w, r, eerr.Error(), eerr.Status())
 					return
 				}
-				if err := chef_env.Save(); err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-					return
-				}
-				if lerr := log_info.LogEvent(opUser, chef_env, "create"); lerr != nil {
-					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
-					return
-				}
-				env_response["uri"] = util.ObjURL(chef_env)
 				w.WriteHeader(http.StatusCreated)
-			default:
-				JsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+				oldenv, olderr := environment.Get(envName)
+				if olderr == nil {
+					oldenv.Delete()
+				}
+			} else {
+				if jsonName == "" {
+					envData["name"] = envName
+				}
+				if err := env.UpdateFromJSON(envData); err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+			}
+			if err := env.Save(); err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
-		}
-	} else if path_array_len == 2 {
-		/* All of the 2 element operations return the environment
-		 * object, so we do the json encoding in this block and return 
-		 * out. */
-		env_name := path_array[1]
-		env, err := environment.Get(env_name)
-		del_env := false /* Set this to delete the environment after
-				  * sending the json. */
-		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			}
+			if lerr := loginfo.LogEvent(opUser, env, "modify"); lerr != nil {
+				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				return
+			}
+		default:
+			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return
-		}
-		switch r.Method {
-			case "GET", "DELETE":
-				/* We don't actually have to do much here. */
-				if r.Method == "DELETE" {
-					if !opUser.IsAdmin() {
-							JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-							return
-						}
-					if env_name == "_default" {
-						JsonErrorReport(w, r, "The '_default' environment cannot be modified.", http.StatusMethodNotAllowed)
-						return	
-					} else {
-						del_env = true
-					}
-				} else {
-					if opUser.IsValidator() {
-						JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-						return
-					}
-				}
-			case "PUT":
-				if !opUser.IsAdmin() {
-					JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-					return
-				}
-				env_data, jerr := ParseObjJson(r.Body)
-				if jerr != nil {
-					JsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-					return
-				}
-				if env_data == nil {
-					JsonErrorReport(w, r, "No environment data in body at all!", http.StatusBadRequest)
-					return
-				}
-				if _, ok := env_data["name"]; !ok {
-					//env_data["name"] = env_name
-					JsonErrorReport(w, r, "Environment name missing", http.StatusBadRequest)
-					return
-				}
-				json_name, sterr := util.ValidateAsString(env_data["name"])
-				if sterr != nil {
-					JsonErrorReport(w, r, sterr.Error(), sterr.Status())
-					return
-				} else if json_name == "" {
-					JsonErrorReport(w, r, "Environment name missing", http.StatusBadRequest)
-					return
-				}
-				if env_name != env_data["name"].(string) {
-					env, err = environment.Get(env_data["name"].(string))
-					if err == nil {
-						JsonErrorReport(w, r, "Environment already exists", http.StatusConflict)
-						return
-					} else {
-						var eerr util.Gerror
-						env, eerr = environment.NewFromJson(env_data)
-						if eerr != nil {
-							JsonErrorReport(w, r, eerr.Error(), eerr.Status())
-							return
-						}
-						w.WriteHeader(http.StatusCreated)
-						oldenv, olderr := environment.Get(env_name)
-						if olderr == nil {
-							oldenv.Delete()
-						}
-					}
-				} else {
-					if json_name == "" {
-						env_data["name"] = env_name
-					}
-					if err := env.UpdateFromJson(env_data); err != nil {
-						JsonErrorReport(w, r, err.Error(), err.Status())
-						return
-					}
-				}
-				if err := env.Save(); err != nil {
-					JsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
-				if lerr := log_info.LogEvent(opUser, env, "modify"); lerr != nil {
-					JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
-					return
-				}
-			default:
-				JsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
-				return
 		}
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(&env); err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if del_env {
+		if delEnv {
 			err := env.Delete()
 			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if lerr := log_info.LogEvent(opUser, env, "delete"); lerr != nil {
-				JsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+			if lerr := loginfo.LogEvent(opUser, env, "delete"); lerr != nil {
+				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
 		}
 		return
-	} else if path_array_len == 3 {
-		env_name := path_array[1]
-		op := path_array[2]
+	} else if pathArrayLen == 3 {
+		envName := pathArray[1]
+		op := pathArray[2]
 
 		if op == "cookbook_versions" && r.Method != "POST" || op != "cookbook_versions" && r.Method != "GET" {
-			JsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return
 		}
 
 		if opUser.IsValidator() {
-			JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
 
-		env, err := environment.Get(env_name)
+		env, err := environment.Get(envName)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
 
 		switch op {
-			case "cookbook_versions":
-				/* Chef Server API docs aren't even remotely
-				 * right here. What it actually wants is the
-				 * usual hash of info for the latest or
-				 * constrained version. Weird. */
-				cb_ver, jerr := ParseObjJson(r.Body)
-				if jerr != nil {
-					errmsg := jerr.Error()
-					if !strings.Contains(errmsg, "Field") {
-						errmsg = "invalid JSON"
-					} else {
-						errmsg = jerr.Error()
-					}
-					JsonErrorReport(w, r, errmsg, http.StatusBadRequest)
-					return
+		case "cookbook_versions":
+			/* Chef Server API docs aren't even remotely
+			 * right here. What it actually wants is the
+			 * usual hash of info for the latest or
+			 * constrained version. Weird. */
+			cbVer, jerr := parseObjJSON(r.Body)
+			if jerr != nil {
+				errmsg := jerr.Error()
+				if !strings.Contains(errmsg, "Field") {
+					errmsg = "invalid JSON"
+				} else {
+					errmsg = jerr.Error()
 				}
+				jsonErrorReport(w, r, errmsg, http.StatusBadRequest)
+				return
+			}
 
-				if _, ok := cb_ver["run_list"]; !ok {
-					JsonErrorReport(w, r, "POSTed JSON badly formed.", http.StatusMethodNotAllowed)
-					return
-				}
-				deps, err := cookbook.DependsCookbooks(cb_ver["run_list"].([]string), env.CookbookVersions)
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusPreconditionFailed)
-					return
-				}
-				/* Need our own encoding here too. */
-				enc := json.NewEncoder(w)
-				if err := enc.Encode(&deps); err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				}
+			if _, ok := cbVer["run_list"]; !ok {
+				jsonErrorReport(w, r, "POSTed JSON badly formed.", http.StatusMethodNotAllowed)
 				return
-			case "cookbooks":
-				env_response = env.AllCookbookHash(num_results)
-			case "nodes":
-				node_list, err := node.GetFromEnv(env_name)
-				if err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				for _, chef_node := range node_list {
-					env_response[chef_node.Name] = util.ObjURL(chef_node) 
-				}
-			case "recipes":
-				env_recipes := env.RecipeList()
-				/* And... we have to do our own json response
-				 * here. Hmph. */
-				/* TODO: make the JSON encoding stuff its own
-				 * function. Dunno why I never thought of that
-				 * before now for this. */
-				enc := json.NewEncoder(w)
-				if err := enc.Encode(&env_recipes); err != nil {
-					JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				}
+			}
+			deps, err := cookbook.DependsCookbooks(cbVer["run_list"].([]string), env.CookbookVersions)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusPreconditionFailed)
 				return
-			default:
-				JsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			}
+			/* Need our own encoding here too. */
+			enc := json.NewEncoder(w)
+			if err := enc.Encode(&deps); err != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		case "cookbooks":
+			envResponse = env.AllCookbookHash(numResults)
+		case "nodes":
+			nodeList, err := node.GetFromEnv(envName)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
+			}
+			for _, chefNode := range nodeList {
+				envResponse[chefNode.Name] = util.ObjURL(chefNode)
+			}
+		case "recipes":
+			envRecipes := env.RecipeList()
+			/* And... we have to do our own json response
+			 * here. Hmph. */
+			/* TODO: make the JSON encoding stuff its own
+			 * function. Dunno why I never thought of that
+			 * before now for this. */
+			enc := json.NewEncoder(w)
+			if err := enc.Encode(&envRecipes); err != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		default:
+			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			return
 
 		}
-	} else if path_array_len == 4 {
-		env_name := path_array[1]
-		/* op is either "cookbooks" or "roles", and op_name is the name
+	} else if pathArrayLen == 4 {
+		envName := pathArray[1]
+		/* op is either "cookbooks" or "roles", and opName is the name
 		 * of the object op refers to. */
-		op := path_array[2]
-		op_name := path_array[3]
+		op := pathArray[2]
+		opName := pathArray[3]
 
 		if r.Method != "GET" {
-			JsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+			jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		if opUser.IsValidator() {
-			JsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
-		env, err := environment.Get(env_name)
+		env, err := environment.Get(envName)
 		if err != nil {
-			JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
 
-		/* Biting the bullet and not redirecting this to 
+		/* Biting the bullet and not redirecting this to
 		 * /roles/NAME/environments/NAME. The behavior is exactly the
 		 * same, but it makes clients and chef-pedant somewhat unhappy
 		 * to not have this way available. */
 		if op == "roles" {
-			role, err := role.Get(op_name)
+			role, err := role.Get(opName)
 			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
-			var run_list []string
-			if env_name == "_default" {
-				run_list = role.RunList
+			var runList []string
+			if envName == "_default" {
+				runList = role.RunList
 			} else {
-				run_list = role.EnvRunLists[env_name]
+				runList = role.EnvRunLists[envName]
 			}
-			env_response["run_list"] = run_list
+			envResponse["run_list"] = runList
 		} else if op == "cookbooks" {
-			cb, err := cookbook.Get(op_name)
+			cb, err := cookbook.Get(opName)
 			if err != nil {
-				JsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
 			/* Here and, I think, here only, if num_versions isn't
 			 * set it's supposed to return ALL matching versions.
 			 * API docs are wrong here. */
-			if num_results == "" {
-				num_results = "all"
+			if numResults == "" {
+				numResults = "all"
 			}
-			env_response[op_name] = cb.ConstrainedInfoHash(num_results, env.CookbookVersions[op_name])
+			envResponse[opName] = cb.ConstrainedInfoHash(numResults, env.CookbookVersions[opName])
 		} else {
 			/* Not an op we know. */
-			JsonErrorReport(w, r, "Bad request - too many elements in path", http.StatusBadRequest)
+			jsonErrorReport(w, r, "Bad request - too many elements in path", http.StatusBadRequest)
 			return
 		}
 	} else {
 		/* Bad number of path elements. */
-		JsonErrorReport(w, r, "Bad request - too many elements in path", http.StatusBadRequest)
+		jsonErrorReport(w, r, "Bad request - too many elements in path", http.StatusBadRequest)
 		return
 	}
 
 	enc := json.NewEncoder(w)
-	if err := enc.Encode(&env_response); err != nil {
-		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	if err := enc.Encode(&envResponse); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }

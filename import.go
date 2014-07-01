@@ -17,25 +17,25 @@
 package main
 
 import (
-	"encoding/json"
-	"encoding/base64"
 	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"
-	"github.com/ctdk/goiardi/data_bag"
+	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/filestore"
-	"github.com/ctdk/goiardi/log_info"
+	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/report"
-	"github.com/ctdk/goiardi/role" 
+	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
-	"github.com/ctdk/goiardi/user" 
-	"os"
+	"github.com/ctdk/goiardi/user"
 	"io/ioutil"
+	"os"
 	"time"
-	"fmt"
-	"github.com/tideland/goas/v2/logger"
 )
 
 func importAll(fileName string) error {
@@ -58,14 +58,14 @@ func importAll(fileName string) error {
 		// load clients
 		logger.Infof("Loading clients")
 		for _, v := range exportedData.Data["client"] {
-			if c, err := client.NewFromJson(v.(map[string]interface{})); err != nil {
+			c, err := client.NewFromJSON(v.(map[string]interface{}))
+			if err != nil {
 				return err
-			} else {
-				c.SetPublicKey(v.(map[string]interface{})["public_key"])
-				gerr := c.Save()
-				if gerr != nil {
-					return gerr
-				}
+			}
+			c.SetPublicKey(v.(map[string]interface{})["public_key"])
+			gerr := c.Save()
+			if gerr != nil {
+				return gerr
 			}
 		}
 
@@ -74,28 +74,28 @@ func importAll(fileName string) error {
 		for _, v := range exportedData.Data["user"] {
 			pwhash, _ := v.(map[string]interface{})["password"].(string)
 			v.(map[string]interface{})["password"] = ""
-			if u, err := user.NewFromJson(v.(map[string]interface{})); err != nil {
+			u, err := user.NewFromJSON(v.(map[string]interface{}))
+			if err != nil {
 				return err
-			} else {
-				u.SetPasswdHash(pwhash)
-				u.SetPublicKey(v.(map[string]interface{})["public_key"])
-				gerr := u.Save()
-				if gerr != nil {
-					return gerr
-				}
+			}
+			u.SetPasswdHash(pwhash)
+			u.SetPublicKey(v.(map[string]interface{})["public_key"])
+			gerr := u.Save()
+			if gerr != nil {
+				return gerr
 			}
 		}
 
 		// load filestore
 		logger.Infof("Loading filestore")
 		for _, v := range exportedData.Data["filestore"] {
-			file_data, err := base64.StdEncoding.DecodeString(v.(map[string]interface{})["Data"].(string))
+			fileData, err := base64.StdEncoding.DecodeString(v.(map[string]interface{})["Data"].(string))
 			if err != nil {
 				return err
 			}
-			fd_buf := bytes.NewBuffer(file_data)
-			fd_rc := ioutil.NopCloser(fd_buf)
-			fs, err := filestore.New(v.(map[string]interface{})["Chksum"].(string), fd_rc, int64(fd_buf.Len()))
+			fdBuf := bytes.NewBuffer(fileData)
+			fdRc := ioutil.NopCloser(fdBuf)
+			fs, err := filestore.New(v.(map[string]interface{})["Chksum"].(string), fdRc, int64(fdBuf.Len()))
 			if err != nil {
 				return err
 			}
@@ -107,22 +107,22 @@ func importAll(fileName string) error {
 		// load cookbooks
 		logger.Infof("Loading cookbooks")
 		for _, v := range exportedData.Data["cookbook"] {
-			if cb, err := cookbook.New(v.(map[string]interface{})["Name"].(string)); err != nil {
+			cb, err := cookbook.New(v.(map[string]interface{})["Name"].(string))
+			if err != nil {
 				return err
-			} else {
-				gerr := cb.Save()
-				if gerr != nil {
-					return gerr
+			}
+			gerr := cb.Save()
+			if gerr != nil {
+				return gerr
+			}
+			for ver, cbvData := range v.(map[string]interface{})["Versions"].(map[string]interface{}) {
+				cbvData, cerr := checkAttrs(cbvData.(map[string]interface{}))
+				if cerr != nil {
+					return cerr
 				}
-				for ver, cbv_data := range v.(map[string]interface{})["Versions"].(map[string]interface{}) {
-					cbv_data, cerr := checkAttrs(cbv_data.(map[string]interface{}))
-					if cerr != nil {
-						return cerr
-					}
-					_, cbverr := cb.NewVersion(ver, cbv_data)
-					if cbverr != nil {
-						return cbverr
-					}
+				_, cbverr := cb.NewVersion(ver, cbvData)
+				if cbverr != nil {
+					return cbverr
 				}
 			}
 		}
@@ -130,40 +130,40 @@ func importAll(fileName string) error {
 		// load data bags
 		logger.Infof("Loading data bags")
 		for _, v := range exportedData.Data["data_bag"] {
-			if dbag, err := data_bag.New(v.(map[string]interface{})["Name"].(string)); err != nil {
+			dbag, err := databag.New(v.(map[string]interface{})["Name"].(string))
+			if err != nil {
 				return err
-			} else {
-				gerr := dbag.Save()
-				if gerr != nil {
-					return gerr
+			}
+			gerr := dbag.Save()
+			if gerr != nil {
+				return gerr
+			}
+			for _, dbagData := range v.(map[string]interface{})["DataBagItems"].(map[string]interface{}) {
+				_, dbierr := dbag.NewDBItem(dbagData.(map[string]interface{})["raw_data"].(map[string]interface{}))
+				if dbierr != nil {
+					return dbierr
 				}
-				for _, dbag_data := range v.(map[string]interface{})["DataBagItems"].(map[string]interface{}) {
-					_, dbierr := dbag.NewDBItem(dbag_data.(map[string]interface{})["raw_data"].(map[string]interface{}))
-					if dbierr != nil {
-						return dbierr
-					}
-				}
-				gerr = dbag.Save()
-				if gerr != nil {
-					return gerr
-				}
+			}
+			gerr = dbag.Save()
+			if gerr != nil {
+				return gerr
 			}
 		}
 		// load environments
 		logger.Infof("Loading environments")
 		for _, v := range exportedData.Data["environment"] {
-			env_data, cerr := checkAttrs(v.(map[string]interface{}))
+			envData, cerr := checkAttrs(v.(map[string]interface{}))
 			if cerr != nil {
 				return nil
 			}
-			if env_data["name"].(string) != "_default" {
-				if e, err := environment.NewFromJson(env_data); err != nil {
+			if envData["name"].(string) != "_default" {
+				e, err := environment.NewFromJSON(envData)
+				if err != nil {
 					return err
-				} else {
-					gerr := e.Save()
-					if gerr != nil {
-						return gerr
-					}
+				}
+				gerr := e.Save()
+				if gerr != nil {
+					return gerr
 				}
 			}
 		}
@@ -171,34 +171,34 @@ func importAll(fileName string) error {
 		// load nodes
 		logger.Infof("Loading nodes")
 		for _, v := range exportedData.Data["node"] {
-			node_data, cerr := checkAttrs(v.(map[string]interface{}))
+			nodeData, cerr := checkAttrs(v.(map[string]interface{}))
 			if cerr != nil {
 				return nil
 			}
-			if n, err := node.NewFromJson(node_data); err != nil {
+			n, err := node.NewFromJSON(nodeData)
+			if err != nil {
 				return err
-			} else {
-				gerr := n.Save()
-				if gerr != nil {
-					return gerr
-				}
+			}
+			gerr := n.Save()
+			if gerr != nil {
+				return gerr
 			}
 		}
 
 		// load roles
 		logger.Infof("Loading roles")
 		for _, v := range exportedData.Data["role"] {
-			role_data, cerr := checkAttrs(v.(map[string]interface{}))
+			roleData, cerr := checkAttrs(v.(map[string]interface{}))
 			if cerr != nil {
 				return nil
 			}
-			if r, err := role.NewFromJson(role_data); err != nil {
+			r, err := role.NewFromJSON(roleData)
+			if err != nil {
 				return err
-			} else {
-				gerr := r.Save()
-				if gerr != nil {
-					return gerr
-				}
+			}
+			gerr := r.Save()
+			if gerr != nil {
+				return gerr
 			}
 		}
 
@@ -217,16 +217,16 @@ func importAll(fileName string) error {
 			for i, c := range sbck {
 				sbChecksums[i] = c.(string)
 			}
-			sbox := &sandbox.Sandbox{ Id: sbid, CreationTime: sbTime, Completed: sbcomplete, Checksums: sbChecksums }
+			sbox := &sandbox.Sandbox{ID: sbid, CreationTime: sbTime, Completed: sbcomplete, Checksums: sbChecksums}
 			if err = sbox.Save(); err != nil {
 				return err
 			}
 		}
 
-		// load log_infos
-		logger.Infof("Loading log_info")
-		for _, v := range exportedData.Data["log_info"] {
-			if err := log_info.Import(v.(map[string]interface{})); err != nil {
+		// load loginfos
+		logger.Infof("Loading loginfo")
+		for _, v := range exportedData.Data["loginfo"] {
+			if err := loginfo.Import(v.(map[string]interface{})); err != nil {
 				return err
 			}
 		}
@@ -241,33 +241,31 @@ func importAll(fileName string) error {
 				if err != nil {
 					return err
 				}
-				 v.(map[string]interface{})["start_time"] = t.Format(report.ReportTimeFormat)
+				v.(map[string]interface{})["start_time"] = t.Format(report.ReportTimeFormat)
 			}
 			if et, ok := v.(map[string]interface{})["end_time"].(string); ok {
 				t, err := time.Parse(time.RFC3339, et)
 				if err != nil {
 					return err
 				}
-				 v.(map[string]interface{})["end_time"] = t.Format(report.ReportTimeFormat)
+				v.(map[string]interface{})["end_time"] = t.Format(report.ReportTimeFormat)
 			}
-			if r, err := report.NewFromJson(nodeName, v.(map[string]interface{})); err != nil {
+			r, err := report.NewFromJSON(nodeName, v.(map[string]interface{}))
+			if err != nil {
 				return err
-			} else {
-				gerr := r.Save()
-				if gerr != nil {
-					return gerr
-				}
-				v.(map[string]interface{})["action"] = "end"
-				if err := r.UpdateFromJson(v.(map[string]interface{})); err != nil {
-					return err
-				} else {
-					gerr := r.Save()
-					if gerr != nil {
-						return gerr
-					}
-				}
 			}
-			
+			gerr := r.Save()
+			if gerr != nil {
+				return gerr
+			}
+			v.(map[string]interface{})["action"] = "end"
+			if err := r.UpdateFromJSON(v.(map[string]interface{})); err != nil {
+				return err
+			}
+			gerr = r.Save()
+			if gerr != nil {
+				return gerr
+			}
 		}
 
 	} else {

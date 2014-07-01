@@ -17,21 +17,21 @@
 package indexer
 
 import (
-	"testing"
-	"github.com/ctdk/goiardi/util"
 	"fmt"
-	"os"
+	"github.com/ctdk/goiardi/util"
 	"io/ioutil"
+	"os"
+	"testing"
 )
 
 type testObj struct {
-	Name string `json:"name"`
-	UrlType string `json:"url_type"`
-	Normal map[string]interface{} `json:"normal"`
-	RunList []string `json:"run_list"`
+	Name    string                 `json:"name"`
+	URLType string                 `json:"url_type"`
+	Normal  map[string]interface{} `json:"normal"`
+	RunList []string               `json:"run_list"`
 }
 
-func (to *testObj) DocId() string {
+func (to *testObj) DocID() string {
 	return to.Name
 }
 
@@ -45,8 +45,8 @@ func (to *testObj) Flatten() []string {
 	return indexified
 }
 
-func TestIndexObj(t *testing.T){
-	obj := &testObj{ Name: "foo", UrlType: "bar" }
+func TestIndexObj(t *testing.T) {
+	obj := &testObj{Name: "foo", URLType: "bar"}
 	IndexObj(obj)
 }
 
@@ -80,7 +80,7 @@ func TestLoad(t *testing.T) {
 // lib. However, *that* may not be practical outside of chef-pedant.
 
 func TestSearchObj(t *testing.T) {
-	obj := &testObj{ Name: "foo", UrlType: "client" }
+	obj := &testObj{Name: "foo", URLType: "client"}
 	IndexObj(obj)
 	_, err := SearchIndex("client", "name:foo", false)
 	if err != nil {
@@ -89,7 +89,7 @@ func TestSearchObj(t *testing.T) {
 }
 
 func TestSearchObjLoad(t *testing.T) {
-	obj := &testObj{ Name: "foo", UrlType: "client" }
+	obj := &testObj{Name: "foo", URLType: "client"}
 	IndexObj(obj)
 	tmpfile := fmt.Sprintf("%s/idx2.bin", idxTmpDir)
 	SaveIndex(tmpfile)

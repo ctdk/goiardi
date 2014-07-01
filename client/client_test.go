@@ -18,13 +18,13 @@
 package client
 
 import (
-	"testing"
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"testing"
 )
 
-func TestGobEncodeDecode(t *testing.T){
+func TestGobEncodeDecode(t *testing.T) {
 	c, _ := New("foo")
 	saved := new(bytes.Buffer)
 	var err error
@@ -46,5 +46,19 @@ func TestGobEncodeDecode(t *testing.T){
 	}
 	if c2.Name != c.Name {
 		t.Errorf("saved user doesn't seem to be equal to original: %v vs %v", c2, c)
+	}
+}
+
+func TestActionAtADistance(t *testing.T) {
+	c, _ := New("foo2")
+	gob.Register(c)
+	c.Save()
+	c2, _ := Get("foo2")
+	if c.Name != c2.Name {
+		t.Errorf("Client names should have been the same, but weren't, got %s and %s", c.Name, c2.Name)
+	}
+	c2.Validator = true
+	if c.Validator == c2.Validator {
+		t.Errorf("Changing the value of validator on one client improperly changed it on the other")
 	}
 }

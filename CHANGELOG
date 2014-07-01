@@ -1,3 +1,35 @@
+0.6.0 (not released yet)
+-----
+* Postgres support.
+* Fix rebuilding indexes with an SQL backend.
+* Fix a bug where in MySQL mode events were being logged twice.
+* Fix an annoying chef-pedant error with data bags.
+* Event logging methods that are not allowed now return Method Not Allowed
+  rather than Bad Request.
+* Switch the logger to a fork that can be built and used with Windows that
+  excludes syslog when building on Windows.
+* Add basic syslog support.
+* Authenication protocol version 1.2 now supported.
+* Add a 'status' param to reporting, so a list of reports return by 'knife
+  runs' can be narrowed by the status of the chef run (started, success, and
+  failure).
+* Fix an action at a distance problem with in-memory mode objects. If this
+  behavior is still desirable (it seems to be slightly faster than the new way),
+  it can be turned back on with the --use-unsafe-mem-store flag. This change
+  DEFINITELY breaks in-mem data file compatibility. If upgrading, export your 
+  data, upgrade goiardi, and reload your data.
+* Add several new searchable parameters for logged events.
+* Add organization_id to all MySQL tables that might need it someday. Orgs are
+  not used at all, so only the default value of 1 currently makes it to the 
+  database.
+* Finally ran 'go fmt' on goiardi. It didn't even mess up the long comment
+  blocks, which was what I was afraid it would do. I also ran golint against
+  goiardi and took its recommendations where it made sense, which was most
+  areas except for some involving generated parser code, comments on
+  GobEncode/Decode, commenting a bunch of identical functions on an interface
+  in search, and a couple of cases involving make and slices. All in all,
+  though, the reformatting, linting, and light refactoring has done it good.
+
 0.5.2
 -----
 * Add import/export of goiardi data through a JSON dump.

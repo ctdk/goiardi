@@ -18,15 +18,17 @@
 package actor
 
 import (
-	"testing"
-	"github.com/ctdk/goiardi/user"
+	"encoding/gob"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/user"
+	"testing"
 )
 
 func TestActorClient(t *testing.T) {
 	config.Config.UseAuth = true
 	c, _ := client.New("fooclient")
+	gob.Register(c)
 	c.Save()
 	c1, err := GetReqUser("fooclient")
 	if err != nil {
@@ -43,6 +45,7 @@ func TestActorClient(t *testing.T) {
 	}
 
 	u, _ := user.New("foouser")
+	gob.Register(u)
 	u.Save()
 
 	y = c1.IsSelf(u)

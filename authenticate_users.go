@@ -19,33 +19,33 @@
 package main
 
 import (
-	"net/http"
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/user"
+	"net/http"
 )
 
 type authenticator struct {
 	Name, Password string
 }
 type authResponse struct {
-	Name string `json:"name"`
-	Verified bool `json:"verified"`
+	Name     string `json:"name"`
+	Verified bool   `json:"verified"`
 }
 
-func authenticate_user_handler(w http.ResponseWriter, r *http.Request){
+func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	dec := json.NewDecoder(r.Body)
-	authJson := make(map[string]interface{})
-	if err := dec.Decode(&authJson); err != nil {
-		JsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+	authJSON := make(map[string]interface{})
+	if err := dec.Decode(&authJSON); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 		return
 	}
-	auth, authErr := validateJson(authJson)
+	auth, authErr := validateJSON(authJSON)
 	if authErr != nil {
-		JsonErrorReport(w, r, authErr.Error(), http.StatusBadRequest)
+		jsonErrorReport(w, r, authErr.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -53,7 +53,7 @@ func authenticate_user_handler(w http.ResponseWriter, r *http.Request){
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(resp); err != nil {
-		JsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -70,7 +70,7 @@ func validateLogin(auth *authenticator) authResponse {
 	if err != nil {
 		resp.Verified = false
 		return resp
-	} 
+	}
 	perr := u.CheckPasswd(auth.Password)
 	if perr != nil {
 		resp.Verified = false
@@ -80,27 +80,27 @@ func validateLogin(auth *authenticator) authResponse {
 	return resp
 }
 
-func validateJson(authJson map[string]interface{}) (*authenticator, error) {
+func validateJSON(authJSON map[string]interface{}) (*authenticator, error) {
 	auth := new(authenticator)
-	if name, ok := authJson["name"]; ok {
+	if name, ok := authJSON["name"]; ok {
 		switch name := name.(type) {
-			case string:
-				auth.Name = name
-			default:
-				err := fmt.Errorf("Field 'name' invalid")
-				return nil, err
+		case string:
+			auth.Name = name
+		default:
+			err := fmt.Errorf("Field 'name' invalid")
+			return nil, err
 		}
 	} else {
 		err := fmt.Errorf("Field 'name' missing")
 		return nil, err
 	}
-	if passwd, ok := authJson["password"]; ok {
+	if passwd, ok := authJSON["password"]; ok {
 		switch passwd := passwd.(type) {
-			case string:
-				auth.Password = passwd
-			default:
-				err := fmt.Errorf("Field 'password' invalid")
-				return nil, err
+		case string:
+			auth.Password = passwd
+		default:
+			err := fmt.Errorf("Field 'password' invalid")
+			return nil, err
 		}
 	} else {
 		err := fmt.Errorf("Field 'password' missing")

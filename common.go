@@ -19,84 +19,84 @@
 package main
 
 import (
-	"io"
 	"encoding/json"
-	"net/http"
-	"github.com/tideland/goas/v2/logger"
-	"strings"
 	"fmt"
+	"github.com/ctdk/goas/v2/logger"
+	"io"
+	"net/http"
+	"strings"
 )
 
-func ParseObjJson(data io.ReadCloser) (map[string]interface{}, error){
-	obj_data := make(map[string]interface{})
+func parseObjJSON(data io.ReadCloser) (map[string]interface{}, error) {
+	objData := make(map[string]interface{})
 	dec := json.NewDecoder(data)
-	
-	if err := dec.Decode(&obj_data); err != nil {
+
+	if err := dec.Decode(&objData); err != nil {
 		return nil, err
 	}
-	return checkAttrs(obj_data)
+	return checkAttrs(objData)
 }
 
-func checkAttrs(obj_data map[string]interface{}) (map[string]interface{}, error) {
+func checkAttrs(objData map[string]interface{}) (map[string]interface{}, error) {
 	/* If this kind of object comes with a run_list, process it */
-	if _, ok := obj_data["run_list"]; ok {
-		if rl, err := chkRunList(obj_data["run_list"]); err != nil {
+	if _, ok := objData["run_list"]; ok {
+		rl, err := chkRunList(objData["run_list"])
+		if err != nil {
 			return nil, err
-		} else {
-			obj_data["run_list"] = rl
 		}
+		objData["run_list"] = rl
 	}
 
 	/* And if we have env_run_lists */
-	if _, ok := obj_data["env_run_lists"]; ok {
-		switch erl := obj_data["env_run_lists"].(type) {
-			case map[string]interface{}:
-				new_env_run_list := make(map[string][]string, len(erl))
-				var erlerr error
-				for i, v := range erl {
-					if new_env_run_list[i], erlerr = chkRunList(v); erlerr != nil {
-						erlerr := fmt.Errorf("Field 'env_run_lists' contains invalid run lists")
-						return nil, erlerr
-					}
+	if _, ok := objData["env_run_lists"]; ok {
+		switch erl := objData["env_run_lists"].(type) {
+		case map[string]interface{}:
+			newEnvRunList := make(map[string][]string, len(erl))
+			var erlerr error
+			for i, v := range erl {
+				if newEnvRunList[i], erlerr = chkRunList(v); erlerr != nil {
+					erlerr := fmt.Errorf("Field 'env_run_lists' contains invalid run lists")
+					return nil, erlerr
 				}
-				obj_data["env_run_lists"] = new_env_run_list
-			default:
-				err := fmt.Errorf("Field 'env_run_lists' contains invalid run lists")
-				return nil, err
+			}
+			objData["env_run_lists"] = newEnvRunList
+		default:
+			err := fmt.Errorf("Field 'env_run_lists' contains invalid run lists")
+			return nil, err
 		}
 	}
 
 	/* If this kind of object has any attributes, process them too */
-	attributes := []string{ "normal", "default", "automatic", "override", "default_attributes", "override_attributes" }
+	attributes := []string{"normal", "default", "automatic", "override", "default_attributes", "override_attributes"}
 	for _, k := range attributes {
 		/* Don't add if it doesn't exist in the json data at all */
-		if _, ok := obj_data[k]; ok {
-			if obj_data[k] == nil {
-				obj_data[k] = make(map[string]interface{})
+		if _, ok := objData[k]; ok {
+			if objData[k] == nil {
+				objData[k] = make(map[string]interface{})
 			}
 		}
 	}
 
-	return obj_data, nil
+	return objData, nil
 }
 
-func SplitPath(path string) (split_path []string){
-	split_path = strings.Split(path[1:], "/")
-	return split_path
+func splitPath(path string) []string {
+	sp := strings.Split(path[1:], "/")
+	return sp
 }
 
-func JsonErrorReport(w http.ResponseWriter, r *http.Request, error_str string, status int){
-	logger.Infof(error_str)
-	json_error := map[string][]string{ "error": []string{ error_str } }
+func jsonErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
+	logger.Infof(errorStr)
+	jsonError := map[string][]string{"error": []string{errorStr}}
 	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
-	if err:= enc.Encode(&json_error); err != nil {
+	if err := enc.Encode(&jsonError); err != nil {
 		logger.Errorf(err.Error())
 	}
 	return
 }
 
-func CheckAccept(w http.ResponseWriter, r *http.Request, acceptType string) error {
+func checkAccept(w http.ResponseWriter, r *http.Request, acceptType string) error {
 	for _, at := range r.Header["Accept"] {
 		if at == "*/*" {
 			return nil // we accept all types in this case
@@ -109,22 +109,22 @@ func CheckAccept(w http.ResponseWriter, r *http.Request, acceptType string) erro
 }
 
 func chkRunList(rl interface{}) ([]string, error) {
-	switch o := rl.(type){
-		case []interface{}:
-			_ = o
-			new_run_list := make([]string, len(o))
-			for i, v := range o {
-				switch v := v.(type) {
-					case string:
-						new_run_list[i] = v
-					default:
-						err := fmt.Errorf("Field 'run_list' is not a valid run list")
-						return nil, err
-				}
+	switch o := rl.(type) {
+	case []interface{}:
+		_ = o
+		newRunList := make([]string, len(o))
+		for i, v := range o {
+			switch v := v.(type) {
+			case string:
+				newRunList[i] = v
+			default:
+				err := fmt.Errorf("Field 'run_list' is not a valid run list")
+				return nil, err
 			}
-			return new_run_list, nil
-		default:
-			err := fmt.Errorf("Field 'run_list' is not a valid run list")
-			return nil, err
+		}
+		return newRunList, nil
+	default:
+		err := fmt.Errorf("Field 'run_list' is not a valid run list")
+		return nil, err
 	}
 }

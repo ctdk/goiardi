@@ -21,31 +21,32 @@
 package cookbook
 
 import (
+	"database/sql"
+	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/data_store"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/util"
-	"fmt"
-	"strings"
-	"strconv"
-	"sort"
-	"github.com/tideland/goas/v2/logger"
 	"net/http"
 	"regexp"
-	"database/sql"
+	"sort"
+	"strconv"
+	"strings"
 )
 
-// Make version strings with the format "x.y.z" sortable.
+// VersionStrings is a type to make version strings with the format "x.y.z"
+// sortable.
 type VersionStrings []string
 
 // The Cookbook struct holds an array of cookbook versions, which is where the
 // run lists, definitions, attributes, etc. are.
 type Cookbook struct {
-	Name string
-	Versions map[string]*CookbookVersion
-	latest *CookbookVersion
+	Name        string
+	Versions    map[string]*CookbookVersion
+	latest      *CookbookVersion
 	numVersions *int
-	id int32
+	id          int32
 }
 
 /* We... want the JSON tags for this. */
@@ -53,61 +54,65 @@ type Cookbook struct {
 // CookbookVersion is the meat of the cookbook. This is what's set when a new
 // cookbook is uploaded.
 type CookbookVersion struct {
-	CookbookName string `json:"cookbook_name"`
-	Name string `json:"name"`
-	Version string `json:"version"`
-	ChefType string `json:"chef_type"`
-	JsonClass string `json:"json_class"`
-	Definitions []map[string]interface{} `json:"definitions"`
-	Libraries []map[string]interface{} `json:"libraries"`
-	Attributes []map[string]interface{} `json:"attributes"`
-	Recipes []map[string]interface{} `json:"recipes"`
-	Providers []map[string]interface{} `json:"providers"`
-	Resources []map[string]interface{} `json:"resources"`
-	Templates []map[string]interface{} `json:"templates"`
-	RootFiles []map[string]interface{} `json:"root_files"`
-	Files []map[string]interface{} `json:"files"`
-	IsFrozen bool `json:"frozen?"`
-	Metadata map[string]interface{} `json:"metadata"` 
-	id int32
-	cookbook_id int32
+	CookbookName string                   `json:"cookbook_name"`
+	Name         string                   `json:"name"`
+	Version      string                   `json:"version"`
+	ChefType     string                   `json:"chef_type"`
+	JSONClass    string                   `json:"json_class"`
+	Definitions  []map[string]interface{} `json:"definitions"`
+	Libraries    []map[string]interface{} `json:"libraries"`
+	Attributes   []map[string]interface{} `json:"attributes"`
+	Recipes      []map[string]interface{} `json:"recipes"`
+	Providers    []map[string]interface{} `json:"providers"`
+	Resources    []map[string]interface{} `json:"resources"`
+	Templates    []map[string]interface{} `json:"templates"`
+	RootFiles    []map[string]interface{} `json:"root_files"`
+	Files        []map[string]interface{} `json:"files"`
+	IsFrozen     bool                     `json:"frozen?"`
+	Metadata     map[string]interface{}   `json:"metadata"`
+	id           int32
+	cookbookID   int32
 }
 
 /* Cookbook methods and functions */
 
+// GetName returns the name of the cookbook.
 func (c *Cookbook) GetName() string {
 	return c.Name
 }
 
+// URLType returns the first path element in a cookbook's URL.
 func (c *Cookbook) URLType() string {
 	return "cookbooks"
 }
 
-func (c *CookbookVersion) GetName() string {
-	return c.Name
+// GetName returns the name of the cookbook version.
+func (cbv *CookbookVersion) GetName() string {
+	return cbv.Name
 }
 
-func (c *CookbookVersion) URLType() string {
+// URLType returns the first path element in a cookbook version's URL.
+func (cbv *CookbookVersion) URLType() string {
 	return "cookbooks"
 }
 
-// Create a new cookbook.
-func New(name string) (*Cookbook, util.Gerror){
+// New creates a new cookbook.
+func New(name string) (*Cookbook, util.Gerror) {
 	var found bool
 	if !util.ValidateEnvName(name) {
 		err := util.Errorf("Invalid cookbook name '%s' using regex: 'Malformed cookbook name. Must only contain A-Z, a-z, 0-9, _ or -'.", name)
 		return nil, err
 	}
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForCookbookMySQL(data_store.Dbh, name)
+		found, cerr = checkForCookbookSQL(datastore.Dbh, name)
 		if cerr != nil {
 			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
 			return nil, err
-		} 
+		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		_, found = ds.Get("cookbook", name)
 	}
 	if found {
@@ -115,35 +120,34 @@ func New(name string) (*Cookbook, util.Gerror){
 		err.SetStatus(http.StatusConflict)
 	}
 	cookbook := &Cookbook{
-		Name: name,
+		Name:     name,
 		Versions: make(map[string]*CookbookVersion),
 	}
 	return cookbook, nil
 }
 
-// The number of versions this cookbook has.
-func (c *Cookbook)NumVersions() int {
-	if config.Config.UseMySQL {
+// NumVersions returns the number of versions this cookbook has.
+func (c *Cookbook) NumVersions() int {
+	if config.UsingDB() {
 		if c.numVersions == nil {
-			c.numVersions = c.numVersionsMySQL()
+			c.numVersions = c.numVersionsSQL()
 		}
 		return *c.numVersions
-	} else {
-		return len(c.Versions)
 	}
+	return len(c.Versions)
 }
 
-// Return all the cookbooks that have been uploaded to this server.
+// AllCookbooks returns all the cookbooks that have been uploaded to this server.
 func AllCookbooks() (cookbooks []*Cookbook) {
-	if config.Config.UseMySQL {
-		cookbooks = allCookbooksMySQL()
+	if config.UsingDB() {
+		cookbooks = allCookbooksSQL()
 		for _, c := range cookbooks {
 			// populate the versions hash
 			c.sortedVersions()
 		}
 	} else {
-		cookbook_list := GetList()
-		for _, c := range cookbook_list {
+		cookbookList := GetList()
+		for _, c := range cookbookList {
 			cb, err := Get(c)
 			if err != nil {
 				logger.Debugf("Curious. Cookbook %s was in the cookbook list, but wasn't found when fetched. Continuing.", c)
@@ -156,12 +160,12 @@ func AllCookbooks() (cookbooks []*Cookbook) {
 }
 
 // Get a cookbook.
-func Get(name string) (*Cookbook, util.Gerror){
+func Get(name string) (*Cookbook, util.Gerror) {
 	var cookbook *Cookbook
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		cookbook, err = getCookbookMySQL(name)
+		cookbook, err = getCookbookSQL(name)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -174,11 +178,17 @@ func Get(name string) (*Cookbook, util.Gerror){
 			found = true
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		var c interface{}
 		c, found = ds.Get("cookbook", name)
 		if c != nil {
 			cookbook = c.(*Cookbook)
+		}
+		/* hrm. */
+		if cookbook != nil && config.Config.UseUnsafeMemStore {
+			for _, v := range cookbook.Versions {
+				datastore.ChkNilArray(v)
+			}
 		}
 	}
 	if !found {
@@ -193,45 +203,48 @@ func Get(name string) (*Cookbook, util.Gerror){
 func (c *Cookbook) Save() error {
 	if config.Config.UseMySQL {
 		return c.saveCookbookMySQL()
+	} else if config.Config.UsePostgreSQL {
+		return c.saveCookbookPostgreSQL()
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		ds.Set("cookbook", c.Name, c)
 	}
 	return nil
 }
 
+// Delete a coookbook.
 func (c *Cookbook) Delete() error {
-	if config.Config.UseMySQL {
-		return c.deleteCookbookMySQL()
-	} else {
-		ds := data_store.New()
-		ds.Delete("cookbook", c.Name)
+	if config.UsingDB() {
+		return c.deleteCookbookSQL()
 	}
+	ds := datastore.New()
+	ds.Delete("cookbook", c.Name)
 	return nil
 }
 
-// Get a list of all cookbooks on this server.
+// GetList gets a list of all cookbooks on this server.
 func GetList() []string {
-	if config.Config.UseMySQL {
-		return getCookbookListMySQL()
-	} 
-	ds := data_store.New()
-	cb_list := ds.GetList("cookbook")
-	return cb_list
+	if config.UsingDB() {
+		return getCookbookListSQL()
+	}
+	ds := datastore.New()
+	cbList := ds.GetList("cookbook")
+	return cbList
 }
 
 /* Returns a sorted list of all the versions of this cookbook */
-func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
-	if config.Config.UseMySQL {
-		return c.sortedCookbookVersionsMySQL()
-	} 
+func (c *Cookbook) sortedVersions() []*CookbookVersion {
+	if config.UsingDB() {
+		return c.sortedCookbookVersionsSQL()
+	}
 	sorted := make([]*CookbookVersion, len(c.Versions))
 	keys := make(VersionStrings, len(c.Versions))
 
 	u := 0
-	for k, _ := range c.Versions {
+	for k, cbv := range c.Versions {
 		keys[u] = k
 		u++
+		datastore.ChkNilArray(cbv)
 	}
 	sort.Sort(sort.Reverse(keys))
 
@@ -246,124 +259,128 @@ func (c *Cookbook)sortedVersions() ([]*CookbookVersion){
 	return sorted
 }
 
-// Update what the cookbook stores as the latest version available.
+// UpdateLatestVersion updates what the cookbook stores as the latest version
+// available.
 func (c *Cookbook) UpdateLatestVersion() {
 	c.latest = nil
 	c.LatestVersion()
 }
 
-// Get the latest version of this cookbook.
+// LatestVersion gets the latest version of this cookbook.
 func (c *Cookbook) LatestVersion() *CookbookVersion {
 	if c.latest == nil {
 		sorted := c.sortedVersions()
 		c.latest = sorted[0]
+		if c.latest != nil {
+			datastore.ChkNilArray(c.latest)
+		}
 	}
 	return c.latest
 }
 
-// Gets num_results (or all if num_results is nil) versions of a cookbook,
+// InfoHash gets numResults (or all if numResults is nil) versions of a cookbook,
 // returning a hash describing the cookbook and the versions returned.
-func (c *Cookbook)InfoHash(num_results interface{}) map[string]interface{} {
-	return c.infoHashBase(num_results, "")
+func (c *Cookbook) InfoHash(numResults interface{}) map[string]interface{} {
+	return c.infoHashBase(numResults, "")
 }
 
-// Gets num_results (or all if num_results is nil) versions of a cookbook that
-// match the given constraint and returns a hash describing the cookbook and the
-// versions returned.
-func (c *Cookbook)ConstrainedInfoHash(num_results interface{}, constraint string) map[string]interface{} {
-	return c.infoHashBase(num_results, constraint)
+// ConstrainedInfoHash gets numResults (or all if numResults is nil) versions of
+// a cookbook that match the given constraint and returns a hash describing the
+// cookbook and the versions returned.
+func (c *Cookbook) ConstrainedInfoHash(numResults interface{}, constraint string) map[string]interface{} {
+	return c.infoHashBase(numResults, constraint)
 }
 
-// For the given run list and environment constraints, return the cookbook
-// dependencies.
-func DependsCookbooks(run_list []string, env_constraints map[string]string) (map[string]interface{}, error) {
-	cd_list := make(map[string][]string, len(run_list))
-	run_list_ref := make([]string, len(run_list))
+// DependsCookbooks will, for the given run list and environment constraints,
+// return the cookbook dependencies.
+func DependsCookbooks(runList []string, envConstraints map[string]string) (map[string]interface{}, error) {
+	cdList := make(map[string][]string, len(runList))
+	runListRef := make([]string, len(runList))
 
-	for i, cb_v := range run_list {
+	for i, cbV := range runList {
 		var cbName string
 		var constraint string
-		cx := strings.Split(cb_v, "@")
+		cx := strings.Split(cbV, "@")
 		cbName = strings.Split(cx[0], "::")[0]
 		if len(cx) == 2 {
 			constraint = fmt.Sprintf("= %s", cx[1])
 		}
-		cd_list[cbName] = []string{constraint}
+		cdList[cbName] = []string{constraint}
 		/* There's a method to our madness. We need to modify the
-		 * cd_list as we go along, but want the base list to remain the
+		 * cdList as we go along, but want the base list to remain the
 		 * same. Thus, we make an additional array of cookbook names to
 		 * range through. */
-		run_list_ref[i] = cbName
+		runListRef[i] = cbName
 	}
 
- 	for k, ec := range env_constraints {
- 		if _, found := cd_list[k]; !found {
- 			continue
- 		} else {
+	for k, ec := range envConstraints {
+		if _, found := cdList[k]; !found {
+			continue
+		} else {
 			/* Check if there's a constraint in the uploaded run
 			 * list. If not take the env one and move on. */
-			if cd_list[k][0] == "" {
-				cd_list[k] = []string{ ec }
+			if cdList[k][0] == "" {
+				cdList[k] = []string{ec}
 				continue
 			}
- 			/* Override if the environment is more restrictive */
-			_, orgver, _ := splitConstraint(cd_list[k][0])
+			/* Override if the environment is more restrictive */
+			_, orgver, _ := splitConstraint(cdList[k][0])
 			newop, newver, nerr := splitConstraint(ec)
 			if nerr != nil {
 				return nil, nerr
 			}
 			/* if the versions are equal, take the env one */
 			if orgver == newver {
-				cd_list[k] = []string{ ec }
+				cdList[k] = []string{ec}
 				continue /* and break out of this step */
 			}
 			switch newop {
-				case ">", ">=":
-					if versionLess(orgver, newver) {
-						cd_list[k] = []string{ ec }
-					} 
-				case "<", "<=":
-					if !versionLess(orgver, newver) {
-						cd_list[k] = []string{ ec }
-					}
-				case "=":
-					if orgver != newver {
-						err := fmt.Errorf("This run list has a constraint '%s' for %s that conflicts with '%s' in the environment's cookbook versions.", cd_list[k][0], k, ec)
-						return nil, err
-					}
-				case "~>":
-					if action := verConstraintCheck(orgver, newver, newop); action == "ok" {
-						cd_list[k] = []string{ ec }
-					} else {
-						err := fmt.Errorf("This run list has a constraint '%s' for %s that conflicts with '%s' in the environment's cookbook versions.", cd_list[k][0], k, ec)
-						return nil, err
-					}
-				default:
-					err := fmt.Errorf("An unlikely occurance, but the constraint '%s' for cookbook %s in this environment is impossible.", ec, k)
+			case ">", ">=":
+				if versionLess(orgver, newver) {
+					cdList[k] = []string{ec}
+				}
+			case "<", "<=":
+				if !versionLess(orgver, newver) {
+					cdList[k] = []string{ec}
+				}
+			case "=":
+				if orgver != newver {
+					err := fmt.Errorf("This run list has a constraint '%s' for %s that conflicts with '%s' in the environment's cookbook versions.", cdList[k][0], k, ec)
 					return nil, err
+				}
+			case "~>":
+				if action := verConstraintCheck(orgver, newver, newop); action == "ok" {
+					cdList[k] = []string{ec}
+				} else {
+					err := fmt.Errorf("This run list has a constraint '%s' for %s that conflicts with '%s' in the environment's cookbook versions.", cdList[k][0], k, ec)
+					return nil, err
+				}
+			default:
+				err := fmt.Errorf("An unlikely occurance, but the constraint '%s' for cookbook %s in this environment is impossible.", ec, k)
+				return nil, err
 			}
- 		}
- 	}
+		}
+	}
 
 	/* Build a slice holding all the needed cookbooks. */
-	for _, cbName := range run_list_ref {
+	for _, cbName := range runListRef {
 		c, err := Get(cbName)
 		if err != nil {
 			return nil, err
 		}
-		cbv := c.LatestConstrained(cd_list[cbName][0])
+		cbv := c.LatestConstrained(cdList[cbName][0])
 		if cbv == nil {
-			return nil, fmt.Errorf("No cookbook found for %s that satisfies constraint '%s'", c.Name, cd_list[cbName][0])
+			return nil, fmt.Errorf("No cookbook found for %s that satisfies constraint '%s'", c.Name, cdList[cbName][0])
 		}
-		
-		nerr := cbv.resolveDependencies(cd_list)
+
+		nerr := cbv.resolveDependencies(cdList)
 		if nerr != nil {
 			return nil, nerr
 		}
 	}
 
-	cookbook_deps := make(map[string]interface{}, len(cd_list))
-	for cname, traints := range cd_list {
+	cookbookDeps := make(map[string]interface{}, len(cdList))
+	for cname, traints := range cdList {
 		cb, err := Get(cname)
 		/* Although we would have already seen this, but being careful
 		 * rarely hurt. */
@@ -372,8 +389,8 @@ func DependsCookbooks(run_list []string, env_constraints map[string]string) (map
 		}
 		var gcbv *CookbookVersion
 
-		for _, cv := range cb.sortedVersions(){
-			Vers:
+		for _, cv := range cb.sortedVersions() {
+		Vers:
 			for _, ct := range traints {
 				if ct != "" { // no constraint
 					op, ver, err := splitConstraint(ct)
@@ -394,64 +411,63 @@ func DependsCookbooks(run_list []string, env_constraints map[string]string) (map
 		if gcbv == nil {
 			err := fmt.Errorf("Unfortunately no version of %s could satisfy the requested constraints: %s", cname, strings.Join(traints, ", "))
 			return nil, err
-		} else {
-			gcbvJson := gcbv.ToJson("POST")
-			/* Sigh. For some reason, *some* places want nothing
-			 * sent for cookbook information divisions like 
-			 * attributes, libraries, providers, etc. However, 
-			 * others will flip out if nothing is sent at all, and
-			 * environment/<env>/cookbook_versions is one of them.
-			 * Go through the list of possibly guilty divisions and
-			 * set them to an empty slice of maps if they're nil. */
-			chkDiv := []string{ "definitions", "libraries", "attributes", "providers", "resources", "templates", "root_files", "files" }
-			for _, cd := range chkDiv {
-				if gcbvJson[cd] == nil {
-					gcbvJson[cd] = make([]map[string]interface{}, 0)
-				}
-			}
-			cookbook_deps[gcbv.CookbookName] = gcbvJson
 		}
+		gcbvJSON := gcbv.ToJSON("POST")
+		/* Sigh. For some reason, *some* places want nothing
+		 * sent for cookbook information divisions like
+		 * attributes, libraries, providers, etc. However,
+		 * others will flip out if nothing is sent at all, and
+		 * environment/<env>/cookbook_versions is one of them.
+		 * Go through the list of possibly guilty divisions and
+		 * set them to an empty slice of maps if they're nil. */
+		chkDiv := []string{"definitions", "libraries", "attributes", "providers", "resources", "templates", "root_files", "files"}
+		for _, cd := range chkDiv {
+			if gcbvJSON[cd] == nil {
+				gcbvJSON[cd] = make([]map[string]interface{}, 0)
+			}
+		}
+		cookbookDeps[gcbv.CookbookName] = gcbvJSON
 	}
 
-	return cookbook_deps, nil
+	return cookbookDeps, nil
 }
 
-func (cbv *CookbookVersion)resolveDependencies(cd_list map[string][]string) error {
-	dep_list := cbv.Metadata["dependencies"].(map[string]interface{})
+func (cbv *CookbookVersion) resolveDependencies(cdList map[string][]string) error {
+	depList := cbv.Metadata["dependencies"].(map[string]interface{})
 
-	for r, c2 := range dep_list {
+	for r, c2 := range depList {
 		c := c2.(string)
-		dep_cb, err := Get(r)
+		depCb, err := Get(r)
 		if err != nil {
 			return err
 		}
-		deb_cbv := dep_cb.LatestConstrained(c)
-		if deb_cbv == nil {
+		debCbv := depCb.LatestConstrained(c)
+		if debCbv == nil {
 			err := fmt.Errorf("No cookbook version for %s satisfies constraint '%s'.", r, c)
 			return err
 		}
 
 		/* Do we satisfy the constraints we have? */
-		if constraints, found := cd_list[r]; found {
+		if constraints, found := cdList[r]; found {
 			for _, dcon := range constraints {
 				if dcon != "" {
 					op, ver, err := splitConstraint(dcon)
 					if err != nil {
 						return err
 					}
-					stat := verConstraintCheck(deb_cbv.Version, ver, op)
+					stat := verConstraintCheck(debCbv.Version, ver, op)
 					if stat != "ok" {
-						err := fmt.Errorf("Oh no! Cookbook %s (ver %s) depends on a version of cookbook %s matching the constraint '%s', but that constraint conflicts with the previous constraint of '%s'. Bailing, sorry.", cbv.CookbookName, cbv.Version, deb_cbv.CookbookName, c, dcon)
+						err := fmt.Errorf("Oh no! Cookbook %s (ver %s) depends on a version of cookbook %s matching the constraint '%s', but that constraint conflicts with the previous constraint of '%s'. Bailing, sorry.", cbv.CookbookName, cbv.Version, debCbv.CookbookName, c, dcon)
 						return err
 					}
 				}
 			}
 		} else {
 			/* Add our constraint */
-			cd_list[r] = []string{c}
+			cdList[r] = []string{c}
 		}
-		
-		nerr := deb_cbv.resolveDependencies(cd_list)
+
+		nerr := debCbv.resolveDependencies(cdList)
 		if nerr != nil {
 			return nerr
 		}
@@ -464,101 +480,99 @@ func splitConstraint(constraint string) (string, string, error) {
 	if len(t1) != 2 {
 		err := fmt.Errorf("Constraint '%s' was not well-formed.", constraint)
 		return "", "", err
-	} else {
-		op := t1[0]
-		ver := t1[1]
-		return op, ver, nil
 	}
+	op := t1[0]
+	ver := t1[1]
+	return op, ver, nil
 }
 
-func (c *Cookbook)infoHashBase(num_results interface{}, constraint string) map[string]interface{} {
-	cb_hash := make(map[string]interface{})
-	cb_hash["url"] = util.ObjURL(c)
-	
+func (c *Cookbook) infoHashBase(numResults interface{}, constraint string) map[string]interface{} {
+	cbHash := make(map[string]interface{})
+	cbHash["url"] = util.ObjURL(c)
+
 	nr := 0
-	
+
 	/* Working to maintain Chef server behavior here. We need to make "all"
 	 * give all versions of the cookbook and make no value give one version,
 	 * but keep 0 as invalid input that gives zero results back. This might
 	 * be an area worth breaking. */
-	var num_versions int
-	all_versions := false
-	//var cb_hash_len int
+	var numVersions int
+	allVersions := false
 
-	if num_results != "" && num_results != "all" {
-		num_versions, _ = strconv.Atoi(num_results.(string))
-	} else if num_results == "" {
-		num_versions = 1
+	if numResults != "" && numResults != "all" {
+		numVersions, _ = strconv.Atoi(numResults.(string))
+	} else if numResults == "" {
+		numVersions = 1
 	} else {
-		all_versions = true
+		allVersions = true
 	}
 
-	cb_hash["versions"] = make([]interface{}, 0)
+	cbHash["versions"] = make([]interface{}, 0)
 
-	var constraint_version string
-	var constraint_op string
+	var constraintVersion string
+	var constraintOp string
 	if constraint != "" {
 		traints := strings.Split(constraint, " ")
 		/* If the constraint isn't well formed like ">= 1.2.3", log the
 		 * fact and ignore the constraint. */
 		if len(traints) == 2 {
-			constraint_version = traints[1]
-			constraint_op = traints[0]
+			constraintVersion = traints[1]
+			constraintOp = traints[0]
 		} else {
 			logger.Warningf("Constraint '%s' for cookbook %s was badly formed -- bailing.\n", constraint, c.Name)
 			return nil
 		}
 	}
 
-	VerLoop:
+VerLoop:
 	for _, cv := range c.sortedVersions() {
-		if !all_versions && nr >= num_versions {
+		if !allVersions && nr >= numVersions {
 			break
-		} 
+		}
 		/* Version constraint checking. */
 		if constraint != "" {
-			con_action := verConstraintCheck(cv.Version, constraint_version, constraint_op)
-			switch con_action {
-				case "skip":
-					/* Skip this version, keep going. */
-					continue VerLoop
-				case "break":
-					/* Stop processing entirely. */
-					break VerLoop
+			conAction := verConstraintCheck(cv.Version, constraintVersion, constraintOp)
+			switch conAction {
+			case "skip":
+				/* Skip this version, keep going. */
+				continue VerLoop
+			case "break":
+				/* Stop processing entirely. */
+				break VerLoop
 				/* Default action is, of course, to continue on
 				 * like nothing happened. Later, we need to
 				 * panic over an invalid constraint. */
 			}
 		}
-		cv_info := make(map[string]string)
-		cv_info["url"] = util.CustomObjURL(c, cv.Version)
-		cv_info["version"] = cv.Version
-		cb_hash["versions"] = append(cb_hash["versions"].([]interface{}), cv_info)
-		nr++ 
+		cvInfo := make(map[string]string)
+		cvInfo["url"] = util.CustomObjURL(c, cv.Version)
+		cvInfo["version"] = cv.Version
+		cbHash["versions"] = append(cbHash["versions"].([]interface{}), cvInfo)
+		nr++
 	}
-	return cb_hash
+	return cbHash
 }
 
-// Returns the latest version of a cookbook that matches the given constraint.
-// If no constraint is given, returns the latest version.
-func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion{
+// LatestConstrained returns the latest version of a cookbook that matches the
+// given constraint. If no constraint is given, returns the latest version.
+func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion {
 	if constraint == "" {
 		return c.LatestVersion()
 	}
-	var constraint_version string
-	var constraint_op string
+	var constraintVersion string
+	var constraintOp string
 	traints := strings.Split(constraint, " ")
 	if len(traints) == 2 {
-		constraint_version = traints[1]
-		constraint_op = traints[0]
+		constraintVersion = traints[1]
+		constraintOp = traints[0]
 	} else {
 		logger.Warningf("Constraint '%s' for cookbook %s (in LatestConstrained) was malformed. Bailing.\n", constraint, c.Name)
 		return nil
 	}
-	for _, cv := range c.sortedVersions(){
-		action := verConstraintCheck(cv.Version, constraint_version, constraint_op)
+	for _, cv := range c.sortedVersions() {
+		action := verConstraintCheck(cv.Version, constraintVersion, constraintOp)
 		/* We only want the latest that works. */
-		if (action == "ok"){
+		if action == "ok" {
 			return cv
 		}
 	}
@@ -566,55 +580,51 @@ func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion{
 	return nil
 }
 
-
-
 /* CookbookVersion methods and functions */
 
-// Create a new version of the cookbook.
-func (c *Cookbook)NewVersion(cb_version string, cbv_data map[string]interface{}) (*CookbookVersion, util.Gerror){
-	if _, err := c.GetVersion(cb_version); err == nil {
-		err := util.Errorf("Version %s of cookbook %s already exists, and shouldn't be created like this. Use UpdateVersion instead.", cb_version, c.Name)
+// NewVersion creates a new version of the cookbook.
+func (c *Cookbook) NewVersion(cbVersion string, cbvData map[string]interface{}) (*CookbookVersion, util.Gerror) {
+	if _, err := c.GetVersion(cbVersion); err == nil {
+		err := util.Errorf("Version %s of cookbook %s already exists, and shouldn't be created like this. Use UpdateVersion instead.", cbVersion, c.Name)
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
 	cbv := &CookbookVersion{
 		CookbookName: c.Name,
-		Version: cb_version,
-		Name: fmt.Sprintf("%s-%s", c.Name, cb_version),
-		ChefType: "cookbook_version",
-		JsonClass: "Chef::CookbookVersion",
-		IsFrozen: false,
-		cookbook_id: c.id, // should be ok even with in-mem
+		Version:      cbVersion,
+		Name:         fmt.Sprintf("%s-%s", c.Name, cbVersion),
+		ChefType:     "cookbook_version",
+		JSONClass:    "Chef::CookbookVersion",
+		IsFrozen:     false,
+		cookbookID:   c.id, // should be ok even with in-mem
 	}
-	err := cbv.UpdateVersion(cbv_data, "")
+	err := cbv.UpdateVersion(cbvData, "")
 	if err != nil {
 		return nil, err
 	}
 	/* And, dur, add it to the versions */
-	c.Versions[cb_version] = cbv
-	
+	c.Versions[cbVersion] = cbv
+
 	c.numVersions = nil
 	c.UpdateLatestVersion()
 	c.Save()
 	return cbv, nil
 }
 
-
-
-// Get a particular version of the cookbook.
-func (c *Cookbook)GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
+// GetVersion gets a particular version of the cookbook.
+func (c *Cookbook) GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
 	if cbVersion == "_latest" {
 		return c.LatestVersion(), nil
 	}
 	var cbv *CookbookVersion
 	var found bool
 
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		// Ridiculously cacheable, but let's get it working first. This
 		// applies all over the place w/ the SQL bits.
 		if cbv, found = c.Versions[cbVersion]; !found {
 			var err error
-			cbv, err = c.getCookbookVersionMySQL(cbVersion)
+			cbv, err = c.getCookbookVersionSQL(cbVersion)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					found = false
@@ -630,6 +640,12 @@ func (c *Cookbook)GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) {
 		}
 	} else {
 		cbv, found = c.Versions[cbVersion]
+		if cbv != nil {
+			datastore.ChkNilArray(cbv)
+			if cbv.Recipes == nil {
+				cbv.Recipes = make([]map[string]interface{}, 0)
+			}
+		}
 	}
 
 	if !found {
@@ -646,7 +662,7 @@ func extractVerNums(cbVersion string) (maj, min, patch int64, err util.Gerror) {
 	}
 	nums := strings.Split(cbVersion, ".")
 	if len(nums) < 2 && len(nums) > 3 {
-		err = util.Errorf("incorrect number of numbers in version string '%s'", len(nums))
+		err = util.Errorf("incorrect number of numbers in version string '%s': %d", cbVersion, len(nums))
 		return 0, 0, 0, err
 	}
 	var vt int64
@@ -676,26 +692,31 @@ func extractVerNums(cbVersion string) (maj, min, patch int64, err util.Gerror) {
 	return maj, min, patch, nil
 }
 
-func (c *Cookbook)deleteHashes(file_hashes []string) {
-	/* And remove the unused hashes. Currently, sigh, this involes checking
+func (c *Cookbook) deleteHashes(fhashes []string) {
+	/* And remove the unused hashes. Currently, sigh, this involves checking
 	 * every cookbook. Probably will be easier with an actual database, I
 	 * imagine. */
-	all_cookbooks := AllCookbooks()
-	for _, cb := range all_cookbooks {
+	ac := AllCookbooks()
+	for _, cb := range ac {
 		/* just move on if we don't find it somehow */
+		// if we get to this cookbook, check the versions currently in
+		// memory
+		if cb.Name == c.Name {
+			cb = c
+		}
 		for _, ver := range cb.sortedVersions() {
-			ver_hash := ver.fileHashes()
-			for _, vh := range ver_hash {
-				for i, fh := range file_hashes {
+			verHash := ver.fileHashes()
+			for _, vh := range verHash {
+				for i, fh := range fhashes {
 					/* If a hash in a deleted cookbook is
 					 * in another cookbook, remove it from
 					 * the hash to delete. Then we can break
 					 * out. If we find that the hash we're
 					 * comparing with is greater than this
-					 * one in file_hashes, also break out.
+					 * one in fhashes, also break out.
 					 */
 					if fh == vh {
-						file_hashes = delSliceElement(i, file_hashes)
+						fhashes = delSliceElement(i, fhashes)
 						break
 					} else if fh > vh {
 						break
@@ -705,38 +726,38 @@ func (c *Cookbook)deleteHashes(file_hashes []string) {
 		}
 	}
 	/* And delete whatever file hashes we still have */
-	filestore.DeleteHashes(file_hashes)
+	filestore.DeleteHashes(fhashes)
 }
 
-// Delete a particular version of a cookbook.
-func (c *Cookbook)DeleteVersion(cb_version string) util.Gerror {
+// DeleteVersion deletes a particular version of a cookbook.
+func (c *Cookbook) DeleteVersion(cbVersion string) util.Gerror {
 	/* Check for existence */
-	cbv, _ := c.GetVersion(cb_version)
+	cbv, _ := c.GetVersion(cbVersion)
 	if cbv == nil {
-		err := util.Errorf("Version %s of cookbook %s does not exist to be deleted.", cb_version, c.Name)
+		err := util.Errorf("Version %s of cookbook %s does not exist to be deleted.", cbVersion, c.Name)
 		err.SetStatus(http.StatusNotFound)
 		return err
-	} 
+	}
 
-	file_hashes := cbv.fileHashes()
+	fhashes := cbv.fileHashes()
 
-	if config.Config.UseMySQL {
-		err := cbv.deleteCookbookVersionMySQL()
+	if config.UsingDB() {
+		err := cbv.deleteCookbookVersionSQL()
 		if err != nil {
 			return nil
 		}
 	}
 	c.numVersions = nil
 
-	delete(c.Versions, cb_version)
-	c.deleteHashes(file_hashes)
-	
+	delete(c.Versions, cbVersion)
 	c.Save()
+	c.deleteHashes(fhashes)
+
 	return nil
 }
 
-// Update a specific version of a cookbook.
-func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force string) util.Gerror {
+// UpdateVersion updates a specific version of a cookbook.
+func (cbv *CookbookVersion) UpdateVersion(cbvData map[string]interface{}, force string) util.Gerror {
 	/* Allow force to update a frozen cookbook */
 	if cbv.IsFrozen == true && force != "true" {
 		err := util.Errorf("The cookbook %s at version %s is frozen. Use the 'force' option to override.", cbv.CookbookName, cbv.Version)
@@ -744,9 +765,9 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 		return err
 	}
 
-	file_hashes := cbv.fileHashes()
-	
-	_, nerr := util.ValidateAsString(cbv_data["cookbook_name"])
+	fhashes := cbv.fileHashes()
+
+	_, nerr := util.ValidateAsString(cbvData["cookbook_name"])
 	if nerr != nil {
 		if nerr.Error() == "Field 'name' missing" {
 			nerr = util.Errorf("Field 'cookbook_name' missing")
@@ -757,10 +778,10 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 	}
 
 	/* Validation, validation, all is validation. */
-	valid_elements := []string{ "cookbook_name", "name", "version", "json_class", "chef_type", "definitions", "libraries", "attributes", "recipes", "providers", "resources", "templates", "root_files", "files", "frozen?", "metadata", "force" }
-	ValidElem:
-	for k, _ := range cbv_data {
-		for _, i := range valid_elements {
+	validElements := []string{"cookbook_name", "name", "version", "json_class", "chef_type", "definitions", "libraries", "attributes", "recipes", "providers", "resources", "templates", "root_files", "files", "frozen?", "metadata", "force"}
+ValidElem:
+	for k := range cbvData {
+		for _, i := range validElements {
 			if k == i {
 				continue ValidElem
 			}
@@ -770,128 +791,127 @@ func (cbv *CookbookVersion)UpdateVersion(cbv_data map[string]interface{}, force 
 	}
 
 	var verr util.Gerror
-	cbv_data["chef_type"], verr = util.ValidateAsFieldString(cbv_data["chef_type"])
+	cbvData["chef_type"], verr = util.ValidateAsFieldString(cbvData["chef_type"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' nil" {
-			cbv_data["chef_type"] = cbv.ChefType
+			cbvData["chef_type"] = cbv.ChefType
 		} else {
 			verr = util.Errorf("Field 'chef_type' invalid")
 			return verr
 		}
 	} else {
 		// Wait, what was I doing here?
-		// if !util.ValidateEnvName(cbv_data["chef_type"].(string)) {
-		if cbv_data["chef_type"].(string) != "cookbook_version" {
+		// if !util.ValidateEnvName(cbvData["chef_type"].(string)) {
+		if cbvData["chef_type"].(string) != "cookbook_version" {
 			verr = util.Errorf("Field 'chef_type' invalid")
 			return verr
 		}
 	}
 
-	cbv_data["json_class"], verr = util.ValidateAsFieldString(cbv_data["json_class"])
+	cbvData["json_class"], verr = util.ValidateAsFieldString(cbvData["json_class"])
 	if verr != nil {
 		if verr.Error() == "Field 'name' nil" {
-			cbv_data["json_class"] = cbv.JsonClass
+			cbvData["json_class"] = cbv.JSONClass
 		} else {
 			verr = util.Errorf("Field 'json_class' invalid")
 			return verr
 		}
 	} else {
-		if cbv_data["json_class"].(string) != "Chef::CookbookVersion" {
+		if cbvData["json_class"].(string) != "Chef::CookbookVersion" {
 			verr = util.Errorf("Field 'json_class' invalid")
 			return verr
 		}
 	}
 
-	cbv_data["version"], verr = util.ValidateAsVersion(cbv_data["version"])
+	cbvData["version"], verr = util.ValidateAsVersion(cbvData["version"])
 	if verr != nil {
 		verr = util.Errorf("Field 'version' invalid")
 		return verr
-	} else {
-		if cbv_data["version"].(string) == "0.0.0" && cbv.Version != "" {
-			cbv_data["version"] = cbv.Version
-		}
+	}
+	if cbvData["version"].(string) == "0.0.0" && cbv.Version != "" {
+		cbvData["version"] = cbv.Version
 	}
 
-	divs := []string{ "definitions", "libraries", "attributes", "recipes", "providers", "resources", "templates", "root_files", "files" }
+	divs := []string{"definitions", "libraries", "attributes", "recipes", "providers", "resources", "templates", "root_files", "files"}
 	for _, d := range divs {
-		cbv_data[d], verr = util.ValidateCookbookDivision(d, cbv_data[d])
+		cbvData[d], verr = util.ValidateCookbookDivision(d, cbvData[d])
 		if verr != nil {
 			return verr
 		}
 	}
-	cbv_data["metadata"], verr = util.ValidateCookbookMetadata(cbv_data["metadata"])
+	cbvData["metadata"], verr = util.ValidateCookbookMetadata(cbvData["metadata"])
 	if verr != nil {
 		return verr
 	}
-	
 
-	cbv_data["frozen?"], verr = util.ValidateAsBool(cbv_data["frozen?"])
+	cbvData["frozen?"], verr = util.ValidateAsBool(cbvData["frozen?"])
 	if verr != nil {
 		return verr
 	}
 
 	/* Basic sanity checking */
-	if cbv_data["cookbook_name"].(string) != cbv.CookbookName {
+	if cbvData["cookbook_name"].(string) != cbv.CookbookName {
 		err := util.Errorf("Field 'cookbook_name' invalid")
 		return err
 	}
-	if cbv_data["name"].(string) != cbv.Name {
+	if cbvData["name"].(string) != cbv.Name {
 		err := util.Errorf("Field 'name' invalid")
 		return err
 	}
-	if cbv_data["version"].(string) != cbv.Version && cbv_data["version"] != "0.0.0" {
+	if cbvData["version"].(string) != cbv.Version && cbvData["version"] != "0.0.0" {
 		err := util.Errorf("Field 'version' invalid")
 		return err
 	}
-	
+
 	/* Update the data */
 	/* With these next two, should we test for existence before setting? */
-	cbv.ChefType = cbv_data["chef_type"].(string)
-	cbv.JsonClass = cbv_data["json_class"].(string)
-	cbv.Definitions = convertToCookbookDiv(cbv_data["definitions"])
-	cbv.Libraries = convertToCookbookDiv(cbv_data["libraries"])
-	cbv.Attributes = convertToCookbookDiv(cbv_data["attributes"])
-	cbv.Recipes = cbv_data["recipes"].([]map[string]interface{})
-	cbv.Providers = convertToCookbookDiv(cbv_data["providers"])
-	cbv.Resources = convertToCookbookDiv(cbv_data["resources"])
-	cbv.Templates = convertToCookbookDiv(cbv_data["templates"])
-	cbv.RootFiles = convertToCookbookDiv(cbv_data["root_files"])
-	cbv.Files = convertToCookbookDiv(cbv_data["files"])
+	cbv.ChefType = cbvData["chef_type"].(string)
+	cbv.JSONClass = cbvData["json_class"].(string)
+	cbv.Definitions = convertToCookbookDiv(cbvData["definitions"])
+	cbv.Libraries = convertToCookbookDiv(cbvData["libraries"])
+	cbv.Attributes = convertToCookbookDiv(cbvData["attributes"])
+	cbv.Recipes = cbvData["recipes"].([]map[string]interface{})
+	cbv.Providers = convertToCookbookDiv(cbvData["providers"])
+	cbv.Resources = convertToCookbookDiv(cbvData["resources"])
+	cbv.Templates = convertToCookbookDiv(cbvData["templates"])
+	cbv.RootFiles = convertToCookbookDiv(cbvData["root_files"])
+	cbv.Files = convertToCookbookDiv(cbvData["files"])
 	if cbv.IsFrozen != true {
-		cbv.IsFrozen = cbv_data["frozen?"].(bool)
+		cbv.IsFrozen = cbvData["frozen?"].(bool)
 	}
-	cbv.Metadata = cbv_data["metadata"].(map[string]interface{})
+	cbv.Metadata = cbvData["metadata"].(map[string]interface{})
 
 	/* If we're using SQL, update this version in the DB. */
-	if config.Config.UseMySQL {
-		if err := cbv.updateCookbookVersionMySQL(); err != nil {
+	if config.UsingDB() {
+		if err := cbv.updateCookbookVersionSQL(); err != nil {
 			return err
 		}
 	}
 
 	/* Clean cookbook hashes */
-	if len(file_hashes) > 0 {
+	if len(fhashes) > 0 {
 		// Get our parent. Bravely assuming that if it exists we exist.
 		cbook, _ := Get(cbv.CookbookName)
-		cbook.deleteHashes(file_hashes)
+		cbook.Versions[cbv.Version] = cbv
+		cbook.deleteHashes(fhashes)
 	}
-	
+
 	return nil
 }
 
 func convertToCookbookDiv(div interface{}) []map[string]interface{} {
 	switch div := div.(type) {
-		case []map[string]interface{}:
-			return div
-		default:
-			return nil
+	case []map[string]interface{}:
+		return div
+	default:
+		return nil
 	}
 }
 
 // Get the hashes of all files associated with a cookbook. Useful for comparing
 // the files in a deleted cookbook version with the files in other versions to
-// figure out which to remove and which to keep. 
-func (cbv *CookbookVersion)fileHashes() []string{
+// figure out which to remove and which to keep.
+func (cbv *CookbookVersion) fileHashes() []string {
 	/* Hmm. Weird as it seems, we seem to want length to be zero here so
 	 * we can happily append. Otherwise we'll end up with a nil element. */
 	fhashes := make([]string, 0)
@@ -912,64 +932,69 @@ func (cbv *CookbookVersion)fileHashes() []string{
 	return fhashes
 }
 
-// Helper function that coverts the internal representation of a cookbook
-// version to JSON in a way that knife and chef-client expect.
-func (cbv *CookbookVersion)ToJson(method string) map[string]interface{} {
-	toJson := make(map[string]interface{})
-	toJson["name"] = cbv.Name
-	toJson["cookbook_name"] = cbv.CookbookName
+// ToJSON is a helper function that coverts the internal representation of a
+// cookbook version to JSON in a way that knife and chef-client expect.
+func (cbv *CookbookVersion) ToJSON(method string) map[string]interface{} {
+	toJSON := make(map[string]interface{})
+	toJSON["name"] = cbv.Name
+	toJSON["cookbook_name"] = cbv.CookbookName
 	if cbv.Version != "0.0.0" {
-		toJson["version"] = cbv.Version
+		toJSON["version"] = cbv.Version
 	}
-	toJson["chef_type"] = cbv.ChefType
-	toJson["json_class"] = cbv.JsonClass
-	toJson["frozen?"] = cbv.IsFrozen
-	toJson["recipes"] = cbv.Recipes
-	toJson["metadata"] = cbv.Metadata
+	toJSON["chef_type"] = cbv.ChefType
+	toJSON["json_class"] = cbv.JSONClass
+	toJSON["frozen?"] = cbv.IsFrozen
+	// hmm.
+	if cbv.Recipes != nil {
+		toJSON["recipes"] = cbv.Recipes
+	} else {
+		toJSON["recipes"] = make([]map[string]interface{},0)
+	}
+	toJSON["metadata"] = cbv.Metadata
 
 	/* Only send the other fields if something exists in them */
-	/* Seriously, though, why *not* send the URL for the resources back 
+	/* Seriously, though, why *not* send the URL for the resources back
 	 * with PUT, but *DO* send it with everything else? */
 	if cbv.Providers != nil && len(cbv.Providers) != 0 {
-		toJson["providers"] = methodize(method, cbv.Providers)
+		toJSON["providers"] = methodize(method, cbv.Providers)
 	}
 	if cbv.Definitions != nil && len(cbv.Definitions) != 0 {
-		toJson["definitions"] = methodize(method, cbv.Definitions)
+		toJSON["definitions"] = methodize(method, cbv.Definitions)
 	}
 	if cbv.Libraries != nil && len(cbv.Libraries) != 0 {
-		toJson["libraries"] = methodize(method, cbv.Libraries)
+		toJSON["libraries"] = methodize(method, cbv.Libraries)
 	}
 	if cbv.Attributes != nil && len(cbv.Attributes) != 0 {
-		toJson["attributes"] = methodize(method, cbv.Attributes)
+		toJSON["attributes"] = methodize(method, cbv.Attributes)
 	}
 	if cbv.Resources != nil && len(cbv.Resources) != 0 {
-		toJson["resources"] = methodize(method, cbv.Resources)
+		toJSON["resources"] = methodize(method, cbv.Resources)
 	}
 	if cbv.Templates != nil && len(cbv.Templates) != 0 {
-		toJson["templates"] = methodize(method, cbv.Templates)
+		toJSON["templates"] = methodize(method, cbv.Templates)
 	}
 	if cbv.RootFiles != nil && len(cbv.RootFiles) != 0 {
-		toJson["root_files"] = methodize(method, cbv.RootFiles)
+		toJSON["root_files"] = methodize(method, cbv.RootFiles)
 	}
 	if cbv.Files != nil && len(cbv.Files) != 0 {
-		toJson["files"] = methodize(method, cbv.Files)
+		toJSON["files"] = methodize(method, cbv.Files)
 	}
 
-	return toJson
+	return toJSON
 }
 
-func methodize(method string, cb_thing []map[string]interface{}) []map[string]interface{} {
-	ret_hash := make([]map[string]interface{}, len(cb_thing))
-	for i, v := range cb_thing {
-		ret_hash[i] = make(map[string]interface{})
+func methodize(method string, cbThing []map[string]interface{}) []map[string]interface{} {
+	retHash := make([]map[string]interface{}, len(cbThing))
+	for i, v := range cbThing {
+		retHash[i] = make(map[string]interface{})
 		for k, j := range v {
 			if method == "PUT" && k == "url" {
 				continue
 			}
-			ret_hash[i][k] = j
+			retHash[i][k] = j
 		}
 	}
-	return ret_hash
+	return retHash
 }
 
 func getAttrHashes(attr []map[string]interface{}) []string {
@@ -977,31 +1002,31 @@ func getAttrHashes(attr []map[string]interface{}) []string {
 	for i, v := range attr {
 		/* Woo, type assertion again */
 		switch h := v["checksum"].(type) {
-			case string:
-				hashes[i] = h
-			case nil:
-				/* anything special here? */
-				;
-			default:
-				; // do we expect an err?
+		case string:
+			hashes[i] = h
+		case nil:
+			/* anything special here? */
+
+		default:
+			// do we expect an err?
 		}
 	}
 	return hashes
 }
 
-func removeDupHashes(file_hashes []string) []string{
-	for i, v := range file_hashes {
+func removeDupHashes(fhashes []string) []string {
+	for i, v := range fhashes {
 		/* break if we're the last element */
-		if i + 1 >= len(file_hashes){
+		if i+1 >= len(fhashes) {
 			break
 		}
-		/* If the current element is equal to the next one, remove 
+		/* If the current element is equal to the next one, remove
 		 * the next element. */
-		if v == file_hashes[i + 1] {
-			file_hashes = delSliceElement(i + 1, file_hashes)
+		if v == fhashes[i+1] {
+			fhashes = delSliceElement(i+1, fhashes)
 		}
 	}
-	return file_hashes
+	return fhashes
 }
 
 func delSliceElement(pos int, strs []string) []string {
@@ -1009,13 +1034,13 @@ func delSliceElement(pos int, strs []string) []string {
 	return strs
 }
 
-// Provide a list of recipes in this cookbook version. 
+// RecipeList provides a list of recipes in this cookbook version.
 func (cbv *CookbookVersion) RecipeList() ([]string, util.Gerror) {
-	recipe_meta := cbv.Recipes
-	recipes := make([]string, len(recipe_meta))
+	recipeMeta := cbv.Recipes
+	recipes := make([]string, len(recipeMeta))
 	ci := 0
 	/* Cobble the recipes together from the Recipes field */
-	for _, r := range recipe_meta {
+	for _, r := range recipeMeta {
 		rm := regexp.MustCompile(`(.*?)\.rb`)
 		rfind := rm.FindStringSubmatch(r["name"].(string))
 		if rfind == nil {
@@ -1050,31 +1075,31 @@ func (v VersionStrings) Less(i, j int) bool {
 	return versionLess(v[i], v[j])
 }
 
-func versionLess(ver_a, ver_b string) bool {
+func versionLess(verA, verB string) bool {
 	/* Chef cookbook versions are always to be in the form x.y.z (with x.y
 	 * also allowed. This simplifies things a bit. */
 
 	/* Easy comparison. False if they're equal. */
-	if ver_a == ver_b {
+	if verA == verB {
 		return false
 	}
 
 	/* Would caching the split strings ever be particularly worth it? */
-	i_ver := strings.Split(ver_a, ".")
-	j_ver := strings.Split(ver_b, ".")
+	iVer := strings.Split(verA, ".")
+	jVer := strings.Split(verB, ".")
 
 	for q := 0; q < 3; q++ {
 		/* If one of them doesn't actually exist, then obviously the
 		 * other is bigger, and we're done. Of course this should only
 		 * happen with the 3rd element. */
-		if len(i_ver) < q + 1 {
+		if len(iVer) < q+1 {
 			return true
-		} else if len(j_ver) < q + 1 {
+		} else if len(jVer) < q+1 {
 			return false
 		}
 
-		ic := i_ver[q]
-		jc := j_ver[q]
+		ic := iVer[q]
+		jc := jVer[q]
 
 		/* Otherwise, see if they're equal. If they're not, return the
 		 * result of x < y. */
@@ -1087,75 +1112,69 @@ func versionLess(ver_a, ver_b string) bool {
 	return false
 }
 
-/* Compares a version number against a constraint, like version 1.2.3 vs. 
+/* Compares a version number against a constraint, like version 1.2.3 vs.
  * ">= 1.0.1". In this case, 1.2.3 passes. It would not satisfy "= 1.2.0" or
  * "< 1.0", though. */
 
-func verConstraintCheck(ver_a, ver_b, op string) string {
+func verConstraintCheck(verA, verB, op string) string {
 	switch op {
-		case "=":
-			if ver_a == ver_b {
-				return "ok"
-			} else if versionLess(ver_a, ver_b) {
-				/* If we want equality and ver_a is less than
-				 * version b, since the version list is sorted
-				 * in descending order we've missed our chance.
-				 * So, break out. */
-				return "break"
-			} else {
-				return "skip"
-			}
-		case ">":
-			if ver_a == ver_b || versionLess(ver_a, ver_b) {
-				return "break"
-			} else {
-				return "ok"
-			}
-		case "<":
-			/* return skip here because we might find what we want
-			 * later. */
-			if ver_a == ver_b || !versionLess(ver_a, ver_b){
-				return "skip"
-			} else {
-				return "ok"
-			}
-		case ">=":
-			if !versionLess(ver_a, ver_b) {
-				return "ok"
-			} else {
-				return "break"
-			}
-		case "<=":
-			if ver_a == ver_b || versionLess(ver_a, ver_b) {
-				return "ok"
-			} else {
-				return "skip"
-			}
-		case "~>":
-			/* only check pessimistic constraints if they can
-			 * possibly be valid. */
-			if versionLess(ver_a, ver_b) {
-				return "break"
-			}
-			var upper_bound string
-			pv := strings.Split(ver_b, ".")
-			if len(pv) == 3 {
-				uver, _ := strconv.Atoi(pv[1])
-				uver++
-				upper_bound = fmt.Sprintf("%s.%d", pv[0], uver)
-			} else {
-				uver, _ := strconv.Atoi(pv[0])
-				uver++
-				upper_bound = fmt.Sprintf("%d.0", uver)
-			}
-			if !versionLess(ver_a, ver_b) && versionLess(ver_a, upper_bound) {
+	case "=":
+		if verA == verB {
+			return "ok"
+		} else if versionLess(verA, verB) {
+			/* If we want equality and verA is less than
+			 * version b, since the version list is sorted
+			 * in descending order we've missed our chance.
+			 * So, break out. */
+			return "break"
+		} else {
+			return "skip"
+		}
+	case ">":
+		if verA == verB || versionLess(verA, verB) {
+			return "break"
+		}
+		return "ok"
+	case "<":
+		/* return skip here because we might find what we want
+		 * later. */
+		if verA == verB || !versionLess(verA, verB) {
+			return "skip"
+		}
+		return "ok"
+	case ">=":
+		if !versionLess(verA, verB) {
+			return "ok"
+		}
+		return "break"
+	case "<=":
+		if verA == verB || versionLess(verA, verB) {
+			return "ok"
+		}
+		return "skip"
+	case "~>":
+		/* only check pessimistic constraints if they can
+		 * possibly be valid. */
+		if versionLess(verA, verB) {
+			return "break"
+		}
+		var upperBound string
+		pv := strings.Split(verB, ".")
+		if len(pv) == 3 {
+			uver, _ := strconv.Atoi(pv[1])
+			uver++
+			upperBound = fmt.Sprintf("%s.%d", pv[0], uver)
+		} else {
+			uver, _ := strconv.Atoi(pv[0])
+			uver++
+			upperBound = fmt.Sprintf("%d.0", uver)
+		}
+		if !versionLess(verA, verB) && versionLess(verA, upperBound) {
 
-				return "ok"
-			} else {
-				return "skip"
-			}
-		default:
-			return "invalid"
+			return "ok"
+		}
+		return "skip"
+	default:
+		return "invalid"
 	}
 }
-

@@ -14,90 +14,96 @@
  * limitations under the License.
  */
 
-/* Package report implements reporting on client runs and node changes. See http://docs.opscode.com/reporting.html for details. CURRENTLY EXPERIMENTAL. */
+/*
+Package report implements reporting on client runs and node changes. See http://docs.opscode.com/reporting.html for details. CURRENTLY EXPERIMENTAL. */
 package report
 
 import (
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/data_store"
 	"bytes"
+	"database/sql"
 	"encoding/gob"
-	"time"
+	"github.com/codeskyblue/go-uuid"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"strconv"
-	"database/sql"
-	"github.com/codeskyblue/go-uuid"
+	"time"
 )
 
 // The format for reporting start and end times in JSON. Of course, subtly
 // different from MySQL's time format, but only subtly.
 const ReportTimeFormat = "2006-01-02 15:04:05 -0700"
 
+// Report holds information on a chef client's run, including when, what
+// resources changed, what recipes were in the run list, and whether the run was
+// successful or not.
 type Report struct {
-	RunId string `json:"run_id"`
-	StartTime time.Time `json:"start_time"`
-	EndTime time.Time `json:"end_time"`
-	TotalResCount int `json:"total_res_count"`
-	Status string `json:"status"`
-	RunList string `json:"run_list"`
-	Resources []interface{} `json:"resources"`
-	Data map[string]interface{} `json:"data"` // I think this is right
-	NodeName string `json:"node_name"`
-	organizationId int
+	RunID          string                 `json:"run_id"`
+	StartTime      time.Time              `json:"start_time"`
+	EndTime        time.Time              `json:"end_time"`
+	TotalResCount  int                    `json:"total_res_count"`
+	Status         string                 `json:"status"`
+	RunList        string                 `json:"run_list"`
+	Resources      []interface{}          `json:"resources"`
+	Data           map[string]interface{} `json:"data"` // I think this is right
+	NodeName       string                 `json:"nodeName"`
+	organizationID int
 }
 
 type privReport struct {
-	RunId *string
-	StartTime *time.Time
-	EndTime *time.Time
-	TotalResCount *int
-	Status *string 
-	RunList *string
-	Resources *[]interface{}
-	Data *map[string]interface{}
-	NodeName *string
-	OrganizationId *int
+	RunID          *string
+	StartTime      *time.Time
+	EndTime        *time.Time
+	TotalResCount  *int
+	Status         *string
+	RunList        *string
+	Resources      *[]interface{}
+	Data           *map[string]interface{}
+	NodeName       *string
+	OrganizationID *int
 }
 
-func New(runId string, nodeName string) (*Report, util.Gerror) {
+// New creates a new report.
+func New(runID string, nodeName string) (*Report, util.Gerror) {
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		found, err = checkForReportMySQL(data_store.Dbh, runId)
+		found, err = checkForReportSQL(datastore.Dbh, runID)
 		if err != nil {
 			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusInternalServerError)
 			return nil, gerr
 		}
 	} else {
-		ds := data_store.New()
-		_, found = ds.Get("report", runId)
+		ds := datastore.New()
+		_, found = ds.Get("report", runID)
 	}
 	if found {
 		err := util.Errorf("Report already exists")
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
-	if u := uuid.Parse(runId); u == nil {
+	if u := uuid.Parse(runID); u == nil {
 		err := util.Errorf("run id was not a valid uuid")
 		err.SetStatus(http.StatusBadRequest)
 		return nil, err
 	}
 	report := &Report{
-		RunId: runId,
+		RunID:    runID,
 		NodeName: nodeName,
-		Status: "started",
+		Status:   "started",
 	}
 	return report, nil
 }
 
-func Get(runId string) (*Report, util.Gerror) {
+// Get a report.
+func Get(runID string) (*Report, util.Gerror) {
 	var report *Report
 	var found bool
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		var err error
-		report, err = getReportMySQL(runId)
+		report, err = getReportSQL(runID)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -107,53 +113,57 @@ func Get(runId string) (*Report, util.Gerror) {
 				return nil, gerr
 			}
 		} else {
-			found = true 
+			found = true
 		}
 	} else {
-		ds := data_store.New()
+		ds := datastore.New()
 		var r interface{}
-		r, found = ds.Get("report", runId)
+		r, found = ds.Get("report", runID)
 		if r != nil {
 			report = r.(*Report)
 		}
 	}
 	if !found {
-		err := util.Errorf("Report %s not found", runId)
+		err := util.Errorf("Report %s not found", runID)
 		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
 	return report, nil
 }
 
-func (r *Report)Save() error {
+// Save a report.
+func (r *Report) Save() error {
 	if config.Config.UseMySQL {
 		return r.saveMySQL()
+	} else if config.Config.UsePostgreSQL {
+		return r.savePostgreSQL()
 	} else {
-		ds := data_store.New()
-		ds.Set("report", r.RunId, r)
+		ds := datastore.New()
+		ds.Set("report", r.RunID, r)
 	}
 	return nil
 }
 
-func (r *Report)Delete() error {
-	if config.Config.UseMySQL {
-		return r.deleteMySQL()
-	} else {
-		ds := data_store.New()
-		ds.Delete("report", r.RunId)
+// Delete a report.
+func (r *Report) Delete() error {
+	if config.UsingDB() {
+		return r.deleteSQL()
 	}
+	ds := datastore.New()
+	ds.Delete("report", r.RunID)
 	return nil
 }
 
-func NewFromJson(node_name string, json_report map[string]interface{}) (*Report, util.Gerror) {
-	rid, ok := json_report["run_id"].(string)
+// NewFromJSON creates a new report from the given uploaded JSON.
+func NewFromJSON(nodeName string, jsonReport map[string]interface{}) (*Report, util.Gerror) {
+	rid, ok := jsonReport["run_id"].(string)
 	if !ok {
 		err := util.Errorf("invalid run id")
 		err.SetStatus(http.StatusBadRequest)
 		return nil, err
 	}
 
-	if action, ok := json_report["action"].(string); ok {
+	if action, ok := jsonReport["action"].(string); ok {
 		if action != "start" {
 			err := util.Errorf("invalid action %s", action)
 			return nil, err
@@ -162,30 +172,31 @@ func NewFromJson(node_name string, json_report map[string]interface{}) (*Report,
 		err := util.Errorf("invalid action")
 		return nil, err
 	}
-	stime, ok := json_report["start_time"].(string)
+	stime, ok := jsonReport["start_time"].(string)
 	if !ok {
 		err := util.Errorf("invalid start time")
 		return nil, err
 	}
-	start_time, terr := time.Parse(ReportTimeFormat, stime)
+	startTime, terr := time.Parse(ReportTimeFormat, stime)
 	if terr != nil {
 		err := util.CastErr(terr)
 		return nil, err
 	}
-	
-	report, err := New(rid, node_name)
+
+	report, err := New(rid, nodeName)
 	if err != nil {
 		return nil, err
 	}
-	report.StartTime = start_time
+	report.StartTime = startTime
 	if err != nil {
 		return nil, err
 	}
 	return report, nil
 }
 
-func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
-	if action, ok := json_report["action"].(string); ok {
+// UpdateFromJSON updates a report with the values in the uploaded JSON.
+func (r *Report) UpdateFromJSON(jsonReport map[string]interface{}) util.Gerror {
+	if action, ok := jsonReport["action"].(string); ok {
 		if action != "end" {
 			err := util.Errorf("invalid action %s", action)
 			return err
@@ -194,34 +205,34 @@ func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
 		err := util.Errorf("invalid action")
 		return err
 	}
-	_, ok := json_report["end_time"].(string)
+	_, ok := jsonReport["end_time"].(string)
 	if !ok {
 		err := util.Errorf("invalid end time")
 		return err
 	}
-	end_time, terr := time.Parse(ReportTimeFormat, json_report["end_time"].(string))
+	endTime, terr := time.Parse(ReportTimeFormat, jsonReport["end_time"].(string))
 	if terr != nil {
 		err := util.CastErr(terr)
 		return err
 	}
 	var trc int
-	switch t := json_report["total_res_count"].(type) {
-		case string:
-			var err error
-			trc, err = strconv.Atoi(t)
-			if err != nil {
-				err := util.Errorf("Error converting %v to int: %s", json_report["total_res_count"], err.Error())
-				return err
-			}
-		case float64:
-			trc = int(t)
-		case int:
-			trc = t
-		default:
-			err := util.Errorf("invalid total_res_count %T", t)
+	switch t := jsonReport["total_res_count"].(type) {
+	case string:
+		var err error
+		trc, err = strconv.Atoi(t)
+		if err != nil {
+			err := util.Errorf("Error converting %v to int: %s", jsonReport["total_res_count"], err.Error())
 			return err
+		}
+	case float64:
+		trc = int(t)
+	case int:
+		trc = t
+	default:
+		err := util.Errorf("invalid total_res_count %T", t)
+		return err
 	}
-	status, ok := json_report["status"].(string)
+	status, ok := jsonReport["status"].(string)
 	if ok {
 		if status != "success" && status != "failure" {
 			err := util.Errorf("invalid status %s", status)
@@ -231,88 +242,91 @@ func (r *Report)UpdateFromJson(json_report map[string]interface{}) util.Gerror {
 		err := util.Errorf("invalid status")
 		return err
 	}
-	_, ok = json_report["run_list"].(string)
+	_, ok = jsonReport["run_list"].(string)
 	if !ok {
 		err := util.Errorf("invalid run_list")
 		return err
 	}
-	_, ok = json_report["resources"].([]interface{})
+	_, ok = jsonReport["resources"].([]interface{})
 	if !ok {
-		err := util.Errorf("invalid resources %T", json_report["resources"])
+		err := util.Errorf("invalid resources %T", jsonReport["resources"])
 		return err
 	}
-	_, ok = json_report["data"].(map[string]interface{})
+	_, ok = jsonReport["data"].(map[string]interface{})
 	if !ok {
 		err := util.Errorf("invalid data")
 		return err
 	}
 
-	r.EndTime = end_time
+	r.EndTime = endTime
 	r.TotalResCount = trc
-	r.Status = json_report["status"].(string)
-	r.RunList = json_report["run_list"].(string)
-	r.Resources = json_report["resources"].([]interface{})
-	r.Data = json_report["data"].(map[string]interface{})
+	r.Status = jsonReport["status"].(string)
+	r.RunList = jsonReport["run_list"].(string)
+	r.Resources = jsonReport["resources"].([]interface{})
+	r.Data = jsonReport["data"].(map[string]interface{})
 	return nil
 }
 
+// GetList returns a list of UUIDs of reports on the system.
 func GetList() []string {
-	var report_list []string
-	if config.Config.UseMySQL {
-		report_list = getListMySQL()
+	var reportList []string
+	if config.UsingDB() {
+		reportList = getListSQL()
 	} else {
-		ds := data_store.New()
-		report_list = ds.GetList("report")
+		ds := datastore.New()
+		reportList = ds.GetList("report")
 	}
-	return report_list
+	return reportList
 }
 
-func GetReportList(from, until time.Time, rows int) ([]*Report, error) {
-	if config.Config.UseMySQL {
-		return getReportListMySQL(from, until, rows)
-	} else {
-		reports := make([]*Report, 0)
-		report_list := GetList()
-		i := 0
-		for _, r := range report_list {
-			rp, _ := Get(r)
-			if rp != nil && rp.checkTimeRange(from, until) {
-				reports = append(reports, rp)
-				i++
-			}
-			if i > rows {
-				break
-			}
+// GetReportList returns a list of reports on the system in the given time range
+// and with the given status, which may be "" for any status.
+func GetReportList(from, until time.Time, rows int, status string) ([]*Report, error) {
+	if config.UsingDB() {
+		return getReportListSQL(from, until, rows, status)
+	}
+	var reports []*Report
+	reportList := GetList()
+	i := 0
+	for _, r := range reportList {
+		rp, _ := Get(r)
+		if rp != nil && rp.checkTimeRange(from, until) && (status == "" || (status != "" && rp.Status == status)) {
+			reports = append(reports, rp)
+			i++
 		}
-		return reports, nil
+		if i > rows {
+			break
+		}
 	}
+	return reports, nil
 }
 
-func (r *Report)checkTimeRange(from, until time.Time) bool {
+func (r *Report) checkTimeRange(from, until time.Time) bool {
 	return r.StartTime.After(from) && r.StartTime.Before(until)
 }
 
-func GetNodeList(nodeName string, from, until time.Time, rows int) ([]*Report, error) {
-	if config.Config.UseMySQL {
-		return getNodeListMySQL(nodeName, from, until, rows)
-	} else {
-		// Really really not the most efficient way, but deliberately
-		// not doing it in a better manner for now. If reporting
-		// performance becomes a concern, SQL mode is probably a better
-		// choice
-		reports, _ := GetReportList(from, until, rows)
-		node_report_list := make([]*Report, 0)
-		for _, r := range reports {
-			if nodeName == r.NodeName {
-				node_report_list = append(node_report_list, r)
-			}
-		}
-		return node_report_list, nil
+// GetNodeList returns a list of reports from the given node in the time range
+// and status given. Status may be "" for all statuses.
+func GetNodeList(nodeName string, from, until time.Time, rows int, status string) ([]*Report, error) {
+	if config.UsingDB() {
+		return getNodeListSQL(nodeName, from, until, rows, status)
 	}
+	// Really really not the most efficient way, but deliberately
+	// not doing it in a better manner for now. If reporting
+	// performance becomes a concern, SQL mode is probably a better
+	// choice
+	reports, _ := GetReportList(from, until, rows, status)
+	var nodeReportList []*Report
+	for _, r := range reports {
+		if nodeName == r.NodeName && (status == "" || (status != "" && r.Status == status)) {
+			nodeReportList = append(nodeReportList, r)
+		}
+	}
+	return nodeReportList, nil
 }
 
 func (r *Report) export() *privReport {
-	return &privReport{ RunId: &r.RunId, StartTime: &r.StartTime, EndTime: &r.EndTime, TotalResCount: &r.TotalResCount, Status: &r.Status, Resources: &r.Resources, Data: &r.Data, NodeName: &r.NodeName, OrganizationId: &r.organizationId }
+	return &privReport{RunID: &r.RunID, StartTime: &r.StartTime, EndTime: &r.EndTime, TotalResCount: &r.TotalResCount, Status: &r.Status, Resources: &r.Resources, Data: &r.Data, NodeName: &r.NodeName, OrganizationID: &r.organizationID}
 }
 
 func (r *Report) GobEncode() ([]byte, error) {
@@ -337,19 +351,18 @@ func (r *Report) GobDecode(b []byte) error {
 	return nil
 }
 
-// Return all run reports currently on the server for export.
+// AllReports returns all run reports currently on the server for export.
 func AllReports() []*Report {
-	if config.Config.UseMySQL {
+	if config.UsingDB() {
 		return getReportsSQL()
-	} else {
-		reports := make([]*Report, 0)
-		report_list := GetList()
-		for _, r := range report_list {
-			rp, _ := Get(r)
-			if rp != nil {
-				reports = append(reports, rp)
-			}
-		}
-		return reports
 	}
+	var reports []*Report
+	reportList := GetList()
+	for _, r := range reportList {
+		rp, _ := Get(r)
+		if rp != nil {
+			reports = append(reports, rp)
+		}
+	}
+	return reports
 }

@@ -23,12 +23,13 @@ package actor
 
 import (
 	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/config"
 	"net/http"
 )
 
+// Actor is an interface for objects that can make requests to the server.
 type Actor interface {
 	IsAdmin() bool
 	IsValidator() bool
@@ -41,8 +42,8 @@ type Actor interface {
 	CheckPermEdit(map[string]interface{}, string) util.Gerror
 }
 
-// Gets the actor making the request. If use-auth is not on, always returns 
-// the admin user.
+// GetReqUser gets the actor making the request. If use-auth is not on, always
+// returns the admin user.
 func GetReqUser(name string) (Actor, util.Gerror) {
 	/* If UseAuth is turned off, use the automatically created admin user */
 	if !config.Config.UseAuth {
@@ -65,4 +66,3 @@ func GetReqUser(name string) (Actor, util.Gerror) {
 	}
 	return c, nil
 }
-

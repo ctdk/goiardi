@@ -21,33 +21,33 @@ package authentication
 /* Geez, import all the things why don't you. */
 
 import (
-	"github.com/ctdk/goiardi/chef_crypto"
-	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/util"
-	"github.com/ctdk/goiardi/config"
-	"net/http"
-	"io"
-	"io/ioutil"
 	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
-	"strings"
+	"fmt"
+	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/chefcrypto"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/util"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"path"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
-	"path"
-	"fmt"
 )
 
-// Check the signed headers sent by the client against the expected result
-// assembled from the request headers to verify their authorization.
-func CheckHeader(user_id string, r *http.Request) util.Gerror {
-	user, err := actor.GetReqUser(user_id)
+// CheckHeader checks the signed headers sent by the client against the expecte
+// result assembled from the request headers to verify their authorization.
+func CheckHeader(userID string, r *http.Request) util.Gerror {
+	user, err := actor.GetReqUser(userID)
 	if err != nil {
-		gerr := util.Errorf("Failed to authenticate as '%s'. Ensure that your node_name and client key are correct.", user_id)
+		gerr := util.Errorf("Failed to authenticate as '%s'. Ensure that your node_name and client key are correct.", userID)
 		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
-	} 
+	}
 	contentHash := r.Header.Get("X-OPS-CONTENT-HASH")
 	if contentHash == "" {
 		gerr := util.Errorf("no content hash provided")
@@ -59,43 +59,43 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 		gerr := util.Errorf("no timestamp header provided")
 		gerr.SetStatus(http.StatusBadRequest)
 		return gerr
-	} else {
-		// check the time stamp w/ allowed slew
-		tok, terr := checkTimeStamp(authTimestamp, config.Config.TimeSlewDur)
-		if !tok {
-			return terr
-		}
 	}
+
+	// check the time stamp w/ allowed slew
+	tok, terr := checkTimeStamp(authTimestamp, config.Config.TimeSlewDur)
+	if !tok {
+		return terr
+	}
+
 	// Eventually this may be put to some sort of use, but for now just
 	// make sure that it's there. Presumably eventually it would be used to
-	// use algorithms other than sha1 for hashing the body, or using a 
+	// use algorithms other than sha1 for hashing the body, or using a
 	// different version of the header signing algorithm.
 	xopssign := r.Header.Get("x-ops-sign")
 	var apiVer string
 	if xopssign == "" {
 		gerr := util.Errorf("missing X-Ops-Sign header")
 		return gerr
-	} else {
-		re := regexp.MustCompile(`version=(\d+\.\d+)`)
-		shaRe := regexp.MustCompile(`algorithm=(\w+)`)
-		if verChk := re.FindStringSubmatch(xopssign); verChk != nil {
-			apiVer = verChk[1]
-			if apiVer != "1.0" && apiVer != "1.1" {
-				gerr := util.Errorf("Bad version number '%s' in X-Ops-Header", apiVer)
-				return gerr
-			}
-		} else {
-			gerr := util.Errorf("malformed version in X-Ops-Header")
+	}
+	re := regexp.MustCompile(`version=(\d+\.\d+)`)
+	shaRe := regexp.MustCompile(`algorithm=(\w+)`)
+	if verChk := re.FindStringSubmatch(xopssign); verChk != nil {
+		apiVer = verChk[1]
+		if apiVer != "1.0" && apiVer != "1.1" && apiVer != "1.2" {
+			gerr := util.Errorf("Bad version number '%s' in X-Ops-Header", apiVer)
 			return gerr
 		}
+	} else {
+		gerr := util.Errorf("malformed version in X-Ops-Header")
+		return gerr
+	}
 
-		// if algorithm is missing, it uses sha1. Of course, no other
-		// hashing algorithm is supported yet...
-		if shaChk := shaRe.FindStringSubmatch(xopssign); shaChk != nil {
-			if shaChk[1] != "sha1" {
-				gerr := util.Errorf("Unsupported hashing algorithm '%s' specified in X-Ops-Header", shaChk[1])
-				return gerr
-			}
+	// if algorithm is missing, it uses sha1. Of course, no other
+	// hashing algorithm is supported yet...
+	if shaChk := shaRe.FindStringSubmatch(xopssign); shaChk != nil {
+		if shaChk[1] != "sha1" {
+			gerr := util.Errorf("Unsupported hashing algorithm '%s' specified in X-Ops-Header", shaChk[1])
+			return gerr
 		}
 	}
 
@@ -109,13 +109,42 @@ func CheckHeader(user_id string, r *http.Request) util.Gerror {
 		return gerr
 	}
 
-	signedHeaders, sherr  := assembleSignedHeader(r)
+	signedHeaders, sherr := assembleSignedHeader(r)
 	if sherr != nil {
 		return sherr
 	}
 	headToCheck := assembleHeaderToCheck(r, chkHash, apiVer)
 
-	decHead, berr := chef_crypto.HeaderDecrypt(user.PublicKey(), signedHeaders)
+	if apiVer == "1.2" {
+		chkerr = checkAuth12Headers(user, r, headToCheck, signedHeaders)
+	} else {
+		chkerr = checkAuthHeaders(user, r, headToCheck, signedHeaders)
+	}
+
+	if chkerr != nil {
+		chkerr.SetStatus(http.StatusUnauthorized)
+		return chkerr
+	}
+
+	return nil
+}
+
+func checkAuth12Headers(user actor.Actor, r *http.Request, headToCheck, signedHeaders string) util.Gerror {
+	sig, err := base64.StdEncoding.DecodeString(signedHeaders)
+	if err != nil {
+		gerr := util.CastErr(err)
+		return gerr
+	}
+	sigSha := sha1.Sum([]byte(headToCheck))
+	err = chefcrypto.Auth12HeaderVerify(user.PublicKey(), sigSha[:], sig)
+	if err != nil {
+		return util.CastErr(err)
+	}
+	return nil
+}
+
+func checkAuthHeaders(user actor.Actor, r *http.Request, headToCheck, signedHeaders string) util.Gerror {
+	decHead, berr := chefcrypto.HeaderDecrypt(user.PublicKey(), signedHeaders)
 
 	if berr != nil {
 		gerr := util.Errorf(berr.Error())
@@ -174,7 +203,7 @@ func assembleSignedHeader(r *http.Request) (string, util.Gerror) {
 			gerr.SetStatus(http.StatusUnauthorized)
 			return "", gerr
 		}
-		sH[k - 1] = v
+		sH[k-1] = v
 	}
 	signedHeaders := strings.Join(sH, "")
 
@@ -206,12 +235,12 @@ func assembleHeaderToCheck(r *http.Request, cHash string, apiVer string) string 
 	method := r.Method
 	hashPath := hashStr(path.Clean(r.URL.Path))
 	timestamp := r.Header.Get("x-ops-timestamp")
-	user_id := r.Header.Get("x-ops-userid")
-	if apiVer == "1.1" {
-		user_id = hashStr(user_id)
+	userID := r.Header.Get("x-ops-userid")
+	if apiVer != "1.0" {
+		userID = hashStr(userID)
 	}
 
-	headStr := fmt.Sprintf("Method:%s\nHashed Path:%s\nX-Ops-Content-Hash:%s\nX-Ops-Timestamp:%s\nX-Ops-UserId:%s", method, hashPath, cHash, timestamp, user_id)
+	headStr := fmt.Sprintf("Method:%s\nHashed Path:%s\nX-Ops-Content-Hash:%s\nX-Ops-Timestamp:%s\nX-Ops-UserId:%s", method, hashPath, cHash, timestamp, userID)
 	return headStr
 }
 
