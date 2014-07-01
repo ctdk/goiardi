@@ -81,6 +81,10 @@ chef-pedant can and should be used for testing goiardi as well.
 
    goiardi <options>
 
+Or, you can look at the goiardi releases page on github at 
+https://github.com/ctdk/goiardi/releases and see if there are precompiled
+binaries available for your platform.
+
 You can get a list of command-line options with the '-h' flag.
 
 Goiardi can also take a config file, run like goiardi -c
