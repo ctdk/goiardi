@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Releases | Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/blog/categories/releases/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-06-19T21:27:32-07:00</updated>
+  <updated>2014-07-02T00:51:55-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,63 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Version 0.6.0 - Order of the Elephant]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant/"/>
+    <updated>2014-07-01T21:36:11-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant</id>
+    <content type="html"><![CDATA[<div style="margin-left: auto; margin-right: auto; width: 40%;"><img src="http://ctdk.github.io/goiardi/images/Order_of_the_Elephant_12.jpg" /></div>
+
+
+<p>The <a href="http://en.wikipedia.org/wiki/Order_of_the_Elephant">Order of the Elephant</a> is a Danish order awarded mostly to foreign heads of state and royals. Its elephant-themed insignia is appropriate for this latest release of goiardi, <a href="https://github.com/ctdk/goiardi/releases/tag/v0.6.0">version 0.6.0</a>.</p>
+
+<p>Along with some bug fixes and smaller improvements, this release introduces Postgres as a supported database backend. The schema is not compatible with erchef&rsquo;s schema, but is close to the goiardi MySQL schema (with some differences of course). This is the first project I&rsquo;ve done with Postgres, so comments on how goiardi is using it are welcome.</p>
+
+<p>Full CHANGELOG:</p>
+
+<ul>
+<li>Postgres support.</li>
+<li>Fix rebuilding indexes with an SQL backend.</li>
+<li>Fix a bug where in MySQL mode events were being logged twice.</li>
+<li>Fix an annoying chef-pedant error with data bags.</li>
+<li>Event logging methods that are not allowed now return Method Not Allowed
+rather than Bad Request.</li>
+<li>Switch the logger to a fork that can be built and used with Windows that
+excludes syslog when building on Windows.</li>
+<li>Add basic syslog support.</li>
+<li>Authentication protocol version 1.2 now supported.</li>
+<li>Add a &lsquo;status&rsquo; param to reporting, so a list of reports return by &lsquo;knife
+runs&rsquo; can be narrowed by the status of the chef run (started, success, and
+failure).</li>
+<li>Fix an action at a distance problem with in-memory mode objects. If this
+behavior is still desirable (it seems to be slightly faster than the new way),
+it can be turned back on with the &mdash;use-unsafe-mem-store flag. This change
+DEFINITELY breaks in-mem data file compatibility. If upgrading, export your
+data, upgrade goiardi, and reload your data.</li>
+<li>Add several new searchable parameters for logged events.</li>
+<li>Add organization_id to all MySQL tables that might need it someday. Orgs are
+not used at all, so only the default value of 1 currently makes it to the
+database.</li>
+<li>Finally ran &lsquo;go fmt&rsquo; on goiardi. It didn&rsquo;t even mess up the long comment
+blocks, which was what I was afraid it would do. I also ran golint against
+goiardi and took its recommendations where it made sense, which was most
+areas except for some involving generated parser code, comments on
+GobEncode/Decode, commenting a bunch of identical functions on an interface
+in search, and a couple of cases involving make and slices. All in all,
+though, the reformatting, linting, and light refactoring has done it good.</li>
+</ul>
+
+
+<p>To reiterate, this update breaks saved data file compatibility. You&rsquo;ll need to export and re-import your data if you&rsquo;re using the persistent in-memory data store.</p>
+
+<p>A selection of precompiled binaries are provided on the release page, including Windows and Solaris builds. There are also knife plugins for goiardi&rsquo;s reporting and event logging capabilities at <a href="https://github.com/ctdk/knife-goiardi-reporting">knife-goiardi-reporting</a> and <a href="https://github.com/ctdk/knife-goiardi-event-log">knife-goiardi-event-log</a>. The reporting plugin was forked from the official Chef knife-reporting plugin to add support for the &ldquo;status&rdquo; parameter. Both plugins are also available on rubygems.</p>
+
+<p>Finally, after someone asked how goiardi would handle running ~500 nodes, I decided to take a look and see. I <a href="https://gist.github.com/ctdk/a2d40f03ddfc616e0d42">whipped up a little test script</a> to create a thousand nodes and clients to see how goiardi (and more importantly the search) would handle it. I wasn&rsquo;t particularly worried about the non-search portions of goiardi (1000 rows on a table isn&rsquo;t very much at all, after all), but I hadn&rsquo;t tested search extensively with large amounts of data. After creating those 1,000 nodes and clients, goiardi was using about 1.40 GB of RAM. An earlier test with 5,500 nodes (but no clients) used 6.45GB RAM. The numbers show that there&rsquo;s definitely room for improvement with the search, in that the capability for indexing nodes and data bags is limited by RAM, but performance was good even at 5,500 nodes. More rigorous testing is needed, however. Search is an area I intend to revisit shortly to improve these problems.</p>
+
+<p>The next issues to work on with goiardi are currently improving search to work even better with large amounts of data and use raft (or something similar) to allow multiple goiardi instances to keep their search indexes consistent, reworking the permissions system, being able to upload files to s3 or similar storage providers, and the serf based pushy type thing.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Goiardi Version 0.5.2 - Block of Dirt]]></title>
@@ -123,17 +180,6 @@ README or godocs for details.</li>
 <p>These were all problems that evaded notice during testing, but did pop up when I was using goiardi to set up a vagrant VM to start working on letting goiardi run a real database (optionally, of course) instead of the in-memory data store system it&rsquo;s using now. The in-memory mode is great and all for testing, and being able to freeze the data to disk for persistence is very handy, but being able to use a real database would be nice for some workloads. Supporting both the current in-memory storage and a database backend is a top priority.</p>
 
 <p>Which database to use is still a bit up in the air, but I&rsquo;m leaning towards throwing caution to the wind and providing support for both MySQL and Postgres, with SQLite as a distinct possibility down the line. MySQL is likely to come first, but that is not set in stone.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Goiardi Version 0.4.1 Release]]></title>
-    <link href="http://ctdk.github.io/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release/"/>
-    <updated>2014-03-16T14:32:27-07:00</updated>
-    <id>http://ctdk.github.io/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release</id>
-    <content type="html"><![CDATA[<p>Hot on the heels of the 0.4.0 release comes <a href="https://github.com/ctdk/goiardi/releases/tag/v0.4.1">goiardi version 0.4.1</a>. This release adds a <tt>&mdash;disable-webui</tt> option to disable using chef-webui with goiardi, fixes a bug with parsing configuration file options and rearranges how some of the config struct items are set, fixes a typo in the sample config file, and makes some small documentation tweaks.</p>
-
-<p>Other than that, all the changes announced in the <a href="http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/">0.4.0 release announcement</a> and previous releases remain relevant.</p>
 ]]></content>
   </entry>
   

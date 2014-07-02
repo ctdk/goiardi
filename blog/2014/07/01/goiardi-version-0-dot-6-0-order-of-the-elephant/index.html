@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Save Persistent Store Fix - Goiardi</title>
+  <title>Goiardi Version 0.6.0 - Order of the Elephant - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="Pushed up a change in the latest goiardi master last night that fixes an issue with saving the persistent index and data store files where, if the &hellip;">
+  <meta name="description" content="The Order of the Elephant is a Danish order awarded mostly to foreign heads of state and royals. Its elephant-themed insignia is appropriate for &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/01/18/save-persistent-store-fix">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -86,7 +86,7 @@
   
   <header>
     
-      <h1 class="entry-title">Save Persistent Store Fix</h1>
+      <h1 class="entry-title">Goiardi Version 0.6.0 - Order of the Elephant</h1>
     
     
       <p class="meta">
@@ -102,14 +102,62 @@
   
 
 
-<time datetime="2014-01-18T15:10:27-08:00" pubdate data-updated="true">Jan 18<span>th</span>, 2014</time>
+<time datetime="2014-07-01T21:36:11-07:00" pubdate data-updated="true">Jul 1<span>st</span>, 2014</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>Pushed up a change in the latest goiardi master last night that fixes an issue with saving the persistent index and data store files where, if the temp directory was not on the same partition, renaming the file after saving would cause an error. I was clued into this by a tweet in Japanese that seemed to say something about that. Ooops.</p>
+<div class="entry-content"><div style="margin-left: auto; margin-right: auto; width: 40%;"><img src="/goiardi/images/Order_of_the_Elephant_12.jpg" /></div>
+
+
+<p>The <a href="http://en.wikipedia.org/wiki/Order_of_the_Elephant">Order of the Elephant</a> is a Danish order awarded mostly to foreign heads of state and royals. Its elephant-themed insignia is appropriate for this latest release of goiardi, <a href="https://github.com/ctdk/goiardi/releases/tag/v0.6.0">version 0.6.0</a>.</p>
+
+<p>Along with some bug fixes and smaller improvements, this release introduces Postgres as a supported database backend. The schema is not compatible with erchef&rsquo;s schema, but is close to the goiardi MySQL schema (with some differences of course). This is the first project I&rsquo;ve done with Postgres, so comments on how goiardi is using it are welcome.</p>
+
+<p>Full CHANGELOG:</p>
+
+<ul>
+<li>Postgres support.</li>
+<li>Fix rebuilding indexes with an SQL backend.</li>
+<li>Fix a bug where in MySQL mode events were being logged twice.</li>
+<li>Fix an annoying chef-pedant error with data bags.</li>
+<li>Event logging methods that are not allowed now return Method Not Allowed
+rather than Bad Request.</li>
+<li>Switch the logger to a fork that can be built and used with Windows that
+excludes syslog when building on Windows.</li>
+<li>Add basic syslog support.</li>
+<li>Authentication protocol version 1.2 now supported.</li>
+<li>Add a &lsquo;status&rsquo; param to reporting, so a list of reports return by &lsquo;knife
+runs&rsquo; can be narrowed by the status of the chef run (started, success, and
+failure).</li>
+<li>Fix an action at a distance problem with in-memory mode objects. If this
+behavior is still desirable (it seems to be slightly faster than the new way),
+it can be turned back on with the &mdash;use-unsafe-mem-store flag. This change
+DEFINITELY breaks in-mem data file compatibility. If upgrading, export your
+data, upgrade goiardi, and reload your data.</li>
+<li>Add several new searchable parameters for logged events.</li>
+<li>Add organization_id to all MySQL tables that might need it someday. Orgs are
+not used at all, so only the default value of 1 currently makes it to the
+database.</li>
+<li>Finally ran &lsquo;go fmt&rsquo; on goiardi. It didn&rsquo;t even mess up the long comment
+blocks, which was what I was afraid it would do. I also ran golint against
+goiardi and took its recommendations where it made sense, which was most
+areas except for some involving generated parser code, comments on
+GobEncode/Decode, commenting a bunch of identical functions on an interface
+in search, and a couple of cases involving make and slices. All in all,
+though, the reformatting, linting, and light refactoring has done it good.</li>
+</ul>
+
+
+<p>To reiterate, this update breaks saved data file compatibility. You&rsquo;ll need to export and re-import your data if you&rsquo;re using the persistent in-memory data store.</p>
+
+<p>A selection of precompiled binaries are provided on the release page, including Windows and Solaris builds. There are also knife plugins for goiardi&rsquo;s reporting and event logging capabilities at <a href="https://github.com/ctdk/knife-goiardi-reporting">knife-goiardi-reporting</a> and <a href="https://github.com/ctdk/knife-goiardi-event-log">knife-goiardi-event-log</a>. The reporting plugin was forked from the official Chef knife-reporting plugin to add support for the &ldquo;status&rdquo; parameter. Both plugins are also available on rubygems.</p>
+
+<p>Finally, after someone asked how goiardi would handle running ~500 nodes, I decided to take a look and see. I <a href="https://gist.github.com/ctdk/a2d40f03ddfc616e0d42">whipped up a little test script</a> to create a thousand nodes and clients to see how goiardi (and more importantly the search) would handle it. I wasn&rsquo;t particularly worried about the non-search portions of goiardi (1000 rows on a table isn&rsquo;t very much at all, after all), but I hadn&rsquo;t tested search extensively with large amounts of data. After creating those 1,000 nodes and clients, goiardi was using about 1.40 GB of RAM. An earlier test with 5,500 nodes (but no clients) used 6.45GB RAM. The numbers show that there&rsquo;s definitely room for improvement with the search, in that the capability for indexing nodes and data bags is limited by RAM, but performance was good even at 5,500 nodes. More rigorous testing is needed, however. Search is an area I intend to revisit shortly to improve these problems.</p>
+
+<p>The next issues to work on with goiardi are currently improving search to work even better with large amounts of data and use raft (or something similar) to allow multiple goiardi instances to keep their search indexes consistent, reworking the permissions system, being able to upload files to s3 or similar storage providers, and the serf based pushy type thing.</p>
 </div>
 
 
@@ -132,12 +180,12 @@
   
 
 
-<time datetime="2014-01-18T15:10:27-08:00" pubdate data-updated="true">Jan 18<span>th</span>, 2014</time>
+<time datetime="2014-07-01T21:36:11-07:00" pubdate data-updated="true">Jul 1<span>st</span>, 2014</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/persistence/'>persistence</a>
+    <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/postgres/'>postgres</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a>
   
 </span>
 
@@ -146,7 +194,7 @@
     
       <div class="sharing">
   
-  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/01/18/save-persistent-store-fix/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/01/18/save-persistent-store-fix/" >Tweet</a>
+  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant/" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
@@ -161,10 +209,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/goiardi/blog/2014/01/09/reindexing-search-capability-added/" title="Previous Post: Reindexing search capability added">&laquo; Reindexing search capability added</a>
+        <a class="basic-alignment left" href="/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc/" title="Previous Post: Building goiardi on Solaris/illumos/etc.">&laquo; Building goiardi on Solaris/illumos/etc.</a>
       
-      
-        <a class="basic-alignment right" href="/goiardi/blog/2014/02/13/go-test-coverage-progressing/" title="Next Post: Go test coverage progressing">Go test coverage progressing &raquo;</a>
       
     </p>
   </footer>
@@ -250,8 +296,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/01/18/save-persistent-store-fix/';
-        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/01/18/save-persistent-store-fix/';
+        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant/';
+        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant/';
         var disqus_script = 'embed.js';
       
     (function () {
