@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"testing"
+	"time"
 )
 
 // Most search testing can be handled fine with chef-pedant, but that's no
@@ -185,3 +186,38 @@ func TestSearchDbagAll(t *testing.T) {
 		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(d))
 	}
 }
+
+// Probably don't want this as an always test, but it's handy to have available.
+/*
+func TestEmbiggenSearch(t *testing.T) {
+	for i := 4; i < 35000; i++ {
+		n, _ := node.New(fmt.Sprintf("node%d", i))
+		n.Save()
+		r, _ := role.New(fmt.Sprintf("role%d", i))
+		r.Save()
+		e, _ := environment.New(fmt.Sprintf("env%d", i))
+		e.Save()
+		c, _ := client.New(fmt.Sprintf("client%d", i))
+		c.Save()
+		d, _ := databag.New(fmt.Sprintf("databag%d", i))
+		d.Save()
+		dbi := make(map[string]interface{})
+		dbi["id"] = fmt.Sprintf("dbi%d", i)
+		dbi["foo"] = fmt.Sprintf("dbag_item_%d", i)
+		d.NewDBItem(dbi)
+	}
+	time.Sleep(1 * time.Second)
+	n, _ := Search("client", "*:*")
+	if len(n) != 35000 {
+		t.Errorf("Incorrect number of items returned, expected 500, got %d", len(n))
+	}
+	c, _ := Search("node", "*:*")
+	if len(c) != 35000 {
+		t.Errorf("Incorrect number of nodes returned, expected 500, got %d", len(n))
+	}
+	e, _ := Search("environment", "name:env11666")
+	if e[0].(*environment.ChefEnvironment).Name != "env11666" {
+		t.Errorf("nothing returned from search")
+	}
+}
+*/
