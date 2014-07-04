@@ -31,7 +31,7 @@ var Serfer *client.RPCClient
 // queries from other serf instances.
 func StartSerfin() error {
 	var err error
-	Serfer, err = client.NewRPCClient("127.0.0.1:7373")
+	Serfer, err = client.NewRPCClient(config.Config.SerfAddr)
 	if err != nil {
 		logger.Criticalf(err.Error())
 		os.Exit(1)
