@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/serfin"
 	"reflect"
 	"sort"
 	"strconv"
@@ -78,6 +79,10 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 		return err
 	}
 	le.ActorInfo = actorInfo
+
+	if config.Config.UseSerf {
+		go serfin.SendQuery("log-event", le)
+	}
 
 	if config.UsingDB() {
 		return le.writeEventSQL()

@@ -20,69 +20,79 @@ package serfin
 import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
-	"github.com/hashicorp/memberlist"
-	"github.com/hashicorp/serf/serf"
-	"fmt"
-	"net"
-	"strconv"
-	"strings"
+	"github.com/hashicorp/serf/client"
+	"os"
+	"encoding/json"
 )
 
-var Serfer *serf.Serf
+var Serfer *client.RPCClient
 
 // StartSerfin sets up the serf instance and starts listening for events and
 // queries from other serf instances.
 func StartSerfin() error {
-	events := make(chan serf.Event, 1)
-	go func() {
-		for {
-			select {
-				case event := <-events:
-					logger.Debugf("Hey, got an event: %T %v", event, event)
-			}
-		}
-	}()
-	var mc *memberlist.Config
-	switch config.Config.SerfNetType {
-	case "lan":
-		mc = memberlist.DefaultLANConfig()
-	case "wan":
-		mc = memberlist.DefaultWANConfig()
-	case "local":
-		mc = memberlist.DefaultLocalConfig()
-	default:
-		err := fmt.Errorf("'%s' is not a valid serf network type", config.Config.SerfNetType)
-		return err
-	}
-	host, p, err := net.SplitHostPort(config.Config.SerfAddr)
+	var err error
+	Serfer, err = client.NewRPCClient("127.0.0.1:7373")
 	if err != nil {
-		return err
+		logger.Criticalf(err.Error())
+		os.Exit(1)
 	}
-	port, err := strconv.Atoi(p)
+	err = Serfer.UserEvent("goiardi-join", []byte(config.Config.Hostname), true)
 	if err != nil {
-		return err
+		logger.Criticalf(err.Error())
+		os.Exit(1)
 	}
-	mc.BindAddr = host
-	mc.BindPort = port
-	// TODO: extend logger package to be able to return the log io.Writer
-	// so the serf logs can go there
-	serfConf := serf.DefaultConfig()
-	serfConf.Init()
-	serfConf.NodeName = config.Config.SerfNode
-	// TODO: may want serf tags?
-	serfConf.MemberlistConfig = mc
-	serfConf.EventCh = events
-	Serfer, err = serf.Create(serfConf)
+	errch := make(chan error, 1)
+	go startEventMonitor(Serfer, errch)
+
+	err = <-errch
 	if err != nil {
-		return err
-	}
-	joins := strings.Split(config.Config.SerfJoin, ",")
-	if len(joins) != 0 {
-		_, err = Serfer.Join(joins, false)
-		if err != nil {
-			logger.Warningf(err.Error())
-		}
+		logger.Errorf(err.Error())
+		os.Exit(1)
 	}
 
 	return nil
+}
+
+func startEventMonitor(sc *client.RPCClient, errch chan<- error) {
+	ch := make(chan map[string]interface{}, 1)
+	sh, err := sc.Stream("*", ch)
+	if err != nil {
+		errch <- err
+		return
+	}
+	errch <- nil
+
+	defer sc.Stop(sh)
+	// watch the events and queries
+	for e := range ch {
+		logger.Debugf("Got an event: %v", e)
+	}
+	return
+}
+
+func SendEvent(eventName string, payload interface{}) {
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		logger.Errorf(err.Error())
+		return
+	}
+	err = Serfer.UserEvent(eventName, jsonPayload, true)
+	if err != nil {
+		logger.Debugf(err.Error())
+	}
+	return
+}
+
+func SendQuery(queryName string, payload interface{}) {
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		logger.Errorf(err.Error())
+		return
+	}
+	q := &client.QueryParam{ Name: queryName, Payload: jsonPayload }
+	err = Serfer.Query(q)
+	if err != nil {
+		logger.Debugf(err.Error())
+	}
+	return
 }

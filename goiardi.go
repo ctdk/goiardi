@@ -395,7 +395,7 @@ func handleSignals() {
 					datastore.Dbh.Close()
 				}
 				if config.Config.UseSerf {
-					serfin.Serfer.Leave()
+					serfin.Serfer.Close()
 				}
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
