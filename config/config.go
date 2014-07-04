@@ -72,6 +72,11 @@ type Conf struct {
 	UseUnsafeMemStore bool  `toml:"use-unsafe-mem-store"`
 	DbPoolSize int `toml:"db-pool-size"`
 	MaxConn int `toml:"max-connections"`
+	UseSerf bool `toml:"use-serf"`
+	SerfAddr string `toml:"serf-addr"`
+	SerfJoin string `toml:"serf-join"`
+	SerfNode string `toml:"serf-node"`
+	SerfNetType string `toml:"serf-net-type"`
 }
 
 // LogLevelNames give convenient, easier to remember than number name for the
@@ -134,6 +139,12 @@ type Options struct {
 	UseUnsafeMemStore bool   `long:"use-unsafe-mem-store" description:"Use the faster, but less safe, old method of storing data in the in-memory data store with pointers, rather than encoding the data with gob and giving a new copy of the object to each requestor. If this is enabled goiardi will run faster in in-memory mode, but one goroutine could change an object while it's being used by another. Has no effect when using an SQL backend."`
 	DbPoolSize int `long:"db-pool-size" description:"Number of idle db connections to maintain. Only useful when using one of the SQL backends. Default is 0 - no idle connections retained"`
 	MaxConn int `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited."`
+	UseSerf bool `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster."`
+	SerfAddr string `long:"serf-addr" description:"IP address and port to bind to for serf. Defaults to 0.0.0.0:7946."`
+	SerfJoin string `long:"serf-join" description:"Comma separated list of IP addresses of an existing serf cluster to join. Optional."`
+	SerfNode string `long:"serf-node" description:"Name to use for goiardi's serf node name. Defaults to the hostname value specified with -H."`
+	SerfNetType string `long:"serf-net-type" description:"Type of serf network to use. Available options are 'local', 'lan', and 'wan'. Default is 'lan'."`
+	
 }
 
 // The goiardi version.
@@ -446,6 +457,36 @@ func ParseConfigOptions() error {
 		}
 		if Config.MaxConn != 0 {
 			logger.Infof("max-connections is set to %d, which is not particularly useful if you are not using one of the SQL databases.", Config.MaxConn)
+		}
+	}
+	if opts.UseSerf {
+		Config.UseSerf = opts.UseSerf
+	}
+	if Config.UseSerf {
+		if opts.SerfAddr != "" {
+			Config.SerfAddr = opts.SerfAddr
+		}
+		if Config.SerfAddr == "" {
+			Config.SerfAddr = "0.0.0.0:7946"
+		}
+		if opts.SerfJoin != "" {
+			Config.SerfJoin = opts.SerfJoin
+		}
+		if opts.SerfNode != "" {
+			Config.SerfNode = opts.SerfNode
+		}
+		if Config.SerfNode == "" {
+			Config.SerfNode = Config.Hostname
+		}
+		if opts.SerfNetType != "" {
+			Config.SerfNetType = opts.SerfNetType
+		}
+		if Config.SerfNetType != "local" && Config.SerfNetType != "lan" && Config.SerfNetType != "wan" && Config.SerfNetType != "" {
+			logger.Criticalf("'%s' is not a valid serf network type!", Config.SerfNetType)
+			os.Exit(1)
+		}
+		if Config.SerfNetType == "" {
+			Config.SerfNetType = "lan"
 		}
 	}
 

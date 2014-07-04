@@ -40,6 +40,7 @@ import (
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/serfin"
 	"net/http"
 	"os"
 	"os/signal"
@@ -122,10 +123,20 @@ func main() {
 		os.Exit(0)
 	}
 
+	/* Set up serf */
+	if config.Config.UseSerf {
+		serferr := serfin.StartSerfin()
+		if serferr != nil {
+			logger.Criticalf(serferr.Error())
+			os.Exit(1)
+		}
+	}
+
 	/* Create default clients and users. Currently chef-validator,
 	 * chef-webui, and admin. */
 	createDefaultActors()
 	handleSignals()
+
 
 	/* Register the various handlers, found in their own source files. */
 	http.HandleFunc("/authenticate_user", authenticateUserHandler)
@@ -383,6 +394,9 @@ func handleSignals() {
 				}
 				if config.UsingDB() {
 					datastore.Dbh.Close()
+				}
+				if config.Config.UseSerf {
+					serfin.Serfer.Leave()
 				}
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
