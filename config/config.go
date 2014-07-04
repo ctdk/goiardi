@@ -74,9 +74,6 @@ type Conf struct {
 	MaxConn int `toml:"max-connections"`
 	UseSerf bool `toml:"use-serf"`
 	SerfAddr string `toml:"serf-addr"`
-	SerfJoin string `toml:"serf-join"`
-	SerfNode string `toml:"serf-node"`
-	SerfNetType string `toml:"serf-net-type"`
 }
 
 // LogLevelNames give convenient, easier to remember than number name for the
@@ -140,11 +137,7 @@ type Options struct {
 	DbPoolSize int `long:"db-pool-size" description:"Number of idle db connections to maintain. Only useful when using one of the SQL backends. Default is 0 - no idle connections retained"`
 	MaxConn int `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited."`
 	UseSerf bool `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster."`
-	SerfAddr string `long:"serf-addr" description:"IP address and port to bind to for serf. Defaults to 0.0.0.0:7946."`
-	SerfJoin string `long:"serf-join" description:"Comma separated list of IP addresses of an existing serf cluster to join. Optional."`
-	SerfNode string `long:"serf-node" description:"Name to use for goiardi's serf node name. Defaults to the hostname value specified with -H."`
-	SerfNetType string `long:"serf-net-type" description:"Type of serf network to use. Available options are 'local', 'lan', and 'wan'. Default is 'lan'."`
-	
+	SerfAddr string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373."`
 }
 
 // The goiardi version.
@@ -467,26 +460,7 @@ func ParseConfigOptions() error {
 			Config.SerfAddr = opts.SerfAddr
 		}
 		if Config.SerfAddr == "" {
-			Config.SerfAddr = "0.0.0.0:7946"
-		}
-		if opts.SerfJoin != "" {
-			Config.SerfJoin = opts.SerfJoin
-		}
-		if opts.SerfNode != "" {
-			Config.SerfNode = opts.SerfNode
-		}
-		if Config.SerfNode == "" {
-			Config.SerfNode = Config.Hostname
-		}
-		if opts.SerfNetType != "" {
-			Config.SerfNetType = opts.SerfNetType
-		}
-		if Config.SerfNetType != "local" && Config.SerfNetType != "lan" && Config.SerfNetType != "wan" && Config.SerfNetType != "" {
-			logger.Criticalf("'%s' is not a valid serf network type!", Config.SerfNetType)
-			os.Exit(1)
-		}
-		if Config.SerfNetType == "" {
-			Config.SerfNetType = "lan"
+			Config.SerfAddr = "127.0.0.1:7373"
 		}
 	}
 
