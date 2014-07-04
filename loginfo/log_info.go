@@ -79,9 +79,13 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 		return err
 	}
 	le.ActorInfo = actorInfo
-
 	if config.Config.UseSerf {
-		go serfin.SendQuery("log-event", le)
+		qle := make(map[string]interface{}, 4)
+		qle["time"] = le.Time
+		qle["action"] = le.Action
+		qle["object_type"] = le.ObjectType
+		qle["object_name"] = le.ObjectName
+		go serfin.SendQuery("log-event", qle)
 	}
 
 	if config.UsingDB() {
