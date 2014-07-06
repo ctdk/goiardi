@@ -14,20 +14,27 @@
  * limitations under the License.
  */
 
-package main
+// Structs, functions, and methods to record and report on a node's status.
+// Goes with the shovey functions and the serf stuff.
+
+package node
 
 import (
-	"net/http"
+	"time"
 )
 
-func shoveyHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return
-	}
-	
+type NodeStatus struct {
+	Node *Node
+	Status string
+	UpdatedAt time.Time
+}
 
-	return
+func (n *Node) UpdateStatus(status string) error {
+	s := n.Status()
+	s.Status = status
+	return s.Save()
+}
+
+func (n *Node)Status() (*NodeStatus, error) {
+
 }

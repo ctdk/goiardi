@@ -165,6 +165,7 @@ func main() {
 	http.HandleFunc("/events/", eventHandler)
 	http.HandleFunc("/reports/", reportHandler)
 	http.HandleFunc("/universe", universeHandler)
+	http.HandleFunc("/shovey/", shoveyHandler)
 
 	/* TODO: figure out how to handle the root & not found pages */
 	http.HandleFunc("/", rootHandler)

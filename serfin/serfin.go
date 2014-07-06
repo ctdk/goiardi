@@ -20,18 +20,18 @@ package serfin
 import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
-	"github.com/hashicorp/serf/client"
+	serfclient "github.com/hashicorp/serf/serfclient"
 	"os"
 	"encoding/json"
 )
 
-var Serfer *client.RPCClient
+var Serfer *serfclient.RPCClient
 
 // StartSerfin sets up the serf instance and starts listening for events and
 // queries from other serf instances.
 func StartSerfin() error {
 	var err error
-	Serfer, err = client.NewRPCClient(config.Config.SerfAddr)
+	Serfer, err = serfclient.NewRPCClient(config.Config.SerfAddr)
 	if err != nil {
 		logger.Criticalf(err.Error())
 		os.Exit(1)
@@ -53,7 +53,7 @@ func StartSerfin() error {
 	return nil
 }
 
-func startEventMonitor(sc *client.RPCClient, errch chan<- error) {
+func startEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 	ch := make(chan map[string]interface{}, 1)
 	sh, err := sc.Stream("*", ch)
 	if err != nil {
@@ -89,7 +89,7 @@ func SendQuery(queryName string, payload interface{}) {
 		logger.Errorf(err.Error())
 		return
 	}
-	q := &client.QueryParam{ Name: queryName, Payload: jsonPayload }
+	q := &serfclient.QueryParam{ Name: queryName, Payload: jsonPayload }
 	err = Serfer.Query(q)
 	if err != nil {
 		logger.Debugf(err.Error())
