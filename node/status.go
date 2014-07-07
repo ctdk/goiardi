@@ -20,6 +20,7 @@
 package node
 
 import (
+	"github.com/ctdk/goiardi/config"
 	"time"
 )
 
@@ -30,11 +31,22 @@ type NodeStatus struct {
 }
 
 func (n *Node) UpdateStatus(status string) error {
-	s := n.Status()
+	s := n.NewStatus()
 	s.Status = status
 	return s.Save()
 }
 
-func (n *Node)Status() (*NodeStatus, error) {
+func (n *Node)NewStatus() (*NodeStatus, error) {
+	if config.UsingDB() {
+
+	}
+
+}
+
+func (n *Node)LatestStatus() (*NodeStatus, error) {
+
+}
+
+func (n *Node)AllStatuses() ([]*NodeStatus, error) {
 
 }
