@@ -21,6 +21,7 @@ package node
 
 import (
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
 	"time"
 )
 
@@ -31,22 +32,43 @@ type NodeStatus struct {
 }
 
 func (n *Node) UpdateStatus(status string) error {
-	s := n.NewStatus()
-	s.Status = status
-	return s.Save()
-}
-
-func (n *Node)NewStatus() (*NodeStatus, error) {
+	s := &NodeStatus{ Node: n, Status: status, UpdatedAt: time.Now() }
 	if config.UsingDB() {
 
 	}
-
+	return datastore.SetNodeStatus(n.Name, s)
 }
 
 func (n *Node)LatestStatus() (*NodeStatus, error) {
+	if config.UsingDB() {
 
+	}
+	s, err := datastore.LatestNodeStatus(n.Name)
+	if err != nil {
+		return nil, err
+	}
+	ns := s.(*NodeStatus)
+	return ns, nil
 }
 
 func (n *Node)AllStatuses() ([]*NodeStatus, error) {
+	if config.UsingDB() {
 
+	}
+	arr, err := datastore.AllNodeStatuses(n.Name)
+	if err != nil {
+		return nil, err
+	}
+	ns := make([]*NodeStatus, len(arr))
+	for i, v := range arr {
+		ns[i] = v.(*NodeStatus)
+	}
+	return ns, nil
+}
+
+func (n *Node)DeleteStatuses() error {
+	if config.UsingDB() {
+
+	}
+	return datastore.DeleteNodeStatus(n.Name)
 }
