@@ -190,6 +190,110 @@ func (ds *DataStore) GetList(keyType string) []string {
 	return j
 }
 
+func SetNodeStatus(nodeName string, obj interface{}, nsID ...int) error {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	nsKey := ds.makeKey("nodestatus", "nodestatuses")
+	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
+	a, _ := ds.dsc.Get(nsKey)
+	if a == nil {
+		a = make(map[int]interface{})
+	}
+	ns := a.(map[int]interface{})
+	a, _ = ds.dsc.Get(nsListKey)
+	if a == nil {
+		a = make(map[string][]int)
+	}
+	nslist := a.(map[string][]int)
+	var nextID int
+	if nsID != nil {
+		nextID = nsID[0]
+	} else {
+		nextID = getNextID(ns)
+	}
+	ns[nextID] = obj
+	nsList[nodeName] = append(nslist[nodeName], nextID)
+
+	ds.dsc.Set(nsKey, ns, -1)
+	ds.dsc.Set(nsListKey, nslist, -1)
+	return nil
+}
+
+func AllNodeStatuses(nodeName string) ([]interface{}, error) {
+	ds.m.RLock()
+	defer ds.m.RUnlock()
+	nsKey := ds.makeKey("nodestatus", "nodestatuses")
+	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
+	a, _ := ds.dsc.Get(nsKey)
+	if a == nil {
+		err := fmt.Errorf("No statuses in the datastore")
+		return nil, err
+	}
+	ns := a.(map[int]interface{})
+	a, _ = ds.dsc.Get(nsListKey)
+	if a == nil {
+		err := fmt.Errorf("No status lists in the datastore")
+		return nil, err
+	}
+	nslist := a.(map[string][]int)
+	arr := make([]interface{}, len(nslist[nodeName]))
+	for i, v := range nslist[nodeName] {
+		arr[i] = v
+	}
+	return arr, nil
+}
+
+func LatestNodeStatus(nodeName string) (interface{}, error) {
+	ds.m.RLock()
+	defer ds.m.RUnlock()
+	nsKey := ds.makeKey("nodestatus", "nodestatuses")
+	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
+	a, _ := ds.dsc.Get(nsKey)
+	if a == nil {
+		err := fmt.Errorf("No statuses in the datastore")
+		return nil, err
+	}
+	ns := a.(map[int]interface{})
+	a, _ = ds.dsc.Get(nsListKey)
+	if a == nil {
+		err := fmt.Errorf("No status lists in the datastore")
+		return nil, err
+	}
+	nslist := a.(map[string][]int)
+	if nslist[nodeName] == nil {
+		err := fmt.Errorf("no statuses found for node %s", nodeName)
+		return nil, err
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(nlist[nodeName])
+	return ns[nlist[nodeName][0]], nil
+}
+
+func DeleteNodeStatus(nodeName string) error {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	nsKey := ds.makeKey("nodestatus", "nodestatuses")
+	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
+	a, _ := ds.dsc.Get(nsKey)
+	if a == nil {
+		err := fmt.Errorf("No statuses in the datastore")
+		return err
+	}
+	ns := a.(map[int]interface{})
+	a, _ = ds.dsc.Get(nsListKey)
+	if a == nil {
+		err := fmt.Errorf("No status lists in the datastore")
+		return err
+	}
+	nslist := a.(map[string][]int)
+	for _, v := range nslist[nodeName] {
+		delete(ns, v)
+	}
+	delete(nslist, nodeName)
+	ds.dsc.Set(nsKey, ns, -1)
+	ds.dsc.Set(nsListKey, nslist, -1)
+	return nil
+}
+
 func (ds *DataStore) getLogInfoMap() map[int]interface{} {
 	dsKey := ds.makeKey("loginfo", "loginfos")
 	var a interface{}
