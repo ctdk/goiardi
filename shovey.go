@@ -17,6 +17,7 @@
 package main
 
 import (
+	"github.com/ctdk/goiardi/actor"
 	"net/http"
 )
 
@@ -27,7 +28,10 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	
+	if !opUser.IsAdmin() {
+		jsonErrorReport(w, r, "you cannot perform this action", http.StatusForbidden)
+		return
+	}
 
 	return
 }
