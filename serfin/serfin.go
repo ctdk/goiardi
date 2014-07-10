@@ -20,6 +20,7 @@ package serfin
 import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/node"
 	serfclient "github.com/hashicorp/serf/client"
 	"os"
 	"encoding/json"
@@ -66,6 +67,28 @@ func startEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 	// watch the events and queries
 	for e := range ch {
 		logger.Debugf("Got an event: %v", e)
+		switch e["Name"].(string) {
+		case "node_status":
+			jsonPayload := make(map[string]string)
+			err = json.Unmarshal(e["Payload"].([]byte), &jsonPayload)
+			if err != nil {
+				logger.Errorf(err.Error())
+				continue
+			}
+			n, _ := node.Get(jsonPayload["node"])
+			if n == nil {
+				logger.Errorf("No node %s", jsonPayload["node"])
+				continue
+			}
+			err = n.UpdateStatus(jsonPayload["status"])
+			if err != nil {
+				logger.Errorf(err.Error())
+				continue
+			}
+			r := map[string]string{ "response": "ok" }
+			response, _ := json.Marshal(r)
+			sc.Respond(uint64(e["ID"].(int64)), response)
+		}
 	}
 	return
 }
