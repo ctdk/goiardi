@@ -20,7 +20,7 @@ package serfin
 import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
-	serfclient "github.com/hashicorp/serf/serfclient"
+	serfclient "github.com/hashicorp/serf/client"
 	"os"
 	"encoding/json"
 )

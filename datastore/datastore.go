@@ -190,7 +190,7 @@ func (ds *DataStore) GetList(keyType string) []string {
 	return j
 }
 
-func SetNodeStatus(nodeName string, obj interface{}, nsID ...int) error {
+func (ds *DataStore) SetNodeStatus(nodeName string, obj interface{}, nsID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	nsKey := ds.makeKey("nodestatus", "nodestatuses")
@@ -212,14 +212,14 @@ func SetNodeStatus(nodeName string, obj interface{}, nsID ...int) error {
 		nextID = getNextID(ns)
 	}
 	ns[nextID] = obj
-	nsList[nodeName] = append(nslist[nodeName], nextID)
+	nslist[nodeName] = append(nslist[nodeName], nextID)
 
 	ds.dsc.Set(nsKey, ns, -1)
 	ds.dsc.Set(nsListKey, nslist, -1)
 	return nil
 }
 
-func AllNodeStatuses(nodeName string) ([]interface{}, error) {
+func (ds *DataStore) AllNodeStatuses(nodeName string) ([]interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
 	nsKey := ds.makeKey("nodestatus", "nodestatuses")
@@ -238,12 +238,12 @@ func AllNodeStatuses(nodeName string) ([]interface{}, error) {
 	nslist := a.(map[string][]int)
 	arr := make([]interface{}, len(nslist[nodeName]))
 	for i, v := range nslist[nodeName] {
-		arr[i] = v
+		arr[i] = ns[v]
 	}
 	return arr, nil
 }
 
-func LatestNodeStatus(nodeName string) (interface{}, error) {
+func (ds *DataStore) LatestNodeStatus(nodeName string) (interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
 	nsKey := ds.makeKey("nodestatus", "nodestatuses")
@@ -260,15 +260,16 @@ func LatestNodeStatus(nodeName string) (interface{}, error) {
 		return nil, err
 	}
 	nslist := a.(map[string][]int)
-	if nslist[nodeName] == nil {
+	nsarr := nslist[nodeName]
+	if nsarr == nil {
 		err := fmt.Errorf("no statuses found for node %s", nodeName)
 		return nil, err
 	}
-	sort.Sort(sort.Reverse(sort.IntSlice(nlist[nodeName])
-	return ns[nlist[nodeName][0]], nil
+	sort.Sort(sort.Reverse(sort.IntSlice(nsarr)))
+	return ns[nsarr[0]], nil
 }
 
-func DeleteNodeStatus(nodeName string) error {
+func (ds *DataStore) DeleteNodeStatus(nodeName string) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	nsKey := ds.makeKey("nodestatus", "nodestatuses")

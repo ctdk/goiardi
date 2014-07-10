@@ -36,14 +36,16 @@ func (n *Node) UpdateStatus(status string) error {
 	if config.UsingDB() {
 
 	}
-	return datastore.SetNodeStatus(n.Name, s)
+	ds := datastore.New()
+	return ds.SetNodeStatus(n.Name, s)
 }
 
 func (n *Node)LatestStatus() (*NodeStatus, error) {
 	if config.UsingDB() {
 
 	}
-	s, err := datastore.LatestNodeStatus(n.Name)
+	ds := datastore.New()
+	s, err := ds.LatestNodeStatus(n.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +57,8 @@ func (n *Node)AllStatuses() ([]*NodeStatus, error) {
 	if config.UsingDB() {
 
 	}
-	arr, err := datastore.AllNodeStatuses(n.Name)
+	ds := datastore.New()
+	arr, err := ds.AllNodeStatuses(n.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -70,5 +73,6 @@ func (n *Node)DeleteStatuses() error {
 	if config.UsingDB() {
 
 	}
-	return datastore.DeleteNodeStatus(n.Name)
+	ds := datastore.New()
+	return ds.DeleteNodeStatus(n.Name)
 }

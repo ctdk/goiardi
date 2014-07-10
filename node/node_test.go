@@ -44,3 +44,34 @@ func TestActionAtADistance(t *testing.T) {
 		t.Errorf("Normal attribute 'foo' should have been equal between the two copies of the node after saving a second time, but weren't.")
 	}
 }
+
+func TestNodeStatus(t *testing.T) {
+	n, _ := New("foo3")
+	n.Save()
+	z := new(NodeStatus)
+	gob.Register(z)
+	n.UpdateStatus("up")
+	ns, err := n.LatestStatus()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if ns == nil {
+		t.Errorf("node status was nil!")
+	} else if ns.Status != "up" {
+		t.Errorf("node status should have been 'up', got %s", ns.Status)
+	}
+	n.UpdateStatus("timeout")
+	n.UpdateStatus("down")
+	nses, err := n.AllStatuses()
+	if len(nses) != 3 {
+		t.Errorf("AllStatuses should have returned 3, but it returned %d", len(nses))
+	}
+	err = n.DeleteStatuses()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	nses, _ = n.AllStatuses()
+	if len(nses) != 0 {
+		t.Errorf("AllStatuses should have returned 0 after calling DeleteStatuses, but instead it returned %d", len(nses))
+	}
+}
