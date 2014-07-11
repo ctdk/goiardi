@@ -76,3 +76,11 @@ func (n *Node)DeleteStatuses() error {
 	ds := datastore.New()
 	return ds.DeleteNodeStatus(n.Name)
 }
+
+func (ns *NodeStatus) ToJSON() map[string]string {
+	nsmap := make(map[string]string)
+	nsmap["node_name"] = ns.Node.Name
+	nsmap["status"] = ns.Status
+	nsmap["updated_at"] = ns.UpdatedAt.Format(time.RFC3339)
+	return nsmap
+}
