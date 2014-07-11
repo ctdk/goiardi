@@ -21,7 +21,6 @@ package node
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
@@ -103,7 +102,7 @@ func NewFromJSON(jsonNode map[string]interface{}) (*Node, util.Gerror) {
 }
 
 // Get a node.
-func Get(nodeName string) (*Node, error) {
+func Get(nodeName string) (*Node, util.Gerror) {
 	var node *Node
 	var found bool
 	if config.UsingDB() {
@@ -113,7 +112,7 @@ func Get(nodeName string) (*Node, error) {
 			if err == sql.ErrNoRows {
 				found = false
 			} else {
-				return nil, err
+				return nil, util.CastErr(err)
 			}
 		} else {
 			found = true
@@ -127,7 +126,8 @@ func Get(nodeName string) (*Node, error) {
 		}
 	}
 	if !found {
-		err := fmt.Errorf("node '%s' not found", nodeName)
+		err := util.Errorf("node '%s' not found", nodeName)
+		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
 	return node, nil

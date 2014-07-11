@@ -46,18 +46,18 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
-		chefNode, err := node.Get(nodeName)
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+		chefNode, nerr := node.Get(nodeName)
+		if nerr != nil {
+			jsonErrorReport(w, r, nerr.Error(), http.StatusNotFound)
 			return
 		}
 		enc := json.NewEncoder(w)
-		if err = enc.Encode(&chefNode); err != nil {
+		if err := enc.Encode(&chefNode); err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if r.Method == "DELETE" {
-			err = chefNode.Delete()
+			err := chefNode.Delete()
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
@@ -77,9 +77,9 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
 		}
-		chefNode, err := node.Get(nodeName)
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+		chefNode, kerr := node.Get(nodeName)
+		if kerr != nil {
+			jsonErrorReport(w, r, kerr.Error(), http.StatusNotFound)
 			return
 		}
 		/* If nodeName and nodeData["name"] don't match, we
@@ -105,7 +105,7 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 			return
 		}
-		err = chefNode.Save()
+		err := chefNode.Save()
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
