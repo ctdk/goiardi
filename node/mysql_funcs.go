@@ -29,3 +29,11 @@ func (n *Node) saveMySQL(tx datastore.Dbhandle, rlb, aab, nab, dab, oab []byte) 
 	}
 	return nil
 }
+
+func (ns *NodeStatus) updateNodeStatusMySQL() error {
+
+}
+
+func (ns *NodeStatus) fillNodeStatusFromMySQL(row datastore.ResRow) error {
+
+}

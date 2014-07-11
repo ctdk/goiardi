@@ -27,3 +27,11 @@ func (n *Node) savePostgreSQL(tx datastore.Dbhandle, rlb, aab, nab, dab, oab []b
 	}
 	return nil
 }
+
+func (ns *NodeStatus) updateNodeStatusPostgreSQL() error {
+
+}
+
+func (ns *NodeStatus) fillNodeStatusFromPostgreSQL(row datastore.ResRow) error {
+
+}
