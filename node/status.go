@@ -32,10 +32,11 @@ type NodeStatus struct {
 }
 
 func (n *Node) UpdateStatus(status string) error {
-	s := &NodeStatus{ Node: n, Status: status, UpdatedAt: time.Now() }
+	s := &NodeStatus{ Node: n, Status: status }
 	if config.UsingDB() {
-
+		return s.updateNodeStatusSQL()
 	}
+	s.UpdatedAt = time.Now()
 	ds := datastore.New()
 	return ds.SetNodeStatus(n.Name, s)
 }
@@ -69,9 +70,10 @@ func (n *Node)AllStatuses() ([]*NodeStatus, error) {
 	return ns, nil
 }
 
-func (n *Node)DeleteStatuses() error {
+func (n *Node)deleteStatuses() error {
 	if config.UsingDB() {
-
+		err := fmt.Errorf("not needed in SQL mode - foreign keys handle deleting node statuses")
+		return err
 	}
 	ds := datastore.New()
 	return ds.DeleteNodeStatus(n.Name)

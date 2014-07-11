@@ -168,6 +168,16 @@ func (n *Node) deleteSQL() error {
 	return err
 }
 
+func (ns *NodeStatus) updateNodeStatusSQL() error {
+	if config.Config.UseMySQL {
+		return ns.updateNodeStatusMySQL()
+	} else if config.Config.UsePostgreSQL {
+		return ns.updateNodeStatusPostgreSQL()
+	}
+	err := fmt.Errorf("reached an impossible db state")
+	return err
+}
+
 func getListSQL() []string {
 	var nodeList []string
 	var sqlStmt string
@@ -269,4 +279,68 @@ func allNodesSQL() []*Node {
 		log.Fatal(err)
 	}
 	return nodes
+}
+
+func (n *Node) latestStatusSQL() (*NodeStatus, error) {
+	var sqlStmt string
+	if config.Config.UseMySQL {
+		sqlStmt = "SELECT status, updated_at FROM node_statuses ns JOIN nodes n on ns.node_id = n.id WHERE n.name = ? ORDER BY id DESC LIMIT 1"
+	} else if config.Config.UsePostgreSQL {
+		sqlStmt = "SELECT status, updated_at FROM goiardi.node_statuses ns JOIN n ON ns.node_id = nid WHERE n.name = $1 ORDER BY id DESC LIMIT 1"
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	ns := &NodeStatus{ Node: n }
+	row := stmt.QueryRow(n.Name)
+	if config.Config.UseMySQL {
+		err = ns.fillNodeStatusFromMySQL(row)
+	} else if config.Config.UsePostgreSQL {
+		err = ns.fillNodeStatusFromPostgreSQL(row)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return ns, nil
+}
+
+func (n *Node) allStatusesSQL() ([]*NodeStatus, error) {
+	var nodeStatuses []*NodeStatus
+	var sqlStmt string
+	if config.Config.UseMySQL {
+		sqlStmt = "SELECT status, updated_at FROM node_statuses ns JOIN nodes n on ns.node_id = n.id WHERE n.name = ? ORDER BY id DESC LIMIT 1"
+	} else if config.Config.UsePostgreSQL {
+		sqlStmt = "SELECT status, updated_at FROM goiardi.node_statuses ns JOIN n ON ns.node_id = nid WHERE n.name = $1 ORDER BY id DESC LIMIT 1"
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return nodeStatuses, nil
+		}
+		return nil, qerr
+	}
+	for rows.Next() {
+		ns := &NodeStatus{ Node: n }
+		if config.Config.UseMySQL {
+			err = ns.fillNodeStatusFromMySQL(rows)
+		} else if config.Config.UsePostgreSQL {
+			err = ns.fillNodeStatusFromPostgreSQL(rows)
+		}
+		if err != nil {
+			return nil, err
+		}
+		nodeStatuses = append(nodeStatuses, ns)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return nodeStatuses
 }

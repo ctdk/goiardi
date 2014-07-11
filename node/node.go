@@ -255,6 +255,10 @@ func (n *Node) Delete() error {
 	} else {
 		ds := datastore.New()
 		ds.Delete("node", n.Name)
+		// TODO: This may need a different config flag?
+		if config.Config.UseSerf {
+			n.deleteStatuses()
+		}
 	}
 	indexer.DeleteItemFromCollection("node", n.Name)
 	return nil

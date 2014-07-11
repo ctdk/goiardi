@@ -66,7 +66,7 @@ func TestNodeStatus(t *testing.T) {
 	if len(nses) != 3 {
 		t.Errorf("AllStatuses should have returned 3, but it returned %d", len(nses))
 	}
-	err = n.DeleteStatuses()
+	err = n.deleteStatuses()
 	if err != nil {
 		t.Errorf(err.Error())
 	}
