@@ -19,8 +19,10 @@ package main
 import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"encoding/json"
+	"fmt"
 )
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
@@ -47,8 +49,33 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		/* pathArray[1] will tell us what operation we're doing */
 		switch pathArray[1] {
+			// /status/all/nodes
 			case "all":
-
+				if len(pathArray) != 3 {
+					jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+					return
+				}
+				if pathArray[2] != "nodes" {
+					jsonErrorReport(w, r, "Invalid object to get status for", http.StatusBadRequest)
+					return
+				}
+				nodes := node.AllNodes()
+				sr := make([]map[string]string, len(nodes))
+				for i, n := range nodes {
+					ns, err := n.LatestStatus()
+					if err != nil {
+						nsbad := make(map[string]string)
+						nsbad["node_name"] = n.Name
+						nsbad["status"] = "no record"
+						sr[i] = nsbad
+						continue
+					}
+					sr[i] = ns.ToJSON()
+					nsurl := fmt.Sprintf("/status/node/%s/latest", n.Name)
+					sr[i]["url"] = util.CustomURL(nsurl)
+				}
+				statusResponse = sr
+			// /status/node/<nodeName>/(all|latest)
 			case "node":
 				if len(pathArray) != 4 {
 					jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
