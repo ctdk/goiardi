@@ -20,6 +20,7 @@ package node
 
 import (
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/go-sql-driver/mysql"
 )
 
 func (n *Node) saveMySQL(tx datastore.Dbhandle, rlb, aab, nab, dab, oab []byte) error {
@@ -31,9 +32,27 @@ func (n *Node) saveMySQL(tx datastore.Dbhandle, rlb, aab, nab, dab, oab []byte) 
 }
 
 func (ns *NodeStatus) updateNodeStatusMySQL() error {
-
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("INSERT INTO node_statuses (node_id, status, updated_at) SELECT id, ?, NOW() FROM nodes WHERE name = ?", ns.Status, ns.Node.Name)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+	return nil
 }
 
 func (ns *NodeStatus) fillNodeStatusFromMySQL(row datastore.ResRow) error {
-
+	var ua mysql.NullTime
+	err := row.Scan(&ns.Status, &ua)
+	if err != nil {
+		return nil
+	}
+	if ua.Valid {
+		ns.UpdatedAt = ua.Time
+	}
+	return nil
 }

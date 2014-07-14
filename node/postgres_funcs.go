@@ -18,6 +18,7 @@ package node
 
 import (
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/lib/pq"
 )
 
 func (n *Node) savePostgreSQL(tx datastore.Dbhandle, rlb, aab, nab, dab, oab []byte) error {
@@ -29,9 +30,27 @@ func (n *Node) savePostgreSQL(tx datastore.Dbhandle, rlb, aab, nab, dab, oab []b
 }
 
 func (ns *NodeStatus) updateNodeStatusPostgreSQL() error {
-
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("SELECT goiardi.insert_node_status($1, $2)", ns.Node.Name, ns.Status)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+	return nil
 }
 
 func (ns *NodeStatus) fillNodeStatusFromPostgreSQL(row datastore.ResRow) error {
-
+	var ua pq.NullTime
+	err := row.Scan(&ns.Status, &ua)
+	if err != nil {
+		return nil
+	}
+	if ua.Valid {
+		ns.UpdatedAt = ua.Time
+	}
+	return nil
 }
