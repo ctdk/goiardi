@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"time"
+	"fmt"
 )
 
 type NodeStatus struct {

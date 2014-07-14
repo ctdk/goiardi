@@ -342,5 +342,5 @@ func (n *Node) allStatusesSQL() ([]*NodeStatus, error) {
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	return nodeStatuses
+	return nodeStatuses, nil
 }
