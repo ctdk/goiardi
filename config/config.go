@@ -74,6 +74,8 @@ type Conf struct {
 	MaxConn int `toml:"max-connections"`
 	UseSerf bool `toml:"use-serf"`
 	SerfAddr string `toml:"serf-addr"`
+	ClusterName string `toml:"cluster-name"`
+	ClusterID string `toml:"cluster-id"`
 }
 
 // LogLevelNames give convenient, easier to remember than number name for the
@@ -138,6 +140,8 @@ type Options struct {
 	MaxConn int `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited."`
 	UseSerf bool `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster."`
 	SerfAddr string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373."`
+	ClusterName string `long:"cluster-name" description:"Set the name of the goiardi cluster this instance should join. Requires --use-serf to be set and one of the SQL backends - not in-memory mode. EXPERIMENTAL, LIKELY TO CHANGE."`
+	ClusterID string `long:"cluster-id" description:"Unique name for this goiardi instance in a cluster. Defaults to the hostname reported by the kernel."`
 }
 
 // The goiardi version.
@@ -461,6 +465,24 @@ func ParseConfigOptions() error {
 		}
 		if Config.SerfAddr == "" {
 			Config.SerfAddr = "127.0.0.1:7373"
+		}
+	}
+	if opts.ClusterName != "" {
+		Config.ClusterName = opts.ClusterName
+	}
+	if Config.ClusterName != "" && (!Config.UseSerf || !UsingDB()) {
+		log.Println("--cluster-name requires that --use-serf also be enabled, and that goiardi not be running in in-memory mode!")
+		os.Exit(1)
+	}
+
+	if opts.ClusterID != "" {
+		Config.ClusterID = opts.ClusterID
+	}
+	if Config.ClusterID == "" && opts.ClusterName != "" {
+		Config.ClusterID, err = os.Hostname()
+		if err != nil {
+			logger.Infof(err.Error())
+			Config.ClusterID = "localhost"
 		}
 	}
 

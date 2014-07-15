@@ -48,6 +48,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	serfclient "github.com/hashicorp/serf/client"
+	"encoding/json"
 )
 
 type interceptHandler struct{} // Doesn't need to do anything, just sit there.
@@ -128,6 +130,13 @@ func main() {
 		serferr := serfin.StartSerfin()
 		if serferr != nil {
 			logger.Criticalf(serferr.Error())
+			os.Exit(1)
+		}
+		errch := make(chan error, 1)
+		go startEventMonitor(serfin.Serfer, errch)
+		err := <-errch
+		if err != nil {
+			logger.Criticalf(err.Error())
 			os.Exit(1)
 		}
 	}
@@ -498,4 +507,44 @@ func setLogEventPurgeTicker() {
 			}
 		}()
 	}
+}
+
+func startEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
+	ch := make(chan map[string]interface{}, 10)
+	sh, err := sc.Stream("*", ch)
+	if err != nil {
+		errch <- err
+		return
+	}
+	errch <- nil
+
+	defer sc.Stop(sh)
+	// watch the events and queries
+	for e := range ch {
+		logger.Debugf("Got an event: %v", e)
+		eName, _ := e["Name"]
+		switch eName {
+		case "node_status":
+			jsonPayload := make(map[string]string)
+			err = json.Unmarshal(e["Payload"].([]byte), &jsonPayload)
+			if err != nil {
+				logger.Errorf(err.Error())
+				continue
+			}
+			n, _ := node.Get(jsonPayload["node"])
+			if n == nil {
+				logger.Errorf("No node %s", jsonPayload["node"])
+				continue
+			}
+			err = n.UpdateStatus(jsonPayload["status"])
+			if err != nil {
+				logger.Errorf(err.Error())
+				continue
+			}
+			r := map[string]string{ "response": "ok" }
+			response, _ := json.Marshal(r)
+			sc.Respond(uint64(e["ID"].(int64)), response)
+		}
+	}
+	return
 }
