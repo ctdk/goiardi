@@ -284,9 +284,9 @@ func allNodesSQL() []*Node {
 func (n *Node) latestStatusSQL() (*NodeStatus, error) {
 	var sqlStmt string
 	if config.Config.UseMySQL {
-		sqlStmt = "SELECT status, updated_at FROM node_statuses ns JOIN nodes n on ns.node_id = n.id WHERE n.name = ? ORDER BY id DESC LIMIT 1"
+		sqlStmt = "SELECT status, ns.updated_at FROM node_statuses ns JOIN nodes n on ns.node_id = n.id WHERE n.name = ? ORDER BY ns.id DESC LIMIT 1"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT status, updated_at FROM goiardi.node_statuses ns JOIN n ON ns.node_id = nid WHERE n.name = $1 ORDER BY id DESC LIMIT 1"
+		sqlStmt = "SELECT status, ns.updated_at FROM goiardi.node_statuses ns JOIN goiardi.nodes n ON ns.node_id = n.id WHERE n.name = $1 ORDER BY ns.id DESC LIMIT 1"
 	}
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -310,16 +310,16 @@ func (n *Node) allStatusesSQL() ([]*NodeStatus, error) {
 	var nodeStatuses []*NodeStatus
 	var sqlStmt string
 	if config.Config.UseMySQL {
-		sqlStmt = "SELECT status, updated_at FROM node_statuses ns JOIN nodes n on ns.node_id = n.id WHERE n.name = ? ORDER BY id DESC LIMIT 1"
+		sqlStmt = "SELECT status, ns.updated_at FROM node_statuses ns JOIN nodes n on ns.node_id = n.id WHERE n.name = ? ORDER BY ns.id DESC"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT status, updated_at FROM goiardi.node_statuses ns JOIN n ON ns.node_id = nid WHERE n.name = $1 ORDER BY id DESC LIMIT 1"
+		sqlStmt = "SELECT status, ns.updated_at FROM goiardi.node_statuses ns JOIN goiardi.nodes n ON ns.node_id = n.id WHERE n.name = $1 ORDER BY ns.id DESC"
 	}
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query()
+	rows, qerr := stmt.Query(n.Name)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return nodeStatuses, nil

@@ -220,49 +220,7 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return
 		}
-		reindexObjs := make([]indexer.Indexable, 0, 100)
-		// We clear the index, *then* do the fetch because if
-		// something comes in between the time we fetch the
-		// objects to reindex and when it gets done, they'll
-		// just be added naturally
-		indexer.ClearIndex()
-
-		for _, v := range client.AllClients() {
-			reindexObjs = append(reindexObjs, v)
-		}
-		for _, v := range node.AllNodes() {
-			reindexObjs = append(reindexObjs, v)
-		}
-		for _, v := range role.AllRoles() {
-			reindexObjs = append(reindexObjs, v)
-		}
-		for _, v := range environment.AllEnvironments() {
-			reindexObjs = append(reindexObjs, v)
-		}
-		defaultEnv, _ := environment.Get("_default")
-		reindexObjs = append(reindexObjs, defaultEnv)
-		// data bags have to be done separately
-		dbags := databag.GetList()
-		for _, db := range dbags {
-			dbag, err := databag.Get(db)
-			if err != nil {
-				continue
-			}
-			dbis := make([]indexer.Indexable, dbag.NumDBItems())
-			i := 0
-			allDBItems, derr := dbag.AllDBItems()
-			if derr != nil {
-				logger.Errorf(derr.Error())
-				continue
-			}
-			for _, k := range allDBItems {
-				n := k
-				dbis[i] = n
-				i++
-			}
-			reindexObjs = append(reindexObjs, dbis...)
-		}
-		indexer.ReIndex(reindexObjs)
+		reindexAll()
 		reindexResponse["reindex"] = "OK"
 	default:
 		jsonErrorReport(w, r, "Method not allowed. If you're trying to do something with a data bag named 'reindex', it's not going to work I'm afraid.", http.StatusMethodNotAllowed)
@@ -272,6 +230,53 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 	if err := enc.Encode(&reindexResponse); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func reindexAll() {
+	reindexObjs := make([]indexer.Indexable, 0, 100)
+	// We clear the index, *then* do the fetch because if
+	// something comes in between the time we fetch the
+	// objects to reindex and when it gets done, they'll
+	// just be added naturally
+	indexer.ClearIndex()
+
+	for _, v := range client.AllClients() {
+		reindexObjs = append(reindexObjs, v)
+	}
+	for _, v := range node.AllNodes() {
+		reindexObjs = append(reindexObjs, v)
+	}
+	for _, v := range role.AllRoles() {
+		reindexObjs = append(reindexObjs, v)
+	}
+	for _, v := range environment.AllEnvironments() {
+		reindexObjs = append(reindexObjs, v)
+	}
+	defaultEnv, _ := environment.Get("_default")
+	reindexObjs = append(reindexObjs, defaultEnv)
+	// data bags have to be done separately
+	dbags := databag.GetList()
+	for _, db := range dbags {
+		dbag, err := databag.Get(db)
+		if err != nil {
+			continue
+		}
+		dbis := make([]indexer.Indexable, dbag.NumDBItems())
+		i := 0
+		allDBItems, derr := dbag.AllDBItems()
+		if derr != nil {
+			logger.Errorf(derr.Error())
+			continue
+		}
+		for _, k := range allDBItems {
+			n := k
+			dbis[i] = n
+			i++
+		}
+		reindexObjs = append(reindexObjs, dbis...)
+	}
+	indexer.ReIndex(reindexObjs)
+	return
 }
 
 func partialSearchFormat(results []map[string]interface{}, partialFormat map[string]interface{}) ([]map[string]interface{}, error) {

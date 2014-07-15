@@ -33,6 +33,9 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"github.com/ctdk/goiardi/serfin"
+	"github.com/codeskyblue/go-uuid"
+	"github.com/ctdk/goiardi/config"
 )
 
 // Indexable is an interface that provides all the information necessary to
@@ -408,6 +411,22 @@ func (i *Index) makeDefaultCollections() {
 // IndexObj processes and adds an object to the index.
 func IndexObj(object Indexable) {
 	go indexMap.saveIndex(object)
+	if doCluster() {
+		y := make(map[string]string)
+		y["action"] = "add"
+		y["job"] = uuid.New()
+		y["id"] = object.DocID()
+		y["index"] = object.Index()
+		y["sender"] = config.Config.ClusterID
+		go serfin.SendQuery("indexing", y)
+	}
+}
+
+// ClusterIndexObj adds an object to the index after receiving a notice over
+// serf that a new object needs to be indexed, and does not send a new command
+// out itself to the other members of the cluster.
+func ClusterIndexObj(object Indexable) {
+	go indexMap.saveIndex(object)
 }
 
 // SearchIndex searches for a string in the given index. Returns a slice of
@@ -573,7 +592,30 @@ func ReIndex(objects []Indexable) error {
 	for _, o := range objects {
 		indexMap.saveIndex(o)
 	}
+	// if we're using serf, send out an alert that we've reindexed
+	// everything
+	if doCluster() {
+		y := make(map[string]string)
+		y["action"] = "reindex"
+		y["job"] = uuid.New()
+		y["sender"] = config.Config.ClusterID
+		go serfin.SendQuery("indexing", y)
+	}
 	// We really ought to be able to return from an error, but at the moment
 	// there aren't any ways it does so in the index save bits.
 	return nil
+}
+
+// ClusterReIndex reindexes objects without sending an alert over serf. Used for
+// when a command to reindex all objects in the search index has been issued by
+// another member of a goiardi cluster.
+func ClusterReIndex(objects []Indexable) error {
+	for _, o := range objects {
+		indexMap.saveIndex(o)
+	}
+	return nil
+}
+
+func doCluster() bool {
+	return config.Config.UseSerf && config.Config.ClusterName != ""
 }

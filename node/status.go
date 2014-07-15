@@ -44,7 +44,7 @@ func (n *Node) UpdateStatus(status string) error {
 
 func (n *Node)LatestStatus() (*NodeStatus, error) {
 	if config.UsingDB() {
-
+		return n.latestStatusSQL()
 	}
 	ds := datastore.New()
 	s, err := ds.LatestNodeStatus(n.Name)
@@ -57,7 +57,7 @@ func (n *Node)LatestStatus() (*NodeStatus, error) {
 
 func (n *Node)AllStatuses() ([]*NodeStatus, error) {
 	if config.UsingDB() {
-
+		return n.allStatusesSQL()
 	}
 	ds := datastore.New()
 	arr, err := ds.AllNodeStatuses(n.Name)
