@@ -548,3 +548,30 @@ func startEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 	}
 	return
 }
+
+func startNodeMonitor() error {
+	// Never do this if serf isn't set up
+	if !config.Config.UseSerf {
+		return nil
+	}
+	go func() {
+		// wait 5 minutes before starting to check for nodes being up
+		time.Sleep(5 * time.Minute)
+		ticker := time.NewTicker(time.Minute * time.Duration(5))
+		for _ = range ticker.C {
+			unseen, err := node.UnseenNodes()
+			if err != nil {
+				logger.Errorf(err.Error())
+				continue
+			}
+			for _, n := range unseen {
+				logger.Infof("Haven't seen %s for a while, marking as down", n.Name)
+				err = n.UpdateStatus("down")
+				if err != nil {
+					logger.Errorf(err.Error())
+					continue
+				}
+			}
+		}
+	}()
+}

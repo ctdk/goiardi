@@ -33,6 +33,10 @@ type NodeStatus struct {
 }
 
 func (n *Node) UpdateStatus(status string) error {
+	if status != "new" && status != "up" && status != "down" {
+		err := fmt.Errorf("invalid node status %s", status)
+		return err
+	}
 	s := &NodeStatus{ Node: n, Status: status }
 	if config.UsingDB() {
 		return s.updateNodeStatusSQL()
@@ -86,4 +90,23 @@ func (ns *NodeStatus) ToJSON() map[string]string {
 	nsmap["status"] = ns.Status
 	nsmap["updated_at"] = ns.UpdatedAt.Format(time.RFC3339)
 	return nsmap
+}
+
+func UnseenNodes() ([]*Node, error){
+	if config.UsingDB() {
+		return unseenNodesSQL()
+	}
+	var downNodes []*Node
+	nodes := AllNodes()
+	t := time.Now().Add(-10 * time.Minute)
+	for _, n := range nodes {
+		ns, _ := n.LatestStatus()
+		if ns == nil {
+			continue
+		}
+		if ns.UpdatedAt.Before(t) {
+			downNodes = append(downNodes, n)
+		}
+	}
+	return downNodes, nil
 }

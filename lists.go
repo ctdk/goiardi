@@ -109,6 +109,11 @@ func nodeHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return nil
 		}
+		err = chefNode.UpdateStatus("new")
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return nil
+		}
 		if lerr := loginfo.LogEvent(opUser, chefNode, "create"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return nil

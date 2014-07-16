@@ -344,3 +344,18 @@ func (n *Node) allStatusesSQL() ([]*NodeStatus, error) {
 	}
 	return nodeStatuses, nil
 }
+
+func unseenNodesSQL() ([]*Node, error) {
+	var nodes []*Nodes
+	var sqlStmt string
+	if config.Config.UseMySQL {
+		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n join node_statuses ns on n.id = ns.node_id where is_down = 0 group by n.id having max(ns.updated_at) < date_sub(now(), interval 10 minute)"
+	} else if config.Config.UsePostgreSQL {
+		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from goiardi.nodes n join goiardi.node_statuses ns on n.id = ns.node_id where is_down = false group by n.id having max(ns.updated_at) < now() - interval '10 minute'"
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+}
