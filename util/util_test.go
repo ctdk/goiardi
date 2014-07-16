@@ -23,7 +23,7 @@ import (
 
 type testObj struct {
 	Name    string                 `json:"name"`
-	URLType string                 `json:"url_type"`
+	TestURLType string             `json:"test_url_type"`
 	Normal  map[string]interface{} `json:"normal"`
 	RunList []string               `json:"run_list"`
 }
@@ -33,14 +33,14 @@ func (to *testObj) GetName() string {
 }
 
 func (to *testObj) URLType() string {
-	return to.URLType
+	return to.TestURLType
 }
 
 // The strange URLs are because the config doesn't get parsed here, so it ends
 // up using the really-really default settings.
 
 func TestObjURL(t *testing.T) {
-	obj := &testObj{Name: "foo", URLType: "bar"}
+	obj := &testObj{Name: "foo", TestURLType: "bar"}
 	url := ObjURL(obj)
 	expectedURL := "http://:0/bar/foo"
 	if url != expectedURL {
@@ -49,7 +49,7 @@ func TestObjURL(t *testing.T) {
 }
 
 func TestCustomObjURL(t *testing.T) {
-	obj := &testObj{Name: "foo", URLType: "bar"}
+	obj := &testObj{Name: "foo", TestURLType: "bar"}
 	url := CustomObjURL(obj, "/baz")
 	expectedURL := "http://:0/bar/foo/baz"
 	if url != expectedURL {
@@ -95,7 +95,7 @@ func TestFlatten(t *testing.T) {
 	normmap["map"] = make(map[string]interface{})
 	normmap["map"].(map[string]interface{})["first"] = "mook"
 	normmap["map"].(map[string]interface{})["second"] = "nork"
-	obj := &testObj{Name: "foo", URLType: "bar", RunList: rl, Normal: normmap}
+	obj := &testObj{Name: "foo", TestURLType: "bar", RunList: rl, Normal: normmap}
 	flattened := FlattenObj(obj)
 	if _, ok := flattened["name"]; !ok {
 		t.Errorf("obj name was not flattened correctly")
@@ -137,7 +137,7 @@ func TestMapify(t *testing.T) {
 	normmap["map"] = make(map[string]interface{})
 	normmap["map"].(map[string]interface{})["first"] = "mook"
 	normmap["map"].(map[string]interface{})["second"] = "nork"
-	obj := &testObj{Name: "foo", URLType: "bar", RunList: rl, Normal: normmap}
+	obj := &testObj{Name: "foo", TestURLType: "bar", RunList: rl, Normal: normmap}
 	mapify := MapifyObject(obj)
 	if mapify["name"].(string) != obj.Name {
 		t.Errorf("Mapify names didn't match, expecte %s, got %v", obj.Name, mapify["name"])
@@ -159,7 +159,7 @@ func TestIndexify(t *testing.T) {
 	normmap["map"] = make(map[string]interface{})
 	normmap["map"].(map[string]interface{})["first"] = "mook"
 	normmap["map"].(map[string]interface{})["second"] = "nork"
-	obj := &testObj{Name: "foo", URLType: "bar", RunList: rl, Normal: normmap}
+	obj := &testObj{Name: "foo", TestURLType: "bar", RunList: rl, Normal: normmap}
 	flatten := FlattenObj(obj)
 	indexificate := Indexify(flatten)
 	if indexificate[0] != "baz:buz" {

@@ -346,7 +346,7 @@ func (n *Node) allStatusesSQL() ([]*NodeStatus, error) {
 }
 
 func unseenNodesSQL() ([]*Node, error) {
-	var nodes []*Nodes
+	var nodes []*Node
 	var sqlStmt string
 	if config.Config.UseMySQL {
 		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n join node_statuses ns on n.id = ns.node_id where is_down = 0 group by n.id having max(ns.updated_at) < date_sub(now(), interval 10 minute)"
@@ -358,4 +358,24 @@ func unseenNodesSQL() ([]*Node, error) {
 		return nil, err
 	}
 	defer stmt.Close()
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return nodes, nil
+		}
+		return nil, qerr
+	}
+	for rows.Next() {
+		no := new(Node)
+		err = no.fillNodeFromSQL(rows)
+		if err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, no)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return nodes, nil
 }
