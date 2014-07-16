@@ -139,6 +139,7 @@ func main() {
 			logger.Criticalf(err.Error())
 			os.Exit(1)
 		}
+		startNodeMonitor()
 	}
 
 	/* Create default clients and users. Currently chef-validator,
@@ -549,10 +550,10 @@ func startEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 	return
 }
 
-func startNodeMonitor() error {
+func startNodeMonitor() {
 	// Never do this if serf isn't set up
 	if !config.Config.UseSerf {
-		return nil
+		return 
 	}
 	go func() {
 		// wait 5 minutes before starting to check for nodes being up
@@ -574,4 +575,5 @@ func startNodeMonitor() error {
 			}
 		}
 	}()
+	return
 }
