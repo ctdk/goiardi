@@ -19,26 +19,42 @@ package shovey
 import (
 	//"github.com/ctdk/goiardi/node"
 	//"github.com/codeskyblue/go-uuid"
+	"github.com/ctdk/goiardi/util"
 	"time"
 )
 
 type Shovey struct {
-	UUID string `json:"uuid"`
-	Nodes []string `json:"nodes"`
+	RunID string `json:"id"`
+	NodeNames []string `json:"nodes"`
 	Command string `json:"command"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Status string `json:"status"`
-	Timeout int `json:"timeout"`
+	Timeout time.Duration `json:"timeout"`
+	Quorum string `json:"quorum"`
 	nodeRuns []*ShoveyRun
+	nodes []*Node
 }
 
-type ShoveyRun string {
+type ShoveyRun struct {
 	ID int
 	ShoveyUUID string 
-	Node string
+	NodeName string
 	Status string
 	AckTime time.Time
 	EndTime time.Time
 }
+
+func New(command string, timeout int, quorumStr string, nodes []*Node) (*Shovey, util.Gerror) {
+
+}
+
+func Get(runID string) (*Shovey, error) {
+
+}
+
+func Cancel(runID string) error {
+
+}
+
 

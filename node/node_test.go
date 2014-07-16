@@ -60,7 +60,7 @@ func TestNodeStatus(t *testing.T) {
 	} else if ns.Status != "up" {
 		t.Errorf("node status should have been 'up', got %s", ns.Status)
 	}
-	n.UpdateStatus("timeout")
+	n.UpdateStatus("up")
 	n.UpdateStatus("down")
 	nses, err := n.AllStatuses()
 	if len(nses) != 3 {
