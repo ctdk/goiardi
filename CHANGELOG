@@ -1,3 +1,7 @@
+0.6.1 (not released yet)
+-----
+* Add /universe API endpoint, per https://github.com/opscode/chef-rfc/pull/19.
+
 0.6.0
 -----
 * Postgres support.

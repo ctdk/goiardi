@@ -580,6 +580,20 @@ func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion {
 	return nil
 }
 
+// UniverseFormat returns a sorted list of this cookbook's versions, formatted
+// to be compatible with the supermarket/berks /universe endpoint.
+func (c *Cookbook) UniverseFormat() map[string]interface{} {
+	u := make(map[string]interface{})
+	for _, cbv := range c.sortedVersions() {
+		v := make(map[string]interface{})
+		v["location_path"] = util.CustomObjURL(c, cbv.Version)
+		v["location_type"] = "chef_server"
+		v["dependencies"] = cbv.Metadata["dependencies"]
+		u[cbv.Version] = v
+	}
+	return u
+}
+
 /* CookbookVersion methods and functions */
 
 // NewVersion creates a new version of the cookbook.

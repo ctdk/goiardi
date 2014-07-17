@@ -405,6 +405,14 @@ but rather leaves that task to the administrator. This functionality is merely
 theoretical and completely untested. If you try it, you should back your data
 up first.
 
+### Berks Universe Endpoint
+
+Starting with version 0.6.1, goiardi supports the berks-api `/universe`
+endpoint. It returns a JSON list of all the cookbooks and their versions that
+have been uploaded to the server, along with the URL and dependencies of each 
+version. The requester will need to be properly authenticated with the server to
+use the universe endpoint.
+
 ### Tested Platforms
 
 Goiardi has been built and run with the native 6g compiler on Mac OS X (10.7,
