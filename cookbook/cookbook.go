@@ -45,7 +45,8 @@ var universeCache = initUniverseCache()
 
 // We really only want one goroutine at a time to be able to update the universe
 // cache.
-var universeSem = make(chan int, 1)
+type uQ struct{}
+var universeSem = make(chan uQ, 1)
 
 // VersionStrings is a type to make version strings with the format "x.y.z"
 // sortable.
@@ -642,7 +643,7 @@ func (c *Cookbook) universeFormat() map[string]interface{} {
 
 // UpdateUniverseCache regenerates the cached version of the universe endpoint.
 func UpdateUniverseCache() {
-	universeSem <- 1
+	universeSem <- uQ{}
 	logger.Debugf("updating universe cache")
 	u := Universe()
 	universeCache.m.Lock()
