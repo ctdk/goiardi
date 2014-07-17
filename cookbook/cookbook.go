@@ -33,7 +33,19 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 )
+
+type uCache struct {
+	m  sync.RWMutex
+	uc map[string]map[string]interface{}
+}
+
+var universeCache = initUniverseCache()
+
+// We really only want one goroutine at a time to be able to update the universe
+// cache.
+var universeSem = make(chan int, 1)
 
 // VersionStrings is a type to make version strings with the format "x.y.z"
 // sortable.
@@ -72,6 +84,11 @@ type CookbookVersion struct {
 	Metadata     map[string]interface{}   `json:"metadata"`
 	id           int32
 	cookbookID   int32
+}
+
+func initUniverseCache() *uCache {
+	uc := new(uCache)
+	return uc
 }
 
 /* Cookbook methods and functions */
@@ -201,24 +218,35 @@ func Get(name string) (*Cookbook, util.Gerror) {
 
 // Save a cookbook to the in-memory data store or database.
 func (c *Cookbook) Save() error {
+	var err error
 	if config.Config.UseMySQL {
-		return c.saveCookbookMySQL()
+		err = c.saveCookbookMySQL()
 	} else if config.Config.UsePostgreSQL {
-		return c.saveCookbookPostgreSQL()
+		err = c.saveCookbookPostgreSQL()
 	} else {
 		ds := datastore.New()
 		ds.Set("cookbook", c.Name, c)
 	}
+	if err != nil {
+		return err
+	}
+	go UpdateUniverseCache()
 	return nil
 }
 
 // Delete a coookbook.
 func (c *Cookbook) Delete() error {
+	var err error
 	if config.UsingDB() {
-		return c.deleteCookbookSQL()
+		err = c.deleteCookbookSQL()
+	} else {
+		ds := datastore.New()
+		ds.Delete("cookbook", c.Name)
 	}
-	ds := datastore.New()
-	ds.Delete("cookbook", c.Name)
+	if err != nil {
+		return err
+	}
+	go UpdateUniverseCache()
 	return nil
 }
 
@@ -580,9 +608,27 @@ func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion {
 	return nil
 }
 
-// UniverseFormat returns a sorted list of this cookbook's versions, formatted
+// Universe returns a hash of the cookbooks stored on this server, with a list
+// of each version of each cookbook formatted to be compatible with the
+// supermarket/berks /universe endpoint.
+func Universe() map[string]map[string]interface{} {
+	universe := make(map[string]map[string]interface{})
+
+	for _, cb := range AllCookbooks() {
+		universe[cb.Name] = cb.universeFormat()
+	}
+	return universe
+}
+
+func UniverseCached() map[string]map[string]interface{} {
+	universeCache.m.RLock()
+	defer universeCache.m.RUnlock()
+	return universeCache.uc
+}
+
+// universeFormat returns a sorted list of this cookbook's versions, formatted
 // to be compatible with the supermarket/berks /universe endpoint.
-func (c *Cookbook) UniverseFormat() map[string]interface{} {
+func (c *Cookbook) universeFormat() map[string]interface{} {
 	u := make(map[string]interface{})
 	for _, cbv := range c.sortedVersions() {
 		v := make(map[string]interface{})
@@ -592,6 +638,17 @@ func (c *Cookbook) UniverseFormat() map[string]interface{} {
 		u[cbv.Version] = v
 	}
 	return u
+}
+
+// UpdateUniverseCache regenerates the cached version of the universe endpoint.
+func UpdateUniverseCache() {
+	universeSem <- 1
+	logger.Debugf("updating universe cache")
+	u := Universe()
+	universeCache.m.Lock()
+	defer universeCache.m.Unlock()
+	universeCache.uc = u
+	<-universeSem
 }
 
 /* CookbookVersion methods and functions */

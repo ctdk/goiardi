@@ -411,7 +411,11 @@ Starting with version 0.6.1, goiardi supports the berks-api `/universe`
 endpoint. It returns a JSON list of all the cookbooks and their versions that
 have been uploaded to the server, along with the URL and dependencies of each 
 version. The requester will need to be properly authenticated with the server to
-use the universe endpoint.
+use the universe endpoint. For development and testing of cookbooks, two query
+parameters are supported with the universe endpoint in this implementation:
+"no-cache" and "force". Setting the "no-cache" param to "true" will bypass the
+cached version of the universe endpoint's information, while setting "force" to
+true will force regenerating that information (and return a fresh copy as well).
 
 ### Tested Platforms
 
