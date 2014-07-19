@@ -81,7 +81,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	 * validators shouldn't be able to do anything. *shrugs*
 	 */
 
-	if pathArrayLen == 1 {
+	if pathArrayLen == 1 || (pathArrayLen == 2 && pathArray[1] == "") {
 		/* list all cookbooks */
 		for _, cb := range cookbook.AllCookbooks() {
 			cookbookResponse[cb.Name] = cb.InfoHash(numResults)

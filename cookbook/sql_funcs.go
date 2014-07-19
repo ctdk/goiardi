@@ -458,3 +458,61 @@ func (cbv *CookbookVersion) deleteCookbookVersionSQL() util.Gerror {
 	tx.Commit()
 	return nil
 }
+
+func universeSQL() map[string]map[string]interface{} {
+	universe := make(map[string]map[string]interface{})
+	var metb []byte
+	var (
+		major int64
+		minor int64
+		patch int64
+	)
+	var name string
+	metadata := make(map[string]interface{})
+
+	var sqlStatement string
+	if config.Config.UseMySQL {
+		sqlStatement = "SELECT major_ver, minor_ver, patch_ver, c.name, metadata FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id ORDER BY cv.cookbook_id, major_ver DESC, minor_ver DESC, patch_ver DESC"
+	} else {
+		sqlStatement = "SELECT major_ver, minor_ver, patch_ver, c.name, metadata FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id ORDER BY cv.cookbook_id, major_ver DESC, minor_ver DESC, patch_ver DESC"
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return universe
+		}
+		log.Fatal(qerr)
+	}
+	for rows.Next() {
+		u := make(map[string]interface{})
+		err := rows.Scan(&major, &minor, &patch, &name, &metb)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = datastore.DecodeBlob(metb, &metadata)
+		if err != nil {
+			log.Fatal(err)
+		}
+		version := fmt.Sprintf("%d.%d.%d", major, minor, patch)
+		customURL := fmt.Sprintf("/cookbook/%s/%s", name, version)
+		u["location_path"] = util.CustomURL(customURL)
+		u["location_type"] = "chef_server"
+		u["dependencies"] = metadata["dependencies"]
+		if _, ok := universe[name]; !ok {
+			universe[name] = make(map[string]interface{})
+		}
+		universe[name][version] = u
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return universe
+}

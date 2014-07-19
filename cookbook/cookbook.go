@@ -34,11 +34,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type uCache struct {
 	m  sync.RWMutex
 	uc map[string]map[string]interface{}
+	updated_at time.Time
 }
 
 var universeCache = initUniverseCache()
@@ -613,6 +615,9 @@ func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion {
 // of each version of each cookbook formatted to be compatible with the
 // supermarket/berks /universe endpoint.
 func Universe() map[string]map[string]interface{} {
+	if config.UsingDB() {
+		return universeSQL()
+	}
 	universe := make(map[string]map[string]interface{})
 
 	for _, cb := range AllCookbooks() {
