@@ -461,20 +461,18 @@ func (cbv *CookbookVersion) deleteCookbookVersionSQL() util.Gerror {
 
 func universeSQL() map[string]map[string]interface{} {
 	universe := make(map[string]map[string]interface{})
-	var metb []byte
 	var (
 		major int64
 		minor int64
 		patch int64
 	)
 	var name string
-	metadata := make(map[string]interface{})
 
 	var sqlStatement string
 	if config.Config.UseMySQL {
 		sqlStatement = "SELECT major_ver, minor_ver, patch_ver, c.name, metadata FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id ORDER BY cv.cookbook_id, major_ver DESC, minor_ver DESC, patch_ver DESC"
-	} else {
-		sqlStatement = "SELECT major_ver, minor_ver, patch_ver, c.name, metadata FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id ORDER BY cv.cookbook_id, major_ver DESC, minor_ver DESC, patch_ver DESC"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "SELECT major_ver, minor_ver, patch_ver, c.name, metadata->>'dependencies' FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id ORDER BY cv.cookbook_id, major_ver DESC, minor_ver DESC, patch_ver DESC"
 	}
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 
@@ -490,7 +488,10 @@ func universeSQL() map[string]map[string]interface{} {
 		}
 		log.Fatal(qerr)
 	}
+
 	for rows.Next() {
+		var metb sql.RawBytes
+		metadata := make(map[string]interface{})
 		u := make(map[string]interface{})
 		err := rows.Scan(&major, &minor, &patch, &name, &metb)
 		if err != nil {
@@ -504,7 +505,12 @@ func universeSQL() map[string]map[string]interface{} {
 		customURL := fmt.Sprintf("/cookbook/%s/%s", name, version)
 		u["location_path"] = util.CustomURL(customURL)
 		u["location_type"] = "chef_server"
-		u["dependencies"] = metadata["dependencies"]
+
+		if config.Config.UsePostgreSQL {
+			u["dependencies"] = metadata
+		} else {
+			u["dependencies"] = metadata["dependencies"]
+		}
 		if _, ok := universe[name]; !ok {
 			universe[name] = make(map[string]interface{})
 		}

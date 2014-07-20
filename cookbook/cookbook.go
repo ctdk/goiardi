@@ -233,7 +233,6 @@ func (c *Cookbook) Save() error {
 	if err != nil {
 		return err
 	}
-	go UpdateUniverseCache()
 	return nil
 }
 
@@ -249,7 +248,6 @@ func (c *Cookbook) Delete() error {
 	if err != nil {
 		return err
 	}
-	go UpdateUniverseCache()
 	return nil
 }
 
@@ -626,12 +624,6 @@ func Universe() map[string]map[string]interface{} {
 	return universe
 }
 
-func UniverseCached() map[string]map[string]interface{} {
-	universeCache.m.RLock()
-	defer universeCache.m.RUnlock()
-	return universeCache.uc
-}
-
 // universeFormat returns a sorted list of this cookbook's versions, formatted
 // to be compatible with the supermarket/berks /universe endpoint.
 func (c *Cookbook) universeFormat() map[string]interface{} {
@@ -644,17 +636,6 @@ func (c *Cookbook) universeFormat() map[string]interface{} {
 		u[cbv.Version] = v
 	}
 	return u
-}
-
-// UpdateUniverseCache regenerates the cached version of the universe endpoint.
-func UpdateUniverseCache() {
-	universeSem <- uQ{}
-	logger.Debugf("updating universe cache")
-	u := Universe()
-	universeCache.m.Lock()
-	defer universeCache.m.Unlock()
-	universeCache.uc = u
-	<-universeSem
 }
 
 /* CookbookVersion methods and functions */

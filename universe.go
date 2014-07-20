@@ -30,47 +30,10 @@ func universeHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 		return
 	}
-	start := time.Now()
-	var noCache, force string
-	r.ParseForm()
-	if f, fok := r.Form["no-cache"]; fok {
-		if len(f) > 0 {
-			noCache = f[0]
-		}
-	}
-	if f, fok := r.Form["force"]; fok {
-		if len(f) > 0 {
-			force = f[0]
-		}
-	}
 
-	var universe map[string]map[string]interface{}
-	cacheHeader := "NO"
-	if force == "true" {
-		go cookbook.UpdateUniverseCache()
-	} else if noCache != "true" {
-		universe = cookbook.UniverseCached()
-		if universe == nil {
-			go cookbook.UpdateUniverseCache()
-		} else {
-			cacheHeader = "YES"
-		}
-	}
-	w.Header().Set("X-UNIVERSE-CACHE", cacheHeader)
-	// Either noCache was false or there was nothing in the cache.
-	if universe == nil {
-		logger.Debugf("universe was nil, noCache was %s", noCache)
-		universe = cookbook.Universe()
-	}
-	end := time.Now()
-	dur := end.Sub(start)
-	logger.Debugf("serving universe took %d microseconds", dur/time.Microsecond)
-
+	universe := cookbook.Universe()
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&universe); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
-	jsonEnd := time.Now()
-	jdur := jsonEnd.Sub(start)
-	logger.Debugf("after json reder serving universe took %d microseconds", jdur/time.Microsecond)
 }

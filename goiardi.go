@@ -126,7 +126,6 @@ func main() {
 	 * chef-webui, and admin. */
 	createDefaultActors()
 	handleSignals()
-	go cookbook.UpdateUniverseCache()
 
 	/* Register the various handlers, found in their own source files. */
 	http.HandleFunc("/authenticate_user", authenticateUserHandler)

@@ -22,7 +22,7 @@ package datastore
 import (
 	"bytes"
 	"database/sql"
-	"encoding/gob"
+	//"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
@@ -107,7 +107,7 @@ func EncodeToJSON(obj interface{}) (string, error) {
 // datastore.EncodeBlob(&foo.Thing).
 func EncodeBlob(obj interface{}) ([]byte, error) {
 	buf := new(bytes.Buffer)
-	enc := gob.NewEncoder(buf)
+	enc := json.NewEncoder(buf)
 	var err error
 	defer func() {
 		if x := recover(); x != nil {
@@ -128,7 +128,7 @@ func EncodeBlob(obj interface{}) ([]byte, error) {
 func DecodeBlob(data []byte, obj interface{}) error {
 	// hmmm
 	dbuf := bytes.NewBuffer(data)
-	dec := gob.NewDecoder(dbuf)
+	dec := json.NewDecoder(dbuf)
 	err := dec.Decode(obj)
 	if err != nil {
 		return err
