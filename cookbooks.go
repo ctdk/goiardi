@@ -26,7 +26,6 @@ import (
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
-	"sort"
 )
 
 func cookbookHandler(w http.ResponseWriter, r *http.Request) {
@@ -83,39 +82,26 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 
 	if pathArrayLen == 1 || (pathArrayLen == 2 && pathArray[1] == "") {
 		/* list all cookbooks */
-		for _, cb := range cookbook.AllCookbooks() {
-			cookbookResponse[cb.Name] = cb.InfoHash(numResults)
-		}
+		cookbookResponse = cookbook.CookbookLister(numResults)
 	} else if pathArrayLen == 2 {
 		/* info about a cookbook and all its versions */
 		cookbookName := pathArray[1]
 		/* Undocumented behavior - a cookbook name of _latest gets a
 		 * list of the latest versions of all the cookbooks, and _recipe
 		 * gets the recipes of the latest cookbooks. */
-		rlist := make([]string, 0)
-		if cookbookName == "_latest" || cookbookName == "_recipes" {
-			for _, cb := range cookbook.AllCookbooks() {
-				if cookbookName == "_latest" {
-					cookbookResponse[cb.Name] = util.CustomObjURL(cb, cb.LatestVersion().Version)
-				} else {
-					/* Damn it, this sends back an array of
-					 * all the recipes. Fill it in, and send
-					 * back the JSON ourselves. */
-					rlistTmp, err := cb.LatestVersion().RecipeList()
-					if err != nil {
-						jsonErrorReport(w, r, err.Error(), err.Status())
-					}
-					rlist = append(rlist, rlistTmp...)
-				}
-				sort.Strings(rlist)
-			}
-			if cookbookName == "_recipes" {
-				enc := json.NewEncoder(w)
-				if err := enc.Encode(&rlist); err != nil {
-					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				}
+		if cookbookName == "_latest" {
+			cookbookResponse = cookbook.CookbookLatest()
+		} else if cookbookName == "_recipes" {
+			rlist, nerr := cookbook.CookbookRecipes()
+			if nerr != nil {
+				jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 				return
 			}
+			enc := json.NewEncoder(w)
+			if err := enc.Encode(&rlist); err != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			}
+			return
 		} else {
 			cb, err := cookbook.Get(cookbookName)
 			if err != nil {

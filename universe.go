@@ -18,10 +18,8 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/cookbook"
 	"net/http"
-	"time"
 )
 
 func universeHandler(w http.ResponseWriter, r *http.Request) {

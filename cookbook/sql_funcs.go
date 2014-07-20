@@ -26,7 +26,9 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"log"
 	"net/http"
+	"regexp"
 	"sort"
+	"strconv"
 )
 
 func (c *Cookbook) numVersionsSQL() *int {
@@ -521,4 +523,141 @@ func universeSQL() map[string]map[string]interface{} {
 		log.Fatal(err)
 	}
 	return universe
+}
+
+func cookbookListerSQL(numResults interface{}) map[string]interface{} {
+	var numVersions int
+	allVersions := false
+
+	cl := make(map[string]interface{})
+
+	if numResults != "" && numResults != "all" {
+		numVersions, _ = strconv.Atoi(numResults.(string))
+	} else if numResults == "" {
+		numVersions = 1
+	} else {
+		allVersions = true
+	}
+
+	var sqlStatement string
+	if config.Config.UseMySQL {
+		sqlStatement = "SELECT version, name FROM joined_cookbook_version ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "SELECT version, name FROM goiardi.joined_cookbook_version ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc"
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return cl
+		}
+		log.Fatal(qerr)
+	}
+	scratch := make(map[string][]string)
+	for rows.Next() {
+		var n, v string
+		err := rows.Scan(&v, &n)
+		if err != nil {
+			log.Fatal(err)
+		}
+		scratch[n] = append(scratch[n], v)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	for name, versions := range scratch {
+		nr := 0
+		cburl := fmt.Sprintf("/cookbooks/%s", name)
+		cb := make(map[string]interface{})
+		cb["url"] = util.CustomURL(cburl)
+		cb["versions"] = make([]interface{}, 0)
+		for _, ver := range versions {
+			if !allVersions && nr >= numVersions {
+				break
+			}
+			cv := make(map[string]string)
+			cv["url"] = util.CustomURL(fmt.Sprintf("/cookbooks/%s/%s", name, ver))
+			cv["version"] = ver
+			cb["versions"] = append(cb["versions"].([]interface{}), cv)
+			cl[name] = cb
+			nr++
+		}
+	}
+	return cl
+}
+
+func cookbookRecipesSQL() ([]string, util.Gerror) {
+	var sqlStatement string
+	if config.Config.UseMySQL {
+		sqlStatement = "SELECT version, name, recipes FROM joined_cookbook_version ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "SELECT version, name, recipes FROM goiardi.joined_cookbook_version ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc"
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	var rlist []string
+
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return rlist, nil
+		}
+		return nil, util.CastErr(qerr)
+	}
+	seen := make(map[string]bool)
+	for rows.Next() {
+		var n, v string
+		var rec sql.RawBytes
+		recipes := make([]map[string]interface{},0)
+		err := rows.Scan(&v, &n, &rec)
+		if seen[n] {
+			continue
+		}
+		if err != nil {
+			return nil, util.CastErr(err)
+		}
+		err = datastore.DecodeBlob(rec, &recipes)
+		if err != nil {
+			return nil, util.CastErr(err)
+		}
+		rltmp := make([]string, len(recipes))
+		ci := 0
+		for _, r := range recipes {
+			rm := regexp.MustCompile(`(.*?)\.rb`)
+			rfind := rm.FindStringSubmatch(r["name"].(string))
+			if rfind == nil {
+				/* unlikely */
+				err := util.Errorf("No recipe name found")
+				return nil, err
+			}
+			rbase := rfind[1]
+			var rname string
+			if rbase == "default" {
+				rname = n
+			} else {
+				rname = fmt.Sprintf("%s::%s", n, rbase)
+			}
+			rltmp[ci] = rname
+			ci++
+		}
+		rlist = append(rlist, rltmp...)
+		seen[n] = true
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return rlist, nil
 }

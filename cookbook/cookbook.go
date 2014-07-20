@@ -307,8 +307,55 @@ func (c *Cookbook) LatestVersion() *CookbookVersion {
 	return c.latest
 }
 
-// InfoHash gets numResults (or all if numResults is nil) versions of a cookbook,
-// returning a hash describing the cookbook and the versions returned.
+func CookbookLister(numResults interface{}) map[string]interface{} {
+	if config.UsingDB() {
+		return cookbookListerSQL(numResults)
+	}
+	cr := make(map[string]interface{})
+	for _, cb := range AllCookbooks() {
+		cr[cb.Name] = cb.InfoHash(numResults)
+	}
+	return cr
+}
+
+func CookbookLatest() map[string]interface{} {
+	latest := make(map[string]interface{})
+	if config.UsingDB() {
+		cs := CookbookLister("")
+		for name, cbdata := range cs {
+			if len(cbdata.(map[string]interface{})["versions"].([]interface{})) > 0 {
+				latest[name] = cbdata.(map[string]interface{})["versions"].([]interface{})[0].(map[string]string)["version"]
+			}
+		}
+	} else {
+		for _, cb := range AllCookbooks() {
+			latest[cb.Name] = util.CustomObjURL(cb, cb.LatestVersion().Version)
+		}
+	}
+	return latest
+}
+
+func CookbookRecipes() ([]string, util.Gerror) {
+	if config.UsingDB() {
+		return cookbookRecipesSQL()
+	} 
+	rlist := make([]string, 0)
+	for _, cb := range AllCookbooks() {
+		/* Damn it, this sends back an array of
+		 * all the recipes. Fill it in, and send
+		 * back the JSON ourselves. */
+		rlistTmp, err := cb.LatestVersion().RecipeList()
+		if err != nil {
+			return nil, err
+		}
+		rlist = append(rlist, rlistTmp...)
+	}
+	sort.Strings(rlist)
+	return rlist, nil
+}
+
+// InfoHash gets numResults (or all if numResults is nil) versions of a 
+// cookbook,returning a hash describing the cookbook and the versions returned.
 func (c *Cookbook) InfoHash(numResults interface{}) map[string]interface{} {
 	return c.infoHashBase(numResults, "")
 }
