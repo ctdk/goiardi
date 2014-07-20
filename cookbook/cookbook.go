@@ -324,7 +324,7 @@ func CookbookLatest() map[string]interface{} {
 		cs := CookbookLister("")
 		for name, cbdata := range cs {
 			if len(cbdata.(map[string]interface{})["versions"].([]interface{})) > 0 {
-				latest[name] = cbdata.(map[string]interface{})["versions"].([]interface{})[0].(map[string]string)["version"]
+				latest[name] = cbdata.(map[string]interface{})["versions"].([]interface{})[0].(map[string]string)["url"]
 			}
 		}
 	} else {

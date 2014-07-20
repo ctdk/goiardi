@@ -586,9 +586,9 @@ func cookbookListerSQL(numResults interface{}) map[string]interface{} {
 			cv["url"] = util.CustomURL(fmt.Sprintf("/cookbooks/%s/%s", name, ver))
 			cv["version"] = ver
 			cb["versions"] = append(cb["versions"].([]interface{}), cv)
-			cl[name] = cb
 			nr++
 		}
+		cl[name] = cb
 	}
 	return cl
 }
@@ -607,7 +607,7 @@ func cookbookRecipesSQL() ([]string, util.Gerror) {
 	}
 	defer stmt.Close()
 
-	var rlist []string
+	rlist := make([]string, 0)
 
 	rows, qerr := stmt.Query()
 	if qerr != nil {
@@ -659,5 +659,6 @@ func cookbookRecipesSQL() ([]string, util.Gerror) {
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
+	sort.Strings(rlist)
 	return rlist, nil
 }
