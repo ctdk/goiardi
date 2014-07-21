@@ -27,6 +27,7 @@
 package filestore
 
 import (
+	"bytes"
 	"crypto/md5"
 	"database/sql"
 	"fmt"
@@ -54,9 +55,11 @@ type FileStore struct {
 // holding the file's data, and the length of the file. If the file data's
 // checksum does not match the provided checksum an error will be trhown.
 func New(chksum string, data io.ReadCloser, dataLength int64) (*FileStore, error) {
-	if _, err := Get(chksum); err == nil {
-		err := fmt.Errorf("File with checksum %s already exists.", chksum)
-		return nil, err
+	f, err := Get(chksum); 
+	if err == nil {
+		// if err is nil, wait until checking the uploaded content to
+		// see if it's the same as what we have already
+		err = fmt.Errorf("File with checksum %s already exists.", chksum)
 	}
 	/* Read the data in */
 	fileData := make([]byte, dataLength)
@@ -64,6 +67,11 @@ func New(chksum string, data io.ReadCloser, dataLength int64) (*FileStore, error
 		/* Something went wrong reading the data! */
 		readErr := fmt.Errorf("Only read %d bytes (out of %d, supposedly) from io.ReadCloser: %s", n, dataLength, err.Error())
 		return nil, readErr
+	}
+	if f != nil {
+		if !bytes.Equal(fileData, *f.Data) {
+			return nil, err
+		}
 	}
 	/* Verify checksum. May move to a different function later. */
 	verChk := md5.New()
