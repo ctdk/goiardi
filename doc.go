@@ -192,11 +192,11 @@ need to do is get the new sources and rebuild, or download the appropriate new
 binary. However, sometimes a little more work is involved. Check the release
 notes for the new release in question for any extra steps that may need to be
 done. If you're running one of the SQL backends, you may need to apply database
-patches (either with sqitch or by hand), and in-memory mode especially may 
+patches (either with sqitch or by hand), and in-memory mode especially may
 require using the data import/export functionality to dump and load your chef
-data between upgrades if the binary save file compatibility breaks between 
+data between upgrades if the binary save file compatibility breaks between
 releases. However, while it should not happen often, occasionally more serious
-preparation will be needed before upgrading. It won't happen without a good 
+preparation will be needed before upgrading. It won't happen without a good
 reason, and the needed steps will be clearly outlined to make the process as
 painless as possible.
 
@@ -450,7 +450,7 @@ have been uploaded to the server, along with the URL and dependencies of each
 version. The requester will need to be properly authenticated with the server to
 use the universe endpoint.
 
-The universe endpoint works with all backends, but with a ridiculous number of 
+The universe endpoint works with all backends, but with a ridiculous number of
 cookbooks (like, loading all 6000+ cookbooks in the Chef Supermarket), the
 Postgres implementation is able to take advantage of some Postgres specific
 functionality to generate that page significantly faster than the in-mem or

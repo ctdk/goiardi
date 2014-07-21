@@ -620,7 +620,7 @@ func cookbookRecipesSQL() ([]string, util.Gerror) {
 	for rows.Next() {
 		var n, v string
 		var rec sql.RawBytes
-		recipes := make([]map[string]interface{},0)
+		recipes := make([]map[string]interface{}, 0)
 		err := rows.Scan(&v, &n, &rec)
 		if seen[n] {
 			continue

@@ -55,7 +55,7 @@ type FileStore struct {
 // holding the file's data, and the length of the file. If the file data's
 // checksum does not match the provided checksum an error will be trhown.
 func New(chksum string, data io.ReadCloser, dataLength int64) (*FileStore, error) {
-	f, err := Get(chksum); 
+	f, err := Get(chksum)
 	if err == nil {
 		// if err is nil, wait until checking the uploaded content to
 		// see if it's the same as what we have already

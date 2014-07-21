@@ -33,22 +33,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 )
-
-type uCache struct {
-	m  sync.RWMutex
-	uc map[string]map[string]interface{}
-	updated_at time.Time
-}
-
-var universeCache = initUniverseCache()
-
-// We really only want one goroutine at a time to be able to update the universe
-// cache.
-type uQ struct{}
-var universeSem = make(chan uQ, 1)
 
 // VersionStrings is a type to make version strings with the format "x.y.z"
 // sortable.
@@ -87,11 +72,6 @@ type CookbookVersion struct {
 	Metadata     map[string]interface{}   `json:"metadata"`
 	id           int32
 	cookbookID   int32
-}
-
-func initUniverseCache() *uCache {
-	uc := new(uCache)
-	return uc
 }
 
 /* Cookbook methods and functions */
@@ -338,7 +318,7 @@ func CookbookLatest() map[string]interface{} {
 func CookbookRecipes() ([]string, util.Gerror) {
 	if config.UsingDB() {
 		return cookbookRecipesSQL()
-	} 
+	}
 	rlist := make([]string, 0)
 	for _, cb := range AllCookbooks() {
 		/* Damn it, this sends back an array of
@@ -354,7 +334,7 @@ func CookbookRecipes() ([]string, util.Gerror) {
 	return rlist, nil
 }
 
-// InfoHash gets numResults (or all if numResults is nil) versions of a 
+// InfoHash gets numResults (or all if numResults is nil) versions of a
 // cookbook,returning a hash describing the cookbook and the versions returned.
 func (c *Cookbook) InfoHash(numResults interface{}) map[string]interface{} {
 	return c.infoHashBase(numResults, "")
