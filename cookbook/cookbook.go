@@ -287,6 +287,8 @@ func (c *Cookbook) LatestVersion() *CookbookVersion {
 	return c.latest
 }
 
+// CookbookLister lists all of the cookbooks on the server, along with some
+// information like URL, available versions, etc.
 func CookbookLister(numResults interface{}) map[string]interface{} {
 	if config.UsingDB() {
 		return cookbookListerSQL(numResults)
@@ -298,6 +300,8 @@ func CookbookLister(numResults interface{}) map[string]interface{} {
 	return cr
 }
 
+// CookbookLatest returns the URL of the latest version of each cookbook on the
+// server.
 func CookbookLatest() map[string]interface{} {
 	latest := make(map[string]interface{})
 	if config.UsingDB() {
@@ -315,6 +319,8 @@ func CookbookLatest() map[string]interface{} {
 	return latest
 }
 
+// CookbookRecipes returns a list of all the recipes on the server in the latest
+// version of each cookbook.
 func CookbookRecipes() ([]string, util.Gerror) {
 	if config.UsingDB() {
 		return cookbookRecipesSQL()
