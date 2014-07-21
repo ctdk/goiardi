@@ -185,6 +185,44 @@ authentication protocol.
 prevents logging in to the webui with the admin user, so a password will have to
 be set for admin before doing so.
 
+Upgrading
+
+Upgrading goiardi is generally a straightforward process. Usually all you should
+need to do is get the new sources and rebuild, or download the appropriate new
+binary. However, sometimes a little more work is involved. Check the release
+notes for the new release in question for any extra steps that may need to be
+done. If you're running one of the SQL backends, you may need to apply database
+patches (either with sqitch or by hand), and in-memory mode especially may 
+require using the data import/export functionality to dump and load your chef
+data between upgrades if the binary save file compatibility breaks between 
+releases. However, while it should not happen often, occasionally more serious
+preparation will be needed before upgrading. It won't happen without a good 
+reason, and the needed steps will be clearly outlined to make the process as
+painless as possible.
+
+As a special note, if you are upgrading from any release prior to 0.6.1-pre1 to
+0.7.0 and are using one of the SQL backends, the upgrade is one of the special
+cases. Between those releases the way the complex data structures associated
+with cookbook versions, nodes, etc. changed from using gob encoding to json
+encoding. It turns out that while gob encoding is indeed faster than json (and
+was in all the tests I had thrown at it) in the usual case, in this case json is
+actually significantly faster, at least once there are a few thousand coobkooks
+in the database. In-memory datastore (including file-backed in-memory datastore)
+users are advised to dump and reload their data between upgrading from <=
+0.6.1-pre1 and 0.7.0, but people using either MySQL or Postgres *have* to do
+these things:
+
+* Export their goiardi server's data with the `-x` flag.
+* Either revert all changes to the db with sqitch, then redeploy, or drop the
+  database manually and recreate it from either the sqitch patches or the full
+  table dump of the release (provided starting with 0.7.0)
+* Reload the goiardi data with the `-m` flag.
+
+It's a fairly quick process (a goiardi dump with the `-x` flag took 15 minutes
+or so to load with over 6200 cookbooks) at least, but if you don't do it very
+little of your goiardi environment will work correctly. The above steps will
+take care of it.
+
 Logging
 
 By default, goiardi logs to standard output. A log file may be specified with the
@@ -410,11 +448,17 @@ Starting with version 0.6.1, goiardi supports the berks-api `/universe`
 endpoint. It returns a JSON list of all the cookbooks and their versions that
 have been uploaded to the server, along with the URL and dependencies of each
 version. The requester will need to be properly authenticated with the server to
-use the universe endpoint. For development and testing of cookbooks, two query
-parameters are supported with the universe endpoint in this implementation:
-"no-cache" and "force". Setting the "no-cache" param to "true" will bypass the
-cached version of the universe endpoint's information, while setting "force" to
-true will force regenerating that information (and return a fresh copy as well).
+use the universe endpoint.
+
+The universe endpoint works with all backends, but with a ridiculous number of 
+cookbooks (like, loading all 6000+ cookbooks in the Chef Supermarket), the
+Postgres implementation is able to take advantage of some Postgres specific
+functionality to generate that page significantly faster than the in-mem or
+MySQL implementations. It's not too bad, but on my laptop at home goiardi could
+generate /universe against the full 6000+ cookbooks of the supermarket in ~350
+milliseconds, while MySQL took about 1 second and in-mem took about 1.2 seconds.
+Normal functionality is OK, but if you have that many cookbooks and expect to
+use the universe endpoint often you may wish to consider using Postgres.
 
 Tested Platforms
 
