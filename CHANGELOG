@@ -1,6 +1,23 @@
-0.6.1 (not released yet)
+0.7.0 (not released yet)
 -----
-* Add /universe API endpoint, per https://github.com/opscode/chef-rfc/pull/19.
+* Add /universe API endpoint, per
+  https://github.com/opscode/chef-rfc/blob/master/rfc014-universe-endpoint.md.
+* Make file uploading a little more forgiving.
+* Breaking DB change: with both MySQL and Postgres, the way data structures
+  for cookbooks, nodes, etc. has changed from gob encoding to using JSON. This
+  obviously breaks existing items in the database, so the following steps must
+  be followed by users using either SQL backend for data storage:
+
+    * Export their goiardi server's data with the `-x` flag.
+    * Either revert all changes to the db with sqitch, then redeploy, or drop 
+      the database manually and recreate it from either the sqitch patches or 
+      the full table dump of the release (provided starting with 0.7.0)
+    * Reload the goiardi data with the `-m` flag.
+  See the README or the godocs for for information.
+
+0.6.1 (cancelled)
+-----
+* See notes for 0.7.0
 
 0.6.0
 -----
