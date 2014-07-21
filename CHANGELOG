@@ -13,7 +13,7 @@
       the database manually and recreate it from either the sqitch patches or 
       the full table dump of the release (provided starting with 0.7.0)
     * Reload the goiardi data with the `-m` flag.
-  See the README or the godocs for for information.
+  See the README or the godocs for more information.
 
 0.6.1 (cancelled)
 -----
