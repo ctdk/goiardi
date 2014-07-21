@@ -23,3 +23,7 @@ reports 2014-05-07T01:11:10Z Jeremy Bingham <jbingham@gmail.com> # Create report
 file_checksum_org [file_checksums] 2014-05-29T21:21:38Z Jeremy Bingham <jbingham@gmail.com> # Rename org_id column to organization_id for file_checksums
 all_org_ids 2014-06-27T00:18:00Z Jeremy Bingham <jbingham@gmail.com> # All relevant tables should have an organization id, even though it will only ever be the default
 @v0.6.0 2014-06-27T07:19:42Z Jeremy Bingham <jbingham@gmail.com> # Tag v0.6.0 for release
+
+joined_cookbook_version 2014-07-20T10:33:16Z Jeremy Bingham <jbingham@gmail.com> # a convenient view for joined versions for cookbook versions, adapted from erchef's joined_cookbook_version - MySQL version
+grow_json_columns 2014-07-20T10:37:32Z Jeremy Bingham <jbingham@gmail.com> # A bunch of columns need to grow with the switch from gob encoded stuff in the db to json encoded
+@v0.7.0 2014-07-21T06:06:35Z Jeremy Bingham <jeremy@terqa.local> # Tag 0.7.0 mysql schema

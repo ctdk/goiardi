@@ -32,3 +32,7 @@ role_insert_update [roles goiardi_schema] 2014-06-02T17:27:32Z Jeremy Bingham <j
 sandbox_insert_update [sandboxes goiardi_schema] 2014-06-02T17:34:39Z Jeremy Bingham <jbingham@gmail.com> # Insert/update for sandboxes
 data_bag_item_insert [data_bag_items data_bags goiardi_schema] 2014-06-02T21:03:22Z Jeremy Bingham <jbingham@gmail.com> # Insert for data bag items
 @v0.6.0 2014-06-27T07:20:56Z Jeremy Bingham <jbingham@gmail.com> # Tag v0.6.0 for release
+
+bytea_to_json 2014-07-20T09:41:22Z Jeremy Bingham <jbingham@gmail.com> # Change most postgres bytea fields to json, because in this peculiar case json is way faster than gob
+joined_cookbkook_version 2014-07-20T10:21:28Z Jeremy Bingham <jbingham@gmail.com> # a convenient view for joined versions for cookbook versions, adapted from erchef's joined_cookbook_version
+@v0.7.0 2014-07-21T06:04:53Z Jeremy Bingham <jeremy@terqa.local> # Tag 0.7.0 postgres schema
