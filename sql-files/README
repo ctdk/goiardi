@@ -2,3 +2,9 @@ Sqitch bundles for deploying SQL databases for goiardi are in here (currently,
 the mysql-bundle and postgres-bundle). See http://sqitch.org/ for more 
 information on sqitch, and goiardi's README for information on how to deploy the
 sqitch bundle.
+
+Additionally, for those folks who don't feel like mucking about with sqitch,
+dumps of the MySQL and Postgres schemas are available. Create the desired 
+database with whatever owner you want, and load the schema with mysql -u <owner>
+[-p] <database> < sql-files/goiardi-schema-mysql.sql (for mysql) or psql 
+-U <owner> <database> < sql-files/goiardi-schema-postgres.sql (for postgres).
