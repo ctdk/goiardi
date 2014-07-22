@@ -1,8 +1,12 @@
-0.7.0 (not released yet)
+0.7.0
 -----
 * Add /universe API endpoint, per
   https://github.com/opscode/chef-rfc/blob/master/rfc014-universe-endpoint.md.
 * Make file uploading a little more forgiving.
+* Make validating some cookbook metadata more forgiving, to bring goiardi's
+  validations in line with erchef.
+* Added some functions to make listing all cookbooks and recipes on the
+  server faster and move the logic into the cookbook package.
 * Breaking DB change: with both MySQL and Postgres, the way data structures
   for cookbooks, nodes, etc. has changed from gob encoding to using JSON. This
   obviously breaks existing items in the database, so the following steps must
