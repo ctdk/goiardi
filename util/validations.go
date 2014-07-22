@@ -278,8 +278,10 @@ func ValidateCookbookMetadata(mdata interface{}) (map[string]interface{}, Gerror
 					switch s := j.(type) {
 					case string:
 						if _, serr := ValidateAsConstraint(s); serr != nil {
-							cerr := Errorf("Invalid value '%s' for metadata.%s", s, v)
-							return nil, cerr
+							if _, serr = ValidateAsVersion(s); serr != nil {
+								cerr := Errorf("Invalid value '%s' for metadata.%s", s, v)
+								return nil, cerr
+							}
 						}
 					case map[string]interface{}:
 						if v != "groupings" {

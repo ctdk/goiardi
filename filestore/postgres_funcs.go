@@ -32,7 +32,7 @@ func (f *FileStore) savePostgreSQL() error {
 		return err
 	}
 
-	_, err = tx.Exec("INSERT INTO goiardi.file_checksums (checksum) VALUES ($1)", f.Chksum)
+	_, err = tx.Exec("INSERT INTO goiardi.file_checksums (organization_id, checksum) VALUES (1, $1)", f.Chksum)
 	if err != nil {
 		tx.Rollback()
 		return err
