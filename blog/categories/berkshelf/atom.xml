@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Berkshelf | Goiardi]]></title>
+  <link href="http://ctdk.github.io/goiardi/blog/categories/berkshelf/atom.xml" rel="self"/>
+  <link href="http://ctdk.github.io/goiardi/"/>
+  <updated>2014-07-21T23:09:46-07:00</updated>
+  <id>http://ctdk.github.io/goiardi/</id>
+  <author>
+    <name><![CDATA[Jeremy Bingham]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Version 0.7.0 - Orphans of the Sky]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky/"/>
+    <updated>2014-07-21T22:40:32-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky</id>
+    <content type="html"><![CDATA[<p>In case you haven&rsquo;t read it, <em><a href="http://en.wikipedia.org/wiki/Orphans_of_the_Sky">Orphans of the Sky</a></em> is a novel by Robert A. Heinlein about a generation ship floating through space where the people on board have forgotten that they are on a space ship. It&rsquo;s pretty good, but more importantly the name of the first of the two novellas that make up the novel is titled &ldquo;Universe&rdquo;. The title of the second part, &ldquo;Common Sense&rdquo;, became relevant after I really dug into making this release for reasons that will soon become clear.</p>
+
+<p>While it ended up being a bigger deal than I expected it to be, I am pleased to announce the release of goiardi <a href="https://github.com/ctdk/goiardi/releases/tag/v0.7.0">version 0.7.0</a>.</p>
+
+<p>I took what I thought would be a brief detour from my current work on the serf integration and &ldquo;shovey&rdquo; stuff for goiardi to implement <a href="https://github.com/opscode/chef-rfc/blob/master/rfc014-universe-endpoint.md">Chef RFC 014</a> real quick like, which I had been considering doing even before the RFC came along. I had been planning on making this a small release numbered 0.6.1, but then after I proposed a mechanism for caching the universe endpoint it was suggested in the RFC discussion that I see how goiardi performed with the full load of cookbooks in the supermarket before jumping the gun and adding caching before it was necessarily needed.</p>
+
+<p>It turned out that will over 6,000 cookbooks the universe endpoint ran like a dog. Ultimately the problem boiled down to using gob to encode the complex data structures in cookbooks, nodes, etc. in the database. Generally gob encoding in golang is faster than using JSON, but in this particular case JSON is actually faster. The &ldquo;common sense&rdquo; thing to do was to change how those complex structures are stored in the database, even though it&rsquo;s a bit of a brutal change. Sometimes, though, you have to bite the bullet and do the thing that sucks. It&rsquo;s ended up working nicely, however; the postgres implementation is now able to make use of the json type and the json functions built into Postgres. Before switching from gob to json, serving <code>/universe</code> with over 6200 cookbooks took over 3 seconds with Postgres or MySQL, but afterwards Postgres can serve it in roughly 325 milliseconds. MySQL isn&rsquo;t able to take advantage of the Postgres-specific json functionality, but it still went down to 1 second, so that&rsquo;s a marked improvement. Using the in-memory (with or without file backing) takes about 1.2 seconds. I&rsquo;m willing to take this; if you have that many cookbooks and can&rsquo;t wait a second for <code>/universe</code>, you may want to use Postgres for your data store.</p>
+
+<p>From the CHANGELOG:</p>
+
+<ul>
+<li>Add /universe API endpoint, per
+<a href="https://github.com/opscode/chef-rfc/blob/master/rfc014-universe-endpoint.md.">https://github.com/opscode/chef-rfc/blob/master/rfc014-universe-endpoint.md.</a></li>
+<li>Make file uploading a little more forgiving.</li>
+<li>Make validating some cookbook metadata more forgiving, to bring goiardi&rsquo;s
+validations in line with erchef.</li>
+<li>Added some functions to make listing all cookbooks and recipes on the
+server faster and move the logic into the cookbook package.</li>
+<li><p>Breaking DB change: with both MySQL and Postgres, the way data structures
+for cookbooks, nodes, etc. has changed from gob encoding to using JSON. This
+obviously breaks existing items in the database, so the following steps must
+be followed by users using either SQL backend for data storage:</p>
+
+<ul>
+<li>Export their goiardi server&rsquo;s data with the <code>-x</code> flag.</li>
+<li>Either revert all changes to the db with sqitch, then redeploy, or drop
+the database manually and recreate it from either the sqitch patches or
+the full table dump of the release (provided starting with 0.7.0)</li>
+<li>Reload the goiardi data with the <code>-m</code> flag.
+See the README or the godocs for more information.</li>
+</ul>
+</li>
+</ul>
+
+
+<p>More documentation on the universe endpoint in goiardi is <a href="https://github.com/ctdk/goiardi#berks-universe-endpoint">available in the README</a>. Specific information on upgrading is also in the README in the <a href="https://github.com/ctdk/goiardi#upgrading">UPGRADING</a> section.</p>
+
+<p>Back to the serf/shovey stuff, then.</p>
+]]></content>
+  </entry>
+  
+</feed>

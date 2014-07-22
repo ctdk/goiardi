@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Building Goiardi on Solaris/illumos/etc. - Goiardi</title>
+  <title>Goiardi Version 0.7.0 - Orphans of the Sky - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="With the recent release of Go 1.3, Go now has experimental support for Solaris and its various derivatives. This means that goiardi will build and &hellip;">
+  <meta name="description" content="In case you haven&rsquo;t read it, Orphans of the Sky is a novel by Robert A. Heinlein about a generation ship floating through space where the &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -86,7 +86,7 @@
   
   <header>
     
-      <h1 class="entry-title">Building Goiardi on Solaris/illumos/etc.</h1>
+      <h1 class="entry-title">Goiardi Version 0.7.0 - Orphans of the Sky</h1>
     
     
       <p class="meta">
@@ -102,65 +102,51 @@
   
 
 
-<time datetime="2014-06-19T21:19:08-07:00" pubdate data-updated="true">Jun 19<span>th</span>, 2014</time>
+<time datetime="2014-07-21T22:40:32-07:00" pubdate data-updated="true">Jul 21<span>st</span>, 2014</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>With the recent release of <a href="http://golang.org/doc/go1.3">Go 1.3</a>, Go now has <a href="http://golang.org/doc/go1.3#solaris">experimental support for Solaris and its various derivatives</a>. This means that goiardi will build and run on Solaris, although in an experimental way.</p>
+<div class="entry-content"><p>In case you haven&rsquo;t read it, <em><a href="http://en.wikipedia.org/wiki/Orphans_of_the_Sky">Orphans of the Sky</a></em> is a novel by Robert A. Heinlein about a generation ship floating through space where the people on board have forgotten that they are on a space ship. It&rsquo;s pretty good, but more importantly the name of the first of the two novellas that make up the novel is titled &ldquo;Universe&rdquo;. The title of the second part, &ldquo;Common Sense&rdquo;, became relevant after I really dug into making this release for reasons that will soon become clear.</p>
 
-<p>Unfortunately to get Go on Solaris/illumos/etc. you have to build it yourself from source, and at least when I was trying it out with OmniOS in vagrant it did not come with gcc by default. Getting go up so you can try out goiardi (if you don&rsquo;t want to <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.2">get the binary</a> is pretty straightforward.</p>
+<p>While it ended up being a bigger deal than I expected it to be, I am pleased to announce the release of goiardi <a href="https://github.com/ctdk/goiardi/releases/tag/v0.7.0">version 0.7.0</a>.</p>
+
+<p>I took what I thought would be a brief detour from my current work on the serf integration and &ldquo;shovey&rdquo; stuff for goiardi to implement <a href="https://github.com/opscode/chef-rfc/blob/master/rfc014-universe-endpoint.md">Chef RFC 014</a> real quick like, which I had been considering doing even before the RFC came along. I had been planning on making this a small release numbered 0.6.1, but then after I proposed a mechanism for caching the universe endpoint it was suggested in the RFC discussion that I see how goiardi performed with the full load of cookbooks in the supermarket before jumping the gun and adding caching before it was necessarily needed.</p>
+
+<p>It turned out that will over 6,000 cookbooks the universe endpoint ran like a dog. Ultimately the problem boiled down to using gob to encode the complex data structures in cookbooks, nodes, etc. in the database. Generally gob encoding in golang is faster than using JSON, but in this particular case JSON is actually faster. The &ldquo;common sense&rdquo; thing to do was to change how those complex structures are stored in the database, even though it&rsquo;s a bit of a brutal change. Sometimes, though, you have to bite the bullet and do the thing that sucks. It&rsquo;s ended up working nicely, however; the postgres implementation is now able to make use of the json type and the json functions built into Postgres. Before switching from gob to json, serving <code>/universe</code> with over 6200 cookbooks took over 3 seconds with Postgres or MySQL, but afterwards Postgres can serve it in roughly 325 milliseconds. MySQL isn&rsquo;t able to take advantage of the Postgres-specific json functionality, but it still went down to 1 second, so that&rsquo;s a marked improvement. Using the in-memory (with or without file backing) takes about 1.2 seconds. I&rsquo;m willing to take this; if you have that many cookbooks and can&rsquo;t wait a second for <code>/universe</code>, you may want to use Postgres for your data store.</p>
+
+<p>From the CHANGELOG:</p>
 
 <ul>
-<li>First, install gcc. <a href="http://omnios.omniti.com/wiki.php/DevEnv">These instructions</a> set you through installing gcc. It wasn&rsquo;t clear to me at first, but you do have to run all the <code>pkg install</code> commands mentioned. First install the appropriate version of gcc, then install those other packages.</li>
+<li>Add /universe API endpoint, per
+<a href="https://github.com/opscode/chef-rfc/blob/master/rfc014-universe-endpoint.md.">https://github.com/opscode/chef-rfc/blob/master/rfc014-universe-endpoint.md.</a></li>
+<li>Make file uploading a little more forgiving.</li>
+<li>Make validating some cookbook metadata more forgiving, to bring goiardi&rsquo;s
+validations in line with erchef.</li>
+<li>Added some functions to make listing all cookbooks and recipes on the
+server faster and move the logic into the cookbook package.</li>
+<li><p>Breaking DB change: with both MySQL and Postgres, the way data structures
+for cookbooks, nodes, etc. has changed from gob encoding to using JSON. This
+obviously breaks existing items in the database, so the following steps must
+be followed by users using either SQL backend for data storage:</p>
+
+<ul>
+<li>Export their goiardi server&rsquo;s data with the <code>-x</code> flag.</li>
+<li>Either revert all changes to the db with sqitch, then redeploy, or drop
+the database manually and recreate it from either the sqitch patches or
+the full table dump of the release (provided starting with 0.7.0)</li>
+<li>Reload the goiardi data with the <code>-m</code> flag.
+See the README or the godocs for more information.</li>
+</ul>
+</li>
 </ul>
 
 
-<p>Once that&rsquo;s done, make sure your PATH is set per the instructions on that page.</p>
+<p>More documentation on the universe endpoint in goiardi is <a href="https://github.com/ctdk/goiardi#berks-universe-endpoint">available in the README</a>. Specific information on upgrading is also in the README in the <a href="https://github.com/ctdk/goiardi#upgrading">UPGRADING</a> section.</p>
 
-<ul>
-<li><p>Install git with <code>pkg install developer/versioning/git</code></p></li>
-<li><p>Next, download go 1.3: <code>wget http://golang.org/dl/go1.3.src.tar.gz</code> and extract it somewhere. This will be your GOROOT. Set the environment variable with <code>export GOROOT=&lt;go's location&gt;</code> (assuming you&rsquo;re using bash or similar).</p></li>
-</ul>
-
-
-<p>The next steps come from <a href="http://golang.org/doc/install/source">*Installing Go from source</a>:</p>
-
-<ul>
-<li><p>In this new GOROOT, <code>cd src/</code>, then run <code>./all.bash</code>. It will build go for you. If it complains about being unable to find unistd.h, you were like me and forgot the second step on that <em>Installing GCC</em> page.</p></li>
-<li><p>You want to actually be able to use go, so add it to your path: <code>export PATH=$PATH:$GOROOT/bin</code>.</p></li>
-<li><p>Now you need a workspace. In your home directory, run:</p></li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>mkdir gocode
-</span><span class='line'>mkdir gocode/src
-</span><span class='line'>mkdir gocode/bin
-</span><span class='line'>mkdir gocode/pkg
-</span><span class='line'>export GOPATH=$HOME/gocode
-</span><span class='line'>export PATH=$PATH:$GOPATH/bin</span></code></pre></td></tr></table></div></figure>
-
-
-<ul>
-<li>Almost there. All that&rsquo;s left is running</li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>go get -t github.com/ctdk/goiardi
-</span><span class='line'>go install github.com/ctdk/goiardi</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Assuming all went well, you can run <code>goiardi</code> at your prompt with whatever options you want, and it will happily run. After this point using goiardi is like using it on any other platform.</p>
+<p>Back to the serf/shovey stuff, then.</p>
 </div>
 
 
@@ -183,12 +169,12 @@
   
 
 
-<time datetime="2014-06-19T21:19:08-07:00" pubdate data-updated="true">Jun 19<span>th</span>, 2014</time>
+<time datetime="2014-07-21T22:40:32-07:00" pubdate data-updated="true">Jul 21<span>st</span>, 2014</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/illumos/'>illumos</a>, <a class='category' href='/goiardi/blog/categories/installation/'>installation</a>, <a class='category' href='/goiardi/blog/categories/omnios/'>omnios</a>, <a class='category' href='/goiardi/blog/categories/solaris/'>solaris</a>
+    <a class='category' href='/goiardi/blog/categories/berks-api/'>berks-api</a>, <a class='category' href='/goiardi/blog/categories/berkshelf/'>berkshelf</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a>
   
 </span>
 
@@ -197,7 +183,7 @@
     
       <div class="sharing">
   
-  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc/" >Tweet</a>
+  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky/" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
@@ -212,10 +198,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/goiardi/blog/2014/06/19/goiardi-version-0-dot-5-2-block-of-dirt/" title="Previous Post: Goiardi Version 0.5.2 - Block of Dirt">&laquo; Goiardi Version 0.5.2 - Block of Dirt</a>
+        <a class="basic-alignment left" href="/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant/" title="Previous Post: Goiardi version 0.6.0 - Order of the Elephant">&laquo; Goiardi version 0.6.0 - Order of the Elephant</a>
       
-      
-        <a class="basic-alignment right" href="/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant/" title="Next Post: Goiardi version 0.6.0 - Order of the Elephant">Goiardi version 0.6.0 - Order of the Elephant &raquo;</a>
       
     </p>
   </footer>
@@ -303,8 +287,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc/';
-        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc/';
+        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky/';
+        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky/';
         var disqus_script = 'embed.js';
       
     (function () {

@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Building Goiardi on Solaris/illumos/etc. - Goiardi</title>
+  <title>Category: Berks-api - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="With the recent release of Go 1.3, Go now has experimental support for Solaris and its various derivatives. This means that goiardi will build and &hellip;">
+  <meta name="description" content="Category: berks-api">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc">
+  <link rel="canonical" href="http://ctdk.github.io/goiardiblog/categories/berks-api">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -82,150 +82,36 @@
   <div id="main">
     <div id="content">
       <div>
-<article class="hentry" role="article">
+<article role="article">
   
   <header>
-    
-      <h1 class="entry-title">Building Goiardi on Solaris/illumos/etc.</h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-06-19T21:19:08-07:00" pubdate data-updated="true">Jun 19<span>th</span>, 2014</time>
-        
-      </p>
+    <h1 class="entry-title">Category: Berks-api</h1>
     
   </header>
-
-
-<div class="entry-content"><p>With the recent release of <a href="http://golang.org/doc/go1.3">Go 1.3</a>, Go now has <a href="http://golang.org/doc/go1.3#solaris">experimental support for Solaris and its various derivatives</a>. This means that goiardi will build and run on Solaris, although in an experimental way.</p>
-
-<p>Unfortunately to get Go on Solaris/illumos/etc. you have to build it yourself from source, and at least when I was trying it out with OmniOS in vagrant it did not come with gcc by default. Getting go up so you can try out goiardi (if you don&rsquo;t want to <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.2">get the binary</a> is pretty straightforward.</p>
-
-<ul>
-<li>First, install gcc. <a href="http://omnios.omniti.com/wiki.php/DevEnv">These instructions</a> set you through installing gcc. It wasn&rsquo;t clear to me at first, but you do have to run all the <code>pkg install</code> commands mentioned. First install the appropriate version of gcc, then install those other packages.</li>
-</ul>
-
-
-<p>Once that&rsquo;s done, make sure your PATH is set per the instructions on that page.</p>
-
-<ul>
-<li><p>Install git with <code>pkg install developer/versioning/git</code></p></li>
-<li><p>Next, download go 1.3: <code>wget http://golang.org/dl/go1.3.src.tar.gz</code> and extract it somewhere. This will be your GOROOT. Set the environment variable with <code>export GOROOT=&lt;go's location&gt;</code> (assuming you&rsquo;re using bash or similar).</p></li>
-</ul>
-
-
-<p>The next steps come from <a href="http://golang.org/doc/install/source">*Installing Go from source</a>:</p>
-
-<ul>
-<li><p>In this new GOROOT, <code>cd src/</code>, then run <code>./all.bash</code>. It will build go for you. If it complains about being unable to find unistd.h, you were like me and forgot the second step on that <em>Installing GCC</em> page.</p></li>
-<li><p>You want to actually be able to use go, so add it to your path: <code>export PATH=$PATH:$GOROOT/bin</code>.</p></li>
-<li><p>Now you need a workspace. In your home directory, run:</p></li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>mkdir gocode
-</span><span class='line'>mkdir gocode/src
-</span><span class='line'>mkdir gocode/bin
-</span><span class='line'>mkdir gocode/pkg
-</span><span class='line'>export GOPATH=$HOME/gocode
-</span><span class='line'>export PATH=$PATH:$GOPATH/bin</span></code></pre></td></tr></table></div></figure>
-
-
-<ul>
-<li>Almost there. All that&rsquo;s left is running</li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>go get -t github.com/ctdk/goiardi
-</span><span class='line'>go install github.com/ctdk/goiardi</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Assuming all went well, you can run <code>goiardi</code> at your prompt with whatever options you want, and it will happily run. After this point using goiardi is like using it on any other platform.</p>
-</div>
-
-
-  <footer>
-    <p class="meta">
-      
   
-
-<span class="byline author vcard">Posted by <span class="fn">Jeremy Bingham</span></span>
-
-      
-
-
-
-
-
+  <div id="blog-archives" class="category">
 
 
 
   
+  <h2>2014</h2>
+
+<article>
+  
+<h1><a href="/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky/">Goiardi Version 0.7.0 - Orphans of the Sky</a></h1>
+<time datetime="2014-07-21T22:40:32-07:00" pubdate><span class='month'>Jul</span> <span class='day'>21</span> <span class='year'>2014</span></time>
+
+<footer>
+  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/berks-api/'>berks-api</a>, <a class='category' href='/goiardi/blog/categories/berkshelf/'>berkshelf</a>, <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a></span>
+</footer>
 
 
-<time datetime="2014-06-19T21:19:08-07:00" pubdate data-updated="true">Jun 19<span>th</span>, 2014</time>
-      
-
-<span class="categories">
-  
-    <a class='category' href='/goiardi/blog/categories/goiardi/'>goiardi</a>, <a class='category' href='/goiardi/blog/categories/illumos/'>illumos</a>, <a class='category' href='/goiardi/blog/categories/installation/'>installation</a>, <a class='category' href='/goiardi/blog/categories/omnios/'>omnios</a>, <a class='category' href='/goiardi/blog/categories/solaris/'>solaris</a>
-  
-</span>
-
-
-    </p>
-    
-      <div class="sharing">
-  
-  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc/" >Tweet</a>
-  
-  
-  <div class="g-plusone" data-size="medium"></div>
-  
-  
-  
-<a href='https://alpha.app.net/intent/post/?text=App.net%20social%20buttons%20are%20here' class='adn-button' target='_blank' data-type='share' data-width='121' data-height='20' data-text='' >Share on App.net</a>
-<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='//d2zh9g63fcvyrq.cloudfront.net/adn.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'adn-button-js'));</script>
-  
-</div>
-
-    
-    <p class="meta">
-      
-        <a class="basic-alignment left" href="/goiardi/blog/2014/06/19/goiardi-version-0-dot-5-2-block-of-dirt/" title="Previous Post: Goiardi Version 0.5.2 - Block of Dirt">&laquo; Goiardi Version 0.5.2 - Block of Dirt</a>
-      
-      
-        <a class="basic-alignment right" href="/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant/" title="Next Post: Goiardi version 0.6.0 - Order of the Elephant">Goiardi version 0.6.0 - Order of the Elephant &raquo;</a>
-      
-    </p>
-  </footer>
 </article>
 
-  <section>
-    <h1>Comments</h1>
-    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
-  </section>
+
+  
+</article>
 
 </div>
 
@@ -302,10 +188,7 @@
       var disqus_shortname = 'goiardi';
       
         
-        // var disqus_developer = 1;
-        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc/';
-        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc/';
-        var disqus_script = 'embed.js';
+        var disqus_script = 'count.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

@@ -9,7 +9,7 @@
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="I am pleased to announce another goiardi release. This release, version 0.3.3 of goiardi, doesn&rsquo;t add much in the way of new functionality. The &hellip;">
+  <meta name="description" content="While there is still some work remaining with finishing some needed authorization checks, I&rsquo;m happy to report that in the goiardi auth branch, &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,46 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/">Meanwhile, in the Auth Branch&#8230;</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-13T10:03:30-07:00" pubdate data-updated="true">Mar 13<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>While there is still some work remaining with finishing some needed authorization checks, I&rsquo;m happy to report that in the <a href="https://github.com/ctdk/goiardi/tree/auth">goiardi auth branch</a>, authentication for chef clients and webui is working and passing the chef-pedant tests.</p>
+
+<p>Once those authorization issues are ironed out, I&rsquo;ll start work on updating the documentation and making a new formal release. If, in the meantime, anyone felt like testing it, it&rsquo;s pretty easy. Start goiardi with the <tt>-A</tt> or <tt>&#8211;use-auth</tt> flags, and set <tt>&#8211;conf-root</tt> to whereever you&rsquo;d like the chef-validator, chef-webui, and admin certificates to be stored. You&rsquo;d probably also want to specify index and data files for persistence, but you don&rsquo;t have to. Goiardi works with chef-webui fine as well, but at the moment you&rsquo;ll have to set a password for the admin user with knife.</p>
+
+<p>As of this writing goiardi authentication is still a work in progress, but it&rsquo;s far enough along to start banging on to look for problems. The chef-pedant tests are pretty happy, but that doesn&rsquo;t always catch every real world issue.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -383,6 +423,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky/">Goiardi Version 0.7.0 - Orphans of the Sky</a>
+      </li>
+    
+      <li class="post">
         <a href="/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant/">Goiardi Version 0.6.0 - Order of the Elephant</a>
       </li>
     
@@ -396,10 +440,6 @@
     
       <li class="post">
         <a href="/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log/">Knife Plugin for the Goiardi Event Log</a>
-      </li>
-    
-      <li class="post">
-        <a href="/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/">Goiardi Version 0.5.1 - Rodan Overhead</a>
       </li>
     
   </ul>
