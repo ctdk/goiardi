@@ -17,8 +17,10 @@
 package shovey
 
 import (
-	//"github.com/ctdk/goiardi/node"
-	//"github.com/codeskyblue/go-uuid"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/node"
+	"github.com/codeskyblue/go-uuid"
 	"github.com/ctdk/goiardi/util"
 	"time"
 )
@@ -46,7 +48,17 @@ type ShoveyRun struct {
 }
 
 func New(command string, timeout int, quorumStr string, nodes []*Node) (*Shovey, util.Gerror) {
-
+	runID := uuid.New()
+	nodeNames := make([]string, len(nodes))
+	for i, n := range nodes {
+		nodeNames[i] = n.Name
+	}
+	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: timeout, Quorum: quorumStr, Status: started }
+	if config.Config.UsingDB() {
+		
+	}
+	s.CreatedAt = time.Now()
+	s.UpdatedAt = time.Now()
 }
 
 func Get(runID string) (*Shovey, error) {
