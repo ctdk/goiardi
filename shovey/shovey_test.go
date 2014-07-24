@@ -17,9 +17,33 @@
 package shovey
 
 import (
+	"encoding/gob"
+	"fmt"
+	"github.com/ctdk/goiardi/node"
 	"testing"
 )
 
 func TestShoveyCreation(t *testing.T) {
-
+	nodes := make([]*node.Node, 5)
+	for i := 0; i < 5; i++ {
+		n, _ := node.New(fmt.Sprintf("node-shove-%d", i))
+		nodes[i] = n
+	}
+	z := new(Shovey)
+	gob.Register(z)
+	s, err := New("/bin/ls", 300, "100%", nodes)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	s2, err := Get(s.RunID)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if s.RunID != s2.RunID {
+		t.Errorf("Run IDs should have been equal, but weren't. Got %s and %s", s.RunID, s2.RunID)
+	}
+	err = Cancel(s.RunID)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 }
