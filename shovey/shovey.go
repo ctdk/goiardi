@@ -22,6 +22,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/codeskyblue/go-uuid"
 	"github.com/ctdk/goiardi/util"
+	"net/http"
 	"time"
 )
 
@@ -34,8 +35,8 @@ type Shovey struct {
 	Status string `json:"status"`
 	Timeout time.Duration `json:"timeout"`
 	Quorum string `json:"quorum"`
-	nodeRuns []*ShoveyRun
-	nodes []*Node
+	NodeRuns []*ShoveyRun
+	Nodes []*node.Node
 }
 
 type ShoveyRun struct {
@@ -47,26 +48,74 @@ type ShoveyRun struct {
 	EndTime time.Time
 }
 
-func New(command string, timeout int, quorumStr string, nodes []*Node) (*Shovey, util.Gerror) {
+func New(command string, timeout int, quorumStr string, nodes []*node.Node) (*Shovey, util.Gerror) {
 	runID := uuid.New()
 	nodeNames := make([]string, len(nodes))
 	for i, n := range nodes {
 		nodeNames[i] = n.Name
 	}
-	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: timeout, Quorum: quorumStr, Status: started }
-	if config.Config.UsingDB() {
+	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout), Quorum: quorumStr, Status: "submitted" }
+	if config.UsingDB() {
 		
 	}
 	s.CreatedAt = time.Now()
 	s.UpdatedAt = time.Now()
+
+	ds := datastore.New()
+	ds.Set("shovey", runID, s)
+
+	// TODO: send jobs to nodes, try and get quorum
+
+	return s, nil
 }
 
-func Get(runID string) (*Shovey, error) {
+func (s *Shovey) save() util.Gerror {
+	if config.UsingDB() {
+		
+	}
+	s.UpdatedAt = time.Now()
 
+	ds := datastore.New()
+	ds.Set("shovey", s.RunID, s)
+
+	return nil
 }
 
-func Cancel(runID string) error {
+func Get(runID string) (*Shovey, util.Gerror) {
+	if config.UsingDB() {
 
+	}
+	var shove *Shovey
+	ds := datastore.New()
+	s, found := ds.Get("shovey", runID)
+	if s != nil {
+		shove = s.(*Shovey)
+	}
+	if !found {
+		err := util.Errorf("shovey job %s not found", runID)
+		err.SetStatus(http.StatusNotFound)
+		return nil, err
+	}
+	return shove, nil
 }
 
+func Cancel(runID string) util.Gerror {
+	s, err := Get(runID)
+	if err != nil {
+		return err
+	}
+	s.Status = "cancelled"
+	err = s.save()
+	if err != nil {
+		return err
+	}
 
+	// TODO: cancel jobs on nodes
+
+	return nil
+}
+
+func (s *Shovey) dialNodes() error {
+
+	return nil
+}
