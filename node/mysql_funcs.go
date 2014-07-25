@@ -45,12 +45,18 @@ func (ns *NodeStatus) updateNodeStatusMySQL() error {
 	if ns.Status == "down" {
 		isDown = true
 	}
-	_, err = tx.Exec("UPDATE nodes SET is_down = ? WHERE name = ?", isDown, ns.Node.Name)
-	if err != nil {
-		tx.Rollback()
-		return err
-	} 
+	if isDown != ns.Node.isDown {
+		_, err = tx.Exec("UPDATE nodes SET is_down = ?, updated_at = NOW() WHERE name = ?", isDown, ns.Node.Name)
+		if err != nil {
+			tx.Rollback()
+			return err
+		} 
+	}
 	tx.Commit()
+	if isDown != ns.Node.isDown {
+		ns.Node.isDown = isDown
+		ns.Node.Save()
+	}
 	return nil
 }
 

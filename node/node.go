@@ -39,6 +39,7 @@ type Node struct {
 	Normal          map[string]interface{} `json:"normal"`
 	Default         map[string]interface{} `json:"default"`
 	Override        map[string]interface{} `json:"override"`
+	isDown 		bool
 }
 
 // New makes a new node.

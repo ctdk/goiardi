@@ -20,6 +20,7 @@
 package node
 
 import (
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"time"
@@ -40,6 +41,14 @@ func (n *Node) UpdateStatus(status string) error {
 	s := &NodeStatus{ Node: n, Status: status }
 	if config.UsingDB() {
 		return s.updateNodeStatusSQL()
+	}
+	var nodeDown bool
+	if status == "down" {
+		down = "true"
+	}
+	if nodeDown != n.isDown {
+		n.isDown = nodeDown
+		n.Save()
 	}
 	s.UpdatedAt = time.Now()
 	ds := datastore.New()
@@ -101,7 +110,7 @@ func UnseenNodes() ([]*Node, error){
 	t := time.Now().Add(-10 * time.Minute)
 	for _, n := range nodes {
 		ns, _ := n.LatestStatus()
-		if ns == nil {
+		if ns == nil || n.isDown {
 			continue
 		}
 		if ns.UpdatedAt.Before(t) {
@@ -109,4 +118,22 @@ func UnseenNodes() ([]*Node, error){
 		}
 	}
 	return downNodes, nil
+}
+
+func GetNodesByStatus(status string) ([]*Node, error) {
+	if config.UsingDB() {
+		return getNodesByStatusSQL(status)
+	}
+	var statNodes []*Node
+	nodes := AllNodes()
+	for _, n := range nodes {
+		ns, _ := n.LatestStatus()
+		if ns == nil {
+			logger.Infof("No status found at all for node %s, skipping", n.Name)
+		}
+		if ns.Status == status {
+			statNodes = append(statNodes, n)
+		}
+	}
+	return statNodes, nil
 }

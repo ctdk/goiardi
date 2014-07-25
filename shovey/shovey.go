@@ -20,9 +20,13 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/serfin"
 	"github.com/codeskyblue/go-uuid"
 	"github.com/ctdk/goiardi/util"
+	serfclient "github.com/hashicorp/serf/client"
 	"net/http"
+	"regexp"
+	"strconv"
 	"time"
 )
 
@@ -115,7 +119,48 @@ func Cancel(runID string) util.Gerror {
 	return nil
 }
 
-func (s *Shovey) dialNodes() error {
+func (s *Shovey) startJobs() error {
+	// determine if we meet the quorum
+	// First is this a percentage or absolute quorum
+	qnum, err := getQuorum(s.Quorum, len(s.Nodes))
+	if err != nil {
+		return err
+	}
+	// query node statuses to see if enough are up
+
+	// if that all worked, ping the nodes over serf & listen for replies.
+	// If enough reply, send the commands
 
 	return nil
+}
+
+func getQuorum(quorum string, numNodes int) (int, error) {
+	var qnum float64
+
+	if numNodes == 0 {
+		err := fmt.Errorf("There's no nodes to make a quorum")
+		return 0, nil
+	}
+
+	m := regexp.MustCompile(`^(\d+\.?\d?)%$`)
+	z := m.FindStringSubmatch(quorum)
+	if z != nil {
+		q, err := strconv.ParseFloat(z[1], 64)
+		if err != nil {
+			return 0, err
+		}
+		qnum = math.Ceil((q / 100.0) * numNodes)
+	} else {
+		var err error
+		qnum, err = strconv.ParseFloat(quorum, 64)
+		if err != nil {
+			return 0, err
+		}
+		if qnum > numNodes {
+			err := fmt.Errorf("%d nodes were required for the quorum, but only %d matched the criteria given", qnum, numNodes)
+			return 0, err
+		}
+	}
+
+	return int(qnum), nil
 }
