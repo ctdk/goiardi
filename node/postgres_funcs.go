@@ -43,12 +43,18 @@ func (ns *NodeStatus) updateNodeStatusPostgreSQL() error {
 	if ns.Status == "down" {
 		isDown = true
 	}
-	_, err = tx.Exec("UPDATE goiardi.nodes SET is_down = $1 WHERE name = $2", isDown, ns.Node.Name)
-	if err != nil {
-		tx.Rollback()
-		return err
+	if isDown != ns.Node.isDown {
+		_, err = tx.Exec("UPDATE goiardi.nodes SET is_down = $1, updated_at = NOW() WHERE name = $2", isDown, ns.Node.Name)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		ns.Node.isDown = isDown
 	}
 	tx.Commit()
+	if isDown != ns.Node.isDown {
+		ns.Node.Save()
+	}
 	return nil
 }
 
