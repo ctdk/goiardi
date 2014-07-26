@@ -17,6 +17,7 @@
 package shovey
 
 import (
+	"encoding/json"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/node"
@@ -26,6 +27,7 @@ import (
 	serfclient "github.com/hashicorp/serf/client"
 	"net/http"
 	"regexp"
+	"runtime"
 	"strconv"
 	"time"
 )
@@ -127,9 +129,49 @@ func (s *Shovey) startJobs() error {
 		return err
 	}
 	// query node statuses to see if enough are up
+	upNodes := node.GetNodesByStatus("up")
+	if len(upNodes) < qnum {
+		err = fmt.Errorf("Not enough nodes were up to execute job %s - got %d, needed at least %d", s.RunID, len(upNodes), qnum)
+	}
 
-	// if that all worked, ping the nodes over serf & listen for replies.
-	// If enough reply, send the commands
+	// if that all worked, send the commands
+	errch := make(chan error, 1)
+	go func() {
+		tagNodes := make([]string, len(upNodes))
+		for i, n := range upNodes {
+			tagNodes[i] = n.Name
+			sr := &ShoveyRun{ ShoveyUUID: s.RunID, NodeName: n.Name, Status: "created" }
+			sr.save()
+		}
+		// make sure this is the right amount of buffering
+		payload := make(map[string]string)
+		payload["run_id"] = s.RunID
+		payload["command"] = s.Command
+		jsonPayload := json.Marshal(payload)
+		ackCh := make(chan string, len(tagNodes))
+		respCh := make(chan serfclient.NodeResponse, len(tagNodes))
+		q := &serfclient.QueryParam{ Name: "shovey", Payload: jsonPayload, FilterNodes: tagNodes, Timeout: s.Timeout, RequestAck: true, AckCh: ackCh, RespCh: respCh }
+		qerr := serfclient.Query(q)
+		if qerr != nil {
+			errch <- qerr
+			return
+		}
+
+		for {
+			select {
+			case a := <-ackCh:
+
+			case r := <-respCh:
+
+			case <- time.After(s.Timeout * time.Second):
+				break
+			}
+		}
+	}()
+	err <-errch
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
