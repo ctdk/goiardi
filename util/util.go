@@ -123,6 +123,9 @@ func FlattenObj(obj interface{}) map[string]interface{} {
 	expanded := make(map[string]interface{})
 	s := reflect.ValueOf(obj).Elem()
 	for i := 0; i < s.NumField(); i++ {
+		if !s.Field(i).CanInterface() {
+			continue
+		}
 		v := s.Field(i).Interface()
 		key := s.Type().Field(i).Tag.Get("json")
 		var mergeKey string
