@@ -44,7 +44,7 @@ func (n *Node) UpdateStatus(status string) error {
 	}
 	var nodeDown bool
 	if status == "down" {
-		down = "true"
+		nodeDown = true
 	}
 	if nodeDown != n.isDown {
 		n.isDown = nodeDown
