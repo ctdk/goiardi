@@ -379,3 +379,8 @@ func unseenNodesSQL() ([]*Node, error) {
 	}
 	return nodes, nil
 }
+
+func getNodesByStatusSQL(status string) ([]*Node, error) {
+
+	return nil, nil
+}
