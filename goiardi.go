@@ -41,6 +41,7 @@ import (
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/serfin"
+	"github.com/ctdk/goiardi/shovey"
 	"net/http"
 	"os"
 	"os/signal"
@@ -467,6 +468,10 @@ func gobRegister() {
 	gob.Register(dbi)
 	rp := new(report.Report)
 	gob.Register(rp)
+	sv := new(shovey.Shovey)
+	gob.Register(sv)
+	svr := new(shovey.ShoveyRun)
+	gob.Register(svr)
 }
 
 func setSaveTicker() {

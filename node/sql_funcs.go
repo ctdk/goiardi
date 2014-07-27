@@ -381,12 +381,36 @@ func unseenNodesSQL() ([]*Node, error) {
 }
 
 func getNodesByStatusSQL(status string) ([]*Node, error) {
+	var nodes []*Node
 	var sqlStmt string
 	if config.Config.UseMySQL {
 		sqlStmt = ""
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.node_latest_statuses n WHERE n.status = $1"
 	}
-
-	return nil, nil
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query(status)
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return nodes, nil
+		}
+		return nil, qerr
+	}
+	for rows.Next() {
+		no := new(Node)
+		err = no.fillNodeFromSQL(rows)
+		if err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, no)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return nodes, nil
 }

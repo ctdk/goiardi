@@ -17,7 +17,10 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/shovey"
 	"net/http"
 )
 
@@ -31,6 +34,19 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 	if !opUser.IsAdmin() {
 		jsonErrorReport(w, r, "you cannot perform this action", http.StatusForbidden)
 		return
+	}
+	n1, _ := node.Get("nineveh.local")
+	n := []*node.Node{ n1 }
+	
+	s, err := shovey.New("ls", 10, "100%", n)
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+
+	enc := json.NewEncoder(w)
+	if jerr := enc.Encode(&s); err != nil {
+		jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
 	}
 
 	return
