@@ -18,6 +18,8 @@ package shovey
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/node"
@@ -25,9 +27,9 @@ import (
 	"github.com/codeskyblue/go-uuid"
 	"github.com/ctdk/goiardi/util"
 	serfclient "github.com/hashicorp/serf/client"
+	"math"
 	"net/http"
 	"regexp"
-	"runtime"
 	"strconv"
 	"time"
 )
@@ -60,7 +62,7 @@ func New(command string, timeout int, quorumStr string, nodes []*node.Node) (*Sh
 	for i, n := range nodes {
 		nodeNames[i] = n.Name
 	}
-	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout), Quorum: quorumStr, Status: "submitted" }
+	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout), Quorum: quorumStr, Status: "submitted", Nodes: nodes }
 	if config.UsingDB() {
 		
 	}
@@ -70,7 +72,10 @@ func New(command string, timeout int, quorumStr string, nodes []*node.Node) (*Sh
 	ds := datastore.New()
 	ds.Set("shovey", runID, s)
 
-	// TODO: send jobs to nodes, try and get quorum
+	err := s.startJobs()
+	if err != nil {
+		return nil, util.CastErr(err)
+	}
 
 	return s, nil
 }
@@ -84,6 +89,15 @@ func (s *Shovey) save() util.Gerror {
 	ds := datastore.New()
 	ds.Set("shovey", s.RunID, s)
 
+	return nil
+}
+
+func (sr *ShoveyRun) save() util.Gerror {
+	if config.UsingDB() {
+
+	}
+	ds := datastore.New()
+	ds.Set("shovey_run", sr.ShoveyUUID + sr.NodeName, sr)
 	return nil
 }
 
@@ -129,7 +143,10 @@ func (s *Shovey) startJobs() error {
 		return err
 	}
 	// query node statuses to see if enough are up
-	upNodes := node.GetNodesByStatus("up")
+	upNodes, err := node.GetNodesByStatus("up")
+	if err != nil {
+		return err
+	}
 	if len(upNodes) < qnum {
 		err = fmt.Errorf("Not enough nodes were up to execute job %s - got %d, needed at least %d", s.RunID, len(upNodes), qnum)
 	}
@@ -147,11 +164,11 @@ func (s *Shovey) startJobs() error {
 		payload := make(map[string]string)
 		payload["run_id"] = s.RunID
 		payload["command"] = s.Command
-		jsonPayload := json.Marshal(payload)
+		jsonPayload, _ := json.Marshal(payload)
 		ackCh := make(chan string, len(tagNodes))
 		respCh := make(chan serfclient.NodeResponse, len(tagNodes))
 		q := &serfclient.QueryParam{ Name: "shovey", Payload: jsonPayload, FilterNodes: tagNodes, Timeout: s.Timeout, RequestAck: true, AckCh: ackCh, RespCh: respCh }
-		qerr := serfclient.Query(q)
+		qerr := serfin.Serfer.Query(q)
 		if qerr != nil {
 			errch <- qerr
 			return
@@ -160,15 +177,16 @@ func (s *Shovey) startJobs() error {
 		for {
 			select {
 			case a := <-ackCh:
-
+				logger.Debugf("got an ack: %s", a)
 			case r := <-respCh:
-
+				logger.Debugf("got a response: %v", r)
 			case <- time.After(s.Timeout * time.Second):
+				logger.Debugf("timed out, might not be appropriate")
 				break
 			}
 		}
 	}()
-	err <-errch
+	err = <-errch
 	if err != nil {
 		return err
 	}
@@ -181,7 +199,7 @@ func getQuorum(quorum string, numNodes int) (int, error) {
 
 	if numNodes == 0 {
 		err := fmt.Errorf("There's no nodes to make a quorum")
-		return 0, nil
+		return 0, err
 	}
 
 	m := regexp.MustCompile(`^(\d+\.?\d?)%$`)
@@ -191,14 +209,14 @@ func getQuorum(quorum string, numNodes int) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		qnum = math.Ceil((q / 100.0) * numNodes)
+		qnum = math.Ceil((q / 100.0) * float64(numNodes))
 	} else {
 		var err error
 		qnum, err = strconv.ParseFloat(quorum, 64)
 		if err != nil {
 			return 0, err
 		}
-		if qnum > numNodes {
+		if qnum > float64(numNodes) {
 			err := fmt.Errorf("%d nodes were required for the quorum, but only %d matched the criteria given", qnum, numNodes)
 			return 0, err
 		}
