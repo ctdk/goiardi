@@ -164,6 +164,7 @@ func (s *Shovey) startJobs() error {
 		payload := make(map[string]string)
 		payload["run_id"] = s.RunID
 		payload["command"] = s.Command
+		payload["action"] = "start"
 		jsonPayload, _ := json.Marshal(payload)
 		ackCh := make(chan string, len(tagNodes))
 		respCh := make(chan serfclient.NodeResponse, len(tagNodes))
