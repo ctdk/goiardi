@@ -35,10 +35,10 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, "you cannot perform this action", http.StatusForbidden)
 		return
 	}
-	n1, _ := node.Get("nineveh.local")
+	n1, _ := node.Get("terqa.local")
 	n := []*node.Node{ n1 }
 	
-	s, err := shovey.New("ls", 10, "100%", n)
+	s, err := shovey.New("ls /", 300, "100%", n)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
