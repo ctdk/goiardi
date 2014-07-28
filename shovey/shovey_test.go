@@ -25,9 +25,12 @@ import (
 
 func TestShoveyCreation(t *testing.T) {
 	nodes := make([]*node.Node, 5)
+	nodeNames := make([]string, 5)
 	for i := 0; i < 5; i++ {
 		n, _ := node.New(fmt.Sprintf("node-shove-%d", i))
+		n.Save()
 		nodes[i] = n
+		nodeNames[i] = n.Name
 	}
 	z := new(Shovey)
 	gob.Register(z)
