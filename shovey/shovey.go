@@ -44,7 +44,6 @@ type Shovey struct {
 	Timeout time.Duration `json:"timeout"`
 	Quorum string `json:"quorum"`
 	NodeRuns []*ShoveyRun
-	Nodes []*node.Node
 }
 
 type ShoveyRun struct {
@@ -56,13 +55,9 @@ type ShoveyRun struct {
 	EndTime time.Time
 }
 
-func New(command string, timeout int, quorumStr string, nodes []*node.Node) (*Shovey, util.Gerror) {
+func New(command string, timeout int, quorumStr string, nodeNames []*node.Node) (*Shovey, util.Gerror) {
 	runID := uuid.New()
-	nodeNames := make([]string, len(nodes))
-	for i, n := range nodes {
-		nodeNames[i] = n.Name
-	}
-	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout) * time.Second, Quorum: quorumStr, Status: "submitted", Nodes: nodes }
+	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout) * time.Second, Quorum: quorumStr, Status: "submitted" }
 	if config.UsingDB() {
 		
 	}
@@ -138,12 +133,12 @@ func Cancel(runID string) util.Gerror {
 func (s *Shovey) startJobs() error {
 	// determine if we meet the quorum
 	// First is this a percentage or absolute quorum
-	qnum, err := getQuorum(s.Quorum, len(s.Nodes))
+	qnum, err := getQuorum(s.Quorum, len(s.NodeNames))
 	if err != nil {
 		return err
 	}
 	// query node statuses to see if enough are up
-	upNodes, err := node.GetNodesByStatus("up")
+	upNodes, err := node.GetNodesByStatus(s.NodeNames, "up")
 	if err != nil {
 		return err
 	}

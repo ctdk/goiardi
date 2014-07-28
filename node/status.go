@@ -120,12 +120,18 @@ func UnseenNodes() ([]*Node, error){
 	return downNodes, nil
 }
 
-func GetNodesByStatus(status string) ([]*Node, error) {
+func GetNodesByStatus(nodeNames []string, status string) ([]*Node, error) {
 	if config.UsingDB() {
-		return getNodesByStatusSQL(status)
+		return getNodesByStatusSQL(nodeNames, status)
 	}
 	var statNodes []*Node
-	nodes := AllNodes()
+	nodes := make([]*Node, 0, len(nodeNames))
+	for _, name := range nodeNames {
+		n, _ := Get(name)
+		if n != nil {
+			nodes = append(nodes, n)
+		}
+	}
 	for _, n := range nodes {
 		ns, _ := n.LatestStatus()
 		if ns == nil {

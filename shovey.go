@@ -35,6 +35,34 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, "you cannot perform this action", http.StatusForbidden)
 		return
 	}
+	pathArray := splitPath(r.URL.Path)
+	pathArrayLen := len(pathArray)
+	if pathArrayLen < 2 || pathArrayLen > 3 {
+		jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	shoveyResponse := make(map[string]interface{})
+
+	switch r.Method {
+	case "GET":
+
+	case "POST":
+		if pathArrayLen == 3 {
+			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			return
+		}
+		shvData, err := parseObjJSON(r.Body)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			return
+		}
+	default:
+		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	/*
 	n1, _ := node.Get("terqa.local")
 	n := []*node.Node{ n1 }
 	
@@ -43,9 +71,10 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
+	*/
 
 	enc := json.NewEncoder(w)
-	if jerr := enc.Encode(&s); err != nil {
+	if jerr := enc.Encode(&shoveyResponse); err != nil {
 		jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
 	}
 
