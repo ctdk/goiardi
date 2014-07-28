@@ -46,7 +46,19 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-
+		if pathArrayLen == 3 {
+			shove, err := shovey.Get(pathArray[2])
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+		} else {
+			shoveys, err := shovey.AllShoveyJobs()
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+		}
 	case "POST":
 		if pathArrayLen == 3 {
 			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
