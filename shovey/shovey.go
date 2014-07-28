@@ -62,7 +62,7 @@ func New(command string, timeout int, quorumStr string, nodes []*node.Node) (*Sh
 	for i, n := range nodes {
 		nodeNames[i] = n.Name
 	}
-	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout), Quorum: quorumStr, Status: "submitted", Nodes: nodes }
+	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout) * time.Second, Quorum: quorumStr, Status: "submitted", Nodes: nodes }
 	if config.UsingDB() {
 		
 	}
@@ -154,6 +154,7 @@ func (s *Shovey) startJobs() error {
 	// if that all worked, send the commands
 	errch := make(chan error, 1)
 	go func() {
+		logger.Debugf("upnodes: %d", len(upNodes))
 		tagNodes := make([]string, len(upNodes))
 		for i, n := range upNodes {
 			tagNodes[i] = n.Name
@@ -174,18 +175,21 @@ func (s *Shovey) startJobs() error {
 			errch <- qerr
 			return
 		}
+		errch <- nil
 
-		for {
+		for i := 0; i < len(upNodes) * 2; i++{
 			select {
 			case a := <-ackCh:
 				logger.Debugf("got an ack: %s", a)
 			case r := <-respCh:
 				logger.Debugf("got a response: %v", r)
-			case <- time.After(s.Timeout * time.Second):
+				break
+			case <- time.After(s.Timeout):
 				logger.Debugf("timed out, might not be appropriate")
 				break
 			}
 		}
+		logger.Debugf("out of for/select loop for shovey responses")
 	}()
 	err = <-errch
 	if err != nil {
