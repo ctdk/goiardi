@@ -18,10 +18,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/shovey"
+	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"strconv"
 )
 
 func shoveyHandler(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +40,8 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	pathArray := splitPath(r.URL.Path)
 	pathArrayLen := len(pathArray)
-	if pathArrayLen < 2 || pathArrayLen > 3 {
+
+	if pathArrayLen < 2 || pathArrayLen > 3 || pathArray[1] == "" {
 		jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 		return
 	}
@@ -52,12 +56,22 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
-		} else {
-			shoveys, err := shovey.AllShoveyJobs()
+			shoveyResponse, err = shove.ToJSON()
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
+		} else {
+			shoveyIDs, err := shovey.AllShoveyIDs()
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			enc := json.NewEncoder(w)
+			if jerr := enc.Encode(&shoveyIDs); err != nil {
+				jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
+			}
+			return
 		}
 	case "POST":
 		if pathArrayLen == 3 {
@@ -69,24 +83,45 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 			return
 		}
+		logger.Debugf("shvData: %v", shvData)
+		var quorum string
+		var timeout int
+		var ok bool
+		if quorum, ok = shvData["quorum"].(string); !ok {
+			quorum = "100%"
+		}
+		if t, ok := shvData["run_timeout"].(string); !ok {
+			timeout = 300
+		} else {
+			timeout, err = strconv.Atoi(t)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+		if len(shvData["nodes"].([]interface{})) == 0 {
+			jsonErrorReport(w, r, "no nodes provided", http.StatusBadRequest)
+			return
+		} 
+		nodeNames := make([]string, len(shvData["nodes"].([]interface{})))
+		for i, v := range shvData["nodes"].([]interface{}) {
+			nodeNames[i] = v.(string)
+		}
+		
+		s, gerr := shovey.New(shvData["command"].(string), timeout, quorum, nodeNames)
+		if gerr != nil {
+			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
+			return
+		}
+		shoveyResponse["id"] = s.RunID
+		shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/shovey/jobs/%s", s.RunID))
 	default:
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 		return
 	}
 
-	/*
-	n1, _ := node.Get("terqa.local")
-	n := []*node.Node{ n1 }
-	
-	s, err := shovey.New("ls /", 300, "100%", n)
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	*/
-
 	enc := json.NewEncoder(w)
-	if jerr := enc.Encode(&shoveyResponse); err != nil {
+	if jerr := enc.Encode(&shoveyResponse); jerr != nil {
 		jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
 	}
 

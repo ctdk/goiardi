@@ -19,8 +19,10 @@
 package node
 
 import (
+	"database/sql"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/go-sql-driver/mysql"
+	"strings"
 )
 
 func (n *Node) saveMySQL(tx datastore.Dbhandle, rlb, aab, nab, dab, oab []byte) error {
@@ -70,4 +72,36 @@ func (ns *NodeStatus) fillNodeStatusFromMySQL(row datastore.ResRow) error {
 		ns.UpdatedAt = ua.Time
 	}
 	return nil
+}
+
+func getNodesByStatusMySQL(nodeNames []string, status string) ([]*Node, error) {
+	var nodes []*Node
+	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM node_latest_statuses n WHERE n.status = ? AND n.name IN(?" + strings.Repeat(",?", len(nodeNames) - 1) + ")"
+	nodeArgs := make([]interface{}, len(nodeNames) + 1)
+	nodeArgs[0] = status
+	for i, v := range nodeNames {
+		nodeArgs[i+1] = v
+	}
+	// Can't prepare this ahead of time, apparently, because of the way the
+	// number of query parameters is variable. Makes sense.
+	rows, qerr := datastore.Dbh.Query(sqlStmt, nodeArgs...)
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return nodes, nil
+		}
+		return nil, qerr
+	}
+	for rows.Next() {
+		no := new(Node)
+		err := no.fillNodeFromSQL(rows)
+		if err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, no)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return nodes, nil
 }

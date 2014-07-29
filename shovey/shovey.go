@@ -43,7 +43,6 @@ type Shovey struct {
 	Status string `json:"status"`
 	Timeout time.Duration `json:"timeout"`
 	Quorum string `json:"quorum"`
-	NodeRuns []*ShoveyRun
 }
 
 type ShoveyRun struct {
@@ -55,7 +54,7 @@ type ShoveyRun struct {
 	EndTime time.Time
 }
 
-func New(command string, timeout int, quorumStr string, nodeNames []*node.Node) (*Shovey, util.Gerror) {
+func New(command string, timeout int, quorumStr string, nodeNames []string) (*Shovey, util.Gerror) {
 	runID := uuid.New()
 	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout) * time.Second, Quorum: quorumStr, Status: "submitted" }
 	if config.UsingDB() {
@@ -94,6 +93,42 @@ func (sr *ShoveyRun) save() util.Gerror {
 	ds := datastore.New()
 	ds.Set("shovey_run", sr.ShoveyUUID + sr.NodeName, sr)
 	return nil
+}
+
+func (s *Shovey) GetRun(nodeName string) (*ShoveyRun, util.Gerror) {
+	if config.UsingDB() {
+
+	}
+	var shoveyRun *ShoveyRun
+	ds := datastore.New()
+	sr, found := ds.Get("shovey_run", s.RunID + nodeName)
+	if !found {
+		err := util.Errorf("run %s for node %s not found", s.RunID, nodeName)
+		err.SetStatus(http.StatusNotFound)
+		return nil, err
+	}
+	if sr != nil {
+		shoveyRun = sr.(*ShoveyRun)
+	}
+	return shoveyRun, nil
+}
+
+func (s *Shovey) GetNodeRuns() ([]*ShoveyRun, util.Gerror) {
+	if config.UsingDB() {
+
+	}
+	var runs []*ShoveyRun
+	for _, n := range s.NodeNames {
+		sr, err := s.GetRun(n)
+		if err != nil {
+			if err.Status() != http.StatusNotFound {
+				return nil, err
+			}
+		} else {
+			runs = append(runs, sr)
+		}
+	}
+	return runs, nil
 }
 
 func Get(runID string) (*Shovey, util.Gerror) {
@@ -164,7 +199,7 @@ func (s *Shovey) startJobs() error {
 		jsonPayload, _ := json.Marshal(payload)
 		ackCh := make(chan string, len(tagNodes))
 		respCh := make(chan serfclient.NodeResponse, len(tagNodes))
-		q := &serfclient.QueryParam{ Name: "shovey", Payload: jsonPayload, FilterNodes: tagNodes, Timeout: s.Timeout, RequestAck: true, AckCh: ackCh, RespCh: respCh }
+		q := &serfclient.QueryParam{ Name: "shovey", Payload: jsonPayload, FilterNodes: tagNodes, RequestAck: true, AckCh: ackCh, RespCh: respCh }
 		qerr := serfin.Serfer.Query(q)
 		if qerr != nil {
 			errch <- qerr
@@ -192,6 +227,45 @@ func (s *Shovey) startJobs() error {
 	}
 
 	return nil
+}
+
+
+func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
+	toJSON := make(map[string]interface{})
+	toJSON["id"] = s.RunID
+	toJSON["command"] = s.Command
+	toJSON["run_timeout"] = s.Timeout
+	toJSON["status"] = s.Status
+	toJSON["created_at"] = s.CreatedAt
+	toJSON["updated_at"] = s.UpdatedAt
+	tjnodes := make(map[string][]string)
+	
+	// we can totally do this more efficiently in SQL mode. Do so when we're
+	// done with in-mem mode
+	srs, err := s.GetNodeRuns()
+	if err != nil {
+		return nil, err
+	}
+	for _, sr := range srs {
+		tjnodes[sr.Status] = append(tjnodes[sr.Status], sr.NodeName)
+	}
+	toJSON["nodes"] = tjnodes
+
+	return toJSON, nil
+}
+
+func AllShoveyIDs() ([]string, util.Gerror) {
+	if config.UsingDB() {
+
+	}
+	ds := datastore.New()
+	list := ds.GetList("shovey")
+	return list, nil
+}
+
+func GetList() []string {
+	list, _ := AllShoveyIDs()
+	return list
 }
 
 func getQuorum(quorum string, numNodes int) (int, error) {
