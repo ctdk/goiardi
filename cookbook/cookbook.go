@@ -1076,13 +1076,20 @@ func (cbv *CookbookVersion) ToJSON(method string) map[string]interface{} {
 
 func methodize(method string, cbThing []map[string]interface{}) []map[string]interface{} {
 	retHash := make([]map[string]interface{}, len(cbThing))
+	baseURL := config.ServerBaseURL()
+	r := regexp.MustCompile(`/file_store/`)
 	for i, v := range cbThing {
 		retHash[i] = make(map[string]interface{})
+		chkSum := cbThing[i]["checksum"].(string)
 		for k, j := range v {
 			if method == "PUT" && k == "url" {
 				continue
 			}
-			retHash[i][k] = j
+			if k == "url" && r.MatchString(`/file_store/`) {
+				retHash[i][k] = baseURL + "/file_store/" + chkSum
+			} else {
+				retHash[i][k] = j
+			}
 		}
 	}
 	return retHash
