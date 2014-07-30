@@ -54,6 +54,75 @@ type ShoveyRun struct {
 	EndTime time.Time
 }
 
+type Qerror interface {
+	String() string
+	Error() string
+	Status() string
+	SetStatus(string)
+	UpNodes() []string
+	DownNodes() []string
+	SetUpNodes([]string)
+	SetDownNodes([]string)
+}
+
+type qerror struct {
+	msg string
+	status string
+	upNodes []string
+	downNodes []string
+}
+
+func newQuerror(text string) Qerror {
+	return &qerror{msg: text,
+		status: "job_failed",
+	}
+}
+
+// Errorf creates a new Qerror, with a formatted error string.
+func Errorf(format string, a ...interface{}) Qerror {
+	return newQuerror(fmt.Sprintf(format, a...))
+}
+
+// Error returns the Qerror error message.
+func (e *qerror) Error() string {
+	return e.msg
+}
+
+// CastErr will easily cast a different kind of error to a Qerror.
+func CastErr(err error) Qerror {
+	return Errorf(err.Error())
+}
+
+func (e *qerror) String() string {
+	return e.msg
+}
+
+// Set the Qerror status string.
+func (e *qerror) SetStatus(s string) {
+	e.status = s
+}
+
+// Returns the Qerror's HTTP status code.
+func (e *qerror) Status() string {
+	return e.status
+}
+
+func (e *qerror) UpNodes() []string {
+	return e.upNodes
+}
+
+func (e *qerror) DownNodes() []string {
+	return e.downNodes
+}
+
+func (e *qerror) SetUpNodes(u []string) {
+	e.upNodes = u
+}
+
+func (e *qerror) SetDownNodes(d []string) {
+	e.downNodes = d
+}
+
 func New(command string, timeout int, quorumStr string, nodeNames []string) (*Shovey, util.Gerror) {
 	runID := uuid.New()
 	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout) * time.Second, Quorum: quorumStr, Status: "submitted" }
@@ -68,6 +137,8 @@ func New(command string, timeout int, quorumStr string, nodeNames []string) (*Sh
 
 	err := s.startJobs()
 	if err != nil {
+		s.Status = err.Status()
+		s.save()
 		return nil, util.CastErr(err)
 	}
 
@@ -165,7 +236,7 @@ func Cancel(runID string) util.Gerror {
 	return nil
 }
 
-func (s *Shovey) startJobs() error {
+func (s *Shovey) startJobs() Qerror {
 	// determine if we meet the quorum
 	// First is this a percentage or absolute quorum
 	qnum, err := getQuorum(s.Quorum, len(s.NodeNames))
@@ -173,18 +244,20 @@ func (s *Shovey) startJobs() error {
 		return err
 	}
 	// query node statuses to see if enough are up
-	upNodes, err := node.GetNodesByStatus(s.NodeNames, "up")
-	if err != nil {
-		return err
+	upNodes, nerr := node.GetNodesByStatus(s.NodeNames, "up")
+	if nerr != nil {
+		return CastErr(nerr)
 	}
 	if len(upNodes) < qnum {
-		err = fmt.Errorf("Not enough nodes were up to execute job %s - got %d, needed at least %d", s.RunID, len(upNodes), qnum)
+		err = Errorf("Not enough nodes were up to execute job %s - got %d, needed at least %d", s.RunID, len(upNodes), qnum)
+		err.SetStatus("quorum_failed")
+		// be setting up/down nodes here too
+		return err
 	}
 
 	// if that all worked, send the commands
 	errch := make(chan error, 1)
 	go func() {
-		logger.Debugf("upnodes: %d", len(upNodes))
 		tagNodes := make([]string, len(upNodes))
 		for i, n := range upNodes {
 			tagNodes[i] = n.Name
@@ -221,9 +294,9 @@ func (s *Shovey) startJobs() error {
 		}
 		logger.Debugf("out of for/select loop for shovey responses")
 	}()
-	err = <-errch
-	if err != nil {
-		return err
+	grerr := <-errch
+	if grerr != nil {
+		return CastErr(grerr)
 	}
 
 	return nil
@@ -268,11 +341,12 @@ func GetList() []string {
 	return list
 }
 
-func getQuorum(quorum string, numNodes int) (int, error) {
+func getQuorum(quorum string, numNodes int) (int, Qerror) {
 	var qnum float64
 
 	if numNodes == 0 {
-		err := fmt.Errorf("There's no nodes to make a quorum")
+		err := Errorf("There's no nodes to make a quorum")
+		err.SetStatus("quorum_failed")
 		return 0, err
 	}
 
@@ -281,17 +355,19 @@ func getQuorum(quorum string, numNodes int) (int, error) {
 	if z != nil {
 		q, err := strconv.ParseFloat(z[1], 64)
 		if err != nil {
-			return 0, err
+			qerr := CastErr(err)
+			return 0, qerr
 		}
 		qnum = math.Ceil((q / 100.0) * float64(numNodes))
 	} else {
 		var err error
 		qnum, err = strconv.ParseFloat(quorum, 64)
 		if err != nil {
-			return 0, err
+			return 0, CastErr(err)
 		}
 		if qnum > float64(numNodes) {
-			err := fmt.Errorf("%d nodes were required for the quorum, but only %d matched the criteria given", qnum, numNodes)
+			err := Errorf("%d nodes were required for the quorum, but only %d matched the criteria given", qnum, numNodes)
+			err.SetStatus("quorum_failed")
 			return 0, err
 		}
 	}
