@@ -1,3 +1,15 @@
+0.7.1
+-----
+* Add --db-pool-size and --max-connections options for configuring the number
+  of idle db connections kept around and the maximum number of db connections
+  to make to the server. It isn't particularly useful if you're not using one
+  of the SQL backends.
+* For locally stored cookbook files (which is currently all of them), goiardi
+  now generates the URL to the resource from the currently configured
+  hostname. This fixes an issue where if you uploaded a cookbook and then
+  changed the goairdi server's hostname, the URLs to download cookbooks would
+  break.
+
 0.7.0
 -----
 * Add /universe API endpoint, per

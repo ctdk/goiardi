@@ -163,6 +163,12 @@ Currently available command line and config file options:
                           faster in in-memory mode, but one goroutine could
                           change an object while it's being used by
                           another. Has no effect when using an SQL backend.
+       --db-pool-size=    Number of idle db connections to maintain. Only
+                          useful when using one of the SQL backends.
+                          Default is 0 - no idle connections retained
+       --max-connections= Maximum number of connections allowed for the
+                          database. Only useful when using one of the SQL
+                          backends. Default is 0 - unlimited.
 
    Options specified on the command line override options in the config file.
 
@@ -335,6 +341,19 @@ and can be seen below:
 		port = "5432"
 		dbname = "mydb"
 		sslmode = "disable"
+
+General Database Options
+
+There are two general options that can be set for either database: 
+`--db-pool-size` and `--max-connections` (and their configuration file
+equivalents `db-pool-size` and `max-connections`). `--db-pool-size` sets the
+number of idle connections to keep open to the database, and `--max-connections`
+sets the maximum number of connections to open on the database. If they are not
+set, the default behavior is to keep no idle connections alive and to have
+unlimited connections to the database.
+
+It should go without saying that these options don't do much if you aren't using
+one of the SQL backends.
 
 Event Logging
 

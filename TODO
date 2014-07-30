@@ -1,9 +1,4 @@
-* Get go testing working
-* Fix errors the go tests and chef-pedant reveal
-* More and better documentation
-* More configuration options
-* Go code should be idiomatic where it isn't
-* More Go language features should be used where appropriate
+* More documentation where appropriate
 * Get sorting searches working properly
 * Provide a smooth and easy installation process, possibly packages where
   appropriate.
