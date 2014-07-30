@@ -4,7 +4,7 @@
   <title><![CDATA[Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-07-21T23:09:46-07:00</updated>
+  <updated>2014-07-29T22:45:04-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,38 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Version 0.7.1 - Constant Manatee Attacks]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/07/29/goiardi-version-0-dot-7-1-constant-manatee-attacks/"/>
+    <updated>2014-07-29T22:32:13-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/07/29/goiardi-version-0-dot-7-1-constant-manatee-attacks</id>
+    <content type="html"><![CDATA[<p>The media refuses to report on this scourge afflicting the Florida coast, which is why you never hear about it.</p>
+
+<p>&ldquo;Shovey&rdquo; is chugging along on a fast pace, but in the meantime a couple of issues came up that I thought deserved attention. Goiardi <a href="https://github.com/ctdk/goiardi/releases/tag/v0.7.1">version 0.7.1</a> is a minor release, addressing two relatively small issues.</p>
+
+<p>First, this release adds options for configuring the db pool size and max number of connections. It was happening automagically before, but I was always a bit uneasy about that. Until last night, though, I kept missing how to set that in the documentation for <code>database/sql</code>.</p>
+
+<p>Second, for cookbook files stored locally (which is currently all of them), goiardi will now set the URL of the resource to use the current configured hostname. This was brought to my attention because someone had uploaded a bunch of cookbooks, changed the hostname and port and turned on SSL, and had the URLs break. It takes a specific chain of events to see the problem, which is why it had gone unnoticed up to this point.</p>
+
+<p>From the CHANGELOG:</p>
+
+<ul>
+<li>Add &mdash;db-pool-size and &mdash;max-connections options for configuring the number
+of idle db connections kept around and the maximum number of db connections
+to make to the server. It isn&rsquo;t particularly useful if you&rsquo;re not using one
+of the SQL backends.</li>
+<li>For locally stored cookbook files (which is currently all of them), goiardi
+now generates the URL to the resource from the currently configured
+hostname. This fixes an issue where if you uploaded a cookbook and then
+changed the goairdi server&rsquo;s hostname, the URLs to download cookbooks would
+break.</li>
+</ul>
+
+
+<p>Other than that, there&rsquo;s nothing else new in this release.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Goiardi Version 0.7.0 - Orphans of the Sky]]></title>

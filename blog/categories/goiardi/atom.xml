@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Goiardi | Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/blog/categories/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-07-21T23:09:46-07:00</updated>
+  <updated>2014-07-29T22:45:04-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,38 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Version 0.7.1 - Constant Manatee Attacks]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/07/29/goiardi-version-0-dot-7-1-constant-manatee-attacks/"/>
+    <updated>2014-07-29T22:32:13-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/07/29/goiardi-version-0-dot-7-1-constant-manatee-attacks</id>
+    <content type="html"><![CDATA[<p>The media refuses to report on this scourge afflicting the Florida coast, which is why you never hear about it.</p>
+
+<p>&ldquo;Shovey&rdquo; is chugging along on a fast pace, but in the meantime a couple of issues came up that I thought deserved attention. Goiardi <a href="https://github.com/ctdk/goiardi/releases/tag/v0.7.1">version 0.7.1</a> is a minor release, addressing two relatively small issues.</p>
+
+<p>First, this release adds options for configuring the db pool size and max number of connections. It was happening automagically before, but I was always a bit uneasy about that. Until last night, though, I kept missing how to set that in the documentation for <code>database/sql</code>.</p>
+
+<p>Second, for cookbook files stored locally (which is currently all of them), goiardi will now set the URL of the resource to use the current configured hostname. This was brought to my attention because someone had uploaded a bunch of cookbooks, changed the hostname and port and turned on SSL, and had the URLs break. It takes a specific chain of events to see the problem, which is why it had gone unnoticed up to this point.</p>
+
+<p>From the CHANGELOG:</p>
+
+<ul>
+<li>Add &mdash;db-pool-size and &mdash;max-connections options for configuring the number
+of idle db connections kept around and the maximum number of db connections
+to make to the server. It isn&rsquo;t particularly useful if you&rsquo;re not using one
+of the SQL backends.</li>
+<li>For locally stored cookbook files (which is currently all of them), goiardi
+now generates the URL to the resource from the currently configured
+hostname. This fixes an issue where if you uploaded a cookbook and then
+changed the goairdi server&rsquo;s hostname, the URLs to download cookbooks would
+break.</li>
+</ul>
+
+
+<p>Other than that, there&rsquo;s nothing else new in this release.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Goiardi Version 0.7.0 - Orphans of the Sky]]></title>
@@ -198,31 +230,6 @@ go install github.com/ctdk/goiardi
 <p>Finally, as an added convenience: on <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.2">the goiardi 0.5.2 release page</a>, precompiled binaries are being provided for download, if you don&rsquo;t feel like setting up go and compiling them yourself. As of this writing binaries are provided for Linux (built on Debian wheezy), MacOS X (built on 10.9 Mavericks), FreeBSD (built on FreeBSD 9.2), and illumos (built on OmniOS r151008j). The Linux, MacOS X, and FreeBSD binaries are x86_64, the illumos binary <strike>i386</strike> <strong>update:</strong> I misinterpreted the output of <code>psrinfo</code> &ndash; it was compiled for 64 bit. It appears that there&rsquo;s no reason that goiardi can&rsquo;t easily be cross compiled though, so a more sensible set of precompiled binaries will be coming soon. If you don&rsquo;t see binaries for your platform, try grabbing a binary that&rsquo;s built on a similar platform to yours, or compile it yourself.</p>
 
 <p>Coming down the pipeline is resuming and re-merging the Postgres work, making some data structures safer for in-memory mode, some extra features for event logging and reporting, improving tests and moving away from depending on chef-pedant, and an idea I&rsquo;ve been kicking around for a serf-based pushy type thing. For those curious about the Postgres goiardi schema, you can see it <a href="https://github.com/ctdk/goiardi-schema/tree/postgres">in the &lsquo;postgres&rsquo; tree in goiardi-schema</a>. It&rsquo;s firmed up, but still subject to change before getting merged back in.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Knife Plugin for the Goiardi Event Log]]></title>
-    <link href="http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log/"/>
-    <updated>2014-05-28T20:16:32-07:00</updated>
-    <id>http://ctdk.github.io/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log</id>
-    <content type="html"><![CDATA[<p>There&rsquo;s now a knife plugin to use with goiardi&rsquo;s new event logging capabilities: <a href="https://github.com/ctdk/knife-goiardi-event-log">knife-goiardi-event-log 0.1.1</a>.</p>
-
-<p>Usage info from the README:</p>
-
-<p>There are four goiardi event log commands: <code>knife goiardi gel list</code>, <code>knife goiardi gel show</code>, <code>knife goiardi gel delete</code> and <code>knife goiardi gel purge</code>.</p>
-
-<p><code>knife goiardi gel list</code> returns a list of logged events. A limit may be specified with <code>--limit</code>; the default limit is 15. An offset may also be specified; the default offset is 0.</p>
-
-<p><code>knife goiardi gel show [id]</code> gives a detailed listing of a particular event log item.</p>
-
-<p><code>knife goiardi gel delete [id]</code> deletes the given event, and prints out a detailed display of the deleted event.</p>
-
-<p><code>knife goiardi gel purge [id]</code> purges all event log items with an id less than the given id. After purging the events, it displays the number of events that were purged.</p>
-
-<hr />
-
-<p>Being able to list events of a certain kind of action, type of object, time range, etc. would be nice and are on the roadmap for this plugin. Adding that capability depends on changes to goairdi before that can happen though. This plugin makes use of all the current event log functionality however.</p>
 ]]></content>
   </entry>
   
