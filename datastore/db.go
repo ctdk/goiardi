@@ -78,6 +78,8 @@ func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 		if err = db.Ping(); err != nil {
 			return nil, err
 		}
+		db.SetMaxIdleConns(config.Config.DbPoolSize)
+		db.SetMaxOpenConns(config.Config.MaxConn)
 		return db, nil
 	default:
 		err := fmt.Errorf("cannot connect to database: unsupported database type %s", dbEngine)

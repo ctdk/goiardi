@@ -70,6 +70,8 @@ type Conf struct {
 	ObjMaxSize        int64 `toml:"obj-max-size"`
 	JSONReqMaxSize    int64 `toml:"json-req-max-size"`
 	UseUnsafeMemStore bool  `toml:"use-unsafe-mem-store"`
+	DbPoolSize int `toml:"db-pool-size"`
+	MaxConn int `toml:"max-connections"`
 }
 
 // LogLevelNames give convenient, easier to remember than number name for the
@@ -130,10 +132,12 @@ type Options struct {
 	ObjMaxSize        int64  `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)."`
 	JSONReqMaxSize    int64  `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000."`
 	UseUnsafeMemStore bool   `long:"use-unsafe-mem-store" description:"Use the faster, but less safe, old method of storing data in the in-memory data store with pointers, rather than encoding the data with gob and giving a new copy of the object to each requestor. If this is enabled goiardi will run faster in in-memory mode, but one goroutine could change an object while it's being used by another. Has no effect when using an SQL backend."`
+	DbPoolSize int `long:"db-pool-size" description:"Number of idle db connections to maintain. Only useful when using one of the SQL backends. Default is 0 - no idle connections retained"`
+	MaxConn int `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited."`
 }
 
 // The goiardi version.
-const Version = "0.7.0"
+const Version = "0.7.1"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
 const ChefVersion = "11.1.3"
@@ -428,6 +432,21 @@ func ParseConfigOptions() error {
 
 	if opts.UseUnsafeMemStore {
 		Config.UseUnsafeMemStore = opts.UseUnsafeMemStore
+	}
+
+	if opts.DbPoolSize != 0 {
+		Config.DbPoolSize = opts.DbPoolSize
+	}
+	if opts.MaxConn != 0 {
+		Config.MaxConn = opts.MaxConn
+	}
+	if !UsingDB() {
+		if Config.DbPoolSize != 0 {
+			logger.Infof("db-pool-size is set to %d, which is not particularly useful if you are not using one of the SQL databases.", Config.DbPoolSize)
+		}
+		if Config.MaxConn != 0 {
+			logger.Infof("max-connections is set to %d, which is not particularly useful if you are not using one of the SQL databases.", Config.MaxConn)
+		}
 	}
 
 	return nil
