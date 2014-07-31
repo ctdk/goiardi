@@ -209,8 +209,9 @@ func (s *Shovey) startJobs() error {
 		srCh := make(chan *ShoveyRun, len(upNodes) * 2);
 
 		go func() {
-			sr := <- srCh
-			sr.save()
+			for sr := range srCh {
+				sr.save()
+			}
 		}()
 
 		for i := 0; i < len(upNodes) * 2; i++{
