@@ -41,7 +41,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 	pathArray := splitPath(r.URL.Path)
 	pathArrayLen := len(pathArray)
 
-	if pathArrayLen < 2 || pathArrayLen > 3 || pathArray[1] == "" {
+	if pathArrayLen < 2 || pathArrayLen > 4 || pathArray[1] == "" {
 		jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 		return
 	}
@@ -115,6 +115,8 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		shoveyResponse["id"] = s.RunID
 		shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/shovey/jobs/%s", s.RunID))
+	case "PUT":
+
 	default:
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 		return
