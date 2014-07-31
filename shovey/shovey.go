@@ -279,11 +279,19 @@ func (s *Shovey) startJobs() Qerror {
 			return
 		}
 		errch <- nil
+		srCh := make(chan *ShoveyRun, len(upNodes) * 2);
+
+		go func() {
+			sr := <- srCh
+			sr.save()
+		}()
 
 		for i := 0; i < len(upNodes) * 2; i++{
 			select {
 			case a := <-ackCh:
-				logger.Debugf("got an ack: %s", a)
+				sr, _ := s.GetRun(a)
+				sr.AckTime = time.Now
+				srCh <- sr
 			case r := <-respCh:
 				logger.Debugf("got a response: %v", r)
 				break
@@ -292,6 +300,8 @@ func (s *Shovey) startJobs() Qerror {
 				break
 			}
 		}
+		close(srCh)
+
 		logger.Debugf("out of for/select loop for shovey responses")
 	}()
 	grerr := <-errch
