@@ -50,7 +50,10 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		if pathArrayLen == 3 {
+		if pathArrayLen == 4 {
+			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			return
+		} else if pathArrayLen == 3 {
 			shove, err := shovey.Get(pathArray[2])
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
@@ -74,7 +77,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "POST":
-		if pathArrayLen == 3 {
+		if pathArrayLen != 2 {
 			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 			return
 		}
@@ -116,7 +119,37 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		shoveyResponse["id"] = s.RunID
 		shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/shovey/jobs/%s", s.RunID))
 	case "PUT":
-
+		switch pathArrayLen {
+		case 4:
+			sjData, perr := parseObjJSON(r.Body)
+			if perr != nil {
+				jsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
+				return
+			}
+			nodeName := pathArray[3]
+			logger.Debugf("sjData: %v", sjData)
+			shove, err := shovey.Get(pathArray[2])
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			sj, err := shove.GetRun(nodeName)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			err = sj.UpdateFromJSON(sjData)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			shoveyResponse["id"] = s.RunID
+			shoveyResponse["node"] = nodeName
+			shoveyResponse["response"] = "ok" 
+		default:
+			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			return
+		}
 	default:
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 		return

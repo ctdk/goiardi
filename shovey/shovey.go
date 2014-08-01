@@ -52,6 +52,9 @@ type ShoveyRun struct {
 	Status string
 	AckTime time.Time
 	EndTime time.Time
+	Output string
+	ErrMsg string
+	ExitStatus uint8
 }
 
 type Qerror interface {
@@ -350,6 +353,10 @@ func AllShoveyIDs() ([]string, util.Gerror) {
 func GetList() []string {
 	list, _ := AllShoveyIDs()
 	return list
+}
+
+func (sj *ShoveyRun) UpdateFromJSON(sjData map[string]interface{}) error {
+
 }
 
 func getQuorum(quorum string, numNodes int) (int, Qerror) {
