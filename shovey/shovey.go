@@ -225,8 +225,8 @@ func Get(runID string) (*Shovey, util.Gerror) {
 	return shove, nil
 }
 
-func Cancel(runID string) util.Gerror {
-	s, err := Get(runID)
+func (s *Shovey) Cancel() util.Gerror {
+	err := s.CancelRuns(s.NodeNames)
 	if err != nil {
 		return err
 	}
@@ -236,8 +236,27 @@ func Cancel(runID string) util.Gerror {
 		return err
 	}
 
-	// TODO: cancel jobs on nodes
+	return nil
+}
 
+func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
+	if config.UsingDB() {
+
+	}
+	for _, n := range nodeNames {
+		sr, err := s.GetRun(n)
+		if err != nil {
+			return err
+		}
+		if sr.Status != "invalid" && sr.Status != "completed" && sr.Status != "failed" && sr.Status != "down" {
+			sr.EndTime = time.Now()
+			sr.Status = "cancelled"
+			err = sr.save()
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -264,10 +283,18 @@ func (s *Shovey) startJobs() Qerror {
 	errch := make(chan error, 1)
 	go func() {
 		tagNodes := make([]string, len(upNodes))
+		d := make(map[string]bool)
 		for i, n := range upNodes {
 			tagNodes[i] = n.Name
+			d[n.Name] = true
 			sr := &ShoveyRun{ ShoveyUUID: s.RunID, NodeName: n.Name, Status: "created" }
 			sr.save()
+		}
+		for _, n := range s.NodeNames {
+			if !d[n] {
+				sr := &ShoveyRun{ ShoveyUUID: s.RunID, NodeName: n, Status: "down", EndTime: time.Now() }
+				sr.save()
+			}
 		}
 		// make sure this is the right amount of buffering
 		payload := make(map[string]string)
@@ -318,6 +345,27 @@ func (s *Shovey) startJobs() Qerror {
 	return nil
 }
 
+func (s *Shovey) checkCompleted() {
+	if config.UsingDB() {
+
+	}
+	srs, err := s.GetNodeRuns()
+	if err != nil {
+		logger.Debugf("Something went wrong checking for job completion: %s", err.Error())
+		return
+	}
+	c := 0
+	for _, sr := range srs {
+		if sr.Status == "invalid" || sr.Status == "completed" || sr.Status == "failed" || sr.Status == "down" {
+			c++
+		}
+	}
+	if c == len(s.NodeNames) {
+		s.Status = "completed"
+		s.save()
+	}
+}
+
 func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
 	toJSON := make(map[string]interface{})
 	toJSON["id"] = s.RunID
@@ -340,10 +388,6 @@ func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
 	toJSON["nodes"] = tjnodes
 
 	return toJSON, nil
-}
-
-func (s *Shovey) notifyParent(nodeName string) {
-	
 }
 
 func AllShoveyIDs() ([]string, util.Gerror) {
@@ -386,7 +430,7 @@ func (sj *ShoveyRun) UpdateFromJSON(sjData map[string]interface{}) util.Gerror {
 	return nil
 }
 
-func (sj *ShoveyJob) cleanup() {
+func (sj *ShoveyRun) cleanup() {
 	payload := make(map[string]string)
 	payload["run_id"] = sj.ShoveyUUID
 	payload["action"] = "reap"
@@ -408,13 +452,13 @@ func (sj *ShoveyJob) cleanup() {
 			return
 		}
 	}
-	logger.Errorf("Unable to reap job %s on node %s", sj.ShoveyUUID, string(response.Payload))
+	logger.Errorf("Unable to reap job %s on node %s", sj.ShoveyUUID, sj.NodeName)
 	return
 }
 
-func (sj *ShoveyJob) notifyParent() {
+func (sj *ShoveyRun) notifyParent() {
 	s, _ := Get(sj.ShoveyUUID)
-	s.completed(sj.NodeName)
+	s.checkCompleted()
 }
 
 func getQuorum(quorum string, numNodes int) (int, Qerror) {
