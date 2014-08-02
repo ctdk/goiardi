@@ -322,7 +322,14 @@ func (s *Shovey) startJobs() Qerror {
 		for i := 0; i < len(upNodes) * 2; i++{
 			select {
 			case a := <-ackCh:
-				sr, _ := s.GetRun(a)
+				if a == "" {
+					continue
+				}
+				sr, err := s.GetRun(a)
+				if err != nil {
+					logger.Debugf("err with sr %s: %s", a, err.Error())
+					continue
+				}
 				sr.AckTime = time.Now()
 				srCh <- sr
 			case r := <-respCh:
