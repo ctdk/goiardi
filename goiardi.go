@@ -472,6 +472,10 @@ func gobRegister() {
 	gob.Register(sv)
 	svr := new(shovey.ShoveyRun)
 	gob.Register(svr)
+	ns := new(node.NodeStatus)
+	gob.Register(ns)
+	msi := make(map[string][]int)
+	gob.Register(msi)
 }
 
 func setSaveTicker() {
