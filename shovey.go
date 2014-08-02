@@ -50,10 +50,11 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		if pathArrayLen == 4 {
+		switch pathArrayLen {
+		case 4:
 			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 			return
-		} else if pathArrayLen == 3 {
+		case 3:
 			shove, err := shovey.Get(pathArray[2])
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
@@ -64,7 +65,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
-		} else {
+		default:
 			shoveyIDs, err := shovey.AllShoveyIDs()
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
@@ -120,6 +121,56 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/shovey/jobs/%s", s.RunID))
 	case "PUT":
 		switch pathArrayLen {
+		case 3:
+			if pathArray[2] != "cancel" {
+				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+				return
+			}
+			r.ParseForm()
+			var runID string
+			var nodeNames []string
+			if ri, ok := r.Form["run_id"]; ok {
+				if len(ri) < 0 {
+					jsonErrorReport(w, r, "invalid run ID", http.StatusBadRequest)
+					return
+				}
+				runID = ri[0]
+			} else {
+				jsonErrorReport(w, r, "No shovey run ID provided", http.StatusBadRequest)
+				return
+			}
+			if nn, ok := r.Form["node"]; ok {
+				if len(nn) < 0 {
+					jsonErrorReport(w, r, "invalid nodes to cancel", http.StatusBadRequest)
+					return
+				}
+				for _, n := range nn {
+					nodeNames = append(nodeNames, n)
+				}
+			}
+			shove, err := shovey.Get(runID)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			if len(nodeNames) != 0 {
+				serr := shove.CancelRuns(nodeNames)
+				if serr != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+			} else {
+				err = shove.Cancel()
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+			}
+			shoveyResponse, err = shove.ToJSON()
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
 		case 4:
 			sjData, perr := parseObjJSON(r.Body)
 			if perr != nil {
