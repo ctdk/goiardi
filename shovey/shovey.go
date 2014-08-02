@@ -144,6 +144,8 @@ func New(command string, timeout int, quorumStr string, nodeNames []string) (*Sh
 		s.save()
 		return nil, util.CastErr(err)
 	}
+	s.Status = "running"
+	s.save()
 
 	return s, nil
 }
@@ -294,7 +296,7 @@ func (s *Shovey) startJobs() Qerror {
 			select {
 			case a := <-ackCh:
 				sr, _ := s.GetRun(a)
-				sr.AckTime = time.Now
+				sr.AckTime = time.Now()
 				srCh <- sr
 			case r := <-respCh:
 				logger.Debugf("got a response: %v", r)
@@ -315,7 +317,6 @@ func (s *Shovey) startJobs() Qerror {
 
 	return nil
 }
-
 
 func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
 	toJSON := make(map[string]interface{})
@@ -341,6 +342,10 @@ func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
 	return toJSON, nil
 }
 
+func (s *Shovey) notifyParent(nodeName string) {
+	
+}
+
 func AllShoveyIDs() ([]string, util.Gerror) {
 	if config.UsingDB() {
 
@@ -355,8 +360,61 @@ func GetList() []string {
 	return list
 }
 
-func (sj *ShoveyRun) UpdateFromJSON(sjData map[string]interface{}) error {
+func (sj *ShoveyRun) UpdateFromJSON(sjData map[string]interface{}) util.Gerror {
+	if status, ok := sjData["status"].(string); ok {
+		if status == "invalid" || status == "completed" || status == "failed" {
+			sj.EndTime = time.Now()
+		}
+		sj.Status = status
+	}
+	if output, ok := sjData["output"].(string); ok {
+		sj.Output = output
+	}
+	if errMsg, ok := sjData["err_msg"].(string); ok {
+		sj.ErrMsg = errMsg
+	}
+	if exitStatus, ok := sjData["exit_status"].(float64); ok {
+		sj.ExitStatus = uint8(exitStatus)
+	}
 
+	err := sj.save()
+	if err != nil {
+		return err
+	}
+	go sj.cleanup()
+	go sj.notifyParent()
+	return nil
+}
+
+func (sj *ShoveyJob) cleanup() {
+	payload := make(map[string]string)
+	payload["run_id"] = sj.ShoveyUUID
+	payload["action"] = "reap"
+	jsonPayload, _ := json.Marshal(payload)
+	respCh := make(chan serfclient.NodeResponse, 1)
+	q := &serfclient.QueryParam{ Name: "shovey", Payload: jsonPayload, FilterNodes: []string{ sj.NodeName }, RespCh: respCh }
+	// try 10 times to clean this up, log if it still doesn't work
+	for i := 0; i < 10; i++ {
+		time.Sleep(250 * time.Millisecond)
+		qerr := serfin.Serfer.Query(q)
+		if qerr != nil {
+			logger.Errorf(qerr.Error())
+			return
+		}
+		response := <-respCh
+		logger.Debugf("got response for reaping: %s", string(response.Payload))
+		if string(response.Payload) == "success" {
+			logger.Debugf("reaped job %s on node %s", sj.ShoveyUUID, string(response.Payload))
+			return
+		}
+	}
+	logger.Errorf("Unable to reap job %s on node %s", sj.ShoveyUUID, string(response.Payload))
+	return
+}
+
+func (sj *ShoveyJob) notifyParent() {
+	s, _ := Get(sj.ShoveyUUID)
+	s.completed(sj.NodeName)
 }
 
 func getQuorum(quorum string, numNodes int) (int, Qerror) {
