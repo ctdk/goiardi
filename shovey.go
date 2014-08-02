@@ -143,7 +143,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
-			shoveyResponse["id"] = s.RunID
+			shoveyResponse["id"] = shove.RunID
 			shoveyResponse["node"] = nodeName
 			shoveyResponse["response"] = "ok" 
 		default:
