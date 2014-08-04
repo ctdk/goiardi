@@ -88,14 +88,11 @@ func (ds *DataStore) Set(keyType string, key string, val interface{}) {
 	if config.Config.UseUnsafeMemStore {
 		ds.dsc.Set(dsKey, val, -1)
 	} else {
-		valBuf := new(bytes.Buffer)
-		valItem := &dsItem{Item: val}
-		enc := gob.NewEncoder(valBuf)
-		err := enc.Encode(valItem)
+		valBytes, err := encodeSafeVal(val)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		ds.dsc.Set(dsKey, valBuf.Bytes(), -1)
+		ds.dsc.Set(dsKey, valBytes, -1)
 	}
 	ds.addToList(keyType, key)
 }
@@ -116,20 +113,40 @@ func (ds *DataStore) Get(keyType string, key string) (interface{}, bool) {
 		found = f
 
 		if valEnc != nil {
-			valBuf := bytes.NewBuffer(valEnc.([]byte))
-			valItem := new(dsItem)
-			dec := gob.NewDecoder(valBuf)
-			err := dec.Decode(&valItem)
+			var err error
+			val, err = decodeSafeVal(valEnc)
 			if err != nil {
 				log.Fatalln(err)
 			}
-			val = valItem.Item
 		}
 	}
 	if val != nil {
 		ChkNilArray(val)
 	}
 	return val, found
+}
+
+func encodeSafeVal(val interface{}) ([]byte, error) {
+	valBuf := new(bytes.Buffer)
+	valItem := &dsItem{Item: val}
+	enc := gob.NewEncoder(valBuf)
+	err := enc.Encode(valItem)
+	
+	if err != nil {
+		return nil, err
+	}
+	return valBuf.Bytes(), nil
+}
+
+func decodeSafeVal(valEnc interface{}) (interface{}, error) {
+	valBuf := bytes.NewBuffer(valEnc.([]byte))
+	valItem := new(dsItem)
+	dec := gob.NewDecoder(valBuf)
+	err := dec.Decode(&valItem)
+	if err != nil {
+		return nil, err
+	}
+	return valItem.Item, nil
 }
 
 // Delete a value from the data store.
@@ -173,17 +190,47 @@ func (ds *DataStore) GetList(keyType string) []string {
 	return j
 }
 
+func (ds *DataStore) getLogInfoMap() map[int]interface{} {
+	dsKey := ds.makeKey("loginfo", "loginfos")
+	var a interface{}
+	if config.Config.UseUnsafeMemStore {
+		a, _ = ds.dsc.Get(dsKey)
+	} else {
+		aEnc, _ := ds.dsc.Get(dsKey)
+		if aEnc != nil {
+			var err error
+			a, err = decodeSafeVal(aEnc)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		}
+	}
+	if a == nil {
+		a = make(map[int]interface{})
+	}
+	arr := a.(map[int]interface{})
+	return arr
+}
+
+func (ds *DataStore) setLogInfoMap(liMap map[int]interface{}) {
+	dsKey := ds.makeKey("loginfo", "loginfos")
+	if config.Config.UseUnsafeMemStore {
+		ds.dsc.Set(dsKey, liMap, -1)
+	} else {
+		valBytes, err := encodeSafeVal(liMap)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		ds.dsc.Set(dsKey, valBytes, -1)
+	}
+}
+
 // SetLogInfo sets a loginfo in the data store. Unlike most of these objects,
 // log infos are stored and retrieved by id, since they have no useful names.
 func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	dsKey := ds.makeKey("loginfo", "loginfos")
-	a, _ := ds.dsc.Get(dsKey)
-	if a == nil {
-		a = make(map[int]interface{})
-	}
-	arr := a.(map[int]interface{})
+	arr := ds.getLogInfoMap()
 	var nextID int
 	if logID != nil {
 		nextID = logID[0]
@@ -191,7 +238,7 @@ func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
 		nextID = getNextID(arr)
 	}
 	arr[nextID] = obj
-	ds.dsc.Set(dsKey, arr, -1)
+	ds.setLogInfoMap(arr)
 	return nil
 }
 
@@ -199,14 +246,9 @@ func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
 func (ds *DataStore) DeleteLogInfo(id int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	dsKey := ds.makeKey("loginfo", "loginfos")
-	a, _ := ds.dsc.Get(dsKey)
-	if a == nil {
-		a = make(map[int]interface{})
-	}
-	arr := a.(map[int]interface{})
+	arr := ds.getLogInfoMap()
 	delete(arr, id)
-	ds.dsc.Set(dsKey, arr, -1)
+	ds.setLogInfoMap(arr)
 	return nil
 }
 
@@ -215,12 +257,7 @@ func (ds *DataStore) DeleteLogInfo(id int) error {
 func (ds *DataStore) PurgeLogInfoBefore(id int) (int64, error) {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	dsKey := ds.makeKey("loginfo", "loginfos")
-	a, _ := ds.dsc.Get(dsKey)
-	if a == nil {
-		a = make(map[int]interface{})
-	}
-	arr := a.(map[int]interface{})
+	arr := ds.getLogInfoMap()
 	newLogs := make(map[int]interface{})
 	var purged int64
 	for k, v := range arr {
@@ -230,7 +267,7 @@ func (ds *DataStore) PurgeLogInfoBefore(id int) (int64, error) {
 			purged++
 		}
 	}
-	ds.dsc.Set(dsKey, newLogs, -1)
+	ds.setLogInfoMap(newLogs)
 	return purged, nil
 }
 
@@ -250,13 +287,7 @@ func getNextID(lis map[int]interface{}) int {
 func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	dsKey := ds.makeKey("loginfo", "loginfos")
-	a, _ := ds.dsc.Get(dsKey)
-	if a == nil {
-		err := fmt.Errorf("No log events stored")
-		return nil, err
-	}
-	arr := a.(map[int]interface{})
+	arr := ds.getLogInfoMap()
 	item := arr[id]
 	if item == nil {
 		err := fmt.Errorf("Log info with id %d not found", id)
@@ -269,12 +300,7 @@ func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 func (ds *DataStore) GetLogInfoList() map[int]interface{} {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	dsKey := ds.makeKey("loginfo", "loginfos")
-	a, _ := ds.dsc.Get(dsKey)
-	if a == nil {
-		return nil
-	}
-	arr := a.(map[int]interface{})
+	arr := ds.getLogInfoMap()
 	return arr
 }
 

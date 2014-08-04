@@ -177,11 +177,13 @@ func (i *Index) endpoints() []string {
 /* IdxCollection methods */
 
 func (ic *IdxCollection) addDoc(object Indexable) {
+	ic.m.Lock()
 	if _, found := ic.docs[object.DocID()]; !found {
-		ic.m.Lock()
 		ic.docs[object.DocID()] = new(IdxDoc)
-		ic.m.Unlock()
 	}
+	ic.m.Unlock()
+	ic.m.RLock()
+	defer ic.m.RUnlock()
 	ic.docs[object.DocID()].update(object)
 }
 
