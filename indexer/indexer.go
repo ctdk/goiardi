@@ -69,6 +69,8 @@ type IdxDoc struct {
 // CreateNewCollection creates an index for data bags when they are created,
 // rather than when the first data bag item is uploaded
 func CreateNewCollection(idxName string) {
+	indexMap.m.Lock()
+	defer indexMap.m.Unlock()
 	indexMap.createCollection(idxName)
 }
 
@@ -91,11 +93,6 @@ func DeleteItemFromCollection(idxName string, doc string) error {
 }
 
 func (i *Index) createCollection(idxName string) {
-	i.m.Lock()
-	defer i.m.Unlock()
-	/* It's not inconceivable that a previous check for the existence of
-	 * the index collection had a new index collection created under it,
-	 * so only make a new one if it doesn't exist. */
 	if _, ok := i.idxmap[idxName]; !ok {
 		i.idxmap[idxName] = new(IdxCollection)
 		i.idxmap[idxName].docs = make(map[string]*IdxDoc)
@@ -110,6 +107,8 @@ func (i *Index) deleteCollection(idxName string) {
 
 func (i *Index) saveIndex(object Indexable) {
 	/* Have to check to see if data bag indexes exist */
+	i.m.Lock()
+	defer i.m.Unlock()
 	if _, found := i.idxmap[object.Index()]; !found {
 		i.createCollection(object.Index())
 	}
@@ -117,6 +116,8 @@ func (i *Index) saveIndex(object Indexable) {
 }
 
 func (i *Index) deleteItem(idxName string, doc string) error {
+	i.m.Lock()
+	defer i.m.Unlock()
 	if _, found := i.idxmap[idxName]; !found {
 		err := fmt.Errorf("Index collection %s not found", idxName)
 		return err
@@ -208,7 +209,8 @@ func (ic *IdxCollection) searchCollection(term string, notop bool) (map[string]*
 			results[k] = v
 		}
 	}
-	return results, nil
+	rsafe := safeSearchResults(results)
+	return rsafe, nil
 }
 
 func (ic *IdxCollection) searchTextCollection(term string, notop bool) (map[string]*IdxDoc, error) {
@@ -224,7 +226,8 @@ func (ic *IdxCollection) searchTextCollection(term string, notop bool) (map[stri
 			results[k] = v
 		}
 	}
-	return results, nil
+	rsafe := safeSearchResults(results)
+	return rsafe, nil
 }
 
 func (ic *IdxCollection) searchRange(field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error) {
@@ -241,7 +244,17 @@ func (ic *IdxCollection) searchRange(field string, start string, end string, inc
 			results[k] = v
 		}
 	}
-	return results, nil
+	rsafe := safeSearchResults(results)
+	return rsafe, nil
+}
+
+func safeSearchResults(results map[string]*IdxDoc) map[string]*IdxDoc {
+	rsafe := make(map[string]*IdxDoc, len(results))
+	for k, v := range results {
+		j := &v
+		rsafe[k] = *j
+	}
+	return rsafe
 }
 
 /* IdxDoc methods */
@@ -400,8 +413,8 @@ func initializeIndex() *Index {
 func (i *Index) makeDefaultCollections() {
 	defaults := [...]string{"client", "environment", "node", "role"}
 	i.m.Lock()
+	defer i.m.Unlock()
 	i.idxmap = make(map[string]*IdxCollection)
-	i.m.Unlock()
 	for _, d := range defaults {
 		i.createCollection(d)
 	}
