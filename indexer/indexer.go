@@ -127,6 +127,8 @@ func (i *Index) deleteItem(idxName string, doc string) error {
 }
 
 func (i *Index) search(idx string, term string, notop bool) (map[string]*IdxDoc, error) {
+	i.m.RLock()
+	defer i.m.RUnlock()
 	idc, found := i.idxmap[idx]
 	if !found {
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
@@ -141,6 +143,8 @@ func (i *Index) search(idx string, term string, notop bool) (map[string]*IdxDoc,
 }
 
 func (i *Index) searchText(idx string, term string, notop bool) (map[string]*IdxDoc, error) {
+	i.m.RLock()
+	defer i.m.RUnlock()
 	idc, found := i.idxmap[idx]
 	if !found {
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
@@ -151,6 +155,8 @@ func (i *Index) searchText(idx string, term string, notop bool) (map[string]*Idx
 }
 
 func (i *Index) searchRange(idx string, field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error) {
+	i.m.RLock()
+	defer i.m.RUnlock()
 	idc, found := i.idxmap[idx]
 	if !found {
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
