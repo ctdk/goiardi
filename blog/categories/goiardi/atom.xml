@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Goiardi | Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/blog/categories/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-07-29T22:45:04-07:00</updated>
+  <updated>2014-08-09T16:05:50-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,24 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Version 0.7.2 - the Yak of Seville]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/08/09/goiardi-version-0-dot-7-2-the-yak-of-seville/"/>
+    <updated>2014-08-09T16:01:06-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/08/09/goiardi-version-0-dot-7-2-the-yak-of-seville</id>
+    <content type="html"><![CDATA[<p><a href="https://github.com/ctdk/goiardi/releases/tag/v0.7.2">Goiardi version 0.7.2</a> is a minor yak shaving release that there isn&rsquo;t a lot to say about. The CHANGELOG pretty much sums it up:</p>
+
+<ul>
+<li>Remove a newline in a debug statement, courtesy of <a href="https://github.com/spheromak">@spheromak</a>.</li>
+<li>Also per <a href="https://github.com/spheromak">@spheromak</a>&rsquo;s suggestion, fixed some possible race conditions revealed by building goiardi with the <code>-race</code> flag and running chef-pedant against it.</li>
+<li>Edit doc.go slightly to make godocs more attractive.</li>
+</ul>
+
+
+<p>Elsewhere, shovey work continues and comes closer to completion.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Goiardi Version 0.7.1 - Constant Manatee Attacks]]></title>
@@ -199,37 +217,6 @@ go install github.com/ctdk/goiardi
 </code></p>
 
 <p>Assuming all went well, you can run <code>goiardi</code> at your prompt with whatever options you want, and it will happily run. After this point using goiardi is like using it on any other platform.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Goiardi Version 0.5.2 - Block of Dirt]]></title>
-    <link href="http://ctdk.github.io/goiardi/blog/2014/06/19/goiardi-version-0-dot-5-2-block-of-dirt/"/>
-    <updated>2014-06-19T12:36:31-07:00</updated>
-    <id>http://ctdk.github.io/goiardi/blog/2014/06/19/goiardi-version-0-dot-5-2-block-of-dirt</id>
-    <content type="html"><![CDATA[<p>Between the previous goiardi release and this one, my kids discovered Minecraft. This means that <em>I</em> started playing Minecraft, which ended up slowing goiardi development down for a while.</p>
-
-<p>This blocky adversary has been overcome, however, and goiardi <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.2">version 0.5.2</a> is out.</p>
-
-<p>Originally the next goiardi release was going to add Postgres support. This was about halfway done, and will be resumed shortly, but I decided that it was more important to add the ability to import and export data before any of the goiardi structs changed.</p>
-
-<p>Changes in this release, from the CHANGELOG:</p>
-
-<ul>
-<li>Add import/export of goiardi data through a JSON dump.</li>
-<li>Add configuration options to specify the max sizes for objects uploaded to the filestore and for JSON requests from the client.</li>
-</ul>
-
-
-<p>Importing and exporting is explained <a href="https://github.com/ctdk/goiardi#import-and-export-of-data">in the README</a> and in <a href="http://godoc.org/github.com/ctdk/goiardi#hdr-Import_and_Export_of_Data">the godocs</a>. Basically you add the <code>-x/--export</code> flag to your usual goiardi command to export the data to a JSON file, and run the <code>-m/--import</code> flags with your new desired goiardi set of flags to import the data. The administrator is responsible for removing any existing data (on-disk or SQL) and index files. This can help with backups or moving between the different storage engines goiardi supports, keeping data between upgrades, and should make testing easier in the future.</p>
-
-<p>Also, per the README, there are new options to specify the maximum size of an object that can be uploaded to the filestore, and the maximum size of a JSON request from a client. The <code>-Q/--obj-max-size</code> flag gets the filestore object max size, while <code>-j/--json-req-max-size</code> sets the JSON request max size limit.</p>
-
-<p>Completely unrelated to any of my efforts, but while I was preparing this release <a href="http://blog.golang.org/go1.3">Go 1.3 was released</a>. Goiardi and its dependencies build just fine with Go 1.3 with no changes. This also means that goiardi should be able run on some of the stranger platforms out there, like Solaris, the illumos based distributions, plan9, and apparently Dragonfly BSD. So far goiardi has only been build on OmniOS r151008j, but it built fine.</p>
-
-<p>Finally, as an added convenience: on <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.2">the goiardi 0.5.2 release page</a>, precompiled binaries are being provided for download, if you don&rsquo;t feel like setting up go and compiling them yourself. As of this writing binaries are provided for Linux (built on Debian wheezy), MacOS X (built on 10.9 Mavericks), FreeBSD (built on FreeBSD 9.2), and illumos (built on OmniOS r151008j). The Linux, MacOS X, and FreeBSD binaries are x86_64, the illumos binary <strike>i386</strike> <strong>update:</strong> I misinterpreted the output of <code>psrinfo</code> &ndash; it was compiled for 64 bit. It appears that there&rsquo;s no reason that goiardi can&rsquo;t easily be cross compiled though, so a more sensible set of precompiled binaries will be coming soon. If you don&rsquo;t see binaries for your platform, try grabbing a binary that&rsquo;s built on a similar platform to yours, or compile it yourself.</p>
-
-<p>Coming down the pipeline is resuming and re-merging the Postgres work, making some data structures safer for in-memory mode, some extra features for event logging and reporting, improving tests and moving away from depending on chef-pedant, and an idea I&rsquo;ve been kicking around for a serf-based pushy type thing. For those curious about the Postgres goiardi schema, you can see it <a href="https://github.com/ctdk/goiardi-schema/tree/postgres">in the &lsquo;postgres&rsquo; tree in goiardi-schema</a>. It&rsquo;s firmed up, but still subject to change before getting merged back in.</p>
 ]]></content>
   </entry>
   
