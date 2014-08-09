@@ -220,8 +220,8 @@ these things:
 
 * Export their goiardi server's data with the `-x` flag.
 * Either revert all changes to the db with sqitch, then redeploy, or drop the
-  database manually and recreate it from either the sqitch patches or the full
-  table dump of the release (provided starting with 0.7.0)
+database manually and recreate it from either the sqitch patches or the full
+table dump of the release (provided starting with 0.7.0)
 * Reload the goiardi data with the `-m` flag.
 
 It's a fairly quick process (a goiardi dump with the `-x` flag took 15 minutes

@@ -1,3 +1,11 @@
+0.7.2
+-----
+* Remove a newline in a debug statement, courtesy of @spheromak.
+* Also per @spheromak's suggestion, fixed some possible race conditions
+  revealed by building goiardi with the -race flag and running chef-pedant
+  against it.
+* Edit doc.go slightly to make godocs more attractive.
+
 0.7.1
 -----
 * Add --db-pool-size and --max-connections options for configuring the number
