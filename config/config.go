@@ -70,11 +70,8 @@ type Conf struct {
 	ObjMaxSize        int64 `toml:"obj-max-size"`
 	JSONReqMaxSize    int64 `toml:"json-req-max-size"`
 	UseUnsafeMemStore bool  `toml:"use-unsafe-mem-store"`
-<<<<<<< HEAD
 	DbPoolSize int `toml:"db-pool-size"`
 	MaxConn int `toml:"max-connections"`
-=======
->>>>>>> 2e712619528f527422f29160e3213cee7694070b
 	UseSerf bool `toml:"use-serf"`
 	SerfAddr string `toml:"serf-addr"`
 	ClusterName string `toml:"cluster-name"`
@@ -139,11 +136,8 @@ type Options struct {
 	ObjMaxSize        int64  `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)."`
 	JSONReqMaxSize    int64  `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000."`
 	UseUnsafeMemStore bool   `long:"use-unsafe-mem-store" description:"Use the faster, but less safe, old method of storing data in the in-memory data store with pointers, rather than encoding the data with gob and giving a new copy of the object to each requestor. If this is enabled goiardi will run faster in in-memory mode, but one goroutine could change an object while it's being used by another. Has no effect when using an SQL backend."`
-<<<<<<< HEAD
 	DbPoolSize int `long:"db-pool-size" description:"Number of idle db connections to maintain. Only useful when using one of the SQL backends. Default is 0 - no idle connections retained"`
 	MaxConn int `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited."`
-=======
->>>>>>> 2e712619528f527422f29160e3213cee7694070b
 	UseSerf bool `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster."`
 	SerfAddr string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373."`
 	ClusterName string `long:"cluster-name" description:"Set the name of the goiardi cluster this instance should join. Requires --use-serf to be set and one of the SQL backends - not in-memory mode. EXPERIMENTAL, LIKELY TO CHANGE."`

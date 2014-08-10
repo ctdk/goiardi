@@ -270,37 +270,6 @@ func (ds *DataStore) LatestNodeStatus(nodeName string) (interface{}, error) {
 }
 
 func (ds *DataStore) DeleteNodeStatus(nodeName string) error {
-<<<<<<< HEAD
-=======
-	ds.m.Lock()
-	defer ds.m.Unlock()
-	nsKey := ds.makeKey("nodestatus", "nodestatuses")
-	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
-	a, _ := ds.dsc.Get(nsKey)
-	if a == nil {
-		err := fmt.Errorf("No statuses in the datastore")
-		return err
-	}
-	ns := a.(map[int]interface{})
-	a, _ = ds.dsc.Get(nsListKey)
-	if a == nil {
-		err := fmt.Errorf("No status lists in the datastore")
-		return err
-	}
-	nslist := a.(map[string][]int)
-	for _, v := range nslist[nodeName] {
-		delete(ns, v)
-	}
-	delete(nslist, nodeName)
-	ds.dsc.Set(nsKey, ns, -1)
-	ds.dsc.Set(nsListKey, nslist, -1)
-	return nil
-}
-
-// SetLogInfo sets a loginfo in the data store. Unlike most of these objects,
-// log infos are stored and retrieved by id, since they have no useful names.
-func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
->>>>>>> 2e712619528f527422f29160e3213cee7694070b
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	nsKey := ds.makeKey("nodestatus", "nodestatuses")
