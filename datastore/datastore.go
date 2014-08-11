@@ -211,7 +211,15 @@ func (ds *DataStore) SetNodeStatus(nodeName string, obj interface{}, nsID ...int
 	} else {
 		nextID = getNextID(ns)
 	}
-	ns[nextID] = obj
+	if config.Config.UseUnsafeMemStore {
+		ns[nextID] = obj
+	} else {
+		n, err := encodeSafeVal(obj)
+		if err != nil {
+			return err
+		}
+		ns[nextID] = n
+	}
 	nslist[nodeName] = append(nslist[nodeName], nextID)
 
 	ds.dsc.Set(nsKey, ns, -1)
@@ -238,7 +246,15 @@ func (ds *DataStore) AllNodeStatuses(nodeName string) ([]interface{}, error) {
 	nslist := a.(map[string][]int)
 	arr := make([]interface{}, len(nslist[nodeName]))
 	for i, v := range nslist[nodeName] {
-		arr[i] = ns[v]
+		if config.Config.UseUnsafeMemStore {
+			arr[i] = ns[v]
+		} else {
+			n, err := decodeSafeVal(ns[v])
+			if err != nil {
+				return nil, err
+			}
+			arr[i] = n
+		}
 	}
 	return arr, nil
 }
@@ -266,7 +282,19 @@ func (ds *DataStore) LatestNodeStatus(nodeName string) (interface{}, error) {
 		return nil, err
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(nsarr)))
-	return ns[nsarr[0]], nil
+	var n interface{}
+	var err error
+
+	if config.Config.UseUnsafeMemStore {
+		n = ns[nsarr[0]]
+	} else {
+		n, err = decodeSafeVal(ns[nsarr[0]])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return n, nil
 }
 
 func (ds *DataStore) DeleteNodeStatus(nodeName string) error {
