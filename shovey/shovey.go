@@ -248,7 +248,7 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 		if err != nil {
 			return err
 		}
-		if sr.Status != "invalid" && sr.Status != "completed" && sr.Status != "failed" && sr.Status != "down" {
+		if sr.Status != "invalid" && sr.Status != "completed" && sr.Status != "failed" && sr.Status != "down" && sr.Status != "nacked" {
 			sr.EndTime = time.Now()
 			sr.Status = "cancelled"
 			err = sr.save()
