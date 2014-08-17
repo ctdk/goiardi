@@ -126,26 +126,22 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
 			}
-			r.ParseForm()
-			var runID string
-			var nodeNames []string
-			if ri, ok := r.Form["run_id"]; ok {
-				if len(ri) < 0 {
-					jsonErrorReport(w, r, "invalid run ID", http.StatusBadRequest)
-					return
-				}
-				runID = ri[0]
-			} else {
-				jsonErrorReport(w, r, "No shovey run ID provided", http.StatusBadRequest)
+			cancelData, perr := parseObjJSON(r.Body)
+			if perr != nil {
+				jsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
 				return
 			}
-			if nn, ok := r.Form["node"]; ok {
-				if len(nn) < 0 {
-					jsonErrorReport(w, r, "invalid nodes to cancel", http.StatusBadRequest)
-					return
-				}
-				for _, n := range nn {
-					nodeNames = append(nodeNames, n)
+
+			var nodeNames []string
+			runID, ok := cancelData["run_id"].(string)
+			if !ok {
+				jsonErrorReport(w, r, "No shovey run ID provided, or provided id was invalid", http.StatusBadRequest)
+				return
+			}
+			
+			if nn, ok := cancelData["nodes"].([]interface{}); ok {
+				for _, v := range nn {
+					nodeNames = append(nodeNames, v.(string))
 				}
 			}
 			shove, err := shovey.Get(runID)

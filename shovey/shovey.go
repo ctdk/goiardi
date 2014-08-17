@@ -257,6 +257,30 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 			}
 		}
 	}
+	payload := make(map[string]string)
+	payload["action"] = "cancel"
+	jsonPayload, _ := json.Marshal(payload)
+	ackCh := make(chan string, len(nodeNames))
+	q := &serfclient.QueryParam{ Name: "shovey", Payload: jsonPayload, FilterNodes: nodeNames, RequestAck: true, AckCh: ackCh }
+	err := serfin.Serfer.Query(q)
+	if err != nil {
+		return util.CastErr(err)
+	}
+	doneCh := make(chan struct{}, 1)
+	go func(){
+		for c := range ackCh {
+			logger.Debugf("Received acknowledgement from %s", c)
+		}
+		doneCh <- struct{}{}
+	}()
+	select {
+		case <-doneCh:
+			logger.Infof("All nodes acknowledged cancellation")
+			// probably do a report here?
+		case <- time.After(time.Duration(60) * time.Second):
+			logger.Errorf("Didn't get all acknowledgements within 60 seconds")
+	}
+
 	return nil
 }
 
