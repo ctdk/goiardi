@@ -34,7 +34,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if !opUser.IsAdmin() {
+	if !opUser.IsAdmin() && r.Method != "PUT" {
 		jsonErrorReport(w, r, "you cannot perform this action", http.StatusForbidden)
 		return
 	}

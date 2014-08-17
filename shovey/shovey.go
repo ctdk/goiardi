@@ -363,7 +363,7 @@ func (s *Shovey) checkCompleted() {
 	}
 	c := 0
 	for _, sr := range srs {
-		if sr.Status == "invalid" || sr.Status == "completed" || sr.Status == "failed" || sr.Status == "down" {
+		if sr.Status == "invalid" || sr.Status == "completed" || sr.Status == "failed" || sr.Status == "down" || sr.Status == "nacked" {
 			c++
 		}
 	}
@@ -413,10 +413,12 @@ func GetList() []string {
 
 func (sj *ShoveyRun) UpdateFromJSON(sjData map[string]interface{}) util.Gerror {
 	if status, ok := sjData["status"].(string); ok {
-		if status == "invalid" || status == "completed" || status == "failed" {
+		if status == "invalid" || status == "completed" || status == "failed" || status == "nacked" {
 			sj.EndTime = time.Now()
 		}
 		sj.Status = status
+	} else {
+		logger.Errorf("status isn't getting set?? type: %T status %v", sjData["status"], sjData["status"])
 	}
 	if output, ok := sjData["output"].(string); ok {
 		sj.Output = output
@@ -432,7 +434,7 @@ func (sj *ShoveyRun) UpdateFromJSON(sjData map[string]interface{}) util.Gerror {
 	if err != nil {
 		return err
 	}
-	go sj.cleanup()
+	//go sj.cleanup()
 	go sj.notifyParent()
 	return nil
 }
