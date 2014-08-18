@@ -46,15 +46,15 @@ type Shovey struct {
 }
 
 type ShoveyRun struct {
-	ID int
-	ShoveyUUID string 
-	NodeName string
-	Status string
-	AckTime time.Time
-	EndTime time.Time
-	Output string
-	ErrMsg string
-	ExitStatus uint8
+	ID int `json:"-"`
+	ShoveyUUID string `json:"run_id"`
+	NodeName string `json:"node_name"`
+	Status string `json:"status"`
+	AckTime time.Time `json:"ack_time"`
+	EndTime time.Time `json:"end_time"`
+	Output string `json:"output"`
+	ErrMsg string `json:"err_msg"`
+	ExitStatus uint8 `json:"exit_status"`
 }
 
 type Qerror interface {

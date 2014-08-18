@@ -52,7 +52,20 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		switch pathArrayLen {
 		case 4:
-			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			shove, err := shovey.Get(pathArray[2])
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			sj, err := shove.GetRun(pathArray[3])
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			enc := json.NewEncoder(w)
+			if jerr := enc.Encode(&sj); err != nil {
+				jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
+			}
 			return
 		case 3:
 			shove, err := shovey.Get(pathArray[2])
