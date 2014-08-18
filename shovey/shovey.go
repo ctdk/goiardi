@@ -259,6 +259,7 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 	}
 	payload := make(map[string]string)
 	payload["action"] = "cancel"
+	payload["run_id"] = s.RunID
 	jsonPayload, _ := json.Marshal(payload)
 	ackCh := make(chan string, len(nodeNames))
 	q := &serfclient.QueryParam{ Name: "shovey", Payload: jsonPayload, FilterNodes: nodeNames, RequestAck: true, AckCh: ackCh }
