@@ -22,6 +22,7 @@ package config
 
 import (
 	"fmt"
+	"crypto/rsa"
 	"github.com/BurntSushi/toml"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/jessevdk/go-flags"
@@ -31,6 +32,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -76,7 +78,18 @@ type Conf struct {
 	SerfAddr string `toml:"serf-addr"`
 	ClusterName string `toml:"cluster-name"`
 	ClusterID string `toml:"cluster-id"`
+	UseShovey bool `toml:"use-shovey"`
+	SignPrivKey string `toml:"sign-priv-key"`
+	SignPubKey string `toml:"sign-pub-key"`
 }
+
+type SigningKeys struct {
+	sync.RWMutex
+	PrivKey *rsa.PrivateKey
+	PubKey *rsa.PublicKey
+}
+
+var Key = &SigningKeys{}
 
 // LogLevelNames give convenient, easier to remember than number name for the
 // different levels of logging.
@@ -138,10 +151,13 @@ type Options struct {
 	UseUnsafeMemStore bool   `long:"use-unsafe-mem-store" description:"Use the faster, but less safe, old method of storing data in the in-memory data store with pointers, rather than encoding the data with gob and giving a new copy of the object to each requestor. If this is enabled goiardi will run faster in in-memory mode, but one goroutine could change an object while it's being used by another. Has no effect when using an SQL backend."`
 	DbPoolSize int `long:"db-pool-size" description:"Number of idle db connections to maintain. Only useful when using one of the SQL backends. Default is 0 - no idle connections retained"`
 	MaxConn int `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited."`
-	UseSerf bool `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster."`
+	UseSerf bool `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster. Required for shovey."`
 	SerfAddr string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373."`
 	ClusterName string `long:"cluster-name" description:"Set the name of the goiardi cluster this instance should join. Requires --use-serf to be set and one of the SQL backends - not in-memory mode. EXPERIMENTAL, LIKELY TO CHANGE."`
 	ClusterID string `long:"cluster-id" description:"Unique name for this goiardi instance in a cluster. Defaults to the hostname reported by the kernel."`
+	UseShovey bool `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes and creating the signing keys for those requests. Requires --use-serf."`
+	SignPrivKey string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests"`
+	SignPubKey string `long:"sign-pub-key" description:"Path to RSA public key used to verify shovey requests"`
 }
 
 // The goiardi version.
@@ -483,6 +499,38 @@ func ParseConfigOptions() error {
 		if err != nil {
 			logger.Infof(err.Error())
 			Config.ClusterID = "localhost"
+		}
+	}
+
+	if opts.UseShovey {
+		Config.UseShovey = opts.UseShovey
+	}
+
+	// shovey signing key stuff
+	if opts.SignPrivKey != "" {
+		Config.SignPrivKey = opts.SignPrivKey
+	}
+	if opts.SignPubKey != "" {
+		Config.SignPubKey = opts.SignPubKey
+	}
+
+	if (Config.SignPrivKey == "" && Config.SignPubKey != "") || (Config.SignPrivKey != "" && Config.SignPubKey == "") {
+		logger.Criticalf("Either both --sign-priv-key and --sign-pub-key must be specified, or neither.")
+		os.Exit(1)
+	}
+
+	// if using shovey, open the existing, or create if absent, signing
+	// keys.
+	if Config.UseShovey {
+		if Config.SignPubKey == "" {
+			Config.SignPubKey = path.Join(Config.ConfRoot, "shovey-sign_rsa.pub")
+		} else if !path.IsAbs(Config.SignPubKey) {
+			Config.SignPubKey = path.Join(Config.ConfRoot, Config.SignPubKey)
+		}
+		if Config.SignPrivKey == "" {
+			Config.SignPrivKey = path.Join(Config.ConfRoot, "shovey-sign_rsa")
+		} else if !path.IsAbs(Config.SignPrivKey) {
+			Config.SignPrivKey = path.Join(Config.ConfRoot, Config.SignPrivKey)
 		}
 	}
 

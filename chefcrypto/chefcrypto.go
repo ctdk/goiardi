@@ -23,6 +23,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/sha512"
 	"crypto/x509"
 	"encoding/base64"
@@ -130,6 +131,18 @@ func Auth12HeaderVerify(pkPem string, hashed, sig []byte) error {
 		return err
 	}
 	return rsa.VerifyPKCS1v15(pubKey.(*rsa.PublicKey), crypto.SHA1, hashed, sig)
+}
+
+func SignTextBlock(textBlock string) ([]byte, error) {
+	if textBlock == "" {
+		err := fmt.Errorf("no text to sign provided")
+		return nil, err
+	}
+	tbSha := sha1.Sum([]byte(textBlock))
+	config.Key.RLock()
+	defer config.Key.RUnlock()
+	signed, err := rsa.SignPKCS1v15(rand.Reader, config.Key.PrivKey, crypto.SHA1, tbSha)
+	return signed, err
 }
 
 // There has been discussion of renaming this and submitting it along with its

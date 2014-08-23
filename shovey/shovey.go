@@ -528,3 +528,8 @@ func getQuorum(quorum string, numNodes int) (int, Qerror) {
 
 	return int(qnum), nil
 }
+
+func (s *Shovey) signRequest(payload map[string]string) (string, error) {
+
+	return "", nil
+}
