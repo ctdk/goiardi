@@ -133,16 +133,14 @@ func Auth12HeaderVerify(pkPem string, hashed, sig []byte) error {
 	return rsa.VerifyPKCS1v15(pubKey.(*rsa.PublicKey), crypto.SHA1, hashed, sig)
 }
 
-func SignTextBlock(textBlock string) ([]byte, error) {
+func SignTextBlock(textBlock string, privKey *rsa.PrivateKey) (string, error) {
 	if textBlock == "" {
 		err := fmt.Errorf("no text to sign provided")
-		return nil, err
+		return "", err
 	}
 	tbSha := sha1.Sum([]byte(textBlock))
-	config.Key.RLock()
-	defer config.Key.RUnlock()
-	signed, err := rsa.SignPKCS1v15(rand.Reader, config.Key.PrivKey, crypto.SHA1, tbSha)
-	return signed, err
+	signed, err := rsa.SignPKCS1v15(rand.Reader, privKey, crypto.SHA1, tbSha[:])
+	return base64.StdEncoding.EncodeToString(signed), err
 }
 
 // There has been discussion of renaming this and submitting it along with its

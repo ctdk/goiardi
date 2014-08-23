@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/node"
@@ -30,7 +31,9 @@ import (
 	"math"
 	"net/http"
 	"regexp"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -530,6 +533,27 @@ func getQuorum(quorum string, numNodes int) (int, Qerror) {
 }
 
 func (s *Shovey) signRequest(payload map[string]string) (string, error) {
+	if payload == nil {
+		return "", fmt.Errorf("No payload given to sign!")
+	}
+	pkeys := make([]string, len(payload))
+	i := 0
+	for k := range payload {
+		pkeys[i] = k
+		i++
+	}
+	sort.Strings(pkeys)
+	parr := make([]string, len(pkeys))
+	for u, k := range pkeys {
+		parr[u] = payload[k]
+	}
+	payloadBlock := strings.Join(parr, "\n")
 
-	return "", nil
+	config.Key.RLock()
+	defer config.Key.RUnlock()
+	sig, err := chefcrypto.SignTextBlock(payloadBlock, config.Key.PrivKey)
+	if err != nil {
+		return "", err
+	}
+	return sig, nil
 }

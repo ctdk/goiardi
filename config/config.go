@@ -23,9 +23,12 @@ package config
 import (
 	"fmt"
 	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"github.com/BurntSushi/toml"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/jessevdk/go-flags"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -532,6 +535,50 @@ func ParseConfigOptions() error {
 		} else if !path.IsAbs(Config.SignPrivKey) {
 			Config.SignPrivKey = path.Join(Config.ConfRoot, Config.SignPrivKey)
 		}
+		privfp, err := os.Open(Config.SignPrivKey)
+		if err != nil {
+			logger.Criticalf("Private key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPrivKey)
+			os.Exit(1)
+		}
+		pubfp, err := os.Open(Config.SignPubKey)
+		if err != nil {
+			logger.Criticalf("Public key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPubKey)
+			os.Exit(1)
+		}
+		privPem, err := ioutil.ReadAll(privfp)
+		if err != nil {
+			logger.Criticalf(err.Error())
+			os.Exit(1)
+		}
+		pubPem, err := ioutil.ReadAll(pubfp)
+		if err != nil {
+			logger.Criticalf(err.Error())
+			os.Exit(1)
+		}
+		privBlock, _ := pem.Decode(privPem)
+		if privBlock == nil {
+			logger.Criticalf("Invalid block size for private key for shovey")
+			os.Exit(1)
+		}
+		pubBlock, _ := pem.Decode(pubPem)
+		if pubBlock == nil {
+			logger.Criticalf("Invalid block size for public key for shovey")
+			os.Exit(1)
+		}
+		privKey, err := x509.ParsePKCS1PrivateKey(privBlock.Bytes)
+		if err != nil {
+			logger.Criticalf(err.Error())
+			os.Exit(1)
+		}
+		pubKey, err := x509.ParsePKIXPublicKey(pubBlock.Bytes)
+		if err != nil {
+			logger.Criticalf(err.Error())
+			os.Exit(1)
+		}
+		Key.Lock()
+		defer Key.Unlock()
+		Key.PrivKey = privKey
+		Key.PubKey = pubKey.(*rsa.PublicKey)
 	}
 
 	return nil
