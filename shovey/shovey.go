@@ -263,6 +263,11 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 	payload := make(map[string]string)
 	payload["action"] = "cancel"
 	payload["run_id"] = s.RunID
+	sig, serr := s.signRequest(payload)
+	if serr != nil {
+		return util.CastErr(serr)
+	}
+	payload["signature"] = sig
 	jsonPayload, _ := json.Marshal(payload)
 	ackCh := make(chan string, len(nodeNames))
 	q := &serfclient.QueryParam{ Name: "shovey", Payload: jsonPayload, FilterNodes: nodeNames, RequestAck: true, AckCh: ackCh }
@@ -329,6 +334,12 @@ func (s *Shovey) startJobs() Qerror {
 		payload["run_id"] = s.RunID
 		payload["command"] = s.Command
 		payload["action"] = "start"
+		sig, serr := s.signRequest(payload)
+		if serr != nil {
+			errch <- serr
+			return
+		}
+		payload["signature"] = sig
 		jsonPayload, _ := json.Marshal(payload)
 		ackCh := make(chan string, len(tagNodes))
 		respCh := make(chan serfclient.NodeResponse, len(tagNodes))
