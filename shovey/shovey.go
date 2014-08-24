@@ -562,6 +562,7 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 
 	config.Key.RLock()
 	defer config.Key.RUnlock()
+	logger.Debugf("privkey: %v+", config.Key.PrivKey)
 	sig, err := chefcrypto.SignTextBlock(payloadBlock, config.Key.PrivKey)
 	if err != nil {
 		return "", err

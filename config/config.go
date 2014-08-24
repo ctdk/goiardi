@@ -570,6 +570,7 @@ func ParseConfigOptions() error {
 			logger.Criticalf(err.Error())
 			os.Exit(1)
 		}
+		logger.Debugf("priv key in config: %v", privKey)
 		pubKey, err := x509.ParsePKIXPublicKey(pubBlock.Bytes)
 		if err != nil {
 			logger.Criticalf(err.Error())
