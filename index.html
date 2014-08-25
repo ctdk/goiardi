@@ -9,7 +9,7 @@
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="Goiardi version 0.7.2 is a minor yak shaving release that there isn&rsquo;t a lot to say about. The CHANGELOG pretty much sums it up: Remove a &hellip;">
+  <meta name="description" content="The long promised &ldquo;shovey&rdquo; jobs for goiardi, a serf-based way to push commands out to nodes, is finally ready for a preview. There&rsquo; &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,63 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/goiardi/blog/2014/08/24/a-preview-of-shovey/">A Preview of Shovey</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-08-24T22:07:42-07:00" pubdate data-updated="true">Aug 24<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>The long promised &ldquo;shovey&rdquo; jobs for goiardi, a serf-based way to push commands out to nodes, is finally ready for a preview. There&rsquo;s still some loose ends to pull together, like saving job status on the client so if it&rsquo;s interrupted it can report that fact back to the server and making the goiardi end work with MySQL and Postgres, but it&rsquo;s ready to play with.</p>
+
+<p>To try playing with it, you&rsquo;ll need <a href="https://github.com/ctdk/schob">schob</a>, the shovey client, and <a href="https://github.com/ctdk/knife-shove">knife-shove</a>, the knife plugin to manage shovey jobs.</p>
+
+<p>As explained in the schob README:</p>
+
+<blockquote><ol>
+<li>Checkout the &ldquo;serfing&rdquo; branch from goiardi</li>
+<li>Create an RSA keypair for signing shovey requests</li>
+<li>Install serf and run it as &ldquo;serf agent&rdquo;</li>
+<li>Run goiardi in in-memory mode (at this writing, MySQL and Postgres in goiardi don&rsquo;t support shovey yet) with these extra options: <code>--use-serf --use-shovey --sign-priv-key=/path/to/private.key --sign-pub-key=/path/to/public.key</code></li>
+<li>Install knife-shove from <a href="https://github.com/ctdk/knife-shove">https://github.com/ctdk/knife-shove</a></li>
+<li>Set up the node in goiardi you want to test shovey on. I&rsquo;ve been using the computer I do my usual goiardi dev work for most of it.</li>
+<li>Install schob the usual go way</li>
+<li>Note where the testing whitelist file is (probably somewhere like ~/go/src/github.com/ctdk/schob/test/whitelist.json).</li>
+<li>Run schob like so: <code>schob -VVVV -e http://chef-server.local:4545 -n node-name.local -k /path/to/node.key -w /path/to/schob/test/whitelist.json -p /path/to/public.key --serf-addr=127.0.0.1:7373</code></li>
+</ol>
+
+
+<p>Run schob with <code>-h</code> to see all current options.</p></blockquote>
+
+<p>Cookbooks for setting this all up and better documentation are coming, including documenting the HTTP and serf APIs for communicating with the server and client. The HTTP API is broadly similar to the Chef Pushy API, but not identical. Everything about shovey is still subject to change until it&rsquo;s officially released, but it&rsquo;s ready to play with now. Suggestions and comments are, of course, welcome.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -654,57 +711,6 @@ README or godocs for details.</li>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/goiardi/blog/2014/03/19/goiardi-version-0-dot-4-2-this-is-spinal-tap/">Goiardi Version 0.4.2 - This Is Spinal Tap</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-03-19T23:04:46-07:00" pubdate data-updated="true">Mar 19<span>th</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>It seems like only yesterday that there was a goiardi release, but really it was a few days ago. <a href="https://github.com/ctdk/goiardi/releases/tag/v0.4.2">Goiardi version 0.4.2</a> is hot off the presses and ready for your perusal.</p>
-
-<p>This is a bugfix release. The reason this is the &ldquo;Spinal Tap&rdquo; release was because I noticed these problems while I took the day off after getting a spinal tap and was bored, so it seemed fitting. The bug fixes, from the CHANGELOG, are:</p>
-
-<ul>
-<li>Perm tweak for nodes updating themselves.</li>
-<li>Small change with validating role descriptions when creating or updating from JSON.</li>
-<li>Fix issue with saving complicated indexed objects to disk where improperly flattened indexable objects were making the gob encoder puke all over itself when encoding the tries in the index docs.</li>
-<li>Fixed a possible regression with synchronizing cookbooks that did not show up in testing, but only in real use.</li>
-<li>An absolutely bonkers fix for listing cookbook files with webui. Webui wants all of the cookbook top level attributes sent over with a request to /cookbooks/&lt;name&gt;/&lt;version&gt;, but this is the exact <em>opposite</em> of the behavior chef-pedant wants, where empty definitions, attributes, etc. are not sent over. Knife also seems quite content with this, so the fix for now, since the two cases are mutually exclusionary, is to only send the empty hashes for those top level attributes with a GET if the request is coming from the webui. Bizarre, but it seems to be what&rsquo;s necessary.</li>
-</ul>
-
-
-<p>These were all problems that evaded notice during testing, but did pop up when I was using goiardi to set up a vagrant VM to start working on letting goiardi run a real database (optionally, of course) instead of the in-memory data store system it&rsquo;s using now. The in-memory mode is great and all for testing, and being able to freeze the data to disk for persistence is very handy, but being able to use a real database would be nice for some workloads. Supporting both the current in-memory storage and a database backend is a top priority.</p>
-
-<p>Which database to use is still a bit up in the air, but I&rsquo;m leaning towards throwing caution to the wind and providing support for both MySQL and Postgres, with SQLite as a distinct possibility down the line. MySQL is likely to come first, but that is not set in stone.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/goiardi/blog/page/2/">&larr; Older</a>
@@ -738,6 +744,10 @@ README or godocs for details.</li>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/goiardi/blog/2014/08/24/a-preview-of-shovey/">A Preview of Shovey</a>
+      </li>
+    
+      <li class="post">
         <a href="/goiardi/blog/2014/08/09/goiardi-version-0-dot-7-2-the-yak-of-seville/">Goiardi Version 0.7.2 - the Yak of Seville</a>
       </li>
     
@@ -751,10 +761,6 @@ README or godocs for details.</li>
     
       <li class="post">
         <a href="/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant/">Goiardi Version 0.6.0 - Order of the Elephant</a>
-      </li>
-    
-      <li class="post">
-        <a href="/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc/">Building Goiardi on Solaris/illumos/etc.</a>
       </li>
     
   </ul>

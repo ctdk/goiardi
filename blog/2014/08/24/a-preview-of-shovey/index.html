@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: Goairdi - Goiardi</title>
+  <title>A Preview of Shovey - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="Category: goairdi">
+  <meta name="description" content="The long promised &ldquo;shovey&rdquo; jobs for goiardi, a serf-based way to push commands out to nodes, is finally ready for a preview. There&rsquo; &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardiblog/categories/goairdi">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/08/24/a-preview-of-shovey">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -82,36 +82,118 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: Goairdi</h1>
+    
+      <h1 class="entry-title">A Preview of Shovey</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-08-24T22:07:42-07:00" pubdate data-updated="true">Aug 24<span>th</span>, 2014</time>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p>The long promised &ldquo;shovey&rdquo; jobs for goiardi, a serf-based way to push commands out to nodes, is finally ready for a preview. There&rsquo;s still some loose ends to pull together, like saving job status on the client so if it&rsquo;s interrupted it can report that fact back to the server and making the goiardi end work with MySQL and Postgres, but it&rsquo;s ready to play with.</p>
 
-  
-  <h2>2014</h2>
+<p>To try playing with it, you&rsquo;ll need <a href="https://github.com/ctdk/schob">schob</a>, the shovey client, and <a href="https://github.com/ctdk/knife-shove">knife-shove</a>, the knife plugin to manage shovey jobs.</p>
 
-<article>
-  
-<h1><a href="/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/">Version 0.4.0 of Goiardi Released. Now, With Authentication!</a></h1>
-<time datetime="2014-03-16T10:28:50-07:00" pubdate><span class='month'>Mar</span> <span class='day'>16</span> <span class='year'>2014</span></time>
+<p>As explained in the schob README:</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/goiardi/blog/categories/authentication/'>authentication</a>, <a class='category' href='/goiardi/blog/categories/goairdi/'>goairdi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a></span>
-</footer>
+<blockquote><ol>
+<li>Checkout the &ldquo;serfing&rdquo; branch from goiardi</li>
+<li>Create an RSA keypair for signing shovey requests</li>
+<li>Install serf and run it as &ldquo;serf agent&rdquo;</li>
+<li>Run goiardi in in-memory mode (at this writing, MySQL and Postgres in goiardi don&rsquo;t support shovey yet) with these extra options: <code>--use-serf --use-shovey --sign-priv-key=/path/to/private.key --sign-pub-key=/path/to/public.key</code></li>
+<li>Install knife-shove from <a href="https://github.com/ctdk/knife-shove">https://github.com/ctdk/knife-shove</a></li>
+<li>Set up the node in goiardi you want to test shovey on. I&rsquo;ve been using the computer I do my usual goiardi dev work for most of it.</li>
+<li>Install schob the usual go way</li>
+<li>Note where the testing whitelist file is (probably somewhere like ~/go/src/github.com/ctdk/schob/test/whitelist.json).</li>
+<li>Run schob like so: <code>schob -VVVV -e http://chef-server.local:4545 -n node-name.local -k /path/to/node.key -w /path/to/schob/test/whitelist.json -p /path/to/public.key --serf-addr=127.0.0.1:7373</code></li>
+</ol>
 
 
-</article>
+<p>Run schob with <code>-h</code> to see all current options.</p></blockquote>
 
+<p>Cookbooks for setting this all up and better documentation are coming, including documenting the HTTP and serf APIs for communicating with the server and client. The HTTP API is broadly similar to the Chef Pushy API, but not identical. Everything about shovey is still subject to change until it&rsquo;s officially released, but it&rsquo;s ready to play with now. Suggestions and comments are, of course, welcome.</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Jeremy Bingham</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-08-24T22:07:42-07:00" pubdate data-updated="true">Aug 24<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/goiardi/blog/categories/shovey/'>shovey</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/08/24/a-preview-of-shovey/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/08/24/a-preview-of-shovey/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+  
+<a href='https://alpha.app.net/intent/post/?text=App.net%20social%20buttons%20are%20here' class='adn-button' target='_blank' data-type='share' data-width='121' data-height='20' data-text='' >Share on App.net</a>
+<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='//d2zh9g63fcvyrq.cloudfront.net/adn.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'adn-button-js'));</script>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/goiardi/blog/2014/08/09/goiardi-version-0-dot-7-2-the-yak-of-seville/" title="Previous Post: Goiardi Version 0.7.2 - The Yak of Seville">&laquo; Goiardi Version 0.7.2 - The Yak of Seville</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -188,7 +270,10 @@
       var disqus_shortname = 'goiardi';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/08/24/a-preview-of-shovey/';
+        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/08/24/a-preview-of-shovey/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

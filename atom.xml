@@ -4,7 +4,7 @@
   <title><![CDATA[Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-08-09T16:05:50-07:00</updated>
+  <updated>2014-08-24T22:20:57-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,36 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[A Preview of Shovey]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/08/24/a-preview-of-shovey/"/>
+    <updated>2014-08-24T22:07:42-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/08/24/a-preview-of-shovey</id>
+    <content type="html"><![CDATA[<p>The long promised &ldquo;shovey&rdquo; jobs for goiardi, a serf-based way to push commands out to nodes, is finally ready for a preview. There&rsquo;s still some loose ends to pull together, like saving job status on the client so if it&rsquo;s interrupted it can report that fact back to the server and making the goiardi end work with MySQL and Postgres, but it&rsquo;s ready to play with.</p>
+
+<p>To try playing with it, you&rsquo;ll need <a href="https://github.com/ctdk/schob">schob</a>, the shovey client, and <a href="https://github.com/ctdk/knife-shove">knife-shove</a>, the knife plugin to manage shovey jobs.</p>
+
+<p>As explained in the schob README:</p>
+
+<blockquote><ol>
+<li>Checkout the &ldquo;serfing&rdquo; branch from goiardi</li>
+<li>Create an RSA keypair for signing shovey requests</li>
+<li>Install serf and run it as &ldquo;serf agent&rdquo;</li>
+<li>Run goiardi in in-memory mode (at this writing, MySQL and Postgres in goiardi don&rsquo;t support shovey yet) with these extra options: <code>--use-serf --use-shovey --sign-priv-key=/path/to/private.key --sign-pub-key=/path/to/public.key</code></li>
+<li>Install knife-shove from <a href="https://github.com/ctdk/knife-shove">https://github.com/ctdk/knife-shove</a></li>
+<li>Set up the node in goiardi you want to test shovey on. I&rsquo;ve been using the computer I do my usual goiardi dev work for most of it.</li>
+<li>Install schob the usual go way</li>
+<li>Note where the testing whitelist file is (probably somewhere like ~/go/src/github.com/ctdk/schob/test/whitelist.json).</li>
+<li>Run schob like so: <code>schob -VVVV -e http://chef-server.local:4545 -n node-name.local -k /path/to/node.key -w /path/to/schob/test/whitelist.json -p /path/to/public.key --serf-addr=127.0.0.1:7373</code></li>
+</ol>
+
+
+<p>Run schob with <code>-h</code> to see all current options.</p></blockquote>
+
+<p>Cookbooks for setting this all up and better documentation are coming, including documenting the HTTP and serf APIs for communicating with the server and client. The HTTP API is broadly similar to the Chef Pushy API, but not identical. Everything about shovey is still subject to change until it&rsquo;s officially released, but it&rsquo;s ready to play with now. Suggestions and comments are, of course, welcome.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Goiardi Version 0.7.2 - the Yak of Seville]]></title>
