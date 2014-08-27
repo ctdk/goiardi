@@ -108,6 +108,8 @@ JSON payload parameters:
 
 The block to sign will look something like this:
 
->action: start
->command: foo
->run_id: b5a6ee64-67ca-4a4f-94ad-6c18eb1c6a32
+```
+action: start
+command: foo
+run_id: b5a6ee64-67ca-4a4f-94ad-6c18eb1c6a32
+```
