@@ -97,6 +97,40 @@ Response body format:
 }
 ```
 
+Method: PUT
+
+Update a node's shovey run information on the server.
+
+Request body format:
+
+```
+{
+  "run_id": "76b745eb-45d6-4856-94f9-7830e79cb8cd",
+  "node_name": "nineveh.local",
+  "status": "completed",
+  "ack_time": "2014-08-26T21:44:24.645047317-07:00",
+  "end_time": "2014-08-26T21:44:25.078800724-07:00",
+  "output": "Applications\nLibrary\nNetwork\nSystem\nUser Information\nUsers\nVolumes\nbin\ncores\ndev\netc\nhome\nmach_kernel\nnet\nopt\nprivate\nsbin\ntmp\nusr\nvar\n",
+  "error": "",
+  "err_msg": "",
+  "exit_status": 0,
+  "run_duration": 100,
+  "protocol_major": 0,
+  "protocol_minor": 1
+}
+```
+
+Response body format:
+
+```
+{
+  "id": "76b745eb-45d6-4856-94f9-7830e79cb8cd",
+  "node": "nineveh.local",
+  "response": "ok"
+}
+
+```
+
 
 `/shovey/jobs/cancel`
 
