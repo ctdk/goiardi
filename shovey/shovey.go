@@ -556,7 +556,7 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 	sort.Strings(pkeys)
 	parr := make([]string, len(pkeys))
 	for u, k := range pkeys {
-		parr[u] = payload[k]
+		parr[u] = fmt.Sprintf("%s: %s", k, payload[k])
 	}
 	payloadBlock := strings.Join(parr, "\n")
 

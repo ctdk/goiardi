@@ -570,7 +570,7 @@ func (i *Index) save(idxFile string) error {
 	}
 	err = fp.Close()
 	if err != nil {
-		return nil
+		return err
 	}
 	return os.Rename(fp.Name(), idxFile)
 }
