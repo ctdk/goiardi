@@ -1,16 +1,21 @@
 The Shovey API
 --------------
 
+Documentation of the goiardi shovey HTTP and Serf APIs. As a work in progress, be aware that anything in this document is subject to change until shovey is officially released.
+
 ### HTTP API
+
+The Chef Pushy API located at http://docs.getchef.com/push_jobs.html#api-push-jobs is also relevant, but the Shovey HTTP API is not exactly the same as the Pushy API, for various reasons.
 
 #### Shovey job control
 
 `/shovey/jobs`
 
-	Method: GET
-		List all jobs on the server
+Method: GET
 
-		Response body format:
+List all jobs on the server. Returns a list of uuids of jobs.
+
+Response body format:
 
 ```
 [
@@ -21,10 +26,11 @@ The Shovey API
 ]
 ```
 
-	Method: POST
-		Create a new shovey job.
+Method: POST
 
-		Request body format:
+Create a new shovey job.
+
+Request body format:
 
 ```
 {
@@ -34,7 +40,7 @@ The Shovey API
 }
 ```
 
-		Response body format:
+Response body format:
 
 ```
 {
@@ -46,11 +52,11 @@ The Shovey API
 
 `/shovey/jobs/<JOB ID>`
 
-	Method: GET
-		Information about a shovey jobs status, both overall and each
-		node's status.
+Method: GET
 
-		Response body format:
+Information about a shovey jobs status, both overall and each node's status.
+
+Response body format:
 
 ```
 {
@@ -71,11 +77,11 @@ The Shovey API
 	
 `/shovey/jobs/<JOB ID>/<NODENAME>`
 
-	Method: GET
-		Provides detailed information about a shovey run on a specific
-		node.
+Method: GET
 
-		Response body format:
+Provides detailed information about a shovey run on a specific node.
+
+Response body format:
 
 ```
 {
@@ -94,10 +100,11 @@ The Shovey API
 
 `/shovey/jobs/cancel`
 
-	Methods: PUT
-		Cancels a job. The "nodes" option can either be a list of nodes to cancel the job on, or use an empty array to cancel the job on all nodes running this job.
+Methods: PUT
 
-		Request body format:
+Cancels a job. The "nodes" option can either be a list of nodes to cancel the job on, or use an empty array to cancel the job on all nodes running this job.
+
+Request body format:
 
 ```
 {
@@ -106,7 +113,7 @@ The Shovey API
 }
 ```
 
-		Response body format:
+Response body format:
 
 ```
 {
@@ -124,9 +131,11 @@ The Shovey API
 
 `/status/all/nodes`
 
-	Methods: GET
+Methods: GET
 
-		Response Body format:
+Get the latest status from every node on the server.
+
+Response Body format:
 
 ```
 [
@@ -148,9 +157,11 @@ The Shovey API
 
 `/status/node/<NODENAME>/all`
 
-	Methods: GET
+Methods: GET
+
+Get a list of all statuses a particular node has had.
 		
-		Response body format:
+Response body format:
 
 ```
 [
@@ -181,9 +192,11 @@ The Shovey API
 
 `/status/node/<NODENAME>/latest`
 
-	Methods: GET
+Methods: GET
 
-		Response body format:
+Get the latest status of this particular node.
+
+Response body format:
 
 ```
 {
