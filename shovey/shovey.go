@@ -56,6 +56,7 @@ type ShoveyRun struct {
 	AckTime time.Time `json:"ack_time"`
 	EndTime time.Time `json:"end_time"`
 	Output string `json:"output"`
+	Error string `json:"error"`
 	ErrMsg string `json:"err_msg"`
 	ExitStatus uint8 `json:"exit_status"`
 }
@@ -465,6 +466,9 @@ func (sj *ShoveyRun) UpdateFromJSON(sjData map[string]interface{}) util.Gerror {
 	if errMsg, ok := sjData["err_msg"].(string); ok {
 		sj.ErrMsg = errMsg
 	}
+	if errorStr, ok := sjData["error"].(string); ok {
+		sj.Error = errorStr
+	}
 	if exitStatus, ok := sjData["exit_status"].(float64); ok {
 		sj.ExitStatus = uint8(exitStatus)
 	}
@@ -562,7 +566,6 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 
 	config.Key.RLock()
 	defer config.Key.RUnlock()
-	logger.Debugf("privkey: %v+", config.Key.PrivKey)
 	sig, err := chefcrypto.SignTextBlock(payloadBlock, config.Key.PrivKey)
 	if err != nil {
 		return "", err
