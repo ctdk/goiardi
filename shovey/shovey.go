@@ -142,16 +142,19 @@ func New(command string, timeout int, quorumStr string, nodeNames []string) (*Sh
 	ds := datastore.New()
 	ds.Set("shovey", runID, s)
 
+	return s, nil
+}
+
+func (s *Shovey) Start() util.Gerror {
 	err := s.startJobs()
 	if err != nil {
 		s.Status = err.Status()
 		s.save()
-		return nil, util.CastErr(err)
+		return util.CastErr(err)
 	}
 	s.Status = "running"
 	s.save()
-
-	return s, nil
+	return nil
 }
 
 func (s *Shovey) save() util.Gerror {

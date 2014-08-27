@@ -130,6 +130,12 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 			return
 		}
+		gerr = s.Start()
+		if gerr != nil {
+			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
+			return
+		}
+
 		shoveyResponse["id"] = s.RunID
 		shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/shovey/jobs/%s", s.RunID))
 	case "PUT":

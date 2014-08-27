@@ -136,6 +136,7 @@ func GetNodesByStatus(nodeNames []string, status string) ([]*Node, error) {
 		ns, _ := n.LatestStatus()
 		if ns == nil {
 			logger.Infof("No status found at all for node %s, skipping", n.Name)
+			continue
 		}
 		if ns.Status == status {
 			statNodes = append(statNodes, n)
