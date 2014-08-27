@@ -12,12 +12,37 @@ The Shovey API
 
 		Response body format:
 
+```
+[
+  "036d8b61-da10-439b-ba1f-40f5f866c6b1",
+  "04226cc8-0c9b-47e5-adaa-158ccc36f0b1",
+  "1204692a-8e4c-4adb-960a-089d59c10fbf",
+  "242957ce-10c5-4f7a-89d8-ffb478fd1ef9"
+]
+```
+
 	Method: POST
 		Create a new shovey job.
 
 		Request body format:
 
+```
+{
+	"command": "foo",
+	"quorum": "75%",
+	"nodes": [ "foo.local", "bar.local" ]
+}
+```
+
 		Response body format:
+
+```
+{
+	"id": "76b745eb-45d6-4856-94f9-7830e79cb8cd",
+	"uri": "http://your.chef-server.local:4545/shovey/jobs/76b745eb-45d6-4856-94f9-7830e79cb8cd"
+}
+```
+
 
 `/shovey/jobs/<JOB ID>`
 
@@ -26,6 +51,23 @@ The Shovey API
 		node's status.
 
 		Response body format:
+
+```
+{
+  "command": "ls",
+  "created_at": "2014-08-26T21:44:24.636242093-07:00",
+  "id": "76b745eb-45d6-4856-94f9-7830e79cb8cd",
+  "nodes": {
+    "completed": [
+      "nineveh.local"
+    ]
+  },
+  "run_timeout": 300000000000,
+  "status": "completed",
+  "updated_at": "2014-08-26T21:44:25.079010129-07:00"
+}
+```
+
 	
 `/shovey/jobs/<JOB ID>/<NODENAME>`
 
@@ -35,14 +77,48 @@ The Shovey API
 
 		Response body format:
 
+```
+{
+  "run_id": "76b745eb-45d6-4856-94f9-7830e79cb8cd",
+  "node_name": "nineveh.local",
+  "status": "completed",
+  "ack_time": "2014-08-26T21:44:24.645047317-07:00",
+  "end_time": "2014-08-26T21:44:25.078800724-07:00",
+  "output": "Applications\nLibrary\nNetwork\nSystem\nUser Information\nUsers\nVolumes\nbin\ncores\ndev\netc\nhome\nmach_kernel\nnet\nopt\nprivate\nsbin\ntmp\nusr\nvar\n",
+  "error": "",
+  "err_msg": "",
+  "exit_status": 0
+}
+```
+
+
 `/shovey/jobs/cancel`
 
 	Methods: PUT
-		Cancels a job.
+		Cancels a job. The "nodes" option can either be a list of nodes to cancel the job on, or use an empty array to cancel the job on all nodes running this job.
 
 		Request body format:
 
+```
+{
+  "run_id": "76b745eb-45d6-4856-94f9-7830e79cb8cd",
+  "nodes": [ "foomer.local", "noober.snerber.com" ]
+}
+```
+
 		Response body format:
+
+```
+{
+  "command"=>"sleepy", 
+  "created_at"=>"2014-08-26T21:55:07.751851335-07:00",
+  "id"=>"188d457e-2e07-40ef-954c-ab936af615b6",
+  "nodes"=>{"cancelled"=>["nineveh.local"]},
+  "run_timeout"=>300000000000,
+  "status"=>"cancelled",
+  "updated_at"=>"2014-08-26T21:55:25.161713014-07:00"
+}
+```
 
 #### Node status
 
@@ -52,17 +128,70 @@ The Shovey API
 
 		Response Body format:
 
+```
+[
+  {
+    "node_name": "nineveh.local",
+    "status": "up",
+    "updated_at": "2014-08-26T21:49:58-07:00",
+    "url": "http://nineveh.local:4545/status/node/nineveh.local/latest"
+  },
+  {
+    "node_name": "fooper.local",
+    "status": "down",
+    "updated_at": "2014-08-26T21:47:48-07:00",
+    "url": "http://nineveh.local:4545/status/node/fooper.local/latest"
+  }
+]
+```
+
+
 `/status/node/<NODENAME>/all`
 
 	Methods: GET
 		
 		Response body format:
 
+```
+[
+  {
+    "node_name": "nineveh.local",
+    "status": "up",
+    "updated_at": "2014-08-26T21:51:28-07:00"
+  },
+  {
+    "node_name": "nineveh.local",
+    "status": "up",
+    "updated_at": "2014-08-26T21:50:58-07:00"
+  },
+  {
+    "node_name": "nineveh.local",
+    "status": "up",
+    "updated_at": "2014-08-26T21:50:28-07:00"
+  },
+  {
+    "node_name": "nineveh.local",
+    "status": "up",
+    "updated_at": "2014-08-26T21:49:58-07:00"
+  }
+]
+
+```
+
+
 `/status/node/<NODENAME>/latest`
 
 	Methods: GET
 
 		Response body format:
+
+```
+{
+  "node_name": "nineveh.local",
+  "status": "up",
+  "updated_at": "2014-08-26T21:50:58-07:00"
+}
+```
 
 ### serf API
 
