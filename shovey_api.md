@@ -92,7 +92,7 @@ Response body format:
   "end_time": "2014-08-26T21:44:25.078800724-07:00",
   "output": "Applications\nLibrary\nNetwork\nSystem\nUser Information\nUsers\nVolumes\nbin\ncores\ndev\netc\nhome\nmach_kernel\nnet\nopt\nprivate\nsbin\ntmp\nusr\nvar\n",
   "error": "",
-  "err_msg": "",
+  "stderr": "",
   "exit_status": 0
 }
 ```
@@ -112,7 +112,7 @@ Request body format:
   "end_time": "2014-08-26T21:44:25.078800724-07:00",
   "output": "Applications\nLibrary\nNetwork\nSystem\nUser Information\nUsers\nVolumes\nbin\ncores\ndev\netc\nhome\nmach_kernel\nnet\nopt\nprivate\nsbin\ntmp\nusr\nvar\n",
   "error": "",
-  "err_msg": "",
+  "stderr": "",
   "exit_status": 0,
   "run_duration": 100,
   "protocol_major": 0,

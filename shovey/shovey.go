@@ -57,7 +57,7 @@ type ShoveyRun struct {
 	EndTime time.Time `json:"end_time"`
 	Output string `json:"output"`
 	Error string `json:"error"`
-	ErrMsg string `json:"err_msg"`
+	Stderr string `json:"stderr"`
 	ExitStatus uint8 `json:"exit_status"`
 }
 
@@ -463,8 +463,8 @@ func (sj *ShoveyRun) UpdateFromJSON(sjData map[string]interface{}) util.Gerror {
 	if output, ok := sjData["output"].(string); ok {
 		sj.Output = output
 	}
-	if errMsg, ok := sjData["err_msg"].(string); ok {
-		sj.ErrMsg = errMsg
+	if errMsg, ok := sjData["stderr"].(string); ok {
+		sj.Stderr = errMsg
 	}
 	if errorStr, ok := sjData["error"].(string); ok {
 		sj.Error = errorStr
