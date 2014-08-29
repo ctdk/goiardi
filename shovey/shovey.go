@@ -61,6 +61,15 @@ type ShoveyRun struct {
 	ExitStatus uint8 `json:"exit_status"`
 }
 
+type ShoveyRunStream struct {
+	ShoveyUUID string,
+	NodeName string,
+	Seq int,
+	OutputType string,
+	Output string,
+	CreatedAt time.Time
+}
+
 type Qerror interface {
 	String() string
 	Error() string
@@ -131,16 +140,38 @@ func (e *qerror) SetDownNodes(d []string) {
 }
 
 func New(command string, timeout int, quorumStr string, nodeNames []string) (*Shovey, util.Gerror) {
+	var found bool
 	runID := uuid.New()
-	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout) * time.Second, Quorum: quorumStr, Status: "submitted" }
+	
+	// Conflicting uuids are unlikely, but conceivable.
 	if config.UsingDB() {
-		
+		var err error
+		found, err = checkForShoveySQL(datastore.Dbh, runID)
+		if err != nil {
+			gerr := util.CastErr(err)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return nil, gerr
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get("shovey", runID)
 	}
+
+	// unlikely
+	if found { 
+		err := util.Errorf("a shovey run with this run id already exists")
+		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
+	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout) * time.Second, Quorum: quorumStr, Status: "submitted" }
+	
 	s.CreatedAt = time.Now()
 	s.UpdatedAt = time.Now()
 
-	ds := datastore.New()
-	ds.Set("shovey", runID, s)
+	err := s.save()
+	if err != nil {
+		return nil, err
+	}
 
 	return s, nil
 }
@@ -514,6 +545,19 @@ func (sj *ShoveyRun) cleanup() {
 func (sj *ShoveyRun) notifyParent() {
 	s, _ := Get(sj.ShoveyUUID)
 	s.checkCompleted()
+}
+
+func (sj *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, isLast bool) error {
+	if config.UsingDB() {
+
+	}
+}
+
+func (sj *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunStream, error) {
+	if config.UsingDB() {
+
+	}
+
 }
 
 func getQuorum(quorum string, numNodes int) (int, Qerror) {

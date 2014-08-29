@@ -11,6 +11,8 @@ The Chef Pushy API located at http://docs.getchef.com/push_jobs.html#api-push-jo
 
 `/shovey/jobs`
 
+Methods: GET, PUT
+
 Method: GET
 
 List all jobs on the server. Returns a list of uuids of jobs.
@@ -76,6 +78,8 @@ Response body format:
 
 	
 `/shovey/jobs/<JOB ID>/<NODENAME>`
+
+Methods: GET, PUT
 
 Method: GET
 
@@ -158,6 +162,54 @@ Response body format:
   "run_timeout"=>300000000000,
   "status"=>"cancelled",
   "updated_at"=>"2014-08-26T21:55:25.161713014-07:00"
+}
+```
+
+#### Streaming output
+
+`/shovey/stream/<JOB ID>/<NODE>`
+
+Methods: GET, PUT
+
+Method: GET
+
+Streams the output from a job running on a node. Takes two query parameters: `sequence` and `output_type`. The `sequence` parameter is the number of the most recent sequence fetched so far, while `output_type` sets the sort of output you'd like to receive. Acceptable values are 'stdout', 'stderr', and 'both'. The default value for `sequence` if none is given is 0, while the default for `output_type` is 'stdout'.
+
+Response body format:
+
+```
+{
+  "run_id": "188d457e-2e07-40ef-954c-ab936af615b6",
+  "node_name": "foomer.local",
+  "last_seq": 123,
+  "output_type": "stdout",
+  "length": "3",
+  "output": "foo"
+}
+```
+
+Method: PUT
+
+Add a chunk of output from a shovey job on a node to the log on the server for the job and node.
+
+Request body format:
+
+```
+{
+  "run_id": "188d457e-2e07-40ef-954c-ab936af615b6",
+  "node_name": "foomer.local",
+  "seq": 1,
+  "length": 3,
+  "output_type": "stdout",
+  "output": "foo"
+}
+```
+
+Response body format:
+
+```
+{
+  "response":"ok"
 }
 ```
 

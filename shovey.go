@@ -45,13 +45,219 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 		return
 	}
+	op := pathArray[1]
 
 	shoveyResponse := make(map[string]interface{})
 
-	switch r.Method {
-	case "GET":
-		switch pathArrayLen {
-		case 4:
+	switch op {
+	case "jobs":
+		switch r.Method {
+		case "GET":
+			switch pathArrayLen {
+			case 4:
+				shove, err := shovey.Get(pathArray[2])
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				sj, err := shove.GetRun(pathArray[3])
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				enc := json.NewEncoder(w)
+				if jerr := enc.Encode(&sj); err != nil {
+					jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
+				}
+				return
+			case 3:
+				shove, err := shovey.Get(pathArray[2])
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				shoveyResponse, err = shove.ToJSON()
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+			default:
+				shoveyIDs, err := shovey.AllShoveyIDs()
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				enc := json.NewEncoder(w)
+				if jerr := enc.Encode(&shoveyIDs); err != nil {
+					jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
+				}
+				return
+			}
+		case "POST":
+			if pathArrayLen != 2 {
+				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+				return
+			}
+			shvData, err := parseObjJSON(r.Body)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				return
+			}
+			logger.Debugf("shvData: %v", shvData)
+			var quorum string
+			var timeout int
+			var ok bool
+			if quorum, ok = shvData["quorum"].(string); !ok {
+				quorum = "100%"
+			}
+			if t, ok := shvData["run_timeout"].(string); !ok {
+				timeout = 300
+			} else {
+				timeout, err = strconv.Atoi(t)
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+					return
+				}
+			}
+			if len(shvData["nodes"].([]interface{})) == 0 {
+				jsonErrorReport(w, r, "no nodes provided", http.StatusBadRequest)
+				return
+			} 
+			nodeNames := make([]string, len(shvData["nodes"].([]interface{})))
+			for i, v := range shvData["nodes"].([]interface{}) {
+				nodeNames[i] = v.(string)
+			}
+			
+			s, gerr := shovey.New(shvData["command"].(string), timeout, quorum, nodeNames)
+			if gerr != nil {
+				jsonErrorReport(w, r, gerr.Error(), gerr.Status())
+				return
+			}
+			gerr = s.Start()
+			if gerr != nil {
+				jsonErrorReport(w, r, gerr.Error(), gerr.Status())
+				return
+			}
+
+			shoveyResponse["id"] = s.RunID
+			shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/shovey/jobs/%s", s.RunID))
+		case "PUT":
+			switch pathArrayLen {
+			case 3:
+				if pathArray[2] != "cancel" {
+					jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+					return
+				}
+				cancelData, perr := parseObjJSON(r.Body)
+				if perr != nil {
+					jsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
+					return
+				}
+
+				var nodeNames []string
+				runID, ok := cancelData["run_id"].(string)
+				if !ok {
+					jsonErrorReport(w, r, "No shovey run ID provided, or provided id was invalid", http.StatusBadRequest)
+					return
+				}
+				
+				if nn, ok := cancelData["nodes"].([]interface{}); ok {
+					for _, v := range nn {
+						nodeNames = append(nodeNames, v.(string))
+					}
+				}
+				shove, err := shovey.Get(runID)
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				if len(nodeNames) != 0 {
+					serr := shove.CancelRuns(nodeNames)
+					if serr != nil {
+						jsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
+				} else {
+					err = shove.Cancel()
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
+				}
+				shoveyResponse, err = shove.ToJSON()
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+			case 4:
+				sjData, perr := parseObjJSON(r.Body)
+				if perr != nil {
+					jsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
+					return
+				}
+				nodeName := pathArray[3]
+				logger.Debugf("sjData: %v", sjData)
+				shove, err := shovey.Get(pathArray[2])
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				sj, err := shove.GetRun(nodeName)
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				err = sj.UpdateFromJSON(sjData)
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				shoveyResponse["id"] = shove.RunID
+				shoveyResponse["node"] = nodeName
+				shoveyResponse["response"] = "ok" 
+			default:
+				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+				return
+			}
+		default:
+			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+			return
+		}
+	case "stream":
+		if pathArrayLen != 4 {
+			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			return
+		}
+		switch r.Method {
+		case "GET":
+			var seq int
+			r.ParseForm()
+			if s, found := r.Form["sequence"]; found {
+				if len(s) < 0 {
+					jsonErrorReport(w, r, "invalid sequence", http.StatusBadRequest)
+					return
+				}
+				var err error
+				seq, err = strconv.Atoi(s[0])
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+					return
+				}
+			}
+			var outType string
+			if o, found := r.Form["output_type"]; found {
+				if len(o) < 0 {
+					jsonErrorReport(w, r, "invalid output type", http.StatusBadRequest)
+					return
+				}
+				outType = o[0]
+				if outType != "stdout" && outType != "stderr" && outType != "both" {
+					jsonErrorReport(w, r, "output type must be 'stdout', 'stderr', or 'both'", http.StatusBadRequest)
+					return
+				}
+			} else {
+				outType = "stdout"
+			}
 			shove, err := shovey.Get(pathArray[2])
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
@@ -62,162 +268,16 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
-			enc := json.NewEncoder(w)
-			if jerr := enc.Encode(&sj); err != nil {
-				jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
-			}
-			return
-		case 3:
-			shove, err := shovey.Get(pathArray[2])
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-			shoveyResponse, err = shove.ToJSON()
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-		default:
-			shoveyIDs, err := shovey.AllShoveyIDs()
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-			enc := json.NewEncoder(w)
-			if jerr := enc.Encode(&shoveyIDs); err != nil {
-				jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
-			}
-			return
-		}
-	case "POST":
-		if pathArrayLen != 2 {
-			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
-			return
-		}
-		shvData, err := parseObjJSON(r.Body)
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-			return
-		}
-		logger.Debugf("shvData: %v", shvData)
-		var quorum string
-		var timeout int
-		var ok bool
-		if quorum, ok = shvData["quorum"].(string); !ok {
-			quorum = "100%"
-		}
-		if t, ok := shvData["run_timeout"].(string); !ok {
-			timeout = 300
-		} else {
-			timeout, err = strconv.Atoi(t)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-				return
-			}
-		}
-		if len(shvData["nodes"].([]interface{})) == 0 {
-			jsonErrorReport(w, r, "no nodes provided", http.StatusBadRequest)
-			return
-		} 
-		nodeNames := make([]string, len(shvData["nodes"].([]interface{})))
-		for i, v := range shvData["nodes"].([]interface{}) {
-			nodeNames[i] = v.(string)
-		}
-		
-		s, gerr := shovey.New(shvData["command"].(string), timeout, quorum, nodeNames)
-		if gerr != nil {
-			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
-			return
-		}
-		gerr = s.Start()
-		if gerr != nil {
-			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
-			return
-		}
-
-		shoveyResponse["id"] = s.RunID
-		shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/shovey/jobs/%s", s.RunID))
-	case "PUT":
-		switch pathArrayLen {
-		case 3:
-			if pathArray[2] != "cancel" {
-				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
-				return
-			}
-			cancelData, perr := parseObjJSON(r.Body)
-			if perr != nil {
-				jsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
-				return
-			}
-
-			var nodeNames []string
-			runID, ok := cancelData["run_id"].(string)
-			if !ok {
-				jsonErrorReport(w, r, "No shovey run ID provided, or provided id was invalid", http.StatusBadRequest)
-				return
-			}
+			stream, err := sj.GetStreamOutput(outType, seq)
+		case "PUT":
 			
-			if nn, ok := cancelData["nodes"].([]interface{}); ok {
-				for _, v := range nn {
-					nodeNames = append(nodeNames, v.(string))
-				}
-			}
-			shove, err := shovey.Get(runID)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-			if len(nodeNames) != 0 {
-				serr := shove.CancelRuns(nodeNames)
-				if serr != nil {
-					jsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
-			} else {
-				err = shove.Cancel()
-				if err != nil {
-					jsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
-			}
-			shoveyResponse, err = shove.ToJSON()
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-		case 4:
-			sjData, perr := parseObjJSON(r.Body)
-			if perr != nil {
-				jsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
-				return
-			}
-			nodeName := pathArray[3]
-			logger.Debugf("sjData: %v", sjData)
-			shove, err := shovey.Get(pathArray[2])
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-			sj, err := shove.GetRun(nodeName)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-			err = sj.UpdateFromJSON(sjData)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-			shoveyResponse["id"] = shove.RunID
-			shoveyResponse["node"] = nodeName
-			shoveyResponse["response"] = "ok" 
 		default:
-			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return
 		}
+
 	default:
-		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "Unrecognized operation", http.StatusBadRequest)
 		return
 	}
 
