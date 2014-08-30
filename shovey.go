@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"sort"
 	"strconv"
 )
 
@@ -269,8 +270,69 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			stream, err := sj.GetStreamOutput(outType, seq)
+			sort.Sort(shovey.BySeq(stream))
+
+			var combinedOutput string
+			for _, sitem := range stream {
+				combinedOutput = combinedOutput + sitem.Output
+			}
+
+			shoveyResponse["run_id"] = sj.ShoveyUUID
+			shoveyResponse["node_name"] = sj.NodeName
+			shoveyResponse["output_type"] = outType
+			shoveyResponse["last_seq"] = stream[len(stream)-1].Seq
+			shoveyResponse["output"] = combinedOutput
 		case "PUT":
+			streamData, serr := parseObjJSON(r.Body)
+			if serr != nil {
+				jsonErrorReport(w, r, serr.Error(), http.StatusBadRequest)
+				return
+			}
+			shove, err := shovey.Get(pathArray[2])
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			sj, err := shove.GetRun(pathArray[3])
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
 			
+			output, ok := streamData["output"].(string)
+			if !ok {
+				oerr := util.Errorf("invalid output")
+				jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+				return
+			}
+			outputType, ok := streamData["output_type"].(string)
+			if !ok {
+				oerr := util.Errorf("invalid output type")
+				jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+				return
+			}
+
+			isLast, ok := streamData["is_last"].(bool)
+			if !ok {
+				oerr := util.Errorf("invalid is_last")
+				jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+				return
+			}
+
+			seqFloat, ok := streamData["seq"].(float64)
+			if !ok {
+				oerr := util.Errorf("invalid seq")
+				jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+				return
+			}
+			seq := int(seqFloat)
+
+			err = sj.AddStreamOutput(output, outputType, seq, isLast)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			shoveyResponse["response"] = "ok"
 		default:
 			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return

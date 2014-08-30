@@ -173,7 +173,7 @@ Methods: GET, PUT
 
 Method: GET
 
-Streams the output from a job running on a node. Takes two query parameters: `sequence` and `output_type`. The `sequence` parameter is the number of the most recent sequence fetched so far, while `output_type` sets the sort of output you'd like to receive. Acceptable values are 'stdout', 'stderr', and 'both'. The default value for `sequence` if none is given is 0, while the default for `output_type` is 'stdout'.
+Streams the output from a job running on a node. Takes two query parameters: `sequence` and `output_type`. The `sequence` parameter is the the sequence record to start fetching from, while `output_type` sets the sort of output you'd like to receive. Acceptable values are 'stdout', 'stderr', and 'both'. The default value for `sequence` if none is given is 0, while the default for `output_type` is 'stdout'.
 
 Response body format:
 
@@ -183,7 +183,6 @@ Response body format:
   "node_name": "foomer.local",
   "last_seq": 123,
   "output_type": "stdout",
-  "length": "3",
   "output": "foo"
 }
 ```
@@ -199,7 +198,7 @@ Request body format:
   "run_id": "188d457e-2e07-40ef-954c-ab936af615b6",
   "node_name": "foomer.local",
   "seq": 1,
-  "length": 3,
+  "is_last": false,
   "output_type": "stdout",
   "output": "foo"
 }

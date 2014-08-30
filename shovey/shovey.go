@@ -62,13 +62,16 @@ type ShoveyRun struct {
 }
 
 type ShoveyRunStream struct {
-	ShoveyUUID string,
-	NodeName string,
-	Seq int,
-	OutputType string,
-	Output string,
+	ShoveyUUID string 
+	NodeName string
+	Seq int
+	OutputType string
+	Output string
+	IsLast bool
 	CreatedAt time.Time
 }
+
+type BySeq []*ShoveyRunStream
 
 type Qerror interface {
 	String() string
@@ -511,35 +514,8 @@ func (sj *ShoveyRun) UpdateFromJSON(sjData map[string]interface{}) util.Gerror {
 	if err != nil {
 		return err
 	}
-	//go sj.cleanup()
 	go sj.notifyParent()
 	return nil
-}
-
-func (sj *ShoveyRun) cleanup() {
-	payload := make(map[string]string)
-	payload["run_id"] = sj.ShoveyUUID
-	payload["action"] = "reap"
-	jsonPayload, _ := json.Marshal(payload)
-	respCh := make(chan serfclient.NodeResponse, 1)
-	q := &serfclient.QueryParam{ Name: "shovey", Payload: jsonPayload, FilterNodes: []string{ sj.NodeName }, RespCh: respCh }
-	// try 10 times to clean this up, log if it still doesn't work
-	for i := 0; i < 10; i++ {
-		time.Sleep(250 * time.Millisecond)
-		qerr := serfin.Serfer.Query(q)
-		if qerr != nil {
-			logger.Errorf(qerr.Error())
-			return
-		}
-		response := <-respCh
-		logger.Debugf("got response for reaping: %s", string(response.Payload))
-		if string(response.Payload) == "success" {
-			logger.Debugf("reaped job %s on node %s", sj.ShoveyUUID, string(response.Payload))
-			return
-		}
-	}
-	logger.Errorf("Unable to reap job %s on node %s", sj.ShoveyUUID, sj.NodeName)
-	return
 }
 
 func (sj *ShoveyRun) notifyParent() {
@@ -547,17 +523,37 @@ func (sj *ShoveyRun) notifyParent() {
 	s.checkCompleted()
 }
 
-func (sj *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, isLast bool) error {
+func (sj *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, isLast bool) util.Gerror {
 	if config.UsingDB() {
 
 	}
+	stream := &ShoveyRunStream{ ShoveyUUID: sj.ShoveyUUID, NodeName: sj.NodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: time.Now() }
+	ds := datastore.New()
+	_, found := ds.Get("shovey_run_stream", fmt.Sprintf("%s_%s_%d", sj.ShoveyUUID, sj.NodeName, seq))
+	if found {
+		err := util.Errorf("sequence %s for %s - %s already exists", seq, sj.ShoveyUUID, sj.NodeName)
+		err.SetStatus(http.StatusConflict)
+		return err
+	}
+	ds.Set("shovey_run_stream", fmt.Sprintf("%s_%s_%d", sj.ShoveyUUID, sj.NodeName, seq), stream)
+
+	return nil
 }
 
-func (sj *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunStream, error) {
+func (sj *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunStream, util.Gerror) {
 	if config.UsingDB() {
 
 	}
-
+	var streams []*ShoveyRunStream
+	ds := datastore.New()
+	for i := seq; ; i++ {
+		s, found := ds.Get("shovey_run_stream", fmt.Sprintf("%s_%s_%d", sj.ShoveyUUID, sj.NodeName))
+		if !found {
+			break
+		}
+		streams = append(streams, s.(*ShoveyRunStream))
+	}
+	return streams, nil
 }
 
 func getQuorum(quorum string, numNodes int) (int, Qerror) {
@@ -619,3 +615,7 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 	}
 	return sig, nil
 }
+
+func (s BySeq) Len() int { return len(s) }
+func (s BySeq) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s BySeq) Less(i, j int) bool { return s[i].Seq < s[j].Seq }
