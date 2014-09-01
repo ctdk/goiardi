@@ -17,6 +17,7 @@
 package shovey
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
@@ -313,7 +314,7 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 	if err != nil {
 		return util.CastErr(err)
 	}
-	doneCh := make(chan struct{}, 1)
+	doneCh := make(chan struct{})
 	go func(){
 		for c := range ackCh {
 			logger.Debugf("Received acknowledgement from %s", c)
@@ -351,7 +352,7 @@ func (s *Shovey) startJobs() Qerror {
 	}
 
 	// if that all worked, send the commands
-	errch := make(chan error, 1)
+	errch := make(chan error)
 	go func() {
 		tagNodes := make([]string, len(upNodes))
 		d := make(map[string]bool)
@@ -560,10 +561,37 @@ func (sj *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunSt
 	return streams, nil
 }
 
-func (sj *ShoveyRun) ToJSON() (map[string]interface{}, error) {
-	toJSON := make(map[string]interface{}
+func (sj *ShoveyRun) CombineStreamOutput(outputType string, seq int) (string, util.Gerror) {
+	stream, err := sj.GetStreamOutput(outputType, seq)
+	if err != nil {
+		return "", err
+	}
+	sort.Sort(BySeq(stream))
+	var combinedOutput bytes.Buffer
+	for _, sitem := range stream {
+		combinedOutput.WriteString(sitem.Output)
+	}
+	return combinedOutput.String(), nil
+}
+
+func (sj *ShoveyRun) ToJSON() (map[string]interface{}, util.Gerror) {
+	var err util.Gerror
+	toJSON := make(map[string]interface{})
 	toJSON["run_id"] = sj.ShoveyUUID
 	toJSON["node_name"] = sj.NodeName
+	toJSON["status"] = sj.Status
+	toJSON["ack_time"] = sj.AckTime
+	toJSON["end_time"] = sj.EndTime
+	toJSON["error"] = sj.Error
+	toJSON["exit_status"] = sj.ExitStatus
+	toJSON["output"], err = sj.CombineStreamOutput("stdout", 0)
+	if err != nil {
+		return nil, err
+	}
+	toJSON["stderr"], err = sj.CombineStreamOutput("stderr", 0)
+	if err != nil {
+		return nil, err
+	}
 	return toJSON, nil
 }
 

@@ -133,7 +133,7 @@ func main() {
 			logger.Criticalf(serferr.Error())
 			os.Exit(1)
 		}
-		errch := make(chan error, 1)
+		errch := make(chan error)
 		go startEventMonitor(serfin.Serfer, errch)
 		err := <-errch
 		if err != nil {
