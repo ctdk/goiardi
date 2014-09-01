@@ -529,13 +529,15 @@ func (sj *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, 
 	}
 	stream := &ShoveyRunStream{ ShoveyUUID: sj.ShoveyUUID, NodeName: sj.NodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: time.Now() }
 	ds := datastore.New()
-	_, found := ds.Get("shovey_run_stream", fmt.Sprintf("%s_%s_%d", sj.ShoveyUUID, sj.NodeName, seq))
+	streamKey := fmt.Sprintf("%s_%s_%s_%d", sj.ShoveyUUID, sj.NodeName, outputType, seq)
+	logger.Debugf("Setting %s", streamKey)
+	_, found := ds.Get("shovey_run_stream", streamKey)
 	if found {
-		err := util.Errorf("sequence %s for %s - %s already exists", seq, sj.ShoveyUUID, sj.NodeName)
+		err := util.Errorf("sequence %d for %s - %s already exists", seq, sj.ShoveyUUID, sj.NodeName)
 		err.SetStatus(http.StatusConflict)
 		return err
 	}
-	ds.Set("shovey_run_stream", fmt.Sprintf("%s_%s_%d", sj.ShoveyUUID, sj.NodeName, seq), stream)
+	ds.Set("shovey_run_stream", streamKey, stream)
 
 	return nil
 }
@@ -547,13 +549,22 @@ func (sj *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunSt
 	var streams []*ShoveyRunStream
 	ds := datastore.New()
 	for i := seq; ; i++ {
-		s, found := ds.Get("shovey_run_stream", fmt.Sprintf("%s_%s_%d", sj.ShoveyUUID, sj.NodeName))
+		logger.Debugf("Getting %s", fmt.Sprintf("%s_%s_%s_%d", sj.ShoveyUUID, sj.NodeName, outputType, i))
+		s, found := ds.Get("shovey_run_stream", fmt.Sprintf("%s_%s_%s_%d", sj.ShoveyUUID, sj.NodeName, outputType, i))
 		if !found {
 			break
 		}
+		logger.Debugf("got a stream: %v", s)
 		streams = append(streams, s.(*ShoveyRunStream))
 	}
 	return streams, nil
+}
+
+func (sj *ShoveyRun) ToJSON() (map[string]interface{}, error) {
+	toJSON := make(map[string]interface{}
+	toJSON["run_id"] = sj.ShoveyUUID
+	toJSON["node_name"] = sj.NodeName
+	return toJSON, nil
 }
 
 func getQuorum(quorum string, numNodes int) (int, Qerror) {

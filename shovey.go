@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
@@ -66,11 +67,11 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-				enc := json.NewEncoder(w)
-				if jerr := enc.Encode(&sj); err != nil {
-					jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
+				shoveyResponse, err = sj.ToJSON()
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
 				}
-				return
 			case 3:
 				shove, err := shovey.Get(pathArray[2])
 				if err != nil {
@@ -270,20 +271,25 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			stream, err := sj.GetStreamOutput(outType, seq)
+			logger.Debugf("stream? %v", stream)
 			sort.Sort(shovey.BySeq(stream))
 
-			var combinedOutput string
+			var combinedOutput bytes.Buffer
 			for _, sitem := range stream {
-				combinedOutput = combinedOutput + sitem.Output
+				//combinedOutput = combinedOutput + sitem.Output
+				combinedOutput.WriteString(sitem.Output)
 			}
 
 			shoveyResponse["run_id"] = sj.ShoveyUUID
 			shoveyResponse["node_name"] = sj.NodeName
 			shoveyResponse["output_type"] = outType
-			shoveyResponse["last_seq"] = stream[len(stream)-1].Seq
-			shoveyResponse["output"] = combinedOutput
+			if len(stream) != 0 {
+				shoveyResponse["last_seq"] = stream[len(stream)-1].Seq
+			}
+			shoveyResponse["output"] = combinedOutput.String()
 		case "PUT":
 			streamData, serr := parseObjJSON(r.Body)
+			logger.Debugf("streamData: %v", streamData)
 			if serr != nil {
 				jsonErrorReport(w, r, serr.Error(), http.StatusBadRequest)
 				return

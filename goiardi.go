@@ -472,6 +472,8 @@ func gobRegister() {
 	gob.Register(sv)
 	svr := new(shovey.ShoveyRun)
 	gob.Register(svr)
+	svs := new(shovey.ShoveyRunStream)
+	gob.Register(svs)
 	ns := new(node.NodeStatus)
 	gob.Register(ns)
 	msi := make(map[string][]int)
