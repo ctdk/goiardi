@@ -23,7 +23,6 @@ import (
 	serfclient "github.com/hashicorp/serf/client"
 	"os"
 	"encoding/json"
-	"time"
 )
 
 var Serfer *serfclient.RPCClient
@@ -36,34 +35,6 @@ func StartSerfin() error {
 	if err != nil {
 		logger.Criticalf(err.Error())
 		os.Exit(1)
-	}
-	if config.Config.ClusterName != "" {
-		removeTags := []string{ "goiardi-cluster", "cluster-id" }
-		err = Serfer.UpdateTags(nil, removeTags)
-		if err != nil {
-			logger.Criticalf(err.Error())
-			os.Exit(1)
-		}
-		setTags := map[string]string{ "goiardi-cluster": config.Config.ClusterName, "cluster-id": config.Config.ClusterID }
-		ack := make(chan string, 1)
-		q := &serfclient.QueryParam{ Name: "helo", Payload: nil, RequestAck: true, FilterTags: setTags, AckCh: ack }
-		err = Serfer.Query(q)
-		if err != nil {
-			logger.Criticalf("bwah: %s", err.Error())
-		}
-		select {
-			case <-ack:
-				logger.Criticalf("There is another goiardi node in cluster %s named %s", config.Config.ClusterName, config.Config.ClusterID)
-				os.Exit(0)
-			case <- time.After(500 * time.Millisecond):
-				logger.Debugf("no duplicate goiardi nodes in the cluster")
-		}
-		
-		err = Serfer.UpdateTags(setTags, nil)
-		if err != nil {
-			logger.Criticalf(err.Error())
-			os.Exit(1)
-		}
 	}
 	
 	err = Serfer.UserEvent("goiardi-join", []byte(config.Config.Hostname), true)
