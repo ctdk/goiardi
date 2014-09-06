@@ -111,8 +111,14 @@
         <lastmod>2014-08-24T22:20:30-07:00</lastmod>
     </url>
     <url>
+        <loc>
+            http://ctdk.github.io/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook/
+        </loc>
+        <lastmod>2014-09-05T23:16:10-07:00</lastmod>
+    </url>
+    <url>
         <loc>http://ctdk.github.io/goiardi/blog/archives/</loc>
-        <lastmod>2014-08-24T22:20:30-07:00</lastmod>
+        <lastmod>2014-09-05T23:16:10-07:00</lastmod>
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/docs/</loc>
@@ -120,7 +126,7 @@
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/</loc>
-        <lastmod>2014-08-24T22:20:30-07:00</lastmod>
+        <lastmod>2014-09-05T23:16:10-07:00</lastmod>
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/robots.txt</loc>

@@ -9,7 +9,7 @@
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="It seems like only yesterday that there was a goiardi release, but really it was a few days ago. Goiardi version 0.4.2 is hot off the presses and &hellip;">
+  <meta name="description" content="Stormily agitated, a new goiardi release appears! Goiardi version 0.5.0 has been released. Aside from a few bug fixes, this release brings MySQL &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,58 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/goiardi/blog/2014/05/02/goiardi-version-0-dot-5-0-sturmisch-bewegt-now-with-mysql/">Goiardi Version 0.5.0 - Stürmisch Bewegt - Now With MySQL</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-02T10:10:55-07:00" pubdate data-updated="true">May 2<span>nd</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Stormily agitated, a new goiardi release appears! Goiardi <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.0">version 0.5.0</a> has been released.</p>
+
+<p>Aside from a few bug fixes, this release brings MySQL support. Now, in addition to running entirely in memory, goiardi can use MySQL for storing data. The <a href="https://github.com/ctdk/goiardi/blob/master/README.md">README</a> and <a href="http://godoc.org/github.com/ctdk/goiardi">godocs</a> explain how to set that up.</p>
+
+<p>From the CHANGELOG:</p>
+
+<ul>
+<li>MySQL support added</li>
+<li>No longer redirect /environments/NAME/roles/NAME to /roles/NAME/environments/NAME</li>
+<li>Update documentation, reformat godocs</li>
+<li>Split actors apart into separate user and client types, made new Actor interface that encompasses both users and clients.</li>
+</ul>
+
+
+<p><strong>Note:</strong> This release contains one breaking change. Saved data files from previous goiardi releases will not work with 0.5.0, so if you&rsquo;re in that situation either don&rsquo;t upgrade or remove your saved index and data files before starting up. This will regenerate your admin, validator, and webui keys, and of course nuke anything you had in place before.</p>
+
+<p>Postgres support has already been requested by a few people, so that should be coming fairly soon. The <a href="https://github.com/ctdk/goiardi/issues?state=open">issues page</a> has been filled in with some enhancements that would be nice for goiardi to have. Feel free to add your own if there&rsquo;s something you&rsquo;d like to see.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -463,69 +515,9 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/goiardi/blog/2013/12/31/introducing-goiardi/">Introducing Goiardi</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-12-31T12:32:00-08:00" pubdate data-updated="true">Dec 31<span>st</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><em>Originally posted on <a href="http://time.to.pullthepl.ug/blog/2013/12/31/introducing-goiardi/">time.to.pullthepl.ug</a>.</em></p>
-
-<p>A while back, I decided that I would like to learn <a href="http://golang.org/">Go</a>, which is a pretty neat language all around (in my humble opinion). I had to come up with some sort of project that would be ambitious enough to teach myself a lot of the language features, but not so huge that I&rsquo;d give up in frustration. Then I thought of a name, and realized what I had to do.</p>
-
-<p>After many evenings spent coding, I&rsquo;m proud to announce the first offical release of <a href="https://github.com/ctdk/goiardi">Goiardi</a>, an in-memory Chef server written in Go (the <a href="https://github.com/ctdk/goiardi/blob/master/README.md">README</a> has more information). (I started on it before I found out about Chef-Zero, but I decided to keep at it anyway. Chef-Zero was also a huge help in figuring out what the Chef server behavior ought to be.) At this time it has pretty much all the features Chef-Zero does, but sorting searches isn&rsquo;t working yet. If anyone has real examples of how those sorts are specified, I&rsquo;d love to hear them.</p>
-
-<p>Goiardi does not support authenication or validation at all, so it isn&rsquo;t very secure. Of course, it also doesn&rsquo;t persist its contents, so you probably shouldn&rsquo;t rely on it for your infrastructure provisioning needs.</p>
-
-<p>Aside from the authentication and permission tests, goiardi performs pretty well against chef-pedant. There are a few minor tests that fail because of slight JSON formatting differences or error messages that don&rsquo;t agree with chef-pedant, but otherwise it does quite well. Improving its performance against chef-pedant is, of course, an ongoing concern. It should do fine as a stand-in for chef-zero though, or some other situation where you need a chef server running but don&rsquo;t care if it loses all its information when it quits.</p>
-
-<p>Goiardi is, like many Chef things, open source and licensed under version 2.0 of the Apache License.</p>
-
-<h3>The Future</h3>
-
-<p>Where to go from here? Goiardi certainly has a lot of room for improvement. The first things I intend to do with it are allowing you to use a config file to store options, and allowing freezing the in-memory data structures to disk so they persist when goiardi is shut down. Those aren&rsquo;t in this release because if I kept adding &ldquo;just one more thing&rdquo; before making a formal release, I&rsquo;d never actually get it out.</p>
-
-<p>Further in the future, handling real authenication and permissions is pretty important. A real Chef Server mode, where goiardi uses Solr and a real database, is on the roadmap down the road as well. SSL, better documentation, and making the Go code more idiomatic where needed are also on the TODO list.</p>
-
-<p>Anyway, there is is. Feel free to check it out, bang on it, see where it breaks (and where it works). Suggestions, code, and comments are always welcome. Hopefully the comments are nice, but this <em>is</em> the Internet.</p>
-
-<p><strong>Update:</strong> At least part of the future is now. Goiardi has config file support now with 0.2.1, huzzah! This release also fixes a problem building goiardi with more recent versions of go-flags.</p>
-
-<p>Goiardi has been tested to compile with the native go compiler and run on Mac OS X (10.7 and 10.8), Debian &lsquo;wheezy&rsquo;, and Arch Linux. It also builds and runs with gccgo (using the <code>-compiler gccgo</code> option to <code>go</code>), tested on Arch Linux. Efforts are ongoing to get it to build with gccgo without the <code>go</code> command on OmniOS, but so far they&rsquo;ve been unsuccessful.</p>
-
-<h3>The Name</h3>
-
-<p>If you&rsquo;re wondering about the name, <a href="http://en.wikipedia.org/wiki/Ettore_Boiardi">Ettore Boiardi</a> was the real Chef Boyardee. Wakka wakka.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
+    
+      <a class="prev" href="/goiardi/blog/page/3/">&larr; Older</a>
     
     <a href="/goiardi/blog/archives">Blog Archives</a>
     
@@ -558,6 +550,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook/">Another Shovey Preview: The Shovey-Jobs Cookbook</a>
+      </li>
+    
+      <li class="post">
         <a href="/goiardi/blog/2014/08/24/a-preview-of-shovey/">A Preview of Shovey</a>
       </li>
     
@@ -571,10 +567,6 @@
     
       <li class="post">
         <a href="/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky/">Goiardi Version 0.7.0 - Orphans of the Sky</a>
-      </li>
-    
-      <li class="post">
-        <a href="/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant/">Goiardi Version 0.6.0 - Order of the Elephant</a>
       </li>
     
   </ul>

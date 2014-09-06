@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Version 0.4.0 of Goiardi Released. Now, With Authentication! - Goiardi</title>
+  <title>Another Shovey Preview: The Shovey-Jobs Cookbook - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="A new version of goiardi, version 0.4.0, as been released. This version fixes a bug with pessimistic matching, adds more tests, improves the &hellip;">
+  <meta name="description" content="Shovey still isn&rsquo;t finished, but it&rsquo;s come a long ways. To make it easier to play with and find potential issues, I&rsquo;ve released a &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -86,7 +86,7 @@
   
   <header>
     
-      <h1 class="entry-title">Version 0.4.0 of Goiardi Released. Now, With Authentication!</h1>
+      <h1 class="entry-title">Another Shovey Preview: The Shovey-Jobs Cookbook</h1>
     
     
       <p class="meta">
@@ -102,24 +102,38 @@
   
 
 
-<time datetime="2014-03-16T10:28:50-07:00" pubdate data-updated="true">Mar 16<span>th</span>, 2014</time>
+<time datetime="2014-09-05T19:58:15-07:00" pubdate data-updated="true">Sep 5<span>th</span>, 2014</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>A new version of goiardi, <a href="https://github.com/ctdk/goiardi/releases/tag/v0.4.0">version 0.4.0</a>, as been released.</p>
+<div class="entry-content"><p>Shovey still isn&rsquo;t finished, but it&rsquo;s come a long ways. To make it easier to play with and find potential issues, I&rsquo;ve released a <a href="https://github.com/ctdk/shovey-jobs">shovey-jobs cookbook</a> to install and configure shovey on a node.</p>
 
-<p>This version fixes a bug with pessimistic matching, adds more tests, improves the documentation with an expanded <a href="https://github.com/ctdk/goiardi/blob/master/README.md">README</a> and <a href="http://godoc.org/github.com/ctdk/goiardi">more godocs</a>, and introduces client/user authentication and authorization and SSL for connections as optional settings. It will also run and authenticate properly with the chef webui, if you&rsquo;re so inclined. The webui is a separate install, however, and does not ship with goiardi.</p>
+<p>It&rsquo;s a preliminary cookbook, but since shovey&rsquo;s pretty preliminary still I&rsquo;m OK with that. To use the shovey-jobs cookbook, you&rsquo;ll need to set goiardi and the knife-shove plugin up as explained in <a href="http://ctdk.github.io/goiardi/blog/2014/08/24/a-preview-of-shovey/">this previous post on shovey</a> first. Goiardi still only works with shovey in in-memory mode; the SQL support for shovey hasn&rsquo;t been finished yet. After goiardi and serf on the goiardi server are set up, spin up a node and run the shovey-jobs cookbook on it, following the instructions in the <a href="https://github.com/ctdk/shovey-jobs/blob/master/README.md">shovey-jobs README</a>. This cookbook has only been tested on Debian, but it may work with Ubuntu as well. At the moment it&rsquo;s unlikely to work with RHEL and its derivatives or other operating systems, mostly because the init script is Debian specific.</p>
 
-<p>There is also a <a href="https://github.com/ctdk/chef-pedant">fork of chef-pedant</a> customized for goiardi now, to handle some tests with authentication where goiardi and the chef-server make slightly different decisions.</p>
+<p>This cookbook depends on having the serf and golang cookbooks uploaded and in the node&rsquo;s run list. Serf may need some extra configuration to work correctly; I had to add this to the test node&rsquo;s attributes for it to work right.</p>
 
-<p>Goiardi still works fine in no-auth mode. The authentication and authorization parts are completely optional, but they&rsquo;re there if you want or need authentication. It&rsquo;s recommended that if you do use authentication that you should set the <tt>&mdash;index-file</tt> and <tt>&mdash;data-file</tt> options for persistent data and index storage, but it&rsquo;s not strictly necessary. See the <a href="https://github.com/ctdk/goiardi/blob/master/README.md">README</a> for more on how to set up authentication.</p>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>"serf" =&gt; {
+</span><span class='line'>    "agent" =&gt; { 
+</span><span class='line'>      "node_name" =&gt; "goiardi-test.local",
+</span><span class='line'>      "start_join" =&gt; [ "10.250.55.108" ],
+</span><span class='line'>      "advertise" =&gt; "10.34.10.15"
+</span><span class='line'>    }
+</span><span class='line'>  }</span></code></pre></td></tr></table></div></figure>
 
-<p>SSL is pretty straightforward, and also explained in the README. You&rsquo;ll need to <a href="http://stackoverflow.com/questions/10175812/how-to-build-a-self-signed-certificate-with-openssl">generate a certificate/key pair</a> for it to work, but that isn&rsquo;t too hard. This does assume that you&rsquo;d use a self-signed certificate for this; if you&rsquo;re going to use a real cert I assume you know what you&rsquo;re doing (and am a little surprised, to be honest).</p>
 
-<p>That&rsquo;s it for this release. The next major goiardi task coming up, barring any unexpected changes, is allowing it to use a database for the backend. This will be optional, of course; I plan on supporting the in-memory, no-auth mode a la chef-zero for goiardi indefinitely. Further out, there may be a smoother installation process, and someday even perhaps goiardi-specific features.</p>
+<p>The main serf points are that the serf node&rsquo;s name needs to be the same as the chef client name on the node, it needs to join the same serf cluster as goiardi&rsquo;s serf agent is running on, and it needs to advertise the correct address. The last one came up in testing for me because goiardi was running on my dev box, while the shovey node&rsquo;s serf was advertising the internal vagrant address rather than the shared network address. That should be enough to get you going running commands with shovey. See the <a href="https://github.com/ctdk/knife-shove/blob/master/README.rdoc">knife-shove docs</a> for possible commands there.</p>
+
+<p>On another note, there&rsquo;s some documentation now for the <a href="https://github.com/ctdk/goiardi/blob/serfing/shovey_api.md">shovey API</a>. The new thing there is how the shovey client now streams job output back to the server, and the server can in turn stream it to a client. Unfortunately the knife-shove plugin does not yet allow you to watch the job output stream by, but it&rsquo;s on the list of things to do before the formal release.</p>
 </div>
 
 
@@ -142,12 +156,12 @@
   
 
 
-<time datetime="2014-03-16T10:28:50-07:00" pubdate data-updated="true">Mar 16<span>th</span>, 2014</time>
+<time datetime="2014-09-05T19:58:15-07:00" pubdate data-updated="true">Sep 5<span>th</span>, 2014</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/goiardi/blog/categories/authentication/'>authentication</a>, <a class='category' href='/goiardi/blog/categories/goairdi/'>goairdi</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a>
+    <a class='category' href='/goiardi/blog/categories/previews/'>previews</a>, <a class='category' href='/goiardi/blog/categories/shovey/'>shovey</a>
   
 </span>
 
@@ -156,7 +170,7 @@
     
       <div class="sharing">
   
-  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/" >Tweet</a>
+  <a href="/goiardi//twitter.com/share" class="twitter-share-button" data-url="http://ctdk.github.io/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook/" data-via="" data-counturl="http://ctdk.github.io/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook/" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
@@ -171,10 +185,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/goiardi/blog/2014/03/13/meanwhile-in-the-auth-branch/" title="Previous Post: Meanwhile, in the auth branch...">&laquo; Meanwhile, in the auth branch...</a>
+        <a class="basic-alignment left" href="/goiardi/blog/2014/08/24/a-preview-of-shovey/" title="Previous Post: A preview of shovey">&laquo; A preview of shovey</a>
       
-      
-        <a class="basic-alignment right" href="/goiardi/blog/2014/03/16/goiardi-version-0-dot-4-1-release/" title="Next Post: goiardi version 0.4.1 release">goiardi version 0.4.1 release &raquo;</a>
       
     </p>
   </footer>
@@ -262,8 +274,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/';
-        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/03/16/version-0-dot-4-0-of-goiardi-released/';
+        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook/';
+        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook/';
         var disqus_script = 'embed.js';
       
     (function () {

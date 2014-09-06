@@ -9,7 +9,7 @@
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="The long promised &ldquo;shovey&rdquo; jobs for goiardi, a serf-based way to push commands out to nodes, is finally ready for a preview. There&rsquo; &hellip;">
+  <meta name="description" content="Shovey still isn&rsquo;t finished, but it&rsquo;s come a long ways. To make it easier to play with and find potential issues, I&rsquo;ve released a &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,66 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook/">Another Shovey Preview: The Shovey-Jobs Cookbook</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-09-05T19:58:15-07:00" pubdate data-updated="true">Sep 5<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Shovey still isn&rsquo;t finished, but it&rsquo;s come a long ways. To make it easier to play with and find potential issues, I&rsquo;ve released a <a href="https://github.com/ctdk/shovey-jobs">shovey-jobs cookbook</a> to install and configure shovey on a node.</p>
+
+<p>It&rsquo;s a preliminary cookbook, but since shovey&rsquo;s pretty preliminary still I&rsquo;m OK with that. To use the shovey-jobs cookbook, you&rsquo;ll need to set goiardi and the knife-shove plugin up as explained in <a href="http://ctdk.github.io/goiardi/blog/2014/08/24/a-preview-of-shovey/">this previous post on shovey</a> first. Goiardi still only works with shovey in in-memory mode; the SQL support for shovey hasn&rsquo;t been finished yet. After goiardi and serf on the goiardi server are set up, spin up a node and run the shovey-jobs cookbook on it, following the instructions in the <a href="https://github.com/ctdk/shovey-jobs/blob/master/README.md">shovey-jobs README</a>. This cookbook has only been tested on Debian, but it may work with Ubuntu as well. At the moment it&rsquo;s unlikely to work with RHEL and its derivatives or other operating systems, mostly because the init script is Debian specific.</p>
+
+<p>This cookbook depends on having the serf and golang cookbooks uploaded and in the node&rsquo;s run list. Serf may need some extra configuration to work correctly; I had to add this to the test node&rsquo;s attributes for it to work right.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>"serf" =&gt; {
+</span><span class='line'>    "agent" =&gt; { 
+</span><span class='line'>      "node_name" =&gt; "goiardi-test.local",
+</span><span class='line'>      "start_join" =&gt; [ "10.250.55.108" ],
+</span><span class='line'>      "advertise" =&gt; "10.34.10.15"
+</span><span class='line'>    }
+</span><span class='line'>  }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The main serf points are that the serf node&rsquo;s name needs to be the same as the chef client name on the node, it needs to join the same serf cluster as goiardi&rsquo;s serf agent is running on, and it needs to advertise the correct address. The last one came up in testing for me because goiardi was running on my dev box, while the shovey node&rsquo;s serf was advertising the internal vagrant address rather than the shared network address. That should be enough to get you going running commands with shovey. See the <a href="https://github.com/ctdk/knife-shove/blob/master/README.rdoc">knife-shove docs</a> for possible commands there.</p>
+
+<p>On another note, there&rsquo;s some documentation now for the <a href="https://github.com/ctdk/goiardi/blob/serfing/shovey_api.md">shovey API</a>. The new thing there is how the shovey client now streams job output back to the server, and the server can in turn stream it to a client. Unfortunately the knife-shove plugin does not yet allow you to watch the job output stream by, but it&rsquo;s on the list of things to do before the formal release.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -659,58 +719,6 @@ README or godocs for details.</li>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/goiardi/blog/2014/05/02/goiardi-version-0-dot-5-0-sturmisch-bewegt-now-with-mysql/">Goiardi Version 0.5.0 - Stürmisch Bewegt - Now With MySQL</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-05-02T10:10:55-07:00" pubdate data-updated="true">May 2<span>nd</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Stormily agitated, a new goiardi release appears! Goiardi <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.0">version 0.5.0</a> has been released.</p>
-
-<p>Aside from a few bug fixes, this release brings MySQL support. Now, in addition to running entirely in memory, goiardi can use MySQL for storing data. The <a href="https://github.com/ctdk/goiardi/blob/master/README.md">README</a> and <a href="http://godoc.org/github.com/ctdk/goiardi">godocs</a> explain how to set that up.</p>
-
-<p>From the CHANGELOG:</p>
-
-<ul>
-<li>MySQL support added</li>
-<li>No longer redirect /environments/NAME/roles/NAME to /roles/NAME/environments/NAME</li>
-<li>Update documentation, reformat godocs</li>
-<li>Split actors apart into separate user and client types, made new Actor interface that encompasses both users and clients.</li>
-</ul>
-
-
-<p><strong>Note:</strong> This release contains one breaking change. Saved data files from previous goiardi releases will not work with 0.5.0, so if you&rsquo;re in that situation either don&rsquo;t upgrade or remove your saved index and data files before starting up. This will regenerate your admin, validator, and webui keys, and of course nuke anything you had in place before.</p>
-
-<p>Postgres support has already been requested by a few people, so that should be coming fairly soon. The <a href="https://github.com/ctdk/goiardi/issues?state=open">issues page</a> has been filled in with some enhancements that would be nice for goiardi to have. Feel free to add your own if there&rsquo;s something you&rsquo;d like to see.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/goiardi/blog/page/2/">&larr; Older</a>
@@ -744,6 +752,10 @@ README or godocs for details.</li>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook/">Another Shovey Preview: The Shovey-Jobs Cookbook</a>
+      </li>
+    
+      <li class="post">
         <a href="/goiardi/blog/2014/08/24/a-preview-of-shovey/">A Preview of Shovey</a>
       </li>
     
@@ -757,10 +769,6 @@ README or godocs for details.</li>
     
       <li class="post">
         <a href="/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky/">Goiardi Version 0.7.0 - Orphans of the Sky</a>
-      </li>
-    
-      <li class="post">
-        <a href="/goiardi/blog/2014/07/01/goiardi-version-0-dot-6-0-order-of-the-elephant/">Goiardi Version 0.6.0 - Order of the Elephant</a>
       </li>
     
   </ul>

@@ -4,7 +4,7 @@
   <title><![CDATA[Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-08-24T22:20:57-07:00</updated>
+  <updated>2014-09-05T23:16:26-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,39 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Another Shovey Preview: The Shovey-Jobs Cookbook]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook/"/>
+    <updated>2014-09-05T19:58:15-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook</id>
+    <content type="html"><![CDATA[<p>Shovey still isn&rsquo;t finished, but it&rsquo;s come a long ways. To make it easier to play with and find potential issues, I&rsquo;ve released a <a href="https://github.com/ctdk/shovey-jobs">shovey-jobs cookbook</a> to install and configure shovey on a node.</p>
+
+<p>It&rsquo;s a preliminary cookbook, but since shovey&rsquo;s pretty preliminary still I&rsquo;m OK with that. To use the shovey-jobs cookbook, you&rsquo;ll need to set goiardi and the knife-shove plugin up as explained in <a href="http://ctdk.github.io/goiardi/blog/2014/08/24/a-preview-of-shovey/">this previous post on shovey</a> first. Goiardi still only works with shovey in in-memory mode; the SQL support for shovey hasn&rsquo;t been finished yet. After goiardi and serf on the goiardi server are set up, spin up a node and run the shovey-jobs cookbook on it, following the instructions in the <a href="https://github.com/ctdk/shovey-jobs/blob/master/README.md">shovey-jobs README</a>. This cookbook has only been tested on Debian, but it may work with Ubuntu as well. At the moment it&rsquo;s unlikely to work with RHEL and its derivatives or other operating systems, mostly because the init script is Debian specific.</p>
+
+<p>This cookbook depends on having the serf and golang cookbooks uploaded and in the node&rsquo;s run list. Serf may need some extra configuration to work correctly; I had to add this to the test node&rsquo;s attributes for it to work right.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>"serf" =&gt; {
+</span><span class='line'>    "agent" =&gt; { 
+</span><span class='line'>      "node_name" =&gt; "goiardi-test.local",
+</span><span class='line'>      "start_join" =&gt; [ "10.250.55.108" ],
+</span><span class='line'>      "advertise" =&gt; "10.34.10.15"
+</span><span class='line'>    }
+</span><span class='line'>  }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The main serf points are that the serf node&rsquo;s name needs to be the same as the chef client name on the node, it needs to join the same serf cluster as goiardi&rsquo;s serf agent is running on, and it needs to advertise the correct address. The last one came up in testing for me because goiardi was running on my dev box, while the shovey node&rsquo;s serf was advertising the internal vagrant address rather than the shared network address. That should be enough to get you going running commands with shovey. See the <a href="https://github.com/ctdk/knife-shove/blob/master/README.rdoc">knife-shove docs</a> for possible commands there.</p>
+
+<p>On another note, there&rsquo;s some documentation now for the <a href="https://github.com/ctdk/goiardi/blob/serfing/shovey_api.md">shovey API</a>. The new thing there is how the shovey client now streams job output back to the server, and the server can in turn stream it to a client. Unfortunately the knife-shove plugin does not yet allow you to watch the job output stream by, but it&rsquo;s on the list of things to do before the formal release.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[A Preview of Shovey]]></title>
@@ -503,41 +536,6 @@ README or godocs for details.</li>
 <p>Next tasks coming up: provide a way to reindex the data, improve existing docs as needed and write more, make actual go tests, fork chef-pedant and make a &ldquo;goiardi&rdquo; mode to simplify testing against chef-pedant.</p>
 
 <p>Anyway, that&rsquo;s what this release has. Have fun with it if you&rsquo;re so inclined, and thank you if you do.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Introducing Goiardi]]></title>
-    <link href="http://ctdk.github.io/goiardi/blog/2013/12/31/introducing-goiardi/"/>
-    <updated>2013-12-31T12:32:00-08:00</updated>
-    <id>http://ctdk.github.io/goiardi/blog/2013/12/31/introducing-goiardi</id>
-    <content type="html"><![CDATA[<p><em>Originally posted on <a href="http://time.to.pullthepl.ug/blog/2013/12/31/introducing-goiardi/">time.to.pullthepl.ug</a>.</em></p>
-
-<p>A while back, I decided that I would like to learn <a href="http://golang.org/">Go</a>, which is a pretty neat language all around (in my humble opinion). I had to come up with some sort of project that would be ambitious enough to teach myself a lot of the language features, but not so huge that I&rsquo;d give up in frustration. Then I thought of a name, and realized what I had to do.</p>
-
-<p>After many evenings spent coding, I&rsquo;m proud to announce the first offical release of <a href="https://github.com/ctdk/goiardi">Goiardi</a>, an in-memory Chef server written in Go (the <a href="https://github.com/ctdk/goiardi/blob/master/README.md">README</a> has more information). (I started on it before I found out about Chef-Zero, but I decided to keep at it anyway. Chef-Zero was also a huge help in figuring out what the Chef server behavior ought to be.) At this time it has pretty much all the features Chef-Zero does, but sorting searches isn&rsquo;t working yet. If anyone has real examples of how those sorts are specified, I&rsquo;d love to hear them.</p>
-
-<p>Goiardi does not support authenication or validation at all, so it isn&rsquo;t very secure. Of course, it also doesn&rsquo;t persist its contents, so you probably shouldn&rsquo;t rely on it for your infrastructure provisioning needs.</p>
-
-<p>Aside from the authentication and permission tests, goiardi performs pretty well against chef-pedant. There are a few minor tests that fail because of slight JSON formatting differences or error messages that don&rsquo;t agree with chef-pedant, but otherwise it does quite well. Improving its performance against chef-pedant is, of course, an ongoing concern. It should do fine as a stand-in for chef-zero though, or some other situation where you need a chef server running but don&rsquo;t care if it loses all its information when it quits.</p>
-
-<p>Goiardi is, like many Chef things, open source and licensed under version 2.0 of the Apache License.</p>
-
-<h3>The Future</h3>
-
-<p>Where to go from here? Goiardi certainly has a lot of room for improvement. The first things I intend to do with it are allowing you to use a config file to store options, and allowing freezing the in-memory data structures to disk so they persist when goiardi is shut down. Those aren&rsquo;t in this release because if I kept adding &ldquo;just one more thing&rdquo; before making a formal release, I&rsquo;d never actually get it out.</p>
-
-<p>Further in the future, handling real authenication and permissions is pretty important. A real Chef Server mode, where goiardi uses Solr and a real database, is on the roadmap down the road as well. SSL, better documentation, and making the Go code more idiomatic where needed are also on the TODO list.</p>
-
-<p>Anyway, there is is. Feel free to check it out, bang on it, see where it breaks (and where it works). Suggestions, code, and comments are always welcome. Hopefully the comments are nice, but this <em>is</em> the Internet.</p>
-
-<p><strong>Update:</strong> At least part of the future is now. Goiardi has config file support now with 0.2.1, huzzah! This release also fixes a problem building goiardi with more recent versions of go-flags.</p>
-
-<p>Goiardi has been tested to compile with the native go compiler and run on Mac OS X (10.7 and 10.8), Debian &lsquo;wheezy&rsquo;, and Arch Linux. It also builds and runs with gccgo (using the <code>-compiler gccgo</code> option to <code>go</code>), tested on Arch Linux. Efforts are ongoing to get it to build with gccgo without the <code>go</code> command on OmniOS, but so far they&rsquo;ve been unsuccessful.</p>
-
-<h3>The Name</h3>
-
-<p>If you&rsquo;re wondering about the name, <a href="http://en.wikipedia.org/wiki/Ettore_Boiardi">Ettore Boiardi</a> was the real Chef Boyardee. Wakka wakka.</p>
 ]]></content>
   </entry>
   
