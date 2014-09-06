@@ -331,7 +331,9 @@ JSON payload parameters:
 	run_id: the uuid of the shovey run
 	action: the action to perform on the node. May be "start" or "cancel".
 	command: the name of the command to run. Only required when action is "start".
+	time: RFC3339 formatted current timestamp
 	signature: assembled from the JSON payload by joining the elements of the JSON payload that aren't the signature, separated by newlines, in alphabetical order. The goiardi server must be given an RSA private key to sign the request with, and schob must have the public key matching that private key to verify the request.
+
 
 The block to sign will look something like this:
 
@@ -339,4 +341,5 @@ The block to sign will look something like this:
 action: start
 command: foo
 run_id: b5a6ee64-67ca-4a4f-94ad-6c18eb1c6a32
+time: 2014-09-05T23:00:00Z
 ```

@@ -134,7 +134,7 @@ type Options struct {
 	FreezeInterval    int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk (requires -i/--index-file and -D/--data-file options to be set). (Default 300 seconds/5 minutes.)"`
 	LogFile           string `short:"L" long:"log-file" description:"Log to file X"`
 	SysLog            bool   `short:"s" long:"syslog" description:"Log to syslog rather than a log file. Incompatible with -L/--log-file."`
-	TimeSlew          string `long:"time-slew" description:"Time difference allowed between the server's clock at the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m."`
+	TimeSlew          string `long:"time-slew" description:"Time difference allowed between the server's clock and the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m."`
 	ConfRoot          string `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set."`
 	UseAuth           bool   `short:"A" long:"use-auth" description:"Use authentication. Default: false."`
 	UseSSL            bool   `long:"use-ssl" description:"Use SSL for connections. If --port is set to 433, this will automatically be turned on. If it is set to 80, it will automatically be turned off. Default: off. Requires --ssl-cert and --ssl-key."`

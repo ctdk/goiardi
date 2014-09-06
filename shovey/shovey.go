@@ -302,6 +302,7 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 	payload := make(map[string]string)
 	payload["action"] = "cancel"
 	payload["run_id"] = s.RunID
+	payload["time"] = time.Now().Format(time.RFC3339)
 	sig, serr := s.signRequest(payload)
 	if serr != nil {
 		return util.CastErr(serr)
@@ -373,6 +374,7 @@ func (s *Shovey) startJobs() Qerror {
 		payload["run_id"] = s.RunID
 		payload["command"] = s.Command
 		payload["action"] = "start"
+		payload["time"] = time.Now().Format(time.RFC3339)
 		sig, serr := s.signRequest(payload)
 		if serr != nil {
 			errch <- serr

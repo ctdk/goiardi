@@ -113,7 +113,7 @@ Currently available command line and config file options:
    -L, --log-file=        Log to file X
    -s, --syslog           Log to syslog rather than a log file. Incompatible
                           with -L/--log-file.
-       --time-slew=       Time difference allowed between the server's clock at
+       --time-slew=       Time difference allowed between the server's clock and
                           the time in the X-OPS-TIMESTAMP header. Formatted like
                           5m, 150s, etc. Defaults to 15m.
        --conf-root=       Root directory for configs and certificates. Default:
