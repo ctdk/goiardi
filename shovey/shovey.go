@@ -194,7 +194,7 @@ func (s *Shovey) Start() util.Gerror {
 
 func (s *Shovey) save() util.Gerror {
 	if config.UsingDB() {
-		
+		return s.saveSQL()
 	}
 	s.UpdatedAt = time.Now()
 
@@ -206,7 +206,7 @@ func (s *Shovey) save() util.Gerror {
 
 func (sr *ShoveyRun) save() util.Gerror {
 	if config.UsingDB() {
-
+		return sr.saveSQL()
 	}
 	ds := datastore.New()
 	ds.Set("shovey_run", sr.ShoveyUUID + sr.NodeName, sr)
@@ -215,7 +215,7 @@ func (sr *ShoveyRun) save() util.Gerror {
 
 func (s *Shovey) GetRun(nodeName string) (*ShoveyRun, util.Gerror) {
 	if config.UsingDB() {
-
+		return s.getShoveyRunSQL(nodeName)
 	}
 	var shoveyRun *ShoveyRun
 	ds := datastore.New()
@@ -233,7 +233,7 @@ func (s *Shovey) GetRun(nodeName string) (*ShoveyRun, util.Gerror) {
 
 func (s *Shovey) GetNodeRuns() ([]*ShoveyRun, util.Gerror) {
 	if config.UsingDB() {
-
+		return s.getShoveyNodeRunsSQL()
 	}
 	var runs []*ShoveyRun
 	for _, n := range s.NodeNames {
@@ -251,7 +251,7 @@ func (s *Shovey) GetNodeRuns() ([]*ShoveyRun, util.Gerror) {
 
 func Get(runID string) (*Shovey, util.Gerror) {
 	if config.UsingDB() {
-
+		return getShoveySQL(runID)
 	}
 	var shove *Shovey
 	ds := datastore.New()
@@ -283,19 +283,23 @@ func (s *Shovey) Cancel() util.Gerror {
 
 func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 	if config.UsingDB() {
-
-	}
-	for _, n := range nodeNames {
-		sr, err := s.GetRun(n)
+		err := s.cancelRunsSQL()
 		if err != nil {
 			return err
 		}
-		if sr.Status != "invalid" && sr.Status != "completed" && sr.Status != "failed" && sr.Status != "down" && sr.Status != "nacked" {
-			sr.EndTime = time.Now()
-			sr.Status = "cancelled"
-			err = sr.save()
+	} else {
+		for _, n := range nodeNames {
+			sr, err := s.GetRun(n)
 			if err != nil {
 				return err
+			}
+			if sr.Status != "invalid" && sr.Status != "completed" && sr.Status != "failed" && sr.Status != "down" && sr.Status != "nacked" {
+				sr.EndTime = time.Now()
+				sr.Status = "cancelled"
+				err = sr.save()
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -434,7 +438,8 @@ func (s *Shovey) startJobs() Qerror {
 
 func (s *Shovey) checkCompleted() {
 	if config.UsingDB() {
-
+		s.checkCompletedSQL()
+		return
 	}
 	srs, err := s.GetNodeRuns()
 	if err != nil {
@@ -479,7 +484,7 @@ func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
 
 func AllShoveyIDs() ([]string, util.Gerror) {
 	if config.UsingDB() {
-
+		return allShoveyIDsSQL()
 	}
 	ds := datastore.New()
 	list := ds.GetList("shovey")
@@ -528,7 +533,7 @@ func (sj *ShoveyRun) notifyParent() {
 
 func (sj *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, isLast bool) util.Gerror {
 	if config.UsingDB() {
-
+		return sj.addStreamOutSQL(output, outputType, seq, isLast)
 	}
 	stream := &ShoveyRunStream{ ShoveyUUID: sj.ShoveyUUID, NodeName: sj.NodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: time.Now() }
 	ds := datastore.New()
@@ -547,7 +552,7 @@ func (sj *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, 
 
 func (sj *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunStream, util.Gerror) {
 	if config.UsingDB() {
-
+		return sj.getStreamOutSQL(outputType, seq)
 	}
 	var streams []*ShoveyRunStream
 	ds := datastore.New()
@@ -564,6 +569,8 @@ func (sj *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunSt
 }
 
 func (sj *ShoveyRun) CombineStreamOutput(outputType string, seq int) (string, util.Gerror) {
+	// TODO: This could probably be all SQLized and made way simpler when
+	// using a database. Do see.
 	stream, err := sj.GetStreamOutput(outputType, seq)
 	if err != nil {
 		return "", err

@@ -88,7 +88,7 @@ func getReportSQL(runID string) (*Report, error) {
 func (r *Report) deleteSQL() error {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	var sqlStmt string
