@@ -27,21 +27,67 @@ import (
 )
 
 func (s *Shovey) fillShoveyFromMySQL(row datastore.ResRow) error {
+	var ca, ua mysql.NullTime
+	var nn util.StringSlice
+	var tm int64
+	err := row.Scan(&s.RunID, &nn, &s.Command, &ca, &ua, &s.Status, &tm, &s.Quorum)
+	if err != nil {
+		return err
+	}
+	if ca.Valid {
+		s.CreatedAt = ca.Time
+	}
+	if ua.Valid {
+		s.UpdatedAt = ua.Time
+	}
+	s.Timeout = time.Duration(tm)
 
+	s.NodeNames = nn
+
+	return nil
 }
 
 func (s *ShoveyRun) fillShoveyRunFromMySQL(row datastore.ResRow) error {
-
+	var at, et mysql.NullTime
+	err := row.Scan(&s.ID, &s.ShoveyUUID, &s.NodeName, &s.Status, &at, &et, &s.Output, &s.Error, &s.Stderr, &s.ExitStatus)
+	if err != nil {
+		return err
+	}
+	if at.Valid {
+		s.AckTime = at.Time
+	}
+	if et.Valid {
+		s.EndTime = et.Time
+	}
+	return nil
 }
 
 func (s *ShoveyRunStream) fillShoveyRunStreamFromMySQL(row datastore.ResRow) error {
-
+	var ca mysql.NullTime
+	err := row.Scan(&s.ShoveyUUID, &s.NodeName, &s.Seq, &s.OutputType, &s.Output, &s.IsLast, &ca)
+	if err != nil {
+		return err
+	}
+	if ca.Valid {
+		s.CreatedAt = ca.Time
+	}
+	return nil
 }
 
 func (s *Shovey) saveMySQL() util.Gerror {
-
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		gerr := util.CastErr(err)
+		gerr.SetStatus(http.StatusInternalServerError)
+		return gerr
+	}
 }
 
 func (sr *ShoveyRun) saveMySQL() util.Gerror {
-
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		gerr := util.CastErr(err)
+		gerr.SetStatus(http.StatusInternalServerError)
+		return gerr
+	}
 }
