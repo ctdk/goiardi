@@ -81,6 +81,14 @@ func (s *Shovey) saveMySQL() util.Gerror {
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
+	_, err = tx.Exec("INSERT INTO shoveys (run_id, command, status, timeout, quorum, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE status = ?, updated_at = NOW()", s.RunID, s.Command, s.Status, s.Timeout, s.Quorum, s.Status)
+	if err != nil {
+		tx.Rollback()
+		gerr := util.CastErr(err)
+		return gerr
+	}
+	tx.Commit()
+	return nil
 }
 
 func (sr *ShoveyRun) saveMySQL() util.Gerror {
@@ -90,4 +98,12 @@ func (sr *ShoveyRun) saveMySQL() util.Gerror {
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
+	_, err = tx.Exec("INSERT INTO shovey_runs (shovey_uuid, shovey_id, node_name, status, ack_time, end_time, output, error, stderr, exit_status) SELECT ?, id, ?, ?, NULLIF(?, '0001-01-01 00:00:00 +0000'), NULLIF(?, '0001-01-01 00:00:00 +0000'), ?, ?, ?, ? FROM shoveys WHERE shoveys.run_id = ? ON DUPLICATE KEY UPDATE SET status = ?, ack_time = NULLIF(?, '0001-01-01 00:00:00 +0000'), end_time = NULLIF(?, '0001-01-01 00:00:00 +0000'), output = ?, stderr = ?, exit_status = ?") 
+	if err != nil {
+		tx.Rollback()
+		gerr := util.CastErr(err)
+		return gerr
+	}
+	tx.Commit()
+	return nil
 }
