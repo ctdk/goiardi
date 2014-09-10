@@ -28,9 +28,8 @@ import (
 
 func (s *Shovey) fillShoveyFromMySQL(row datastore.ResRow) error {
 	var ca, ua mysql.NullTime
-	var nn util.StringSlice
 	var tm int64
-	err := row.Scan(&s.RunID, &nn, &s.Command, &ca, &ua, &s.Status, &tm, &s.Quorum)
+	err := row.Scan(&s.RunID, &s.Command, &ca, &ua, &s.Status, &tm, &s.Quorum)
 	if err != nil {
 		return err
 	}
@@ -41,8 +40,6 @@ func (s *Shovey) fillShoveyFromMySQL(row datastore.ResRow) error {
 		s.UpdatedAt = ua.Time
 	}
 	s.Timeout = time.Duration(tm)
-
-	s.NodeNames = nn
 
 	return nil
 }

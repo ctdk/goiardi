@@ -52,7 +52,7 @@ func checkForShoveySQL(dbhandle datastore.Dbhandle, runID string) (bool, error) 
 
 func (s *Shovey) fillShoveyFromSQL(row datastore.ResRow) error {
 	if config.Config.UseMySQL {
-
+		return s.fillShoveyFromMySQL(row)
 	} else if config.Config.UsePostgreSQL {
 		return s.fillShoveyFromPostgreSQL(row)
 	}
@@ -61,7 +61,7 @@ func (s *Shovey) fillShoveyFromSQL(row datastore.ResRow) error {
 
 func (sr *ShoveyRun) fillShoveyRunFromSQL(row datastore.ResRow) error {
 	if config.Config.UseMySQL {
-
+		return sr.fillShoveyRunFromMySQL(row)
 	} else if config.Config.UsePostgreSQL {
 		return sr.fillShoveyRunFromPostgreSQL(row)
 	}
@@ -70,7 +70,7 @@ func (sr *ShoveyRun) fillShoveyRunFromSQL(row datastore.ResRow) error {
 
 func (srs *ShoveyRunStream) fillShoveyRunStreamFromSQL(row datastore.ResRow) error {
 	if config.Config.UseMySQL {
-
+		return srs.fillShoveyRunStreamFromMySQL(row)
 	} else if config.Config.UsePostgreSQL {
 		return srs.fillShoveyRunStreamFromPostgreSQL(row)
 	}
@@ -81,7 +81,7 @@ func getShoveySQL(runID string) (*Shovey, util.Gerror) {
 	s := new(Shovey)
 	var sqlStatement string
 	if config.Config.UseMySQL {
-
+		sqlStatement = "SELECT run_id, command, created_at, updated_at, status, timeout, quorum from shoveys WHERE run_id = ?"
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT run_id, ARRAY(SELECT node_name FROM goiardi.shovey_runs WHERE shovey_uuid = $1), command, created_at, updated_at, status, timeout, quorum FROM goiardi.shoveys WHERE run_id = $1"
 	} else {
@@ -108,6 +108,38 @@ func getShoveySQL(runID string) (*Shovey, util.Gerror) {
 	}
 
 	// TODO: for mysql, fill in the node names array
+	if config.Config.UseMySQL {
+		nodesStatement := "SELECT node_name FROM shovey_runs WHERE shovey_uuid = ?"
+		var nn []string
+		stmt2, err := datastore.Dbh.Prepare(nodesStatement)
+		if err != nil {
+			gerr := util.CastErr(err)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return nil, gerr
+		}
+		rows, err := stmt2.Query(runID)
+		if err != nil {
+			gerr := util.CastErr(err)
+			if err == sql.ErrNoRows {
+				gerr.SetStatus(http.StatusNotFound)
+			} else {
+				gerr.SetStatus(http.StatusInternalServerError)
+			}
+			rows.Close()
+			return nil, gerr
+		}
+		for rows.Next() {
+			var n string
+			err = rows.Scan(&n)
+			if err != nil {
+				gerr := util.CastErr(err)
+				gerr.SetStatus(http.StatusInternalServerError)
+				return nil, gerr
+			}
+			nn = append(nn, n)
+		}
+		s.NodeNames = nn
+	}
 
 	return s, nil
 }
@@ -116,7 +148,7 @@ func (s *Shovey) getShoveyRunSQL(nodeName string) (*ShoveyRun, util.Gerror) {
 	sr := new(ShoveyRun)
 	var sqlStatement string
 	if config.Config.UseMySQL {
-
+		sqlStatement = "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, output, error, stderr, exit_status FROM shovey_runs WHERE shovey_uuid = ? AND node_name = ?"
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, output, error, stderr, exit_status FROM goiardi.shovey_runs WHERE shovey_uuid = $1 and node_name = $2"
 	} else {
@@ -149,7 +181,7 @@ func (s *Shovey) getShoveyNodeRunsSQL() ([]*ShoveyRun, util.Gerror) {
 	var shoveyRuns []*ShoveyRun
 	var sqlStatement string
 	if config.Config.UseMySQL {
-
+		sqlStatement = "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, output, error, stderr, exit_status FROM shovey_runs WHERE shovey_uuid = ?"
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, output, error, stderr, exit_status FROM goiardi.shovey_runs WHERE shovey_uuid = $1"
 	} else {
@@ -194,7 +226,7 @@ func (s *Shovey) getShoveyNodeRunsSQL() ([]*ShoveyRun, util.Gerror) {
 
 func (s *Shovey) saveSQL() util.Gerror {
 	if config.Config.UseMySQL {
-
+		return s.saveMySQL()
 	} else if config.Config.UsePostgreSQL {
 		return s.savePostgreSQL()
 	}
@@ -203,7 +235,7 @@ func (s *Shovey) saveSQL() util.Gerror {
 
 func (sr *ShoveyRun) saveSQL() util.Gerror {
 	if config.Config.UseMySQL {
-
+		return sr.saveMySQL()
 	} else if config.Config.UsePostgreSQL {
 		return sr.savePostgreSQL()
 	}
@@ -213,7 +245,7 @@ func (sr *ShoveyRun) saveSQL() util.Gerror {
 func (s *Shovey) cancelRunsSQL() util.Gerror {
 	var sqlStatement string
 	if config.Config.UseMySQL {
-
+		sqlStatement = "UPDATE shovey_runs SET status = 'canceled', end_time = NOW() WHERE shovey_uuid = ? AND status NOT IN ('invalid', 'completed', 'failed', 'down', 'nacked')"
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "UPDATE goiardi.shovey_runs SET status = 'canceled', end_time = NOW() WHERE shovey_uuid = $1 AND status NOT IN ('invalid', 'completed', 'failed', 'down', 'nacked')"
 	} else {
@@ -243,7 +275,7 @@ func (s *Shovey) checkCompletedSQL() util.Gerror {
 	var c int
 	var sqlStatement string
 	if config.Config.UseMySQL {
-		sqlStatement = ""
+		sqlStatement = "SELECT count(id) FROM shovey_runs WHERE shovey_uuid = ? AND status IN ('invalid', 'completed', 'failed', 'down', 'nacked')"
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT count(id) FROM goiardi.shovey_runs WHERE shovey_uuid = $1 AND status IN ('invalid', 'completed', 'failed', 'down', 'nacked')"
 	} else {
@@ -280,7 +312,7 @@ func allShoveyIDsSQL() ([]string, util.Gerror) {
 
 	var sqlStatement string
 	if config.Config.UseMySQL {
-		sqlStatement = ""
+		sqlStatement = "SELECT run_id FROM shoveys"
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT run_id FROM goiardi.shoveys"
 	} else {
@@ -320,7 +352,7 @@ func allShoveyIDsSQL() ([]string, util.Gerror) {
 func (sr *ShoveyRun) addStreamOutSQL(output string, outputType string, seq int, isLast bool) util.Gerror {
 	var sqlStatement string
 	if config.Config.UseMySQL {
-		sqlStatement = ""
+		sqlStatement = "INSERT INTO shovey_run_streams (shovey_run_id, seq, output_type, output, is_last, created_at) VALUES (?, ?, ?, ?, ?, NOW())"
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "INSERT INTO goiardi.shovey_run_streams (shovey_run_id, seq, output_type, output, is_last, created_at) VALUES ($1, $2, $3, $4, $5, NOW())"
 	} else {
@@ -350,7 +382,7 @@ func (sr *ShoveyRun) getStreamOutSQL(outputType string, seq int) ([]*ShoveyRunSt
 	var streams []*ShoveyRunStream
 	var sqlStatement string
 	if config.Config.UseMySQL {
-		sqlStatement = ""
+		sqlStatement = "SELECT sr.shovey_uuid, sr.node_name, seq, output_type, streams.output, is_last, created_at FROM shovey_run_streams streams JOIN shovey_runs sr ON streams.shovey_run_id = sr.id WHERE shovey_run_id = ? AND output_type = ? AND seq >= ?"
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = "SELECT sr.shovey_uuid, sr.node_name, seq, output_type, streams.output, is_last, created_at FROM goiardi.shovey_run_streams streams JOIN goiardi.shovey_runs sr ON streams.shovey_run_id = sr.id WHERE shovey_run_id = $1 AND output_type = $2 AND seq >= $3"
 	} else {
