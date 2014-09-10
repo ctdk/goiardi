@@ -567,9 +567,9 @@ func startNodeMonitor() {
 		return 
 	}
 	go func() {
-		// wait 5 minutes before starting to check for nodes being up
-		time.Sleep(5 * time.Minute)
-		ticker := time.NewTicker(time.Minute * time.Duration(5))
+		// wait 1 minute before starting to check for nodes being up
+		time.Sleep(1 * time.Minute)
+		ticker := time.NewTicker(time.Minute)
 		for _ = range ticker.C {
 			unseen, err := node.UnseenNodes()
 			if err != nil {

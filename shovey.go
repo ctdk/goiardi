@@ -110,14 +110,11 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			if quorum, ok = shvData["quorum"].(string); !ok {
 				quorum = "100%"
 			}
-			if t, ok := shvData["run_timeout"].(string); !ok {
+			logger.Debugf("run_timeout is a %T", shvData["run_timeout"])
+			if t, ok := shvData["run_timeout"].(float64); !ok {
 				timeout = 300
 			} else {
-				timeout, err = strconv.Atoi(t)
-				if err != nil {
-					jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-					return
-				}
+				timeout = int(t)
 			}
 			if len(shvData["nodes"].([]interface{})) == 0 {
 				jsonErrorReport(w, r, "no nodes provided", http.StatusBadRequest)

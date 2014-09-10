@@ -167,7 +167,7 @@ func New(command string, timeout int, quorumStr string, nodeNames []string) (*Sh
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
-	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout) * time.Second, Quorum: quorumStr, Status: "submitted" }
+	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout), Quorum: quorumStr, Status: "submitted" }
 	
 	s.CreatedAt = time.Now()
 	s.UpdatedAt = time.Now()
@@ -379,6 +379,7 @@ func (s *Shovey) startJobs() Qerror {
 		payload["command"] = s.Command
 		payload["action"] = "start"
 		payload["time"] = time.Now().Format(time.RFC3339)
+		payload["timeout"] = fmt.Sprintf("%d", s.Timeout)
 		sig, serr := s.signRequest(payload)
 		if serr != nil {
 			errch <- serr
@@ -419,7 +420,7 @@ func (s *Shovey) startJobs() Qerror {
 			case r := <-respCh:
 				logger.Debugf("got a response: %v", r)
 				break
-			case <- time.After(s.Timeout):
+			case <- time.After(s.Timeout * time.Second):
 				logger.Debugf("timed out, might not be appropriate")
 				break
 			}
