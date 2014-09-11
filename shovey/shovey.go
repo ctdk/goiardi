@@ -365,12 +365,22 @@ func (s *Shovey) startJobs() Qerror {
 			tagNodes[i] = n.Name
 			d[n.Name] = true
 			sr := &ShoveyRun{ ShoveyUUID: s.RunID, NodeName: n.Name, Status: "created" }
-			sr.save()
+			err := sr.save()
+			if err != nil {
+				logger.Errorf("error saving shovey run: %s", err.Error())
+				errch <- err
+				return
+			}
 		}
 		for _, n := range s.NodeNames {
 			if !d[n] {
 				sr := &ShoveyRun{ ShoveyUUID: s.RunID, NodeName: n, Status: "down", EndTime: time.Now() }
-				sr.save()
+				err := sr.save()
+				if err != nil {
+					logger.Errorf("error saving shovey run: %s", err.Error())
+					errch <- err
+					return
+				}
 			}
 		}
 		// make sure this is the right amount of buffering

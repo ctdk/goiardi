@@ -555,7 +555,17 @@ func startEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 			}
 			r := map[string]string{ "response": "ok" }
 			response, _ := json.Marshal(r)
-			sc.Respond(uint64(e["ID"].(int64)), response)
+			var id uint64
+			switch t := e["ID"].(type) {
+			case int64:
+				id = uint64(t)
+			case uint64:
+				id = t
+			default:
+				logger.Errorf("node_status ID %v type %T not int64 or uint64", e["ID"], e["ID"])
+				continue
+			}
+			sc.Respond(id, response)
 		}
 	}
 	return
