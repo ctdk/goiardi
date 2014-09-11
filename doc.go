@@ -344,7 +344,7 @@ and can be seen below:
 
 General Database Options
 
-There are two general options that can be set for either database: 
+There are two general options that can be set for either database:
 `--db-pool-size` and `--max-connections` (and their configuration file
 equivalents `db-pool-size` and `max-connections`). `--db-pool-size` sets the
 number of idle connections to keep open to the database, and `--max-connections`

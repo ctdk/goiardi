@@ -22,6 +22,7 @@ package main
 import (
 	"compress/gzip"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
@@ -39,9 +40,10 @@ import (
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
-	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/shovey"
+	"github.com/ctdk/goiardi/user"
+	serfclient "github.com/hashicorp/serf/client"
 	"net/http"
 	"os"
 	"os/signal"
@@ -49,8 +51,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	serfclient "github.com/hashicorp/serf/client"
-	"encoding/json"
 )
 
 type interceptHandler struct{} // Doesn't need to do anything, just sit there.
@@ -147,7 +147,6 @@ func main() {
 	 * chef-webui, and admin. */
 	createDefaultActors()
 	handleSignals()
-
 
 	/* Register the various handlers, found in their own source files. */
 	http.HandleFunc("/authenticate_user", authenticateUserHandler)
@@ -553,7 +552,7 @@ func startEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 				logger.Errorf(err.Error())
 				continue
 			}
-			r := map[string]string{ "response": "ok" }
+			r := map[string]string{"response": "ok"}
 			response, _ := json.Marshal(r)
 			var id uint64
 			switch t := e["ID"].(type) {
@@ -574,7 +573,7 @@ func startEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 func startNodeMonitor() {
 	// Never do this if serf isn't set up
 	if !config.Config.UseSerf {
-		return 
+		return
 	}
 	go func() {
 		// wait 1 minute before starting to check for nodes being up

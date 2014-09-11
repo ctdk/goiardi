@@ -293,7 +293,7 @@ func (n *Node) latestStatusSQL() (*NodeStatus, error) {
 		return nil, err
 	}
 	defer stmt.Close()
-	ns := &NodeStatus{ Node: n }
+	ns := &NodeStatus{Node: n}
 	row := stmt.QueryRow(n.Name)
 	if config.Config.UseMySQL {
 		err = ns.fillNodeStatusFromMySQL(row)
@@ -327,7 +327,7 @@ func (n *Node) allStatusesSQL() ([]*NodeStatus, error) {
 		return nil, qerr
 	}
 	for rows.Next() {
-		ns := &NodeStatus{ Node: n }
+		ns := &NodeStatus{Node: n}
 		if config.Config.UseMySQL {
 			err = ns.fillNodeStatusFromMySQL(rows)
 		} else if config.Config.UsePostgreSQL {

@@ -22,10 +22,10 @@ import (
 )
 
 type testObj struct {
-	Name    string                 `json:"name"`
-	TestURLType string             `json:"test_url_type"`
-	Normal  map[string]interface{} `json:"normal"`
-	RunList []string               `json:"run_list"`
+	Name        string                 `json:"name"`
+	TestURLType string                 `json:"test_url_type"`
+	Normal      map[string]interface{} `json:"normal"`
+	RunList     []string               `json:"run_list"`
 }
 
 func (to *testObj) GetName() string {

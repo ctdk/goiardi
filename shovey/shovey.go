@@ -20,13 +20,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/codeskyblue/go-uuid"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/serfin"
-	"github.com/codeskyblue/go-uuid"
 	"github.com/ctdk/goiardi/util"
 	serfclient "github.com/hashicorp/serf/client"
 	"math"
@@ -40,37 +40,37 @@ import (
 )
 
 type Shovey struct {
-	RunID string `json:"id"`
-	NodeNames []string `json:"nodes"`
-	Command string `json:"command"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Status string `json:"status"`
-	Timeout time.Duration `json:"timeout"`
-	Quorum string `json:"quorum"`
+	RunID     string        `json:"id"`
+	NodeNames []string      `json:"nodes"`
+	Command   string        `json:"command"`
+	CreatedAt time.Time     `json:"created_at"`
+	UpdatedAt time.Time     `json:"updated_at"`
+	Status    string        `json:"status"`
+	Timeout   time.Duration `json:"timeout"`
+	Quorum    string        `json:"quorum"`
 }
 
 type ShoveyRun struct {
-	ID int `json:"-"`
-	ShoveyUUID string `json:"run_id"`
-	NodeName string `json:"node_name"`
-	Status string `json:"status"`
-	AckTime time.Time `json:"ack_time"`
-	EndTime time.Time `json:"end_time"`
-	Output string `json:"output"`
-	Error string `json:"error"`
-	Stderr string `json:"stderr"`
-	ExitStatus uint8 `json:"exit_status"`
+	ID         int       `json:"-"`
+	ShoveyUUID string    `json:"run_id"`
+	NodeName   string    `json:"node_name"`
+	Status     string    `json:"status"`
+	AckTime    time.Time `json:"ack_time"`
+	EndTime    time.Time `json:"end_time"`
+	Output     string    `json:"output"`
+	Error      string    `json:"error"`
+	Stderr     string    `json:"stderr"`
+	ExitStatus uint8     `json:"exit_status"`
 }
 
 type ShoveyRunStream struct {
-	ShoveyUUID string 
-	NodeName string
-	Seq int
+	ShoveyUUID string
+	NodeName   string
+	Seq        int
 	OutputType string
-	Output string
-	IsLast bool
-	CreatedAt time.Time
+	Output     string
+	IsLast     bool
+	CreatedAt  time.Time
 }
 
 type BySeq []*ShoveyRunStream
@@ -87,9 +87,9 @@ type Qerror interface {
 }
 
 type qerror struct {
-	msg string
-	status string
-	upNodes []string
+	msg       string
+	status    string
+	upNodes   []string
 	downNodes []string
 }
 
@@ -147,7 +147,7 @@ func (e *qerror) SetDownNodes(d []string) {
 func New(command string, timeout int, quorumStr string, nodeNames []string) (*Shovey, util.Gerror) {
 	var found bool
 	runID := uuid.New()
-	
+
 	// Conflicting uuids are unlikely, but conceivable.
 	if config.UsingDB() {
 		var err error
@@ -163,13 +163,13 @@ func New(command string, timeout int, quorumStr string, nodeNames []string) (*Sh
 	}
 
 	// unlikely
-	if found { 
+	if found {
 		err := util.Errorf("a shovey run with this run id already exists")
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
-	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout), Quorum: quorumStr, Status: "submitted" }
-	
+	s := &Shovey{RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout), Quorum: quorumStr, Status: "submitted"}
+
 	s.CreatedAt = time.Now()
 	s.UpdatedAt = time.Now()
 
@@ -210,7 +210,7 @@ func (sr *ShoveyRun) save() util.Gerror {
 		return sr.saveSQL()
 	}
 	ds := datastore.New()
-	ds.Set("shovey_run", sr.ShoveyUUID + sr.NodeName, sr)
+	ds.Set("shovey_run", sr.ShoveyUUID+sr.NodeName, sr)
 	return nil
 }
 
@@ -220,7 +220,7 @@ func (s *Shovey) GetRun(nodeName string) (*ShoveyRun, util.Gerror) {
 	}
 	var shoveyRun *ShoveyRun
 	ds := datastore.New()
-	sr, found := ds.Get("shovey_run", s.RunID + nodeName)
+	sr, found := ds.Get("shovey_run", s.RunID+nodeName)
 	if !found {
 		err := util.Errorf("run %s for node %s not found", s.RunID, nodeName)
 		err.SetStatus(http.StatusNotFound)
@@ -326,24 +326,24 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 	payload["signature"] = sig
 	jsonPayload, _ := json.Marshal(payload)
 	ackCh := make(chan string, len(nodeNames))
-	q := &serfclient.QueryParam{ Name: "shovey", Payload: jsonPayload, FilterNodes: nodeNames, RequestAck: true, AckCh: ackCh }
+	q := &serfclient.QueryParam{Name: "shovey", Payload: jsonPayload, FilterNodes: nodeNames, RequestAck: true, AckCh: ackCh}
 	err := serfin.Serfer.Query(q)
 	if err != nil {
 		return util.CastErr(err)
 	}
 	doneCh := make(chan struct{})
-	go func(){
+	go func() {
 		for c := range ackCh {
 			logger.Debugf("Received acknowledgement from %s", c)
 		}
 		doneCh <- struct{}{}
 	}()
 	select {
-		case <-doneCh:
-			logger.Infof("All nodes acknowledged cancellation")
-			// probably do a report here?
-		case <- time.After(time.Duration(60) * time.Second):
-			logger.Errorf("Didn't get all acknowledgements within 60 seconds")
+	case <-doneCh:
+		logger.Infof("All nodes acknowledged cancellation")
+		// probably do a report here?
+	case <-time.After(time.Duration(60) * time.Second):
+		logger.Errorf("Didn't get all acknowledgements within 60 seconds")
 	}
 
 	return nil
@@ -376,7 +376,7 @@ func (s *Shovey) startJobs() Qerror {
 		for i, n := range upNodes {
 			tagNodes[i] = n.Name
 			d[n.Name] = true
-			sr := &ShoveyRun{ ShoveyUUID: s.RunID, NodeName: n.Name, Status: "created" }
+			sr := &ShoveyRun{ShoveyUUID: s.RunID, NodeName: n.Name, Status: "created"}
 			err := sr.save()
 			if err != nil {
 				logger.Errorf("error saving shovey run: %s", err.Error())
@@ -386,7 +386,7 @@ func (s *Shovey) startJobs() Qerror {
 		}
 		for _, n := range s.NodeNames {
 			if !d[n] {
-				sr := &ShoveyRun{ ShoveyUUID: s.RunID, NodeName: n, Status: "down", EndTime: time.Now() }
+				sr := &ShoveyRun{ShoveyUUID: s.RunID, NodeName: n, Status: "down", EndTime: time.Now()}
 				err := sr.save()
 				if err != nil {
 					logger.Errorf("error saving shovey run: %s", err.Error())
@@ -411,14 +411,14 @@ func (s *Shovey) startJobs() Qerror {
 		jsonPayload, _ := json.Marshal(payload)
 		ackCh := make(chan string, len(tagNodes))
 		respCh := make(chan serfclient.NodeResponse, len(tagNodes))
-		q := &serfclient.QueryParam{ Name: "shovey", Payload: jsonPayload, FilterNodes: tagNodes, RequestAck: true, AckCh: ackCh, RespCh: respCh }
+		q := &serfclient.QueryParam{Name: "shovey", Payload: jsonPayload, FilterNodes: tagNodes, RequestAck: true, AckCh: ackCh, RespCh: respCh}
 		qerr := serfin.Serfer.Query(q)
 		if qerr != nil {
 			errch <- qerr
 			return
 		}
 		errch <- nil
-		srCh := make(chan *ShoveyRun, len(upNodes) * 2);
+		srCh := make(chan *ShoveyRun, len(upNodes)*2)
 
 		go func() {
 			for sr := range srCh {
@@ -426,7 +426,7 @@ func (s *Shovey) startJobs() Qerror {
 			}
 		}()
 
-		for i := 0; i < len(upNodes) * 2; i++{
+		for i := 0; i < len(upNodes)*2; i++ {
 			select {
 			case a := <-ackCh:
 				if a == "" {
@@ -442,7 +442,7 @@ func (s *Shovey) startJobs() Qerror {
 			case r := <-respCh:
 				logger.Debugf("got a response: %v", r)
 				break
-			case <- time.After(s.Timeout * time.Second):
+			case <-time.After(s.Timeout * time.Second):
 				logger.Debugf("timed out, might not be appropriate")
 				break
 			}
@@ -490,7 +490,7 @@ func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
 	toJSON["created_at"] = s.CreatedAt
 	toJSON["updated_at"] = s.UpdatedAt
 	tjnodes := make(map[string][]string)
-	
+
 	// we can totally do this more efficiently in SQL mode. Do so when we're
 	// done with in-mem mode
 	srs, err := s.GetNodeRuns()
@@ -558,7 +558,7 @@ func (sj *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, 
 	if config.UsingDB() {
 		return sj.addStreamOutSQL(output, outputType, seq, isLast)
 	}
-	stream := &ShoveyRunStream{ ShoveyUUID: sj.ShoveyUUID, NodeName: sj.NodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: time.Now() }
+	stream := &ShoveyRunStream{ShoveyUUID: sj.ShoveyUUID, NodeName: sj.NodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: time.Now()}
 	ds := datastore.New()
 	streamKey := fmt.Sprintf("%s_%s_%s_%d", sj.ShoveyUUID, sj.NodeName, outputType, seq)
 	logger.Debugf("Setting %s", streamKey)
@@ -687,6 +687,6 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 	return sig, nil
 }
 
-func (s BySeq) Len() int { return len(s) }
-func (s BySeq) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s BySeq) Len() int           { return len(s) }
+func (s BySeq) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s BySeq) Less(i, j int) bool { return s[i].Seq < s[j].Seq }

@@ -21,10 +21,10 @@
 package config
 
 import (
-	"fmt"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/jessevdk/go-flags"
@@ -72,22 +72,22 @@ type Conf struct {
 	DoExport          bool
 	DoImport          bool
 	ImpExFile         string
-	ObjMaxSize        int64 `toml:"obj-max-size"`
-	JSONReqMaxSize    int64 `toml:"json-req-max-size"`
-	UseUnsafeMemStore bool  `toml:"use-unsafe-mem-store"`
-	DbPoolSize int `toml:"db-pool-size"`
-	MaxConn int `toml:"max-connections"`
-	UseSerf bool `toml:"use-serf"`
-	SerfAddr string `toml:"serf-addr"`
-	UseShovey bool `toml:"use-shovey"`
-	SignPrivKey string `toml:"sign-priv-key"`
-	SignPubKey string `toml:"sign-pub-key"`
+	ObjMaxSize        int64  `toml:"obj-max-size"`
+	JSONReqMaxSize    int64  `toml:"json-req-max-size"`
+	UseUnsafeMemStore bool   `toml:"use-unsafe-mem-store"`
+	DbPoolSize        int    `toml:"db-pool-size"`
+	MaxConn           int    `toml:"max-connections"`
+	UseSerf           bool   `toml:"use-serf"`
+	SerfAddr          string `toml:"serf-addr"`
+	UseShovey         bool   `toml:"use-shovey"`
+	SignPrivKey       string `toml:"sign-priv-key"`
+	SignPubKey        string `toml:"sign-pub-key"`
 }
 
 type SigningKeys struct {
 	sync.RWMutex
 	PrivKey *rsa.PrivateKey
-	PubKey *rsa.PublicKey
+	PubKey  *rsa.PublicKey
 }
 
 var Key = &SigningKeys{}
@@ -150,13 +150,13 @@ type Options struct {
 	ObjMaxSize        int64  `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)."`
 	JSONReqMaxSize    int64  `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000."`
 	UseUnsafeMemStore bool   `long:"use-unsafe-mem-store" description:"Use the faster, but less safe, old method of storing data in the in-memory data store with pointers, rather than encoding the data with gob and giving a new copy of the object to each requestor. If this is enabled goiardi will run faster in in-memory mode, but one goroutine could change an object while it's being used by another. Has no effect when using an SQL backend."`
-	DbPoolSize int `long:"db-pool-size" description:"Number of idle db connections to maintain. Only useful when using one of the SQL backends. Default is 0 - no idle connections retained"`
-	MaxConn int `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited."`
-	UseSerf bool `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster. Required for shovey."`
-	SerfAddr string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373."`
-	UseShovey bool `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes and creating the signing keys for those requests. Requires --use-serf."`
-	SignPrivKey string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests"`
-	SignPubKey string `long:"sign-pub-key" description:"Path to RSA public key used to verify shovey requests"`
+	DbPoolSize        int    `long:"db-pool-size" description:"Number of idle db connections to maintain. Only useful when using one of the SQL backends. Default is 0 - no idle connections retained"`
+	MaxConn           int    `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited."`
+	UseSerf           bool   `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster. Required for shovey."`
+	SerfAddr          string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373."`
+	UseShovey         bool   `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes and creating the signing keys for those requests. Requires --use-serf."`
+	SignPrivKey       string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests"`
+	SignPubKey        string `long:"sign-pub-key" description:"Path to RSA public key used to verify shovey requests"`
 }
 
 // The goiardi version.

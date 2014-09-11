@@ -20,8 +20,8 @@ package shovey
 
 import (
 	"github.com/ctdk/goiardi/datastore"
-	"github.com/go-sql-driver/mysql"
 	"github.com/ctdk/goiardi/util"
+	"github.com/go-sql-driver/mysql"
 	"net/http"
 	"time"
 )
@@ -95,7 +95,7 @@ func (sr *ShoveyRun) saveMySQL() util.Gerror {
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	_, err = tx.Exec("INSERT INTO shovey_runs (shovey_uuid, shovey_id, node_name, status, ack_time, end_time, output, error, stderr, exit_status) SELECT ?, id, ?, ?, NULLIF(?, '0001-01-01 00:00:00 +0000'), NULLIF(?, '0001-01-01 00:00:00 +0000'), ?, ?, ?, ? FROM shoveys WHERE shoveys.run_id = ? ON DUPLICATE KEY UPDATE status = ?, ack_time = NULLIF(?, '0001-01-01 00:00:00 +0000'), end_time = NULLIF(?, '0001-01-01 00:00:00 +0000'), output = ?, error = ?, stderr = ?, exit_status = ?", sr.ShoveyUUID, sr.NodeName, sr.Status, sr.AckTime, sr.EndTime, sr.Output, sr.Error, sr.Stderr, sr.ExitStatus, sr.ShoveyUUID, sr.Status, sr.AckTime, sr.EndTime, sr.Output, sr.Error, sr.Stderr, sr.ExitStatus) 
+	_, err = tx.Exec("INSERT INTO shovey_runs (shovey_uuid, shovey_id, node_name, status, ack_time, end_time, output, error, stderr, exit_status) SELECT ?, id, ?, ?, NULLIF(?, '0001-01-01 00:00:00 +0000'), NULLIF(?, '0001-01-01 00:00:00 +0000'), ?, ?, ?, ? FROM shoveys WHERE shoveys.run_id = ? ON DUPLICATE KEY UPDATE status = ?, ack_time = NULLIF(?, '0001-01-01 00:00:00 +0000'), end_time = NULLIF(?, '0001-01-01 00:00:00 +0000'), output = ?, error = ?, stderr = ?, exit_status = ?", sr.ShoveyUUID, sr.NodeName, sr.Status, sr.AckTime, sr.EndTime, sr.Output, sr.Error, sr.Stderr, sr.ExitStatus, sr.ShoveyUUID, sr.Status, sr.AckTime, sr.EndTime, sr.Output, sr.Error, sr.Stderr, sr.ExitStatus)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)

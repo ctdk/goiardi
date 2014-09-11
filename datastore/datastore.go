@@ -131,7 +131,7 @@ func encodeSafeVal(val interface{}) ([]byte, error) {
 	valItem := &dsItem{Item: val}
 	enc := gob.NewEncoder(valBuf)
 	err := enc.Encode(valItem)
-	
+
 	if err != nil {
 		return nil, err
 	}

@@ -52,7 +52,7 @@ func (ns *NodeStatus) updateNodeStatusMySQL() error {
 		if err != nil {
 			tx.Rollback()
 			return err
-		} 
+		}
 	}
 	tx.Commit()
 	if isDown != ns.Node.isDown {
@@ -76,8 +76,8 @@ func (ns *NodeStatus) fillNodeStatusFromMySQL(row datastore.ResRow) error {
 
 func getNodesByStatusMySQL(nodeNames []string, status string) ([]*Node, error) {
 	var nodes []*Node
-	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM node_latest_statuses n WHERE n.status = ? AND n.name IN(?" + strings.Repeat(",?", len(nodeNames) - 1) + ")"
-	nodeArgs := make([]interface{}, len(nodeNames) + 1)
+	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM node_latest_statuses n WHERE n.status = ? AND n.name IN(?" + strings.Repeat(",?", len(nodeNames)-1) + ")"
+	nodeArgs := make([]interface{}, len(nodeNames)+1)
 	nodeArgs[0] = status
 	for i, v := range nodeNames {
 		nodeArgs[i+1] = v

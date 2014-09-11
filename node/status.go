@@ -20,16 +20,16 @@
 package node
 
 import (
+	"fmt"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"time"
-	"fmt"
 )
 
 type NodeStatus struct {
-	Node *Node
-	Status string
+	Node      *Node
+	Status    string
 	UpdatedAt time.Time
 }
 
@@ -38,7 +38,7 @@ func (n *Node) UpdateStatus(status string) error {
 		err := fmt.Errorf("invalid node status %s", status)
 		return err
 	}
-	s := &NodeStatus{ Node: n, Status: status }
+	s := &NodeStatus{Node: n, Status: status}
 	if config.UsingDB() {
 		return s.updateNodeStatusSQL()
 	}
@@ -55,7 +55,7 @@ func (n *Node) UpdateStatus(status string) error {
 	return ds.SetNodeStatus(n.Name, s)
 }
 
-func (n *Node)LatestStatus() (*NodeStatus, error) {
+func (n *Node) LatestStatus() (*NodeStatus, error) {
 	if config.UsingDB() {
 		return n.latestStatusSQL()
 	}
@@ -68,7 +68,7 @@ func (n *Node)LatestStatus() (*NodeStatus, error) {
 	return ns, nil
 }
 
-func (n *Node)AllStatuses() ([]*NodeStatus, error) {
+func (n *Node) AllStatuses() ([]*NodeStatus, error) {
 	if config.UsingDB() {
 		return n.allStatusesSQL()
 	}
@@ -84,7 +84,7 @@ func (n *Node)AllStatuses() ([]*NodeStatus, error) {
 	return ns, nil
 }
 
-func (n *Node)deleteStatuses() error {
+func (n *Node) deleteStatuses() error {
 	if config.UsingDB() {
 		err := fmt.Errorf("not needed in SQL mode - foreign keys handle deleting node statuses")
 		return err
@@ -101,7 +101,7 @@ func (ns *NodeStatus) ToJSON() map[string]string {
 	return nsmap
 }
 
-func UnseenNodes() ([]*Node, error){
+func UnseenNodes() ([]*Node, error) {
 	if config.UsingDB() {
 		return unseenNodesSQL()
 	}

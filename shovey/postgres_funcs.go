@@ -20,8 +20,8 @@ package shovey
 
 import (
 	"github.com/ctdk/goiardi/datastore"
-	"github.com/lib/pq"
 	"github.com/ctdk/goiardi/util"
+	"github.com/lib/pq"
 	"net/http"
 	"time"
 )
@@ -45,7 +45,7 @@ func (s *Shovey) fillShoveyFromPostgreSQL(row datastore.ResRow) error {
 	s.NodeNames = nn
 
 	return nil
-} 
+}
 
 func (s *ShoveyRun) fillShoveyRunFromPostgreSQL(row datastore.ResRow) error {
 	var at, et pq.NullTime

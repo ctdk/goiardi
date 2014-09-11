@@ -33,7 +33,7 @@ import (
 	"strings"
 )
 
-var NoDBConfigured = &gerror{ msg: "no db configured, but you tried to use one", status: http.StatusInternalServerError }
+var NoDBConfigured = &gerror{msg: "no db configured, but you tried to use one", status: http.StatusInternalServerError}
 
 // GoiardiObj is an interface for helping goiardi/chef objects, like cookbooks,
 // roles, etc., be able to easily make URLs and be identified by name.

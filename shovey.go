@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
@@ -38,6 +39,12 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, "you cannot perform this action", http.StatusForbidden)
 		return
 	}
+
+	if !config.Config.UseShovey {
+		jsonErrorReport(w, r, "shovey is not enabled", http.StatusPreconditionFailed)
+		return
+	}
+
 	pathArray := splitPath(r.URL.Path)
 	pathArrayLen := len(pathArray)
 
@@ -119,12 +126,12 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			if len(shvData["nodes"].([]interface{})) == 0 {
 				jsonErrorReport(w, r, "no nodes provided", http.StatusBadRequest)
 				return
-			} 
+			}
 			nodeNames := make([]string, len(shvData["nodes"].([]interface{})))
 			for i, v := range shvData["nodes"].([]interface{}) {
 				nodeNames[i] = v.(string)
 			}
-			
+
 			s, gerr := shovey.New(shvData["command"].(string), timeout, quorum, nodeNames)
 			if gerr != nil {
 				jsonErrorReport(w, r, gerr.Error(), gerr.Status())
@@ -157,7 +164,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, "No shovey run ID provided, or provided id was invalid", http.StatusBadRequest)
 					return
 				}
-				
+
 				if nn, ok := cancelData["nodes"].([]interface{}); ok {
 					for _, v := range nn {
 						nodeNames = append(nodeNames, v.(string))
@@ -212,7 +219,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				shoveyResponse["id"] = shove.RunID
 				shoveyResponse["node"] = nodeName
-				shoveyResponse["response"] = "ok" 
+				shoveyResponse["response"] = "ok"
 			default:
 				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
@@ -302,7 +309,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
-			
+
 			output, ok := streamData["output"].(string)
 			if !ok {
 				oerr := util.Errorf("invalid output")

@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-// Package serfin 
+// Package serfin
 package serfin
 
 import (
+	"encoding/json"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
 	serfclient "github.com/hashicorp/serf/client"
 	"os"
-	"encoding/json"
 )
 
 var Serfer *serfclient.RPCClient
@@ -36,7 +36,7 @@ func StartSerfin() error {
 		logger.Criticalf(err.Error())
 		os.Exit(1)
 	}
-	
+
 	err = Serfer.UserEvent("goiardi-join", []byte(config.Config.Hostname), true)
 	if err != nil {
 		logger.Criticalf(err.Error())
@@ -65,7 +65,7 @@ func SendQuery(queryName string, payload interface{}) {
 		logger.Errorf(err.Error())
 		return
 	}
-	q := &serfclient.QueryParam{ Name: queryName, Payload: jsonPayload }
+	q := &serfclient.QueryParam{Name: queryName, Payload: jsonPayload}
 	err = Serfer.Query(q)
 	if err != nil {
 		logger.Debugf(err.Error())
