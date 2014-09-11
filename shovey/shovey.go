@@ -31,6 +31,7 @@ import (
 	serfclient "github.com/hashicorp/serf/client"
 	"math"
 	"net/http"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -303,6 +304,17 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 			}
 		}
 	}
+	if len(nodeNames) == len(s.NodeNames) {
+		sort.Strings(nodeNames)
+		sort.Strings(s.NodeNames)
+		if reflect.DeepEqual(nodeNames, s.NodeNames) {
+			s.Status = "cancelled"
+			s.save()
+		}
+	} else {
+		s.checkCompleted()
+	}
+
 	payload := make(map[string]string)
 	payload["action"] = "cancel"
 	payload["run_id"] = s.RunID
@@ -459,7 +471,7 @@ func (s *Shovey) checkCompleted() {
 	}
 	c := 0
 	for _, sr := range srs {
-		if sr.Status == "invalid" || sr.Status == "completed" || sr.Status == "failed" || sr.Status == "down" || sr.Status == "nacked" {
+		if sr.Status == "invalid" || sr.Status == "completed" || sr.Status == "failed" || sr.Status == "down" || sr.Status == "nacked" || sr.Status == "cancelled" {
 			c++
 		}
 	}

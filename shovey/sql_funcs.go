@@ -245,9 +245,9 @@ func (sr *ShoveyRun) saveSQL() util.Gerror {
 func (s *Shovey) cancelRunsSQL() util.Gerror {
 	var sqlStatement string
 	if config.Config.UseMySQL {
-		sqlStatement = "UPDATE shovey_runs SET status = 'canceled', end_time = NOW() WHERE shovey_uuid = ? AND status NOT IN ('invalid', 'completed', 'failed', 'down', 'nacked')"
+		sqlStatement = "UPDATE shovey_runs SET status = 'cancelled', end_time = NOW() WHERE shovey_uuid = ? AND status NOT IN ('invalid', 'completed', 'failed', 'down', 'nacked')"
 	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "UPDATE goiardi.shovey_runs SET status = 'canceled', end_time = NOW() WHERE shovey_uuid = $1 AND status NOT IN ('invalid', 'completed', 'failed', 'down', 'nacked')"
+		sqlStatement = "UPDATE goiardi.shovey_runs SET status = 'cancelled', end_time = NOW() WHERE shovey_uuid = $1 AND status NOT IN ('invalid', 'completed', 'failed', 'down', 'nacked')"
 	} else {
 		return util.NoDBConfigured
 	}

@@ -171,6 +171,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				if len(nodeNames) != 0 {
 					serr := shove.CancelRuns(nodeNames)
 					if serr != nil {
+						logger.Debugf("Error cancelling runs: %s", serr.Error())
 						jsonErrorReport(w, r, err.Error(), err.Status())
 						return
 					}
