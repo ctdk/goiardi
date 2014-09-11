@@ -401,7 +401,7 @@ func (sr *ShoveyRun) getStreamOutSQL(outputType string, seq int) ([]*ShoveyRunSt
 	}
 	for rows.Next() {
 		srs := new(ShoveyRunStream)
-		err = srs.fillShoveyRunStreamFromPostgreSQL(rows)
+		err = srs.fillShoveyRunStreamFromSQL(rows)
 		if err != nil {
 			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusInternalServerError)

@@ -279,8 +279,10 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			shoveyResponse["run_id"] = sj.ShoveyUUID
 			shoveyResponse["node_name"] = sj.NodeName
 			shoveyResponse["output_type"] = outType
+			shoveyResponse["is_last"] = false
 			if len(stream) != 0 {
 				shoveyResponse["last_seq"] = stream[len(stream)-1].Seq
+				shoveyResponse["is_last"] = stream[len(stream)-1].IsLast
 			}
 			shoveyResponse["output"] = combinedOutput
 		case "PUT":

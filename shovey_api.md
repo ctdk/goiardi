@@ -182,6 +182,7 @@ Response body format:
   "run_id": "188d457e-2e07-40ef-954c-ab936af615b6",
   "node_name": "foomer.local",
   "last_seq": 123,
+  "is_last": false,
   "output_type": "stdout",
   "output": "foo"
 }
