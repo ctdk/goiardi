@@ -84,12 +84,14 @@ type Conf struct {
 	SignPubKey        string `toml:"sign-pub-key"`
 }
 
+// SigningKeys are the public and private keys for signing shovey requests.
 type SigningKeys struct {
 	sync.RWMutex
 	PrivKey *rsa.PrivateKey
 	PubKey  *rsa.PublicKey
 }
 
+// Key is the initialized shovey public and private keys.
 var Key = &SigningKeys{}
 
 // LogLevelNames give convenient, easier to remember than number name for the

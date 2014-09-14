@@ -133,6 +133,8 @@ func Auth12HeaderVerify(pkPem string, hashed, sig []byte) error {
 	return rsa.VerifyPKCS1v15(pubKey.(*rsa.PublicKey), crypto.SHA1, hashed, sig)
 }
 
+// SignTextBlock signs a block of text using the provided private RSA key. Used
+// by shovey to sign requests that the client can verify.
 func SignTextBlock(textBlock string, privKey *rsa.PrivateKey) (string, error) {
 	if textBlock == "" {
 		err := fmt.Errorf("no text to sign provided")

@@ -27,6 +27,7 @@ import (
 	"time"
 )
 
+// NodeStatus records a node's status at a particular time.
 type NodeStatus struct {
 	Node      *Node
 	Status    string

@@ -190,6 +190,7 @@ func (ds *DataStore) GetList(keyType string) []string {
 	return j
 }
 
+// SetNodeStatus updates a node's status.
 func (ds *DataStore) SetNodeStatus(nodeName string, obj interface{}, nsID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
@@ -227,6 +228,7 @@ func (ds *DataStore) SetNodeStatus(nodeName string, obj interface{}, nsID ...int
 	return nil
 }
 
+// AllNodeStatuses returns a list of all statuses known for the given node.
 func (ds *DataStore) AllNodeStatuses(nodeName string) ([]interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
@@ -259,6 +261,7 @@ func (ds *DataStore) AllNodeStatuses(nodeName string) ([]interface{}, error) {
 	return arr, nil
 }
 
+// LatestNodeStatus returns the latest status for a node.
 func (ds *DataStore) LatestNodeStatus(nodeName string) (interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
@@ -297,6 +300,7 @@ func (ds *DataStore) LatestNodeStatus(nodeName string) (interface{}, error) {
 	return n, nil
 }
 
+// DeleteNodeStatus deletes all status reports for a node.
 func (ds *DataStore) DeleteNodeStatus(nodeName string) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
