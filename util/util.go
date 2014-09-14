@@ -33,6 +33,8 @@ import (
 	"strings"
 )
 
+// NoDBConfigured is an error for when no database has been configured for use,
+// yet an SQL function is being called.
 var NoDBConfigured = &gerror{msg: "no db configured, but you tried to use one", status: http.StatusInternalServerError}
 
 // GoiardiObj is an interface for helping goiardi/chef objects, like cookbooks,

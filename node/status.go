@@ -34,6 +34,7 @@ type NodeStatus struct {
 	UpdatedAt time.Time
 }
 
+// UpdateStatus updates a node's current status (up, down, or new).
 func (n *Node) UpdateStatus(status string) error {
 	if status != "new" && status != "up" && status != "down" {
 		err := fmt.Errorf("invalid node status %s", status)
@@ -56,6 +57,7 @@ func (n *Node) UpdateStatus(status string) error {
 	return ds.SetNodeStatus(n.Name, s)
 }
 
+// LatestStatus returns the node's latest status.
 func (n *Node) LatestStatus() (*NodeStatus, error) {
 	if config.UsingDB() {
 		return n.latestStatusSQL()
@@ -69,6 +71,7 @@ func (n *Node) LatestStatus() (*NodeStatus, error) {
 	return ns, nil
 }
 
+// AllStatuses returns all of the node's status reports to date.
 func (n *Node) AllStatuses() ([]*NodeStatus, error) {
 	if config.UsingDB() {
 		return n.allStatusesSQL()
@@ -94,6 +97,7 @@ func (n *Node) deleteStatuses() error {
 	return ds.DeleteNodeStatus(n.Name)
 }
 
+// ToJSON formats a node status report for export to JSON.
 func (ns *NodeStatus) ToJSON() map[string]string {
 	nsmap := make(map[string]string)
 	nsmap["node_name"] = ns.Node.Name
@@ -102,6 +106,7 @@ func (ns *NodeStatus) ToJSON() map[string]string {
 	return nsmap
 }
 
+// UnseenNodes returns all nodes that have not sent status reports for a while.
 func UnseenNodes() ([]*Node, error) {
 	if config.UsingDB() {
 		return unseenNodesSQL()
@@ -121,6 +126,7 @@ func UnseenNodes() ([]*Node, error) {
 	return downNodes, nil
 }
 
+// GetNodesByStatus returns the nodes that currently have the given status.
 func GetNodesByStatus(nodeNames []string, status string) ([]*Node, error) {
 	if config.UsingDB() {
 		return getNodesByStatusSQL(nodeNames, status)

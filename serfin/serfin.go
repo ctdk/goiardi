@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package serfin
+// Package serfin bundles up serf functions for goiardi.
 package serfin
 
 import (
@@ -25,6 +25,7 @@ import (
 	"os"
 )
 
+// Serfer is the common serf client for goiardi.
 var Serfer *serfclient.RPCClient
 
 // StartSerfin sets up the serf instance and starts listening for events and
@@ -46,6 +47,7 @@ func StartSerfin() error {
 	return nil
 }
 
+// SendEvent sends a serf event out from goiardi.
 func SendEvent(eventName string, payload interface{}) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
@@ -59,6 +61,7 @@ func SendEvent(eventName string, payload interface{}) {
 	return
 }
 
+// SendQuery sends a basic, no frills query out over serf.
 func SendQuery(queryName string, payload interface{}) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {

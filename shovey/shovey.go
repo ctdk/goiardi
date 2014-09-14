@@ -39,6 +39,8 @@ import (
 	"time"
 )
 
+// Shovey holds all the overall information for a shovey run common to all nodes
+// running the command.
 type Shovey struct {
 	RunID     string        `json:"id"`
 	NodeNames []string      `json:"nodes"`
@@ -50,6 +52,7 @@ type Shovey struct {
 	Quorum    string        `json:"quorum"`
 }
 
+// ShoveyRun represents a node's shovey run.
 type ShoveyRun struct {
 	ID         int       `json:"-"`
 	ShoveyUUID string    `json:"run_id"`
@@ -63,6 +66,7 @@ type ShoveyRun struct {
 	ExitStatus uint8     `json:"exit_status"`
 }
 
+// ShoveyRunStream holds a chunk of output from a shovey run.
 type ShoveyRunStream struct {
 	ShoveyUUID string
 	NodeName   string
@@ -73,8 +77,10 @@ type ShoveyRunStream struct {
 	CreatedAt  time.Time
 }
 
+// BySeq is a type used to sort ShoveyRunStreams.
 type BySeq []*ShoveyRunStream
 
+// Qerror is a special error type for shovey runs.
 type Qerror interface {
 	String() string
 	Error() string
@@ -114,6 +120,7 @@ func CastErr(err error) Qerror {
 	return Errorf(err.Error())
 }
 
+// String returns a string representation of a Qerror.
 func (e *qerror) String() string {
 	return e.msg
 }
@@ -128,22 +135,27 @@ func (e *qerror) Status() string {
 	return e.status
 }
 
+// UpNodes returns the nodes known to be up by this Qerror.
 func (e *qerror) UpNodes() []string {
 	return e.upNodes
 }
 
+// DownNodes returns the nodes known to be up by this Qerror
 func (e *qerror) DownNodes() []string {
 	return e.downNodes
 }
 
+// SetUpNodes sets the nodes that are up for this Qerror.
 func (e *qerror) SetUpNodes(u []string) {
 	e.upNodes = u
 }
 
+// SetDownNodes sets the nodes that are down for this Qerror.
 func (e *qerror) SetDownNodes(d []string) {
 	e.downNodes = d
 }
 
+// New creates a new shovey instance.
 func New(command string, timeout int, quorumStr string, nodeNames []string) (*Shovey, util.Gerror) {
 	var found bool
 	runID := uuid.New()
@@ -181,6 +193,7 @@ func New(command string, timeout int, quorumStr string, nodeNames []string) (*Sh
 	return s, nil
 }
 
+// Start kicks off all the shovey runs for this shovey instance.
 func (s *Shovey) Start() util.Gerror {
 	err := s.startJobs()
 	if err != nil {
@@ -214,6 +227,8 @@ func (sr *ShoveyRun) save() util.Gerror {
 	return nil
 }
 
+// GetRun gets a particular node's shovey run associated with this shovey
+// instance.
 func (s *Shovey) GetRun(nodeName string) (*ShoveyRun, util.Gerror) {
 	if config.UsingDB() {
 		return s.getShoveyRunSQL(nodeName)
@@ -232,6 +247,7 @@ func (s *Shovey) GetRun(nodeName string) (*ShoveyRun, util.Gerror) {
 	return shoveyRun, nil
 }
 
+// GetNodeRuns gets all of the ShoveyRuns associated with this shovey instance.
 func (s *Shovey) GetNodeRuns() ([]*ShoveyRun, util.Gerror) {
 	if config.UsingDB() {
 		return s.getShoveyNodeRunsSQL()
@@ -250,6 +266,7 @@ func (s *Shovey) GetNodeRuns() ([]*ShoveyRun, util.Gerror) {
 	return runs, nil
 }
 
+// Get a shovey instance with the given run id.
 func Get(runID string) (*Shovey, util.Gerror) {
 	if config.UsingDB() {
 		return getShoveySQL(runID)
@@ -268,6 +285,7 @@ func Get(runID string) (*Shovey, util.Gerror) {
 	return shove, nil
 }
 
+// Cancel cancels all ShoveyRuns associated with this shovey instance.
 func (s *Shovey) Cancel() util.Gerror {
 	err := s.CancelRuns(s.NodeNames)
 	if err != nil {
@@ -282,6 +300,8 @@ func (s *Shovey) Cancel() util.Gerror {
 	return nil
 }
 
+// CancelRuns cancels the shovey runs given in the slice of strings with the
+// node names to cancel jobs on.
 func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 	if config.UsingDB() {
 		err := s.cancelRunsSQL()
@@ -481,6 +501,7 @@ func (s *Shovey) checkCompleted() {
 	}
 }
 
+// ToJSON formats a shovey instance to render as JSON for the client.
 func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
 	toJSON := make(map[string]interface{})
 	toJSON["id"] = s.RunID
@@ -505,6 +526,7 @@ func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
 	return toJSON, nil
 }
 
+// AllShoveyIDs returns all shovey run ids.
 func AllShoveyIDs() ([]string, util.Gerror) {
 	if config.UsingDB() {
 		return allShoveyIDsSQL()
@@ -514,57 +536,61 @@ func AllShoveyIDs() ([]string, util.Gerror) {
 	return list, nil
 }
 
+// GetList returns a list of all shovey ids.
 func GetList() []string {
 	list, _ := AllShoveyIDs()
 	return list
 }
 
-func (sj *ShoveyRun) UpdateFromJSON(sjData map[string]interface{}) util.Gerror {
-	if status, ok := sjData["status"].(string); ok {
+// UpdateFromJSON updates a ShoveyRun with the given JSON from the client.
+func (sr *ShoveyRun) UpdateFromJSON(srData map[string]interface{}) util.Gerror {
+	if status, ok := srData["status"].(string); ok {
 		if status == "invalid" || status == "completed" || status == "failed" || status == "nacked" {
-			sj.EndTime = time.Now()
+			sr.EndTime = time.Now()
 		}
-		sj.Status = status
+		sr.Status = status
 	} else {
-		logger.Errorf("status isn't getting set?? type: %T status %v", sjData["status"], sjData["status"])
+		logger.Errorf("status isn't getting set?? type: %T status %v", srData["status"], srData["status"])
 	}
-	if output, ok := sjData["output"].(string); ok {
-		sj.Output = output
+	if output, ok := srData["output"].(string); ok {
+		sr.Output = output
 	}
-	if errMsg, ok := sjData["stderr"].(string); ok {
-		sj.Stderr = errMsg
+	if errMsg, ok := srData["stderr"].(string); ok {
+		sr.Stderr = errMsg
 	}
-	if errorStr, ok := sjData["error"].(string); ok {
-		sj.Error = errorStr
+	if errorStr, ok := srData["error"].(string); ok {
+		sr.Error = errorStr
 	}
-	if exitStatus, ok := sjData["exit_status"].(float64); ok {
-		sj.ExitStatus = uint8(exitStatus)
+	if exitStatus, ok := srData["exit_status"].(float64); ok {
+		sr.ExitStatus = uint8(exitStatus)
 	}
 
-	err := sj.save()
+	err := sr.save()
 	if err != nil {
 		return err
 	}
-	go sj.notifyParent()
+	go sr.notifyParent()
 	return nil
 }
 
-func (sj *ShoveyRun) notifyParent() {
-	s, _ := Get(sj.ShoveyUUID)
+func (sr *ShoveyRun) notifyParent() {
+	s, _ := Get(sr.ShoveyUUID)
 	s.checkCompleted()
 }
 
-func (sj *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, isLast bool) util.Gerror {
+// AddStreamOutput adds a chunk of output from the job to the output list on the
+// server stored in the ShoveyRunStream objects.
+func (sr *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, isLast bool) util.Gerror {
 	if config.UsingDB() {
-		return sj.addStreamOutSQL(output, outputType, seq, isLast)
+		return sr.addStreamOutSQL(output, outputType, seq, isLast)
 	}
-	stream := &ShoveyRunStream{ShoveyUUID: sj.ShoveyUUID, NodeName: sj.NodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: time.Now()}
+	stream := &ShoveyRunStream{ShoveyUUID: sr.ShoveyUUID, NodeName: sr.NodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: time.Now()}
 	ds := datastore.New()
-	streamKey := fmt.Sprintf("%s_%s_%s_%d", sj.ShoveyUUID, sj.NodeName, outputType, seq)
+	streamKey := fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, seq)
 	logger.Debugf("Setting %s", streamKey)
 	_, found := ds.Get("shovey_run_stream", streamKey)
 	if found {
-		err := util.Errorf("sequence %d for %s - %s already exists", seq, sj.ShoveyUUID, sj.NodeName)
+		err := util.Errorf("sequence %d for %s - %s already exists", seq, sr.ShoveyUUID, sr.NodeName)
 		err.SetStatus(http.StatusConflict)
 		return err
 	}
@@ -573,15 +599,17 @@ func (sj *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, 
 	return nil
 }
 
-func (sj *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunStream, util.Gerror) {
+// GetStreamOutput gets all ShoveyRunStream objects associated with a ShoveyRun
+// of the given output type.
+func (sr *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunStream, util.Gerror) {
 	if config.UsingDB() {
-		return sj.getStreamOutSQL(outputType, seq)
+		return sr.getStreamOutSQL(outputType, seq)
 	}
 	var streams []*ShoveyRunStream
 	ds := datastore.New()
 	for i := seq; ; i++ {
-		logger.Debugf("Getting %s", fmt.Sprintf("%s_%s_%s_%d", sj.ShoveyUUID, sj.NodeName, outputType, i))
-		s, found := ds.Get("shovey_run_stream", fmt.Sprintf("%s_%s_%s_%d", sj.ShoveyUUID, sj.NodeName, outputType, i))
+		logger.Debugf("Getting %s", fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, i))
+		s, found := ds.Get("shovey_run_stream", fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, i))
 		if !found {
 			break
 		}
@@ -591,10 +619,11 @@ func (sj *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunSt
 	return streams, nil
 }
 
-func (sj *ShoveyRun) CombineStreamOutput(outputType string, seq int) (string, util.Gerror) {
+// CombineStreamOutput combines a ShoveyRun's output streams.
+func (sr *ShoveyRun) CombineStreamOutput(outputType string, seq int) (string, util.Gerror) {
 	// TODO: This could probably be all SQLized and made way simpler when
 	// using a database. Do see.
-	stream, err := sj.GetStreamOutput(outputType, seq)
+	stream, err := sr.GetStreamOutput(outputType, seq)
 	if err != nil {
 		return "", err
 	}
@@ -606,21 +635,22 @@ func (sj *ShoveyRun) CombineStreamOutput(outputType string, seq int) (string, ut
 	return combinedOutput.String(), nil
 }
 
-func (sj *ShoveyRun) ToJSON() (map[string]interface{}, util.Gerror) {
+// ToJSON formats a ShoveyRun for marshalling as JSON.
+func (sr *ShoveyRun) ToJSON() (map[string]interface{}, util.Gerror) {
 	var err util.Gerror
 	toJSON := make(map[string]interface{})
-	toJSON["run_id"] = sj.ShoveyUUID
-	toJSON["node_name"] = sj.NodeName
-	toJSON["status"] = sj.Status
-	toJSON["ack_time"] = sj.AckTime
-	toJSON["end_time"] = sj.EndTime
-	toJSON["error"] = sj.Error
-	toJSON["exit_status"] = sj.ExitStatus
-	toJSON["output"], err = sj.CombineStreamOutput("stdout", 0)
+	toJSON["run_id"] = sr.ShoveyUUID
+	toJSON["node_name"] = sr.NodeName
+	toJSON["status"] = sr.Status
+	toJSON["ack_time"] = sr.AckTime
+	toJSON["end_time"] = sr.EndTime
+	toJSON["error"] = sr.Error
+	toJSON["exit_status"] = sr.ExitStatus
+	toJSON["output"], err = sr.CombineStreamOutput("stdout", 0)
 	if err != nil {
 		return nil, err
 	}
-	toJSON["stderr"], err = sj.CombineStreamOutput("stderr", 0)
+	toJSON["stderr"], err = sr.CombineStreamOutput("stderr", 0)
 	if err != nil {
 		return nil, err
 	}

@@ -44,29 +44,29 @@ func (s *Shovey) fillShoveyFromMySQL(row datastore.ResRow) error {
 	return nil
 }
 
-func (s *ShoveyRun) fillShoveyRunFromMySQL(row datastore.ResRow) error {
+func (sr *ShoveyRun) fillShoveyRunFromMySQL(row datastore.ResRow) error {
 	var at, et mysql.NullTime
-	err := row.Scan(&s.ID, &s.ShoveyUUID, &s.NodeName, &s.Status, &at, &et, &s.Output, &s.Error, &s.Stderr, &s.ExitStatus)
+	err := row.Scan(&sr.ID, &sr.ShoveyUUID, &sr.NodeName, &sr.Status, &at, &et, &sr.Output, &sr.Error, &sr.Stderr, &sr.ExitStatus)
 	if err != nil {
 		return err
 	}
 	if at.Valid {
-		s.AckTime = at.Time
+		sr.AckTime = at.Time
 	}
 	if et.Valid {
-		s.EndTime = et.Time
+		sr.EndTime = et.Time
 	}
 	return nil
 }
 
-func (s *ShoveyRunStream) fillShoveyRunStreamFromMySQL(row datastore.ResRow) error {
+func (srs *ShoveyRunStream) fillShoveyRunStreamFromMySQL(row datastore.ResRow) error {
 	var ca mysql.NullTime
-	err := row.Scan(&s.ShoveyUUID, &s.NodeName, &s.Seq, &s.OutputType, &s.Output, &s.IsLast, &ca)
+	err := row.Scan(&srs.ShoveyUUID, &srs.NodeName, &srs.Seq, &srs.OutputType, &srs.Output, &srs.IsLast, &ca)
 	if err != nil {
 		return err
 	}
 	if ca.Valid {
-		s.CreatedAt = ca.Time
+		srs.CreatedAt = ca.Time
 	}
 	return nil
 }
