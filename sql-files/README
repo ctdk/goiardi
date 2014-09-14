@@ -8,3 +8,8 @@ dumps of the MySQL and Postgres schemas are available. Create the desired
 database with whatever owner you want, and load the schema with mysql -u <owner>
 [-p] <database> < sql-files/goiardi-schema-mysql.sql (for mysql) or psql 
 -U <owner> <database> < sql-files/goiardi-schema-postgres.sql (for postgres).
+
+NOTE: If this is not a tagged goiardi release, but rather is a development 
+branch, these sqitch bundles and SQL files may not be up to date for this
+branch. If so, see https://github.com/ctdk/goiardi-schema for the sqitch files
+for the development branch.
