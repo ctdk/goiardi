@@ -562,10 +562,11 @@ repository.
 
 Goiardi has been built and run with the native 6g compiler on Mac OS X (10.7,
 10.8, and 10.9), Debian squeeze and wheezy, a fairly recent Arch Linux, FreeBSD 
-9.2, and Solaris. Using Go's cross compiling capabilities, goiardi builds for all
-of Go's supported platforms except Dragonfly BSD and plan9 (because of issues 
-with the postgres client library). Windows support has not been tested
-extensively, but a cross compiled binary has been tested successfully on Windows.
+9.2, and Solaris. Using Go's cross compiling capabilities, goiardi builds for 
+all of Go's supported platforms except Dragonfly BSD and plan9 (because of 
+issues with the postgres client library). Windows support has not been tested
+extensively, but a cross compiled binary has been tested successfully on 
+Windows.
 
 Goiardi has also been built and run with gccgo (using the `-compiler gccgo`
 option with the `go` command) on Arch Linux. Building it with gccgo without 
