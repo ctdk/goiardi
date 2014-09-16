@@ -22,8 +22,8 @@ Many go tests are present as well in different goiardi subdirectories.
 DEPENDENCIES
 ------------
 
-Goiardi currently has eight dependencies: go-flags, go-cache, go-trie, toml, the 
-mysql driver from go-sql-driver, the postgres driver, logger, and go-uuid.
+Goiardi currently has nine dependencies: go-flags, go-cache, go-trie, toml, the
+mysql driver from go-sql-driver, the postgres driver, logger, go-uuid, and serf.
 
 To install them, run:
 
@@ -36,6 +36,7 @@ To install them, run:
    go get github.com/lib/pq
    go get github.com/ctdk/goas/v2/logger
    go get github.com/codeskyblue/go-uuid
+   go get github.com/hashicorp/serf/client
 ```
 
 from your $GOROOT, or just use the -t flag when you go get goiardi.
@@ -164,6 +165,16 @@ INSTALLATION
        --max-connections= Maximum number of connections allowed for the
                           database. Only useful when using one of the SQL
                           backends. Default is 0 - unlimited.
+       --use-serf         If set, have goidari use serf to send and receive
+                          events and queries from a serf cluster. Required
+                          for shovey.
+       --serf-addr=       IP address and port to use for RPC communication
+                          with a serf agent. Defaults to 127.0.0.1:7373.
+       --use-shovey       Enable using shovey for sending jobs to nodes and
+                          creating the signing keys for those requests.
+                          Requires --use-serf.
+       --sign-priv-key=   Path to RSA private key used to sign shovey
+                          requests
 ```
 
    Options specified on the command line override options in the config file.
@@ -480,6 +491,47 @@ generate /universe against the full 6000+ cookbooks of the supermarket in ~350
 milliseconds, while MySQL took about 1 second and in-mem took about 1.2 seconds.
 Normal functionality is OK, but if you have that many cookbooks and expect to
 use the universe endpoint often you may wish to consider using Postgres.
+
+### Serf
+
+As of version 0.8.0, goiardi has some serf integration. At the moment it's
+mainly used for shovey (see below), but it will also announce that it's started
+up and joined a serf cluster.
+
+### Shovey
+
+Shovey is a facility for sending jobs to nodes, like Chef Push but serf based.
+To use shovey, you'll need to have serf installed on the server goiardi is
+running on and install `schob`, the shovey client, and serf on any nodes you 
+would like to run jobs on. The client can be found at 
+https://github.com/ctdk/schob, and a cookbook for installing the shovey client 
+on a node is at https://github.com/ctdk/shovey-jobs. To control shovey, you'll 
+need to install the `knife-shove` plugin, which can be found at 
+https://github.com/ctdk/knife-shove or on rubygems.
+
+Setting goiardi up to use shovey is pretty straightforward.
+
+* Once goiardi is installed or updated, install serf and run it with 
+  `serf agent`. Make sure that the serf agent is using the same name for its
+  node name that goiardi is using for its server name.
+* Generate an RSA public/private keypair. Goiardi will use this to sign its
+  requests to the client, and schob will verify the requests with it.
+
+```
+	$ openssl genrsa -out shovey.pem 2048 # generate 2048 bit private key
+	$ openssl rsa -in shovey.pem -pubout -out shovey.key # public key
+```
+  Obviously, save these keys.
+
+* Run goiardi like you usually would, but add these options:
+  `--use-serf --use-shovey --sign-priv-key=/path/to/shovey.pem`
+
+See the serf docs at http://www.serfdom.io/docs/index.html for more information
+on setting up serf. One serf option you may want to use, once you're satisfied
+that shovey is working properly, is to use encryption with your serf cluster.
+
+The shovey API is documented in the file `shovey_api.md` in the goiardi 
+repository.
 
 ### Tested Platforms
 
