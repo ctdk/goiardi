@@ -525,6 +525,31 @@ Setting goiardi up to use shovey is pretty straightforward.
 
 * Run goiardi like you usually would, but add these options:
   `--use-serf --use-shovey --sign-priv-key=/path/to/shovey.pem`
+* Install serf and schob on a chef node. Ensure that the serf agent on the node
+  is using the same name as the chef node. The `shovey-jobs` cookbook makes
+  installing schob easier, but it's not too hard to do by hand by running
+  `go get github.com/ctdk/schob` and `go install github.com/ctdk/schob`.
+* If you didn't use the shovey-jobs cookbook, make sure that the public key you
+  generated earlier is uploaded to the node somewhere.
+* Shovey uses a whitelist to allow jobs to run on nodes. The shovey whitelist is
+  a simple JSON hash, with job names as the keys and the commands to run as the
+  values. There's a sample whitelist file in the schob repo at 
+  `test/whitelist.json`, and the shovey-jobs cookbook will create a whitelist
+  file from Chef node attributes using the usual precedence rules. The whitelist
+  is drawn from `node["schob"]["whitelist"]`.
+* If you used the shovey-jobs cookbook schob should be running already. If not,
+  start it with something like `schob -VVVV -e http://chef-server.local:4545 -n
+  node-name.local -k /path/to/node.key -w /path/to/schob/test/whitelist.json -p 
+  /path/to/public.key --serf-addr=127.0.0.1:7373`. Within a minute, goiardi
+  should be aware that the node is up and ready to accept jobs.
+
+At this point you should be able to submit jobs and have them run. The
+knife-shove documentation goes into detail on what actions you can take with 
+shovey, but to start try `knife goiardi job start ls <node name>`. To list jobs,
+run `knife goiardi job list`. You can also get information on a shovey job,
+detailed information of a shovey job's run on one node, cancel jobs, query node
+status, and stream job output from a node with the knife-shove plugin. See the
+plugin's documentation for more information.
 
 See the serf docs at http://www.serfdom.io/docs/index.html for more information
 on setting up serf. One serf option you may want to use, once you're satisfied
