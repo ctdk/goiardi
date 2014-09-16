@@ -81,14 +81,12 @@ type Conf struct {
 	SerfAddr          string `toml:"serf-addr"`
 	UseShovey         bool   `toml:"use-shovey"`
 	SignPrivKey       string `toml:"sign-priv-key"`
-	SignPubKey        string `toml:"sign-pub-key"`
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
 type SigningKeys struct {
 	sync.RWMutex
 	PrivKey *rsa.PrivateKey
-	PubKey  *rsa.PublicKey
 }
 
 // Key is the initialized shovey public and private keys.
@@ -158,7 +156,6 @@ type Options struct {
 	SerfAddr          string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373."`
 	UseShovey         bool   `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes and creating the signing keys for those requests. Requires --use-serf."`
 	SignPrivKey       string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests"`
-	SignPubKey        string `long:"sign-pub-key" description:"Path to RSA public key used to verify shovey requests"`
 }
 
 // The goiardi version.
@@ -493,23 +490,10 @@ func ParseConfigOptions() error {
 	if opts.SignPrivKey != "" {
 		Config.SignPrivKey = opts.SignPrivKey
 	}
-	if opts.SignPubKey != "" {
-		Config.SignPubKey = opts.SignPubKey
-	}
-
-	if (Config.SignPrivKey == "" && Config.SignPubKey != "") || (Config.SignPrivKey != "" && Config.SignPubKey == "") {
-		logger.Criticalf("Either both --sign-priv-key and --sign-pub-key must be specified, or neither.")
-		os.Exit(1)
-	}
 
 	// if using shovey, open the existing, or create if absent, signing
 	// keys.
 	if Config.UseShovey {
-		if Config.SignPubKey == "" {
-			Config.SignPubKey = path.Join(Config.ConfRoot, "shovey-sign_rsa.pub")
-		} else if !path.IsAbs(Config.SignPubKey) {
-			Config.SignPubKey = path.Join(Config.ConfRoot, Config.SignPubKey)
-		}
 		if Config.SignPrivKey == "" {
 			Config.SignPrivKey = path.Join(Config.ConfRoot, "shovey-sign_rsa")
 		} else if !path.IsAbs(Config.SignPrivKey) {
@@ -520,17 +504,7 @@ func ParseConfigOptions() error {
 			logger.Criticalf("Private key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPrivKey)
 			os.Exit(1)
 		}
-		pubfp, err := os.Open(Config.SignPubKey)
-		if err != nil {
-			logger.Criticalf("Public key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPubKey)
-			os.Exit(1)
-		}
 		privPem, err := ioutil.ReadAll(privfp)
-		if err != nil {
-			logger.Criticalf(err.Error())
-			os.Exit(1)
-		}
-		pubPem, err := ioutil.ReadAll(pubfp)
 		if err != nil {
 			logger.Criticalf(err.Error())
 			os.Exit(1)
@@ -540,17 +514,7 @@ func ParseConfigOptions() error {
 			logger.Criticalf("Invalid block size for private key for shovey")
 			os.Exit(1)
 		}
-		pubBlock, _ := pem.Decode(pubPem)
-		if pubBlock == nil {
-			logger.Criticalf("Invalid block size for public key for shovey")
-			os.Exit(1)
-		}
 		privKey, err := x509.ParsePKCS1PrivateKey(privBlock.Bytes)
-		if err != nil {
-			logger.Criticalf(err.Error())
-			os.Exit(1)
-		}
-		pubKey, err := x509.ParsePKIXPublicKey(pubBlock.Bytes)
 		if err != nil {
 			logger.Criticalf(err.Error())
 			os.Exit(1)
@@ -558,7 +522,6 @@ func ParseConfigOptions() error {
 		Key.Lock()
 		defer Key.Unlock()
 		Key.PrivKey = privKey
-		Key.PubKey = pubKey.(*rsa.PublicKey)
 	}
 
 	return nil
