@@ -60,9 +60,7 @@ type ShoveyRun struct {
 	Status     string    `json:"status"`
 	AckTime    time.Time `json:"ack_time"`
 	EndTime    time.Time `json:"end_time"`
-	Output     string    `json:"output"`
 	Error      string    `json:"error"`
-	Stderr     string    `json:"stderr"`
 	ExitStatus uint8     `json:"exit_status"`
 }
 
@@ -551,12 +549,6 @@ func (sr *ShoveyRun) UpdateFromJSON(srData map[string]interface{}) util.Gerror {
 		sr.Status = status
 	} else {
 		logger.Errorf("status isn't getting set?? type: %T status %v", srData["status"], srData["status"])
-	}
-	if output, ok := srData["output"].(string); ok {
-		sr.Output = output
-	}
-	if errMsg, ok := srData["stderr"].(string); ok {
-		sr.Stderr = errMsg
 	}
 	if errorStr, ok := srData["error"].(string); ok {
 		sr.Error = errorStr

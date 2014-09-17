@@ -49,7 +49,7 @@ func (s *Shovey) fillShoveyFromPostgreSQL(row datastore.ResRow) error {
 
 func (sr *ShoveyRun) fillShoveyRunFromPostgreSQL(row datastore.ResRow) error {
 	var at, et pq.NullTime
-	err := row.Scan(&sr.ID, &sr.ShoveyUUID, &sr.NodeName, &sr.Status, &at, &et, &sr.Output, &sr.Error, &sr.Stderr, &sr.ExitStatus)
+	err := row.Scan(&sr.ID, &sr.ShoveyUUID, &sr.NodeName, &sr.Status, &at, &et, &sr.Error, &sr.ExitStatus)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (sr *ShoveyRun) savePostgreSQL() util.Gerror {
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_shovey_runs($1, $2, $3, $4, $5, $6, $7, $8, $9)", sr.ShoveyUUID, sr.NodeName, sr.Status, sr.AckTime, sr.EndTime, sr.Output, sr.Error, sr.Stderr, sr.ExitStatus)
+	_, err = tx.Exec("SELECT goiardi.merge_shovey_runs($1, $2, $3, $4, $5, $6, $7)", sr.ShoveyUUID, sr.NodeName, sr.Status, sr.AckTime, sr.EndTime, sr.Error, sr.ExitStatus)
 	if err != nil {
 		gerr := util.CastErr(err)
 		gerr.SetStatus(http.StatusInternalServerError)

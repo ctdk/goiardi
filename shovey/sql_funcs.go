@@ -148,9 +148,9 @@ func (s *Shovey) getShoveyRunSQL(nodeName string) (*ShoveyRun, util.Gerror) {
 	sr := new(ShoveyRun)
 	var sqlStatement string
 	if config.Config.UseMySQL {
-		sqlStatement = "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, output, error, stderr, exit_status FROM shovey_runs WHERE shovey_uuid = ? AND node_name = ?"
+		sqlStatement = "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, error, exit_status FROM shovey_runs WHERE shovey_uuid = ? AND node_name = ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, output, error, stderr, exit_status FROM goiardi.shovey_runs WHERE shovey_uuid = $1 and node_name = $2"
+		sqlStatement = "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, error, exit_status FROM goiardi.shovey_runs WHERE shovey_uuid = $1 and node_name = $2"
 	} else {
 		return nil, util.NoDBConfigured
 	}
@@ -181,9 +181,9 @@ func (s *Shovey) getShoveyNodeRunsSQL() ([]*ShoveyRun, util.Gerror) {
 	var shoveyRuns []*ShoveyRun
 	var sqlStatement string
 	if config.Config.UseMySQL {
-		sqlStatement = "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, output, error, stderr, exit_status FROM shovey_runs WHERE shovey_uuid = ?"
+		sqlStatement = "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, error, exit_status FROM shovey_runs WHERE shovey_uuid = ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, output, error, stderr, exit_status FROM goiardi.shovey_runs WHERE shovey_uuid = $1"
+		sqlStatement = "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, error, exit_status FROM goiardi.shovey_runs WHERE shovey_uuid = $1"
 	} else {
 		return nil, util.NoDBConfigured
 	}
