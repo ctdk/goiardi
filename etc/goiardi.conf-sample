@@ -86,6 +86,35 @@ log-events = true
 # Maximum size for a JSON request from the client. Default is 1000000.
 #json-req-max-size = 1000000
 
+# Use the faster, but less safe, old method of storing data in the in-memory 
+# data store with pointers, rather than encoding the data with gob and giving a
+# new copy of the object to each requestor. If this is enabled goiardi will run
+# faster in in-memory mode, but one goroutine could change an object while it's
+# being used by another. Has no effect when using an SQL backend.
+# use-unsafe-mem-store = false
+
+# Number of idle db connections to maintain. Default is 0 - no idle connections
+# retained.
+# db-pool-size = 25
+
+# Maximum number of connections allowed for the database. Default is 0 -
+# unlimited.
+# max-connections = 50
+
+# Have goiardi send and receive events and queries from a serf cluster. Required
+# for shovey
+# use-serf = true
+
+# IP address and port for RPC connection with a serf agent. Defaults to
+# 127.0.0.1:7373
+# serf-addr = "127.0.0.1:7373"
+
+# Enable using shovey for sending jobs to nodes. Requires use-serf.
+# use-shovey = true
+
+# Path to RSA private key used to sign shovey requests.
+# sign-priv-key = "/path/to/shovey.key"
+
 # MySQL options. If "use-mysql" is true on the command line or in the
 # configuration file, connect to mysql with the options in [mysql]. All of the
 # MySQL options must be strings.

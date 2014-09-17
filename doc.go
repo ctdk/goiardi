@@ -175,11 +175,10 @@ Currently available command line and config file options:
                           for shovey.
        --serf-addr=       IP address and port to use for RPC communication
                           with a serf agent. Defaults to 127.0.0.1:7373.
-       --use-shovey       Enable using shovey for sending jobs to nodes and
-                          creating the signing keys for those requests.
+       --use-shovey       Enable using shovey for sending jobs to nodes.
                           Requires --use-serf.
        --sign-priv-key=   Path to RSA private key used to sign shovey
-                          requests
+                          requests.
 
    Options specified on the command line override options in the config file.
 
