@@ -154,12 +154,12 @@ type Options struct {
 	MaxConn           int    `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited."`
 	UseSerf           bool   `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster. Required for shovey."`
 	SerfAddr          string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373."`
-	UseShovey         bool   `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes and creating the signing keys for those requests. Requires --use-serf."`
-	SignPrivKey       string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests"`
+	UseShovey         bool   `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes. Requires --use-serf."`
+	SignPrivKey       string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests."`
 }
 
 // The goiardi version.
-const Version = "0.7.1"
+const Version = "0.8.0"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
 const ChefVersion = "11.1.3"
