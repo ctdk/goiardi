@@ -70,7 +70,7 @@ Response body format:
       "nineveh.local"
     ]
   },
-  "run_timeout": 300000000000,
+  "run_timeout": 300,
   "status": "completed",
   "updated_at": "2014-08-26T21:44:25.079010129-07:00"
 }
@@ -114,11 +114,8 @@ Request body format:
   "status": "completed",
   "ack_time": "2014-08-26T21:44:24.645047317-07:00",
   "end_time": "2014-08-26T21:44:25.078800724-07:00",
-  "output": "Applications\nLibrary\nNetwork\nSystem\nUser Information\nUsers\nVolumes\nbin\ncores\ndev\netc\nhome\nmach_kernel\nnet\nopt\nprivate\nsbin\ntmp\nusr\nvar\n",
   "error": "",
-  "stderr": "",
   "exit_status": 0,
-  "run_duration": 100,
   "protocol_major": 0,
   "protocol_minor": 1
 }
@@ -159,7 +156,7 @@ Response body format:
   "created_at"=>"2014-08-26T21:55:07.751851335-07:00",
   "id"=>"188d457e-2e07-40ef-954c-ab936af615b6",
   "nodes"=>{"cancelled"=>["nineveh.local"]},
-  "run_timeout"=>300000000000,
+  "run_timeout"=>300,
   "status"=>"cancelled",
   "updated_at"=>"2014-08-26T21:55:25.161713014-07:00"
 }

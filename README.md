@@ -418,10 +418,10 @@ The data returned from the event log should look something like this:
 
 ### Reporting
 
-Goiardi now supports, on an experimental basis, Chef's reporting facilities.
-Nothing needs to be enabled in goiardi to use this, but changes are required with
-the client. See http://docs.opscode.com/reporting.html for details on how to
-enable reporting and how to use it.
+Goiardi now supports Chef's reporting facilities. Nothing needs to be enabled 
+in goiardi to use this, but changes are required with the client. See 
+http://docs.opscode.com/reporting.html for details on how to enable reporting 
+and how to use it.
 
 There is a goiardi extension to reporting: a "status" query parameter may be
 passed in a GET request that lists reports to limit the reports returned to ones
@@ -433,9 +433,6 @@ To use reporting, you'll either need the Chef knife-reporting plugin, or use the
 knife-goiardi-reporting plugin that supports querying runs by status. It's
 available on rubygems, or on github at 
 https://github.com/ctdk/knife-goiardi-reporting.
-
-As this is an experimental feature, it may not work entirely correctly. Bug
-reports are appreciated.
 
 ### Import and Export of Data
 
@@ -500,14 +497,25 @@ up and joined a serf cluster.
 
 ### Shovey
 
-Shovey is a facility for sending jobs to nodes, like Chef Push but serf based.
-To use shovey, you'll need to have serf installed on the server goiardi is
-running on and install `schob`, the shovey client, and serf on any nodes you 
-would like to run jobs on. The client can be found at 
-https://github.com/ctdk/schob, and a cookbook for installing the shovey client 
-on a node is at https://github.com/ctdk/shovey-jobs. To control shovey, you'll 
-need to install the `knife-shove` plugin, which can be found at 
+Shovey is a facility for sending jobs to nodes independently of a chef-client
+run, like Chef Push but serf based.
+
+#### Shovey requirements
+
+To use shovey, you will need: 
+
+* Serf installed on the server goiardi is running on.
+* Serf installed on the node(s) running jobs.
+* `schob`, the shovey client, must be installed on the node(s) running jobs.
+* The `knife-shove` plugin must be installed on the workstation used to manage
+  shovey jobs.
+
+The client can be found at https://github.com/ctdk/schob, and a cookbook for 
+installing the shovey client on a node is at 
+https://github.com/ctdk/shovey-jobs. The `knife-shove` plugin can be found at 
 https://github.com/ctdk/knife-shove or on rubygems.
+
+#### Shovey Installation
 
 Setting goiardi up to use shovey is pretty straightforward.
 
@@ -557,6 +565,33 @@ that shovey is working properly, is to use encryption with your serf cluster.
 
 The shovey API is documented in the file `shovey_api.md` in the goiardi 
 repository.
+
+### Shovey In More Detail
+
+Every thirty seconds, schob sends a heartbeat back to goiardi over serf to let
+goiardi know that the node is up. Once a minute, goiardi pulls up a list of
+nodes that it hasn't seen in the last 10 minutes and marks them as being down.
+If a node that is down comes back up and sends a heartbeat back to goiardi, it
+is marked as being up again. The node statuses are tracked over time as well, so
+a motivated user could track node availability over time.
+
+When a shovey run is submitted, goiardi determines which nodes are to be
+included in the run, either via the search function or from being listed on the
+command line. It then sees how many of the nodes are believed to be up, and 
+compares that number with the job's quorum. If there aren't enough nodes up to
+satisfy the quorum, the job fails.
+
+If the quorum is satisfied, goiardi sends out a serf query with the job's
+parameters to the nodes that will run the shovey job, signed with the shovey
+private key. The nodes verify the job's signature and compare the job's command
+to the whitelist, and if it checks out begin running the job.
+
+As the job runs, schob will stream the command's output back to goiardi. This
+output can in turn be streamed to the workstation managing the shovey jobs, or
+viewed at a later time. Meanwhile, schob also watches for the job to complete,
+receiving a cancellation command from goiardi, or to timeout because it was
+running too long. Once the job finishes or is cancelled or killed, schob sends
+a report back to goiardi detailing the job's run on that node.
 
 ### Tested Platforms
 

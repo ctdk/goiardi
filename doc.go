@@ -33,8 +33,8 @@ https://github.com/ctdk/chef-pedant that's more custom tailored to goiardi.
 
 Many go tests are present as well in different goiardi subdirectories.
 
-Goiardi currently has eight dependencies: go-flags, go-cache, go-trie, toml, the
-mysql driver from go-sql-driver, the postgres driver, logger, and go-uuid.
+Goiardi currently has nine dependencies: go-flags, go-cache, go-trie, toml, the
+mysql driver from go-sql-driver, the postgres driver, logger, go-uuid, and serf.
 
 To install them, run:
 
@@ -46,6 +46,7 @@ To install them, run:
    go get github.com/lib/pq
    go get github.com/ctdk/goas/v2/logger
    go get github.com/codeskyblue/go-uuid
+   go get github.com/hashicorp/serf/client
 
 from your $GOROOT, or just use the -t flag when you go get goiardi.
 
@@ -169,6 +170,16 @@ Currently available command line and config file options:
        --max-connections= Maximum number of connections allowed for the
                           database. Only useful when using one of the SQL
                           backends. Default is 0 - unlimited.
+       --use-serf         If set, have goidari use serf to send and receive
+                          events and queries from a serf cluster. Required
+                          for shovey.
+       --serf-addr=       IP address and port to use for RPC communication
+                          with a serf agent. Defaults to 127.0.0.1:7373.
+       --use-shovey       Enable using shovey for sending jobs to nodes and
+                          creating the signing keys for those requests.
+                          Requires --use-serf.
+       --sign-priv-key=   Path to RSA private key used to sign shovey
+                          requests
 
    Options specified on the command line override options in the config file.
 
@@ -405,10 +416,10 @@ https://github.com/ctdk/knife-goiardi-event-log.
 
 Reporting
 
-Goiardi now supports, on an experimental basis, Chef's reporting facilities.
-Nothing needs to be enabled in goiardi to use this, but changes are required with
-the client. See http://docs.opscode.com/reporting.html for details on how to
-enable reporting and how to use it.
+Goiardi now supports Chef's reporting facilities. Nothing needs to be enabled 
+in goiardi to use this, but changes are required with the client. See 
+http://docs.opscode.com/reporting.html for details on how to enable reporting 
+and how to use it.
 
 There is a goiardi extension to reporting: a "status" query parameter may be
 passed in a GET request that lists reports to limit the reports returned to ones
@@ -420,9 +431,6 @@ To use reporting, you'll either need the Chef knife-reporting plugin, or use the
 knife-goiardi-reporting plugin that supports querying runs by status. It's
 available on rubygems, or on github at
 https://github.com/ctdk/knife-goiardi-reporting.
-
-As this is an experimental feature, it may not work entirely correctly. Bug
-reports are appreciated.
 
 Import and Export of Data
 
@@ -479,14 +487,118 @@ milliseconds, while MySQL took about 1 second and in-mem took about 1.2 seconds.
 Normal functionality is OK, but if you have that many cookbooks and expect to
 use the universe endpoint often you may wish to consider using Postgres.
 
+Serf
+
+As of version 0.8.0, goiardi has some serf integration. At the moment it's
+mainly used for shovey (see below), but it will also announce that it's started
+up and joined a serf cluster.
+
+Shovey
+
+Shovey is a facility for sending jobs to nodes independently of a chef-client
+run, like Chef Push but serf based.
+
+Shovey requirements
+
+To use shovey, you will need: 
+
+* Serf installed on the server goiardi is running on.
+* Serf installed on the node(s) running jobs.
+* `schob`, the shovey client, must be installed on the node(s) running jobs.
+* The `knife-shove` plugin must be installed on the workstation used to manage
+  shovey jobs.
+
+The client can be found at https://github.com/ctdk/schob, and a cookbook for 
+installing the shovey client on a node is at 
+https://github.com/ctdk/shovey-jobs. The `knife-shove` plugin can be found at 
+https://github.com/ctdk/knife-shove or on rubygems.
+
+Shovey Installation
+
+Setting goiardi up to use shovey is pretty straightforward.
+
+* Once goiardi is installed or updated, install serf and run it with 
+  `serf agent`. Make sure that the serf agent is using the same name for its
+  node name that goiardi is using for its server name.
+* Generate an RSA public/private keypair. Goiardi will use this to sign its
+  requests to the client, and schob will verify the requests with it.
+
+	$ openssl genrsa -out shovey.pem 2048 # generate 2048 bit private key
+	$ openssl rsa -in shovey.pem -pubout -out shovey.key # public key
+
+  Obviously, save these keys.
+
+* Run goiardi like you usually would, but add these options:
+  `--use-serf --use-shovey --sign-priv-key=/path/to/shovey.pem`
+* Install serf and schob on a chef node. Ensure that the serf agent on the node
+  is using the same name as the chef node. The `shovey-jobs` cookbook makes
+  installing schob easier, but it's not too hard to do by hand by running
+  `go get github.com/ctdk/schob` and `go install github.com/ctdk/schob`.
+* If you didn't use the shovey-jobs cookbook, make sure that the public key you
+  generated earlier is uploaded to the node somewhere.
+* Shovey uses a whitelist to allow jobs to run on nodes. The shovey whitelist is
+  a simple JSON hash, with job names as the keys and the commands to run as the
+  values. There's a sample whitelist file in the schob repo at 
+  `test/whitelist.json`, and the shovey-jobs cookbook will create a whitelist
+  file from Chef node attributes using the usual precedence rules. The whitelist
+  is drawn from `node["schob"]["whitelist"]`.
+* If you used the shovey-jobs cookbook schob should be running already. If not,
+  start it with something like `schob -VVVV -e http://chef-server.local:4545 -n
+  node-name.local -k /path/to/node.key -w /path/to/schob/test/whitelist.json -p 
+  /path/to/public.key --serf-addr=127.0.0.1:7373`. Within a minute, goiardi
+  should be aware that the node is up and ready to accept jobs.
+
+At this point you should be able to submit jobs and have them run. The
+knife-shove documentation goes into detail on what actions you can take with 
+shovey, but to start try `knife goiardi job start ls <node name>`. To list jobs,
+run `knife goiardi job list`. You can also get information on a shovey job,
+detailed information of a shovey job's run on one node, cancel jobs, query node
+status, and stream job output from a node with the knife-shove plugin. See the
+plugin's documentation for more information.
+
+See the serf docs at http://www.serfdom.io/docs/index.html for more information
+on setting up serf. One serf option you may want to use, once you're satisfied
+that shovey is working properly, is to use encryption with your serf cluster.
+
+The shovey API is documented in the file `shovey_api.md` in the goiardi 
+repository.
+
+Shovey In More Detail
+
+Every thirty seconds, schob sends a heartbeat back to goiardi over serf to let
+goiardi know that the node is up. Once a minute, goiardi pulls up a list of
+nodes that it hasn't seen in the last 10 minutes and marks them as being down.
+If a node that is down comes back up and sends a heartbeat back to goiardi, it
+is marked as being up again. The node statuses are tracked over time as well, so
+a motivated user could track node availability over time.
+
+When a shovey run is submitted, goiardi determines which nodes are to be
+included in the run, either via the search function or from being listed on the
+command line. It then sees how many of the nodes are believed to be up, and 
+compares that number with the job's quorum. If there aren't enough nodes up to
+satisfy the quorum, the job fails.
+
+If the quorum is satisfied, goiardi sends out a serf query with the job's
+parameters to the nodes that will run the shovey job, signed with the shovey
+private key. The nodes verify the job's signature and compare the job's command
+to the whitelist, and if it checks out begin running the job.
+
+As the job runs, schob will stream the command's output back to goiardi. This
+output can in turn be streamed to the workstation managing the shovey jobs, or
+viewed at a later time. Meanwhile, schob also watches for the job to complete,
+receiving a cancellation command from goiardi, or to timeout because it was
+running too long. Once the job finishes or is cancelled or killed, schob sends
+a report back to goiardi detailing the job's run on that node.
+
 Tested Platforms
 
 Goiardi has been built and run with the native 6g compiler on Mac OS X (10.7,
 10.8, and 10.9), Debian squeeze and wheezy, a fairly recent Arch Linux, FreeBSD
-9.2, and Solaris. Using Go's cross compiling capabilities, goiardi builds for all
-of Go's supported platforms except Dragonfly BSD and plan9 (because of issues
-with the postgres client library). Windows support has not been tested
-extensively, but a cross compiled binary has been tested successfully on Windows.
+9.2, and Solaris. Using Go's cross compiling capabilities, goiardi builds for 
+all of Go's supported platforms except Dragonfly BSD and plan9 (because of 
+issues with the postgres client library). Windows support has not been tested
+extensively, but a cross compiled binary has been tested successfully on 
+Windows.
 
 Goiardi has also been built and run with gccgo (using the "-compiler gccgo"
 option with the "go" command) on Arch Linux. Building it with gccgo without
