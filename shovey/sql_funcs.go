@@ -308,7 +308,7 @@ func (s *Shovey) checkCompletedSQL() util.Gerror {
 }
 
 func allShoveyIDsSQL() ([]string, util.Gerror) {
-	var shoveyList []string
+	shoveyList := make([]string, 0)
 
 	var sqlStatement string
 	if config.Config.UseMySQL {
