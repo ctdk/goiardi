@@ -52,7 +52,7 @@ func importAll(fileName string) error {
 	// What versions of the exported data are supported?
 	// At the moment it's only 1.0.
 
-	if exportedData.MajorVersion == 1 && exportedData.MinorVersion == 0 {
+	if exportedData.MajorVersion == 1 && (exportedData.MinorVersion == 0 || exportedData.MinorVersion == 1) {
 		logger.Infof("Importing data, version %d.%d created on %s", exportedData.MajorVersion, exportedData.MinorVersion, exportedData.CreatedTime)
 
 		// load clients
@@ -265,6 +265,29 @@ func importAll(fileName string) error {
 			gerr = r.Save()
 			if gerr != nil {
 				return gerr
+			}
+		}
+
+		if exportedData.MinorVersion == 1 {
+			// import shovey jobs, run, and streams, and node
+			// statuses
+			for _, v := range exportedData.Data["node_status"] {
+				ns := v.(map[string]interface{})
+				//nodeStatus := &NodeStatus{ Node: n, Status: status, UpdatedAt, updatedAt }
+				logger.Debugf("node status: %v", ns)
+			}
+			for _, v := range exportedData.Data["shovey"] {
+				s := v.(map[string]interface{})
+				logger.Debugf("shovey: %v", s)
+			}
+			for _, v := range exportedData.Data["shovey_run"] {
+				s := v.(map[string]interface{})
+				logger.Debugf("shovey run: %v", s)
+
+			}
+			for _, v := range exportedData.Data["shovey_run_stream"] {
+				s := v.(map[string]interface{})
+				logger.Debugf("shovey run stream: %v", s)
 			}
 		}
 

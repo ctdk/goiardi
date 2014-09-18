@@ -31,6 +31,7 @@ import (
 	serfclient "github.com/hashicorp/serf/client"
 	"math"
 	"net/http"
+	"os"
 	"reflect"
 	"regexp"
 	"sort"
@@ -540,6 +541,56 @@ func GetList() []string {
 	return list
 }
 
+// AllShoveys returns all shovey objects on the server
+func AllShoveys() ([]*Shovey) {
+	var shoveys []*Shovey
+	if config.UsingDB() {
+		return allShoveysSQL()
+	} else {
+		shoveList := GetList()
+		for _, s := range shoveList {
+			sh, err := Get(s)
+			if err != nil {
+				logger.Criticalf(err.Error())
+				os.Exit(1)
+			}
+			shoveys = append(shoveys, sh)
+		}
+	}
+	return shoveys
+}
+
+func AllShoveyRuns() ([]*ShoveyRun) {
+	var shoveyRuns []*ShoveyRun
+	shoveys := AllShoveys()
+	for _, s := range shoveys {
+		runs, err := s.GetNodeRuns()
+		if err != nil {
+			logger.Criticalf(err.Error())
+			os.Exit(1)
+		}
+		shoveyRuns = append(shoveyRuns, runs...)
+	}
+	return shoveyRuns
+}
+
+func AllShoveyRunStreams() ([]*ShoveyRunStream) {
+	var streams []*ShoveyRunStream
+	shoveyRuns := AllShoveyRuns()
+	outputTypes := []string{ "stdout", "stderr" }
+	for _, sr := range shoveyRuns {
+		for _, t := range outputTypes {
+			srs, err := sr.GetStreamOutput(t, 0)
+			if err != nil {
+				logger.Criticalf(err.Error())
+				os.Exit(1)
+			}
+			streams = append(streams, srs...)
+		}
+	}
+	return streams
+}
+
 // UpdateFromJSON updates a ShoveyRun with the given JSON from the client.
 func (sr *ShoveyRun) UpdateFromJSON(srData map[string]interface{}) util.Gerror {
 	if status, ok := srData["status"].(string); ok {
@@ -707,6 +758,22 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 		return "", err
 	}
 	return sig, nil
+}
+
+// ImportShovey is used to import shovey jobs from the exported JSON dump.
+func ImportShovey(shoveyJSON map[string]interface{}) error {
+
+}
+
+// ImportShoveyRun is used to import shovey jobs from the exported JSON dump.
+func ImportShovey(sRunJSON map[string]interface{}) error {
+
+}
+
+// ImportShoveyRunStream is used to import shovey jobs from the exported JSON 
+// dump.
+func ImportShoveyRunStream(srStreamJSON map[string]interface{}) error {
+
 }
 
 func (s BySeq) Len() int           { return len(s) }

@@ -29,6 +29,7 @@ import (
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
+	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
 	"os"
 	"time"
@@ -50,7 +51,7 @@ type ExportData struct {
 const ExportMajorVersion = 1
 
 // Minor version number of the export file format.
-const ExportMinorVersion = 0
+const ExportMinorVersion = 1
 
 // Export all data to a json file. This can help with upgrading goiardi if save
 // file compatibitity is broken between releases, or with transferring goiardi
@@ -67,9 +68,13 @@ func exportAll(fileName string) error {
 	exportedData.Data["filestore"] = exportTransformSlice(filestore.AllFilestores())
 	exportedData.Data["loginfo"] = exportTransformSlice(loginfo.AllLogInfos())
 	exportedData.Data["node"] = exportTransformSlice(node.AllNodes())
+	exportedData.Data["node_status"] = exportTransformSlice(node.AllNodeStatuses())
 	exportedData.Data["report"] = exportTransformSlice(report.AllReports())
 	exportedData.Data["role"] = exportTransformSlice(role.AllRoles())
 	exportedData.Data["sandbox"] = exportTransformSlice(sandbox.AllSandboxes())
+	exportedData.Data["shovey"] = exportTransformSlice(shovey.AllShoveys())
+	exportedData.Data["shovey_run"] = exportTransformSlice(shovey.AllShoveyRuns())
+	exportedData.Data["shovey_run_stream"] = exportTransformSlice(shovey.AllShoveyRunStreams())
 	exportedData.Data["user"] = user.ExportAllUsers()
 
 	fp, err := os.Create(fileName)
@@ -137,6 +142,26 @@ func exportTransformSlice(data interface{}) []interface{} {
 			exp[i] = v
 		}
 	case []*sandbox.Sandbox:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*node.NodeStatus:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*shovey.Shovey:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*shovey.ShoveyRun:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*shovey.ShoveyRunStream:
 		exp = make([]interface{}, len(data))
 		for i, v := range data {
 			exp[i] = v

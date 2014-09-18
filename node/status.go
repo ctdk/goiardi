@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"os"
 	"time"
 )
 
@@ -57,6 +58,12 @@ func (n *Node) UpdateStatus(status string) error {
 	return ds.SetNodeStatus(n.Name, s)
 }
 
+// ImportStatus is used by the import function to import node statuses from the
+// JSON dump.
+func ImportStatus(nodeJSON map[string]interface{}) error {
+
+}
+
 // LatestStatus returns the node's latest status.
 func (n *Node) LatestStatus() (*NodeStatus, error) {
 	if config.UsingDB() {
@@ -86,6 +93,23 @@ func (n *Node) AllStatuses() ([]*NodeStatus, error) {
 		ns[i] = v.(*NodeStatus)
 	}
 	return ns, nil
+}
+
+// AllNodeStatuses returns all node status reports on the server, from all
+// nodes.
+func AllNodeStatuses() ([]*NodeStatus) {
+	var allStatus []*NodeStatus
+	nodes := AllNodes()
+	for _, n := range nodes {
+		ns, err := n.AllStatuses()
+		if err != nil {
+			logger.Criticalf(err.Error())
+			os.Exit(1)
+		}
+		allStatus = append(allStatus, ns...)
+	}
+	
+	return allStatus
 }
 
 func (n *Node) deleteStatuses() error {

@@ -349,6 +349,35 @@ func allShoveyIDsSQL() ([]string, util.Gerror) {
 	return shoveyList, nil
 }
 
+func allShoveysSQL() ([]*Shovey) {
+	shoveys := make([]*Shovey, 0)
+	var sqlStatement string
+	if config.Config.UseMySQL {
+		sqlStatement = "SELECT run_id, command, created_at, updated_at, status, timeout, quorum from shoveys"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "SELECT run_id, ARRAY(SELECT node_name FROM goiardi.shovey_runs WHERE shovey_uuid = goiardi.shoveys.run_id), command, created_at, updated_at, status, timeout, quorum FROM goiardi.shoveys"
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		panic(err)
+	}
+	defer stmt.Close()
+	rows, err := datastore.Dbh.Query(sqlStatement)
+	if err != nil {
+		panic(err)
+	}
+	for rows.Next() {
+		s := new(Shovey)
+		err = s.fillShoveyFromSQL(rows)
+		if err != nil {
+			panic(err)
+		}
+		shoveys = append(shoveys, s)
+	}
+	return shoveys
+}
+
 func (sr *ShoveyRun) addStreamOutSQL(output string, outputType string, seq int, isLast bool) util.Gerror {
 	var sqlStatement string
 	if config.Config.UseMySQL {
