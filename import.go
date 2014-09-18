@@ -271,10 +271,14 @@ func importAll(fileName string) error {
 		if exportedData.MinorVersion == 1 {
 			// import shovey jobs, run, and streams, and node
 			// statuses
+			logger.Infof("Loading node statuses...")
 			for _, v := range exportedData.Data["node_status"] {
 				ns := v.(map[string]interface{})
-				//nodeStatus := &NodeStatus{ Node: n, Status: status, UpdatedAt, updatedAt }
-				logger.Debugf("node status: %v", ns)
+				//logger.Debugf("node status: %v", ns)
+				err := node.ImportStatus(ns)
+				if err != nil {
+					return err
+				}
 			}
 			for _, v := range exportedData.Data["shovey"] {
 				s := v.(map[string]interface{})

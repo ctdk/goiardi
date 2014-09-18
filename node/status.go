@@ -59,9 +59,25 @@ func (n *Node) UpdateStatus(status string) error {
 }
 
 // ImportStatus is used by the import function to import node statuses from the
-// JSON dump.
+// exported JSON dump.
 func ImportStatus(nodeJSON map[string]interface{}) error {
-
+	n := nodeJSON["Node"].(map[string]interface{})
+	status := nodeJSON["Status"].(string)
+	ut := nodeJSON["UpdatedAt"].(string)
+	updatedAt, err := time.Parse(time.RFC3339, ut)
+	if err != nil {
+		return err
+	}
+	node, err := Get(n["name"].(string))
+	if err != nil {
+		return nil
+	}
+	ns := &NodeStatus{Node: node, Status: status, UpdatedAt: updatedAt}
+	if config.UsingDB() {
+		return ns.importNodeStatus()
+	}
+	ds := datastore.New()
+	return ds.SetNodeStatus(node.Name, ns)
 }
 
 // LatestStatus returns the node's latest status.

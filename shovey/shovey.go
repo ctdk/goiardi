@@ -763,17 +763,18 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 // ImportShovey is used to import shovey jobs from the exported JSON dump.
 func ImportShovey(shoveyJSON map[string]interface{}) error {
 
+	return nil
 }
 
 // ImportShoveyRun is used to import shovey jobs from the exported JSON dump.
-func ImportShovey(sRunJSON map[string]interface{}) error {
-
+func ImportShoveyRun(sRunJSON map[string]interface{}) error {
+	return nil
 }
 
 // ImportShoveyRunStream is used to import shovey jobs from the exported JSON 
 // dump.
 func ImportShoveyRunStream(srStreamJSON map[string]interface{}) error {
-
+	return nil
 }
 
 func (s BySeq) Len() int           { return len(s) }

@@ -178,6 +178,26 @@ func (ns *NodeStatus) updateNodeStatusSQL() error {
 	return err
 }
 
+func (ns *NodeStatus) importNodeStatus() error {
+	var sqlStmt string
+	if config.Config.UseMySQL {
+		sqlStmt = "INSERT INTO node_statuses (node_id, status, updated_at) SELECT id, ?, ? FROM nodes WHERE name = ?"
+	} else if config.Config.UsePostgreSQL {
+		sqlStmt = "INSERT INTO goiardi.node_statuses (node_id, status, updated_at) SELECT id, $1, $2 FROM nodes WHERE name = $3"
+	}
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(sqlStmt, ns.Status, ns.UpdatedAt, ns.Node.Name)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+	return nil
+}
+
 func getListSQL() []string {
 	var nodeList []string
 	var sqlStmt string
