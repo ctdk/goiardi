@@ -762,7 +762,7 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 
 // ImportShovey is used to import shovey jobs from the exported JSON dump.
 func ImportShovey(shoveyJSON map[string]interface{}) error {
-
+	s := &Shovey{}
 	return nil
 }
 
