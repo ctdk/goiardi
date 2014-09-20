@@ -275,32 +275,31 @@ func importAll(fileName string) error {
 			logger.Infof("Loading node statuses...")
 			for _, v := range exportedData.Data["node_status"] {
 				ns := v.(map[string]interface{})
-				//logger.Debugf("node status: %v", ns)
 				err := node.ImportStatus(ns)
 				if err != nil {
 					return err
 				}
 			}
+			logger.Infof("Loading shoveys...")
 			for _, v := range exportedData.Data["shovey"] {
 				s := v.(map[string]interface{})
-				logger.Debugf("shovey: %v", s)
 				err := shovey.ImportShovey(s)
 				if err != nil {
 					return err
 				}
 			}
+			logger.Infof("Loading shovey runs...")
 			for _, v := range exportedData.Data["shovey_run"] {
 				s := v.(map[string]interface{})
-				logger.Debugf("shovey run: %v", s)
 				err := shovey.ImportShoveyRun(s)
 				if err != nil {
 					return err
 				}
 
 			}
+			logger.Infof("Loading shovey run streams...")
 			for _, v := range exportedData.Data["shovey_run_stream"] {
 				s := v.(map[string]interface{})
-				logger.Debugf("shovey run stream: %v", s)
 				err := shovey.ImportShoveyRunStream(s)
 				if err != nil {
 					return err

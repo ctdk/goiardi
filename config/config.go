@@ -483,6 +483,10 @@ func ParseConfigOptions() error {
 	}
 
 	if opts.UseShovey {
+		if !Config.UseSerf {
+			logger.Criticalf("--use-shovey requires --use-serf to be enabled")
+			os.Exit(1)
+		}
 		Config.UseShovey = opts.UseShovey
 	}
 

@@ -330,9 +330,9 @@ func (n *Node) allStatusesSQL() ([]*NodeStatus, error) {
 	var nodeStatuses []*NodeStatus
 	var sqlStmt string
 	if config.Config.UseMySQL {
-		sqlStmt = "SELECT status, ns.updated_at FROM node_statuses ns JOIN nodes n on ns.node_id = n.id WHERE n.name = ? ORDER BY ns.id DESC"
+		sqlStmt = "SELECT status, ns.updated_at FROM node_statuses ns JOIN nodes n on ns.node_id = n.id WHERE n.name = ? ORDER BY ns.id"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT status, ns.updated_at FROM goiardi.node_statuses ns JOIN goiardi.nodes n ON ns.node_id = n.id WHERE n.name = $1 ORDER BY ns.id DESC"
+		sqlStmt = "SELECT status, ns.updated_at FROM goiardi.node_statuses ns JOIN goiardi.nodes n ON ns.node_id = n.id WHERE n.name = $1 ORDER BY ns.id"
 	}
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
