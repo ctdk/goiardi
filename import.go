@@ -32,6 +32,7 @@ import (
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
+	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
 	"io/ioutil"
 	"os"

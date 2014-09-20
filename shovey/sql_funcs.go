@@ -454,3 +454,58 @@ func (sr *ShoveyRun) combineStreamOutSQL(outputType string, seq int) (string, ut
 
 	return "", nil
 }
+
+func (s *Shovey) importSaveSQL() error {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	var sqlStatement string
+	if config.Config.UseMySQL {
+		sqlStatement = "INSERT INTO shoveys (run_id, command, status, timeout, quorum, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "INSERT INTO goiardi.shoveys (run_id, command, status, timeout, quorum, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+	} else {
+		return util.NoDBConfigured
+	}
+
+	_, err = tx.Exec(sqlStatement, s.RunID, s.Command, s.Status, s.Timeout, s.Quorum, s.Status, s.CreatedAt, s.UpdatedAt)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+	return nil
+}
+
+func (srs *ShoveyRunStream) importSaveSQL() error {
+	s, gerr := Get(srs.ShoveyUUID)
+	if gerr != nil {
+		return gerr
+	}
+	sr, gerr := s.GetRun(srs.NodeName)
+	if gerr != nil {
+		return gerr
+	}
+
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	var sqlStatement string
+	if config.Config.UseMySQL {
+		sqlStatement = "INSERT INTO shovey_run_streams (shovey_run_id, seq, output_type, output, is_last, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "INSERT INTO goiardi.shovey_run_streams (shovey_run_id, seq, output_type, output, is_last, created_at) VALUES ($1, $2, $3, $4, $5, $6)"
+	} else {
+		return util.NoDBConfigured
+	}
+
+	_, err = tx.Exec(sqlStatement, sr.ID, srs.Seq, srs.OutputType, srs.Output, srs.IsLast, srs.CreatedAt)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+	return nil
+}

@@ -762,18 +762,89 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 
 // ImportShovey is used to import shovey jobs from the exported JSON dump.
 func ImportShovey(shoveyJSON map[string]interface{}) error {
-	s := &Shovey{}
-	return nil
+	runID := shoveyJSON["id"].(string)
+	nn := shoveyJSON["nodes"].([]interface{})
+	nodeNames := make([]string, len(nn))
+	for i, v := range nn {
+		nodeNames[i] = v.(string)
+	}
+	command := shoveyJSON["command"].(string)
+	ca := shoveyJSON["created_at"].(string)
+	createdAt, err := time.Parse(time.RFC3339, ca)
+	if err != nil {
+		return nil
+	}
+	ua := shoveyJSON["updated_at"].(string)
+	updatedAt, err := time.Parse(time.RFC3339, ua)
+	if err != nil {
+		return nil
+	}
+	status := shoveyJSON["status"].(string)
+	timeout := time.Duration(shoveyJSON["timeout"].(float64))
+	quorum := shoveyJSON["quorum"].(string)
+	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, CreatedAt: createdAt, UpdatedAt: updatedAt, Status: status, Timeout: timeout, Quorum: quorum }
+	return s.importSave()
 }
 
 // ImportShoveyRun is used to import shovey jobs from the exported JSON dump.
 func ImportShoveyRun(sRunJSON map[string]interface{}) error {
-	return nil
+	shoveyUUID := sRunJSON["run_id"].(string)
+	nodeName := sRunJSON["node_name"].(string)
+	status := sRunJSON["status"].(string)
+	var ackTime, endTime time.Time
+	if at, ok := sRunJSON["ack_time"].(string); ok {
+		var err error
+		if ackTime, err = time.Parse(time.RFC3339, at); err != nil {
+			return err
+		}
+	}
+	if et, ok := sRunJSON["end_time"].(string); ok {
+		var err error
+		if endTime, err = time.Parse(time.RFC3339, et); err != nil {
+			return err
+		}
+	}
+	errMsg := sRunJSON["error"].(string)
+	exitStatus := uint8(sRunJSON["exit_status"].(float64))
+	sr := &ShoveyRun{ ShoveyUUID: shoveyUUID, NodeName: nodeName, Status: status, AckTime: ackTime, EndTime: endTime, Error: errMsg, ExitStatus: exitStatus }
+	// This can use the normal save function
+	return sr.save()
 }
 
 // ImportShoveyRunStream is used to import shovey jobs from the exported JSON 
 // dump.
 func ImportShoveyRunStream(srStreamJSON map[string]interface{}) error {
+	shoveyUUID := srStreamJSON["ShoveyUUID"].(string)
+	nodeName := srStreamJSON["NodeName"].(string)
+	seq := int(srStreamJSON["Seq"].(float64))
+	outputType := srStreamJSON["OutputType"].(string)
+	output := srStreamJSON["Output"].(string)
+	isLast := srStreamJSON["IsLast"].(bool)
+	ca := srStreamJSON["CreatedAt"].(string)
+	createdAt, err := time.Parse(time.RFC3339, ca)
+	if err != nil {
+		return err
+	}
+	srs := &ShoveyRunStream{ ShoveyUUID: shoveyUUID, NodeName: nodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: createdAt }
+	return srs.importSave()
+}
+
+func (s *Shovey) importSave() error {
+	if config.UsingDB() {
+		return s.importSaveSQL()
+	}
+	ds := datastore.New()
+	ds.Set("shovey", s.RunID, s)
+	return nil
+}
+
+func (srs *ShoveyRunStream) importSave() error {
+	if config.UsingDB() {
+		return srs.importSaveSQL()
+	}
+	ds := datastore.New()
+	skey := fmt.Sprintf("%s_%s_%s_%d", srs.ShoveyUUID, srs.NodeName, srs.OutputType, srs.Seq)
+	ds.Set("shovey_run_stream", skey, srs)
 	return nil
 }
 
