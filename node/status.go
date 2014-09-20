@@ -68,16 +68,17 @@ func ImportStatus(nodeJSON map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-	node, err := Get(n["name"].(string))
+	nodeP, err := Get(n["name"].(string))
 	if err != nil {
 		return nil
 	}
-	ns := &NodeStatus{Node: node, Status: status, UpdatedAt: updatedAt}
+	ns := &NodeStatus{Node: nodeP, Status: status, UpdatedAt: updatedAt}
 	if config.UsingDB() {
 		return ns.importNodeStatus()
 	}
 	ds := datastore.New()
-	return ds.SetNodeStatus(node.Name, ns)
+	nodeP.Save()
+	return ds.SetNodeStatus(nodeP.Name, ns)
 }
 
 // LatestStatus returns the node's latest status.
