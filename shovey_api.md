@@ -56,7 +56,7 @@ Response body format:
 
 Method: GET
 
-Information about a shovey jobs status, both overall and each node's status.
+Information about a shovey job's status, both overall and each node's status.
 
 Response body format:
 
@@ -66,7 +66,7 @@ Response body format:
   "created_at": "2014-08-26T21:44:24.636242093-07:00",
   "id": "76b745eb-45d6-4856-94f9-7830e79cb8cd",
   "nodes": {
-    "completed": [
+    "succeeded": [
       "nineveh.local"
     ]
   },

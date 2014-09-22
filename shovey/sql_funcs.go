@@ -245,9 +245,9 @@ func (sr *ShoveyRun) saveSQL() util.Gerror {
 func (s *Shovey) cancelRunsSQL() util.Gerror {
 	var sqlStatement string
 	if config.Config.UseMySQL {
-		sqlStatement = "UPDATE shovey_runs SET status = 'cancelled', end_time = NOW() WHERE shovey_uuid = ? AND status NOT IN ('invalid', 'completed', 'failed', 'down', 'nacked')"
+		sqlStatement = "UPDATE shovey_runs SET status = 'cancelled', end_time = NOW() WHERE shovey_uuid = ? AND status NOT IN ('invalid', 'succeeded', 'failed', 'down', 'nacked')"
 	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "UPDATE goiardi.shovey_runs SET status = 'cancelled', end_time = NOW() WHERE shovey_uuid = $1 AND status NOT IN ('invalid', 'completed', 'failed', 'down', 'nacked')"
+		sqlStatement = "UPDATE goiardi.shovey_runs SET status = 'cancelled', end_time = NOW() WHERE shovey_uuid = $1 AND status NOT IN ('invalid', 'succeeded', 'failed', 'down', 'nacked')"
 	} else {
 		return util.NoDBConfigured
 	}
@@ -275,9 +275,9 @@ func (s *Shovey) checkCompletedSQL() util.Gerror {
 	var c int
 	var sqlStatement string
 	if config.Config.UseMySQL {
-		sqlStatement = "SELECT count(id) FROM shovey_runs WHERE shovey_uuid = ? AND status IN ('invalid', 'completed', 'failed', 'down', 'nacked')"
+		sqlStatement = "SELECT count(id) FROM shovey_runs WHERE shovey_uuid = ? AND status IN ('invalid', 'succeeded', 'failed', 'down', 'nacked')"
 	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT count(id) FROM goiardi.shovey_runs WHERE shovey_uuid = $1 AND status IN ('invalid', 'completed', 'failed', 'down', 'nacked')"
+		sqlStatement = "SELECT count(id) FROM goiardi.shovey_runs WHERE shovey_uuid = $1 AND status IN ('invalid', 'succeeded', 'failed', 'down', 'nacked')"
 	} else {
 		return util.NoDBConfigured
 	}

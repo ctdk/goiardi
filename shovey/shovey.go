@@ -313,7 +313,7 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 			if err != nil {
 				return err
 			}
-			if sr.Status != "invalid" && sr.Status != "completed" && sr.Status != "failed" && sr.Status != "down" && sr.Status != "nacked" {
+			if sr.Status != "invalid" && sr.Status != "succeeded" && sr.Status != "failed" && sr.Status != "down" && sr.Status != "nacked" {
 				sr.EndTime = time.Now()
 				sr.Status = "cancelled"
 				err = sr.save()
@@ -490,7 +490,7 @@ func (s *Shovey) checkCompleted() {
 	}
 	c := 0
 	for _, sr := range srs {
-		if sr.Status == "invalid" || sr.Status == "completed" || sr.Status == "failed" || sr.Status == "down" || sr.Status == "nacked" || sr.Status == "cancelled" {
+		if sr.Status == "invalid" || sr.Status == "succeeded" || sr.Status == "failed" || sr.Status == "down" || sr.Status == "nacked" || sr.Status == "cancelled" {
 			c++
 		}
 	}
@@ -594,7 +594,7 @@ func AllShoveyRunStreams() ([]*ShoveyRunStream) {
 // UpdateFromJSON updates a ShoveyRun with the given JSON from the client.
 func (sr *ShoveyRun) UpdateFromJSON(srData map[string]interface{}) util.Gerror {
 	if status, ok := srData["status"].(string); ok {
-		if status == "invalid" || status == "completed" || status == "failed" || status == "nacked" {
+		if status == "invalid" || status == "succeeded" || status == "failed" || status == "nacked" {
 			sr.EndTime = time.Now()
 		}
 		sr.Status = status
