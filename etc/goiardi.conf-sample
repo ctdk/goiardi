@@ -105,6 +105,11 @@ log-events = true
 # for shovey
 # use-serf = true
 
+# Announce logged events over serf, as serf user events. If enabled, something
+# needs to be reading the events from the queue, otherwise they'll pile up in
+# the serf event queue and eventually make it so new events can't be added.
+# serf-event-announce = false
+
 # IP address and port for RPC connection with a serf agent. Defaults to
 # 127.0.0.1:7373
 # serf-addr = "127.0.0.1:7373"

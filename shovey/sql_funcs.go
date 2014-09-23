@@ -300,7 +300,7 @@ func (s *Shovey) checkCompletedSQL() util.Gerror {
 		return gerr
 	}
 	if c == len(s.NodeNames) {
-		s.Status = "completed"
+		s.Status = "complete"
 		s.save()
 	}
 
@@ -469,7 +469,7 @@ func (s *Shovey) importSaveSQL() error {
 		return util.NoDBConfigured
 	}
 
-	_, err = tx.Exec(sqlStatement, s.RunID, s.Command, s.Status, s.Timeout, s.Quorum, s.Status, s.CreatedAt, s.UpdatedAt)
+	_, err = tx.Exec(sqlStatement, s.RunID, s.Command, s.Status, s.Timeout, s.Quorum, s.CreatedAt, s.UpdatedAt)
 	if err != nil {
 		tx.Rollback()
 		return err

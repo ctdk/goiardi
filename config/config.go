@@ -78,6 +78,7 @@ type Conf struct {
 	DbPoolSize        int    `toml:"db-pool-size"`
 	MaxConn           int    `toml:"max-connections"`
 	UseSerf           bool   `toml:"use-serf"`
+	SerfEventAnnounce bool 	 `toml:"serf-event-announce"`
 	SerfAddr          string `toml:"serf-addr"`
 	UseShovey         bool   `toml:"use-shovey"`
 	SignPrivKey       string `toml:"sign-priv-key"`
@@ -153,6 +154,7 @@ type Options struct {
 	DbPoolSize        int    `long:"db-pool-size" description:"Number of idle db connections to maintain. Only useful when using one of the SQL backends. Default is 0 - no idle connections retained"`
 	MaxConn           int    `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited."`
 	UseSerf           bool   `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster. Required for shovey."`
+	SerfEventAnnounce bool   `long:"serf-event-announce" description:"Announce log events and joining the serf cluster over serf, as serf events. Requires --use-serf."`
 	SerfAddr          string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373."`
 	UseShovey         bool   `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes. Requires --use-serf."`
 	SignPrivKey       string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests."`
@@ -480,6 +482,13 @@ func ParseConfigOptions() error {
 		if Config.SerfAddr == "" {
 			Config.SerfAddr = "127.0.0.1:7373"
 		}
+	}
+	if opts.SerfEventAnnounce {
+		Config.SerfEventAnnounce = opts.SerfEventAnnounce
+	}
+	if Config.SerfEventAnnounce && !Config.UseSerf {
+		logger.Criticalf("--serf-event-announce requires --use-serf")
+		os.Exit(1)
 	}
 
 	if opts.UseShovey {

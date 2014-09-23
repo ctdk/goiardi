@@ -38,10 +38,12 @@ func StartSerfin() error {
 		os.Exit(1)
 	}
 
-	err = Serfer.UserEvent("goiardi-join", []byte(config.Config.Hostname), true)
-	if err != nil {
-		logger.Criticalf(err.Error())
-		os.Exit(1)
+	if config.Config.SerfEventAnnounce {
+		err = Serfer.UserEvent("goiardi-join", []byte(config.Config.Hostname), true)
+		if err != nil {
+			logger.Criticalf(err.Error())
+			os.Exit(1)
+		}
 	}
 
 	return nil

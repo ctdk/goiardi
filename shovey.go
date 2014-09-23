@@ -123,13 +123,20 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				timeout = int(t)
 			}
-			if len(shvData["nodes"].([]interface{})) == 0 {
-				jsonErrorReport(w, r, "no nodes provided", http.StatusBadRequest)
+			var nodeNames []string
+
+			if shvNodes, ok := shvData["nodes"].([]interface{}); ok {
+				if len(shvNodes) == 0 {
+					jsonErrorReport(w, r, "no nodes provided", http.StatusBadRequest)
+					return
+				}
+				nodeNames = make([]string, len(shvNodes))
+				for i, v := range shvNodes {
+					nodeNames[i] = v.(string)
+				}
+			} else {
+				jsonErrorReport(w, r, "node list not an array", http.StatusBadRequest)
 				return
-			}
-			nodeNames := make([]string, len(shvData["nodes"].([]interface{})))
-			for i, v := range shvData["nodes"].([]interface{}) {
-				nodeNames[i] = v.(string)
 			}
 
 			s, gerr := shovey.New(shvData["command"].(string), timeout, quorum, nodeNames)

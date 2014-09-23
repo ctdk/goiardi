@@ -173,6 +173,8 @@ Currently available command line and config file options:
        --use-serf         If set, have goidari use serf to send and receive
                           events and queries from a serf cluster. Required
                           for shovey.
+       --serf-event-announce Announce log events over serf and joining the serf
+                          cluster, as serf events. Requires --use-serf.
        --serf-addr=       IP address and port to use for RPC communication
                           with a serf agent. Defaults to 127.0.0.1:7373.
        --use-shovey       Enable using shovey for sending jobs to nodes.
@@ -491,6 +493,13 @@ Serf
 As of version 0.8.0, goiardi has some serf integration. At the moment it's
 mainly used for shovey (see below), but it will also announce that it's started
 up and joined a serf cluster.
+
+If the `--serf-event-announce` flag is set, goiardi will announce logged events
+from the event log and starting up and joining the serf cluster over serf as
+serf user events. Be aware that if this is enabled, something will need to read
+these events from serf. Otherwise, the logged events will pile up and eventually
+take up all the space in the event queue and prevent any new events from being
+added.
 
 Shovey
 

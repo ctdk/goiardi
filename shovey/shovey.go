@@ -495,7 +495,7 @@ func (s *Shovey) checkCompleted() {
 		}
 	}
 	if c == len(s.NodeNames) {
-		s.Status = "completed"
+		s.Status = "complete"
 		s.save()
 	}
 }

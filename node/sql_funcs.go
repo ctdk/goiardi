@@ -183,7 +183,7 @@ func (ns *NodeStatus) importNodeStatus() error {
 	if config.Config.UseMySQL {
 		sqlStmt = "INSERT INTO node_statuses (node_id, status, updated_at) SELECT id, ?, ? FROM nodes WHERE name = ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "INSERT INTO goiardi.node_statuses (node_id, status, updated_at) SELECT id, $1, $2 FROM nodes WHERE name = $3"
+		sqlStmt = "INSERT INTO goiardi.node_statuses (node_id, status, updated_at) SELECT id, $1, $2 FROM goiardi.nodes WHERE name = $3"
 	}
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
