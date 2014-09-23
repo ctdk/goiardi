@@ -1,3 +1,15 @@
+0.8.0
+-----
+* Introducing shovey, a facility for running commands on nodes without a full
+  chef run.
+* Goiardi can act as a serf client now. Mostly this is for shovey support, but
+  it can also optionally announce logged events and startup over serf as serf 
+  events.
+* If serf is used, node statuses will be tracked by goiardi. This depends on
+  receiving a heartbeat message from the shovey client.
+* Add an error for the unlikely situation where an SQL function is called, yet
+  no SQL database is configured.
+
 0.7.2
 -----
 * Remove a newline in a debug statement, courtesy of @spheromak.
