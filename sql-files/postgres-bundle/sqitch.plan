@@ -36,3 +36,10 @@ data_bag_item_insert [data_bag_items data_bags goiardi_schema] 2014-06-02T21:03:
 bytea_to_json 2014-07-20T09:41:22Z Jeremy Bingham <jbingham@gmail.com> # Change most postgres bytea fields to json, because in this peculiar case json is way faster than gob
 joined_cookbkook_version 2014-07-20T10:21:28Z Jeremy Bingham <jbingham@gmail.com> # a convenient view for joined versions for cookbook versions, adapted from erchef's joined_cookbook_version
 @v0.7.0 2014-07-21T06:04:53Z Jeremy Bingham <jeremy@terqa.local> # Tag 0.7.0 postgres schema
+node_statuses [nodes] 2014-07-11T06:01:54Z Jeremy Bingham <jeremy@terqa.local> # Create node_status table for node statuses
+node_status_insert [node_statuses] 2014-07-11T07:01:31Z Jeremy Bingham <jeremy@terqa.local> # insert function for node_statuses
+add_down_column_nodes [nodes] 2014-07-16T03:18:05Z Jeremy Bingham <jbingham@gmail.com># Add is_down column to the nodes table
+shovey 2014-07-16T05:07:12Z Jeremy Bingham <jeremy@terqa.local> # add shovey tables
+node_latest_statuses [node_statuses] 2014-07-26T20:32:02Z Jeremy Bingham <jbingham@gmail.com> # Add a view to easily get nodes by their latest status
+shovey_insert_update [shovey] 2014-08-27T07:46:20Z Jeremy Bingham <jbingham@gmail.com> # insert/update functions for shovey
+@v0.8.0 2014-09-25T04:17:41Z Jeremy Bingham <jbingham@gmail.com> # Tag v0.8.0
