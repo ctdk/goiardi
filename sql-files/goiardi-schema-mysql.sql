@@ -202,7 +202,7 @@ CREATE TABLE `environments` (
 
 LOCK TABLES `environments` WRITE;
 /*!40000 ALTER TABLE `environments` DISABLE KEYS */;
-INSERT INTO `environments` VALUES (1,'_default','The default Chef environment',NULL,NULL,NULL,'2014-07-20 23:15:08','2014-07-20 23:15:08',1);
+INSERT INTO `environments` VALUES (1,'_default','The default Chef environment',NULL,NULL,NULL,'2014-09-24 21:23:17','2014-09-24 21:23:17',1);
 /*!40000 ALTER TABLE `environments` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -288,6 +288,58 @@ LOCK TABLES `log_infos` WRITE;
 UNLOCK TABLES;
 
 --
+-- Temporary table structure for view `node_latest_statuses`
+--
+
+DROP TABLE IF EXISTS `node_latest_statuses`;
+/*!50001 DROP VIEW IF EXISTS `node_latest_statuses`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `node_latest_statuses` (
+  `id` tinyint NOT NULL,
+  `name` tinyint NOT NULL,
+  `chef_environment` tinyint NOT NULL,
+  `run_list` tinyint NOT NULL,
+  `automatic_attr` tinyint NOT NULL,
+  `normal_attr` tinyint NOT NULL,
+  `default_attr` tinyint NOT NULL,
+  `override_attr` tinyint NOT NULL,
+  `is_down` tinyint NOT NULL,
+  `status` tinyint NOT NULL,
+  `updated_at` tinyint NOT NULL
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `node_statuses`
+--
+
+DROP TABLE IF EXISTS `node_statuses`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `node_statuses` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `node_id` int(11) NOT NULL,
+  `status` enum('new','up','down') NOT NULL DEFAULT 'new',
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `status` (`status`),
+  KEY `updated_at` (`updated_at`),
+  KEY `node_id` (`node_id`),
+  CONSTRAINT `node_statuses_ibfk_1` FOREIGN KEY (`node_id`) REFERENCES `nodes` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `node_statuses`
+--
+
+LOCK TABLES `node_statuses` WRITE;
+/*!40000 ALTER TABLE `node_statuses` DISABLE KEYS */;
+/*!40000 ALTER TABLE `node_statuses` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `nodes`
 --
 
@@ -306,9 +358,11 @@ CREATE TABLE `nodes` (
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
   `organization_id` int(11) NOT NULL DEFAULT '1',
+  `is_down` tinyint(4) DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `organization_name` (`organization_id`,`name`),
-  KEY `chef_environment` (`chef_environment`)
+  KEY `chef_environment` (`chef_environment`),
+  KEY `is_down` (`is_down`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPRESSED;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -447,6 +501,106 @@ LOCK TABLES `sandboxes` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `shovey_run_streams`
+--
+
+DROP TABLE IF EXISTS `shovey_run_streams`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `shovey_run_streams` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `shovey_run_id` int(11) NOT NULL,
+  `seq` int(11) NOT NULL,
+  `output_type` enum('stdout','stderr') DEFAULT NULL,
+  `output` mediumtext,
+  `is_last` tinyint(4) DEFAULT '0',
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `shovey_run_id` (`shovey_run_id`,`output_type`,`seq`),
+  KEY `shovey_run_id_2` (`shovey_run_id`,`output_type`),
+  CONSTRAINT `shovey_run_streams_ibfk_1` FOREIGN KEY (`shovey_run_id`) REFERENCES `shovey_runs` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPRESSED;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `shovey_run_streams`
+--
+
+LOCK TABLES `shovey_run_streams` WRITE;
+/*!40000 ALTER TABLE `shovey_run_streams` DISABLE KEYS */;
+/*!40000 ALTER TABLE `shovey_run_streams` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `shovey_runs`
+--
+
+DROP TABLE IF EXISTS `shovey_runs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `shovey_runs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `shovey_uuid` varchar(36) NOT NULL,
+  `shovey_id` int(11) NOT NULL,
+  `node_name` varchar(255) NOT NULL,
+  `status` varchar(30) DEFAULT NULL,
+  `ack_time` datetime DEFAULT NULL,
+  `end_time` datetime DEFAULT NULL,
+  `error` text,
+  `exit_status` tinyint(3) unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `shovey_id` (`shovey_id`,`node_name`),
+  KEY `shovey_uuid` (`shovey_uuid`),
+  KEY `node_name` (`node_name`),
+  KEY `status` (`status`),
+  KEY `shovey_uuid_2` (`shovey_uuid`,`node_name`),
+  CONSTRAINT `shovey_runs_ibfk_1` FOREIGN KEY (`shovey_id`) REFERENCES `shoveys` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPRESSED;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `shovey_runs`
+--
+
+LOCK TABLES `shovey_runs` WRITE;
+/*!40000 ALTER TABLE `shovey_runs` DISABLE KEYS */;
+/*!40000 ALTER TABLE `shovey_runs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `shoveys`
+--
+
+DROP TABLE IF EXISTS `shoveys`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `shoveys` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `run_id` varchar(36) NOT NULL,
+  `command` text,
+  `status` varchar(30) DEFAULT NULL,
+  `timeout` int(11) DEFAULT '300',
+  `quorum` varchar(25) DEFAULT '100%',
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `organization_id` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `run_id` (`run_id`),
+  KEY `organization_id` (`organization_id`),
+  KEY `run_id_2` (`run_id`,`organization_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `shoveys`
+--
+
+LOCK TABLES `shoveys` WRITE;
+/*!40000 ALTER TABLE `shoveys` DISABLE KEYS */;
+/*!40000 ALTER TABLE `shoveys` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `users`
 --
 
@@ -497,6 +651,25 @@ UNLOCK TABLES;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `node_latest_statuses`
+--
+
+/*!50001 DROP TABLE IF EXISTS `node_latest_statuses`*/;
+/*!50001 DROP VIEW IF EXISTS `node_latest_statuses`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8 */;
+/*!50001 SET character_set_results     = utf8 */;
+/*!50001 SET collation_connection      = utf8_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `node_latest_statuses` AS select distinct `n`.`id` AS `id`,`n`.`name` AS `name`,`n`.`chef_environment` AS `chef_environment`,`n`.`run_list` AS `run_list`,`n`.`automatic_attr` AS `automatic_attr`,`n`.`normal_attr` AS `normal_attr`,`n`.`default_attr` AS `default_attr`,`n`.`override_attr` AS `override_attr`,`n`.`is_down` AS `is_down`,`ns`.`status` AS `status`,`ns`.`updated_at` AS `updated_at` from (`nodes` `n` join `node_statuses` `ns` on((`n`.`id` = `ns`.`node_id`))) where `ns`.`id` in (select max(`node_statuses`.`id`) from `node_statuses` group by `node_statuses`.`node_id`) order by `n`.`id` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -507,4 +680,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-07-20 23:16:52
+-- Dump completed on 2014-09-24 21:23:59
