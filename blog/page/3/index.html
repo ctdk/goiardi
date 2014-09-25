@@ -9,7 +9,7 @@
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="Originally posted on time.to.pullthepl.ug. A while back, I decided that I would like to learn Go, which is a pretty neat language all around (in my &hellip;">
+  <meta name="description" content="Originally posted on time.to.pullthepl.ug. I am pleased to announce another goiardi (a Chef server written in go) release. Version 0.3.0 of goiardi &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,56 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/goiardi/blog/2014/01/06/version-0-dot-3-0-of-goiardi-released/">Version 0.3.0 of Goiardi Released</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-01-06T21:09:00-08:00" pubdate data-updated="true">Jan 6<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><em>Originally posted on <a href="http://time.to.pullthepl.ug/blog/2014/1/6/version-0-dot-3-0-of-goiardi-released/">time.to.pullthepl.ug</a>.</em></p>
+
+<p>I am pleased to announce another <a href="https://github.com/ctdk/goiardi">goiardi</a> (a <a href="http://getchef.com/chef/">Chef</a> server written in go) release.</p>
+
+<p><a href="https://github.com/ctdk/goiardi/releases/tag/v0.3.0">Version 0.3.0 of goiardi</a> adds the ability to save the in-memory data store and the search index to disk, rather than losing everything everytime the server restarts. If the options are set, goiardi will save when it receives a SIGTERM or SIGINT signal, as well as save in the background periodically. The interval defaults to five minutes, but can be specified as an option as well. In the interest of safety and data integrity, goiardi will first save to a temporary file before renaming it to the save file name.</p>
+
+<p>Of course, goiardi will also still happily run entirely in memory as before.</p>
+
+<p><strong>NB:</strong> Bear in mind that even if the data has been saved to disk goiardi still keeps the data store and search index in memory while it&rsquo;s running. This could cause problems if you try to shove too much data into it. I expect most use cases would have no problems (famous last words), but the appropriate caution is warranted.</p>
+
+<p>It still does no authentication or permission checking, and while it does its best to avoid data corruption and data loss it is not a real database and should not be relied on as such. It may be useful for situations where you do not want or need a full real Chef server, but could use persistent data which you don&rsquo;t get with chef-zero.</p>
+
+<p>Next tasks coming up: provide a way to reindex the data, improve existing docs as needed and write more, make actual go tests, fork chef-pedant and make a &ldquo;goiardi&rdquo; mode to simplify testing against chef-pedant.</p>
+
+<p>Anyway, that&rsquo;s what this release has. Have fun with it if you&rsquo;re so inclined, and thank you if you do.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -179,6 +229,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/goiardi/blog/2014/09/24/goiardi-plus-shovey-in-final-prerelease-stage/">Goiardi + Shovey in Final Prerelease Stage</a>
+      </li>
+    
+      <li class="post">
         <a href="/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook/">Another Shovey Preview: The Shovey-Jobs Cookbook</a>
       </li>
     
@@ -192,10 +246,6 @@
     
       <li class="post">
         <a href="/goiardi/blog/2014/07/29/goiardi-version-0-dot-7-1-constant-manatee-attacks/">Goiardi Version 0.7.1 - Constant Manatee Attacks</a>
-      </li>
-    
-      <li class="post">
-        <a href="/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky/">Goiardi Version 0.7.0 - Orphans of the Sky</a>
       </li>
     
   </ul>

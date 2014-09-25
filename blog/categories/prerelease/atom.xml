@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Prerelease | Goiardi]]></title>
+  <link href="http://ctdk.github.io/goiardi/blog/categories/prerelease/atom.xml" rel="self"/>
+  <link href="http://ctdk.github.io/goiardi/"/>
+  <updated>2014-09-24T21:49:50-07:00</updated>
+  <id>http://ctdk.github.io/goiardi/</id>
+  <author>
+    <name><![CDATA[Jeremy Bingham]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi + Shovey in Final Prerelease Stage]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/09/24/goiardi-plus-shovey-in-final-prerelease-stage/"/>
+    <updated>2014-09-24T21:38:01-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/09/24/goiardi-plus-shovey-in-final-prerelease-stage</id>
+    <content type="html"><![CDATA[<p>Goiardi 0.8.0 is in the final stages of release engineering before its official release. This, of course, is the release that introduces shovey, the goiardi facility for running jobs on client nodes without having to do a full chef-client run.</p>
+
+<p><a href="https://github.com/ctdk/goiardi/releases/tag/v0.8.0-pre3">0.8.0-pre3</a> should be the last prerelease version of goiardi 0.8.0. It goes hand in hand with <a href="https://github.com/ctdk/schob/releases/tag/v0.1.0-pre2">schob 0.1.0pre2</a>, now with updated documentation, and <a href="https://github.com/ctdk/knife-shove/releases/tag/v0.6.0-pre1">knife-shove 0.6.0-pre1</a>. The <a href="https://github.com/ctdk/shovey-jobs/releases/tag/v0.0.3">shovey-jobs</a> cookbook for setting up shovey on a node is important too, although it currently only works on Debian systems.</p>
+
+<p>Documentation for all the pieces of shovey are available. The <a href="https://github.com/ctdk/goiardi/tree/serfing#shovey">shovey docs in goiardi</a> give an overview, and there&rsquo;s some <a href="https://github.com/ctdk/goiardi/blob/serfing/shovey_api.md">shovey API documentation</a> as well. There&rsquo;s <a href="https://github.com/ctdk/knife-shove/blob/tests/README.rdoc">knife-shove documentation</a> and <a href="https://github.com/ctdk/schob/blob/master/README.md">schob (the shovey client) documentation</a> available in their respective repositories as well.</p>
+
+<p>Barring any complications, a formal release should be coming in the next couple of days.</p>
+]]></content>
+  </entry>
+  
+</feed>

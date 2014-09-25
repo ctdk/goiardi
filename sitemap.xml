@@ -117,8 +117,14 @@
         <lastmod>2014-09-05T23:16:10-07:00</lastmod>
     </url>
     <url>
+        <loc>
+            http://ctdk.github.io/goiardi/blog/2014/09/24/goiardi-plus-shovey-in-final-prerelease-stage/
+        </loc>
+        <lastmod>2014-09-24T21:49:29-07:00</lastmod>
+    </url>
+    <url>
         <loc>http://ctdk.github.io/goiardi/blog/archives/</loc>
-        <lastmod>2014-09-05T23:16:10-07:00</lastmod>
+        <lastmod>2014-09-24T21:49:29-07:00</lastmod>
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/docs/</loc>
@@ -126,7 +132,7 @@
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/</loc>
-        <lastmod>2014-09-05T23:16:10-07:00</lastmod>
+        <lastmod>2014-09-24T21:49:29-07:00</lastmod>
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/robots.txt</loc>

@@ -4,7 +4,7 @@
   <title><![CDATA[Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-09-05T23:16:26-07:00</updated>
+  <updated>2014-09-24T21:49:50-07:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,21 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi + Shovey in Final Prerelease Stage]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/09/24/goiardi-plus-shovey-in-final-prerelease-stage/"/>
+    <updated>2014-09-24T21:38:01-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/09/24/goiardi-plus-shovey-in-final-prerelease-stage</id>
+    <content type="html"><![CDATA[<p>Goiardi 0.8.0 is in the final stages of release engineering before its official release. This, of course, is the release that introduces shovey, the goiardi facility for running jobs on client nodes without having to do a full chef-client run.</p>
+
+<p><a href="https://github.com/ctdk/goiardi/releases/tag/v0.8.0-pre3">0.8.0-pre3</a> should be the last prerelease version of goiardi 0.8.0. It goes hand in hand with <a href="https://github.com/ctdk/schob/releases/tag/v0.1.0-pre2">schob 0.1.0pre2</a>, now with updated documentation, and <a href="https://github.com/ctdk/knife-shove/releases/tag/v0.6.0-pre1">knife-shove 0.6.0-pre1</a>. The <a href="https://github.com/ctdk/shovey-jobs/releases/tag/v0.0.3">shovey-jobs</a> cookbook for setting up shovey on a node is important too, although it currently only works on Debian systems.</p>
+
+<p>Documentation for all the pieces of shovey are available. The <a href="https://github.com/ctdk/goiardi/tree/serfing#shovey">shovey docs in goiardi</a> give an overview, and there&rsquo;s some <a href="https://github.com/ctdk/goiardi/blob/serfing/shovey_api.md">shovey API documentation</a> as well. There&rsquo;s <a href="https://github.com/ctdk/knife-shove/blob/tests/README.rdoc">knife-shove documentation</a> and <a href="https://github.com/ctdk/schob/blob/master/README.md">schob (the shovey client) documentation</a> available in their respective repositories as well.</p>
+
+<p>Barring any complications, a formal release should be coming in the next couple of days.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Another Shovey Preview: The Shovey-Jobs Cookbook]]></title>
@@ -513,29 +528,6 @@ README or godocs for details.</li>
     <content type="html"><![CDATA[<p><a href="https://github.com/ctdk/goiardi/commit/7777fd82cb767007a22253c98c02e97f2f0a5bbf">As of the most recent commit</a>, goiardi can now rebuild its search index in case it accidentally got deleted or corrupted somehow.</p>
 
 <p>To rebuild, just run <code>knife index rebuild</code> (or <code>knife index rebuild -y</code> if you don&rsquo;t want to be bothered to press &ldquo;y&rdquo; to confirm that you really want to do it). You&rsquo;ll get a message from knife that &lsquo;knife index rebuild&rsquo; has been removed for Chef 11+ servers. This can be ignored; while goiardi identifies itself as a Chef 11+ server, this command will work because they&rsquo;ve kept it in for older versions of Chef.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Version 0.3.0 of Goiardi Released]]></title>
-    <link href="http://ctdk.github.io/goiardi/blog/2014/01/06/version-0-dot-3-0-of-goiardi-released/"/>
-    <updated>2014-01-06T21:09:00-08:00</updated>
-    <id>http://ctdk.github.io/goiardi/blog/2014/01/06/version-0-dot-3-0-of-goiardi-released</id>
-    <content type="html"><![CDATA[<p><em>Originally posted on <a href="http://time.to.pullthepl.ug/blog/2014/1/6/version-0-dot-3-0-of-goiardi-released/">time.to.pullthepl.ug</a>.</em></p>
-
-<p>I am pleased to announce another <a href="https://github.com/ctdk/goiardi">goiardi</a> (a <a href="http://getchef.com/chef/">Chef</a> server written in go) release.</p>
-
-<p><a href="https://github.com/ctdk/goiardi/releases/tag/v0.3.0">Version 0.3.0 of goiardi</a> adds the ability to save the in-memory data store and the search index to disk, rather than losing everything everytime the server restarts. If the options are set, goiardi will save when it receives a SIGTERM or SIGINT signal, as well as save in the background periodically. The interval defaults to five minutes, but can be specified as an option as well. In the interest of safety and data integrity, goiardi will first save to a temporary file before renaming it to the save file name.</p>
-
-<p>Of course, goiardi will also still happily run entirely in memory as before.</p>
-
-<p><strong>NB:</strong> Bear in mind that even if the data has been saved to disk goiardi still keeps the data store and search index in memory while it&rsquo;s running. This could cause problems if you try to shove too much data into it. I expect most use cases would have no problems (famous last words), but the appropriate caution is warranted.</p>
-
-<p>It still does no authentication or permission checking, and while it does its best to avoid data corruption and data loss it is not a real database and should not be relied on as such. It may be useful for situations where you do not want or need a full real Chef server, but could use persistent data which you don&rsquo;t get with chef-zero.</p>
-
-<p>Next tasks coming up: provide a way to reindex the data, improve existing docs as needed and write more, make actual go tests, fork chef-pedant and make a &ldquo;goiardi&rdquo; mode to simplify testing against chef-pedant.</p>
-
-<p>Anyway, that&rsquo;s what this release has. Have fun with it if you&rsquo;re so inclined, and thank you if you do.</p>
 ]]></content>
   </entry>
   

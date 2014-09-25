@@ -9,7 +9,7 @@
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="Shovey still isn&rsquo;t finished, but it&rsquo;s come a long ways. To make it easier to play with and find potential issues, I&rsquo;ve released a &hellip;">
+  <meta name="description" content="Goiardi 0.8.0 is in the final stages of release engineering before its official release. This, of course, is the release that introduces shovey, the &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,48 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/goiardi/blog/2014/09/24/goiardi-plus-shovey-in-final-prerelease-stage/">Goiardi + Shovey in Final Prerelease Stage</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-09-24T21:38:01-07:00" pubdate data-updated="true">Sep 24<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Goiardi 0.8.0 is in the final stages of release engineering before its official release. This, of course, is the release that introduces shovey, the goiardi facility for running jobs on client nodes without having to do a full chef-client run.</p>
+
+<p><a href="https://github.com/ctdk/goiardi/releases/tag/v0.8.0-pre3">0.8.0-pre3</a> should be the last prerelease version of goiardi 0.8.0. It goes hand in hand with <a href="https://github.com/ctdk/schob/releases/tag/v0.1.0-pre2">schob 0.1.0pre2</a>, now with updated documentation, and <a href="https://github.com/ctdk/knife-shove/releases/tag/v0.6.0-pre1">knife-shove 0.6.0-pre1</a>. The <a href="https://github.com/ctdk/shovey-jobs/releases/tag/v0.0.3">shovey-jobs</a> cookbook for setting up shovey on a node is important too, although it currently only works on Debian systems.</p>
+
+<p>Documentation for all the pieces of shovey are available. The <a href="https://github.com/ctdk/goiardi/tree/serfing#shovey">shovey docs in goiardi</a> give an overview, and there&rsquo;s some <a href="https://github.com/ctdk/goiardi/blob/serfing/shovey_api.md">shovey API documentation</a> as well. There&rsquo;s <a href="https://github.com/ctdk/knife-shove/blob/tests/README.rdoc">knife-shove documentation</a> and <a href="https://github.com/ctdk/schob/blob/master/README.md">schob (the shovey client) documentation</a> available in their respective repositories as well.</p>
+
+<p>Barring any complications, a formal release should be coming in the next couple of days.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -659,66 +701,6 @@ though, the reformatting, linting, and light refactoring has done it good.</li>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/goiardi/blog/2014/05/26/goiardi-version-0-dot-5-1-rodan-overhead/">Goiardi Version 0.5.1 - Rodan Overhead</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-05-26T11:04:04-07:00" pubdate data-updated="true">May 26<span>th</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>The sky darkens. Blotting out the sun, Rodan appears to destroy beloved landmarks and stomp on small models of tanks. Goiardi <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.1">version 0.5.1</a> has been released.</p>
-
-<p>This is an incremental release, made up of bug fixes and relatively minor new features. The most interesting new features are <a href="https://github.com/ctdk/goiardi/tree/cc9aeb1766be7515458dcc6ad6e5260201b0e837#event-logging">event logging</a> and <a href="https://github.com/ctdk/goiardi/tree/cc9aeb1766be7515458dcc6ad6e5260201b0e837#reporting">reporting</a>, although the log level changes are also nice.</p>
-
-<p>From the CHANGELOG:</p>
-
-<ul>
-<li>Add log levels (from debug to critical). This makes -V/&mdash;verbose useful.</li>
-<li>Add an easier option in the config file to specify log levels by name.</li>
-<li>ipv6 already worked, but accidentally. Now it works in a more deliberate
-fashion, preventing mishaps with addresses, colons, and port numbers.</li>
-<li>Authentication protocol version 1.1 now supported.</li>
-<li>Remove a sort on run lists that was there for some reason. I have no idea
-what it was put there for, but it was wrong.</li>
-<li>Add an event log to log changes to objects like nodes, clients, etc. See the
-README or godocs for details.</li>
-<li>Add support for reporting (<a href="http://docs.opscode.com/reporting.html"><a href="http://docs.opscode.com/reporting.html">http://docs.opscode.com/reporting.html</a></a>)</li>
-</ul>
-
-
-<p>This release should not break old save files, if you&rsquo;re using that. If you&rsquo;re using MySQL, you&rsquo;ll need to deploy the sqitch changes.</p>
-
-<p>The next big things to start working on are the long promised Postgres support, and etcd/serf/consul etc. integration. Groupcache has also been asked for and looks like a worthwhile thing to pick up. As always, the <a href="https://github.com/ctdk/goiardi/issues?state=open">issues page</a> is a good place to look at what&rsquo;s being worked on.</p>
-
-<p>Goiardi is also starting to grow beyond using chef-pedant for most of its testing; it&rsquo;s about time to start more native golang tests for goiardi and not use chef-pedant for the main tests. It should always work with chef-pedant, of course, but goiardi&rsquo;s starting to get more features that chef-pedant doesn&rsquo;t check.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/goiardi/blog/page/2/">&larr; Older</a>
@@ -752,6 +734,10 @@ README or godocs for details.</li>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/goiardi/blog/2014/09/24/goiardi-plus-shovey-in-final-prerelease-stage/">Goiardi + Shovey in Final Prerelease Stage</a>
+      </li>
+    
+      <li class="post">
         <a href="/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook/">Another Shovey Preview: The Shovey-Jobs Cookbook</a>
       </li>
     
@@ -765,10 +751,6 @@ README or godocs for details.</li>
     
       <li class="post">
         <a href="/goiardi/blog/2014/07/29/goiardi-version-0-dot-7-1-constant-manatee-attacks/">Goiardi Version 0.7.1 - Constant Manatee Attacks</a>
-      </li>
-    
-      <li class="post">
-        <a href="/goiardi/blog/2014/07/21/goiardi-version-0-dot-7-0-orphans-of-the-sky/">Goiardi Version 0.7.0 - Orphans of the Sky</a>
       </li>
     
   </ul>
