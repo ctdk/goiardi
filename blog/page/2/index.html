@@ -9,7 +9,7 @@
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="The sky darkens. Blotting out the sun, Rodan appears to destroy beloved landmarks and stomp on small models of tanks. Goiardi version 0.5.1 has been &hellip;">
+  <meta name="description" content="There&rsquo;s now a knife plugin to use with goiardi&rsquo;s new event logging capabilities: knife-goiardi-event-log 0.1.1. Usage info from the &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,58 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/goiardi/blog/2014/05/28/knife-plugin-for-the-goiardi-event-log/">Knife Plugin for the Goiardi Event Log</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-28T20:16:32-07:00" pubdate data-updated="true">May 28<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>There&rsquo;s now a knife plugin to use with goiardi&rsquo;s new event logging capabilities: <a href="https://github.com/ctdk/knife-goiardi-event-log">knife-goiardi-event-log 0.1.1</a>.</p>
+
+<p>Usage info from the README:</p>
+
+<p>There are four goiardi event log commands: <code>knife goiardi gel list</code>, <code>knife goiardi gel show</code>, <code>knife goiardi gel delete</code> and <code>knife goiardi gel purge</code>.</p>
+
+<p><code>knife goiardi gel list</code> returns a list of logged events. A limit may be specified with <code>--limit</code>; the default limit is 15. An offset may also be specified; the default offset is 0.</p>
+
+<p><code>knife goiardi gel show [id]</code> gives a detailed listing of a particular event log item.</p>
+
+<p><code>knife goiardi gel delete [id]</code> deletes the given event, and prints out a detailed display of the deleted event.</p>
+
+<p><code>knife goiardi gel purge [id]</code> purges all event log items with an id less than the given id. After purging the events, it displays the number of events that were purged.</p>
+
+<hr />
+
+<p>Being able to list events of a certain kind of action, type of object, time range, etc. would be nice and are on the roadmap for this plugin. Adding that capability depends on changes to goairdi before that can happen though. This plugin makes use of all the current event log functionality however.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -487,44 +539,6 @@ README or godocs for details.</li>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/goiardi/blog/2014/01/09/reindexing-search-capability-added/">Reindexing Search Capability Added</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-01-09T23:32:11-08:00" pubdate data-updated="true">Jan 9<span>th</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://github.com/ctdk/goiardi/commit/7777fd82cb767007a22253c98c02e97f2f0a5bbf">As of the most recent commit</a>, goiardi can now rebuild its search index in case it accidentally got deleted or corrupted somehow.</p>
-
-<p>To rebuild, just run <code>knife index rebuild</code> (or <code>knife index rebuild -y</code> if you don&rsquo;t want to be bothered to press &ldquo;y&rdquo; to confirm that you really want to do it). You&rsquo;ll get a message from knife that &lsquo;knife index rebuild&rsquo; has been removed for Chef 11+ servers. This can be ignored; while goiardi identifies itself as a Chef 11+ server, this command will work because they&rsquo;ve kept it in for older versions of Chef.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/goiardi/blog/page/3/">&larr; Older</a>
@@ -560,6 +574,10 @@ README or godocs for details.</li>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/goiardi/blog/2014/09/29/goiardi-version-0-dot-8-0-plus-shovey-hojotoho-hojotoho/">Goiardi Version 0.8.0 (Plus Shovey) - Hojotoho! Hojotoho!</a>
+      </li>
+    
+      <li class="post">
         <a href="/goiardi/blog/2014/09/24/goiardi-plus-shovey-in-final-prerelease-stage/">Goiardi + Shovey in Final Prerelease Stage</a>
       </li>
     
@@ -573,10 +591,6 @@ README or godocs for details.</li>
     
       <li class="post">
         <a href="/goiardi/blog/2014/08/09/goiardi-version-0-dot-7-2-the-yak-of-seville/">Goiardi Version 0.7.2 - the Yak of Seville</a>
-      </li>
-    
-      <li class="post">
-        <a href="/goiardi/blog/2014/07/29/goiardi-version-0-dot-7-1-constant-manatee-attacks/">Goiardi Version 0.7.1 - Constant Manatee Attacks</a>
       </li>
     
   </ul>

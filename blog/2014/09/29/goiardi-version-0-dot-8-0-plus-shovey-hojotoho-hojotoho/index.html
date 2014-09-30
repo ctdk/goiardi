@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Go Test Coverage Progressing - Goiardi</title>
+  <title>Goiardi Version 0.8.0 (Plus Shovey) - Hojotoho! Hojotoho! - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="It&rsquo;s in progress, but goiardi&rsquo;s getting actual golang test coverage. It&rsquo;s being built out in the test_writing branch, and so far &hellip;">
+  <meta name="description" content="In honor of the upcoming Chef Summit, there are new releases from goiardi and friends. This officially brings out shovey, the goiardi push jobs &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/02/13/go-test-coverage-progressing">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/09/29/goiardi-version-0-dot-8-0-plus-shovey-hojotoho-hojotoho">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -86,7 +86,7 @@
   
   <header>
     
-      <h1 class="entry-title">Go Test Coverage Progressing</h1>
+      <h1 class="entry-title">Goiardi Version 0.8.0 (Plus Shovey) - Hojotoho! Hojotoho!</h1>
     
     
       <p class="meta">
@@ -102,16 +102,33 @@
   
 
 
-<time datetime="2014-02-13T09:28:49-08:00" pubdate data-updated="true">Feb 13<span>th</span>, 2014</time>
+<time datetime="2014-09-29T23:25:23-07:00" pubdate data-updated="true">Sep 29<span>th</span>, 2014</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>It&rsquo;s in progress, but goiardi&rsquo;s getting actual golang test coverage. It&rsquo;s being built out in the <a href="https://github.com/ctdk/goiardi/tree/test_writing">test_writing</a> branch, and so far has coverage with the crypto, data store, indexer, and utility libraries inside goiardi. Already the data store and indexer save and load functions have been reworked to make testing easier, and more tests will be coming soon.</p>
+<div class="entry-content"><p>In honor of the upcoming <a href="https://www.getchef.com/summit/">Chef Summit</a>, there are new releases from goiardi and friends. This officially brings out <a href="https://github.com/ctdk/goiardi#shovey">shovey</a>, the goiardi push jobs facility, to the world.</p>
 
-<p>Previously goiardi testing was done with chef-pedant, and that will continue to be the primary means of testing goiardi. However, there are areas where actual go tests will be useful, particularly with things like the data store and indexer that don&rsquo;t get quite as exercised by chef-pedant. My current thinking is that the go tests should focus more on internals, while chef-pedant coverage is important for testing its public behavior.</p>
+<p>Because of the relative complexity of shovey, there are actually three releases here:</p>
+
+<ul>
+<li><a href="https://github.com/ctdk/goiardi/releases/tag/v0.8.0">goiardi v0.8.0 &ndash; Hojotoho! Hojotoho!</a></li>
+<li><a href="https://github.com/ctdk/schob/releases/tag/v0.1.0">schob v0.1.0 &ndash; Heiaha! Heiaha!</a></li>
+<li><a href="https://github.com/ctdk/knife-shove/releases/tag/v0.6.0">knife-shove v0.6.0 &ndash; Helmwige! Hier!</a></li>
+</ul>
+
+
+<p>Astute readers may recognize the releases&#8217; codenames as the opening lines of <a href="https://www.youtube.com/watch?v=cg0rmuoqo7U">Act III of <i>Die Walküre</i></a>.</p>
+
+<p>Shovey&rsquo;s included with goiardi. Schob is the shovey client that gets installed on the nodes that will run jobs, and knife-shove is a knife plugin forked from knife-push to manage shovey jobs. The <a href="https://github.com/ctdk/goiardi/blob/master/README.md#shovey">goiardi shovey docs</a>, the <a href="https://github.com/ctdk/schob/blob/master/README.md">schob README</a>, and the <a href="https://github.com/ctdk/knife-shove/blob/master/README.rdoc">knife-shove README</a> have a bunch of documentation on how to use shovey.</p>
+
+<p>Nice, functional cookbooks for shovey and goiardi are also coming. There is a <a href="https://github.com/ctdk/shovey-jobs">shovey-jobs</a> cookbook already, but it only supports Debian. Other platforms are being added, and will be ready soon.</p>
+
+<p>Also coming reasonably soon are organizations and RBAC (it&rsquo;s finally time), and revamping the documentation. The README has gotten too long and unweildy. It will be split apart, reorganized, and expanded where needed, while the godocs for goiardi will stop being a mirror of the README and focus more on development and internals.</p>
+
+<p>See you at the Summit!</p>
 </div>
 
 
@@ -134,12 +151,12 @@
   
 
 
-<time datetime="2014-02-13T09:28:49-08:00" pubdate data-updated="true">Feb 13<span>th</span>, 2014</time>
+<time datetime="2014-09-29T23:25:23-07:00" pubdate data-updated="true">Sep 29<span>th</span>, 2014</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/goiardi/blog/categories/testing/'>testing</a>
+    <a class='category' href='/goiardi/blog/categories/releases/'>releases</a>, <a class='category' href='/goiardi/blog/categories/shovey/'>shovey</a>
   
 </span>
 
@@ -156,10 +173,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/goiardi/blog/2014/01/18/save-persistent-store-fix/" title="Previous Post: Save Persistent Store Fix">&laquo; Save Persistent Store Fix</a>
+        <a class="basic-alignment left" href="/goiardi/blog/2014/09/24/goiardi-plus-shovey-in-final-prerelease-stage/" title="Previous Post: goiardi + shovey in final prerelease stage">&laquo; goiardi + shovey in final prerelease stage</a>
       
-      
-        <a class="basic-alignment right" href="/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released/" title="Next Post: Version 0.3.3 of goiardi released">Version 0.3.3 of goiardi released &raquo;</a>
       
     </p>
   </footer>
@@ -247,8 +262,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/02/13/go-test-coverage-progressing/';
-        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/02/13/go-test-coverage-progressing/';
+        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/09/29/goiardi-version-0-dot-8-0-plus-shovey-hojotoho-hojotoho/';
+        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/09/29/goiardi-version-0-dot-8-0-plus-shovey-hojotoho-hojotoho/';
         var disqus_script = 'embed.js';
       
     (function () {
