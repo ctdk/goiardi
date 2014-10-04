@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+// Package shovey provides a means for pushing jobs out to nodes to be run
+// independently of a chef-client run.
 package shovey
 
 import (
