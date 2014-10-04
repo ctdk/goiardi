@@ -8,6 +8,12 @@ chef-zero, or it can use MySQL or PostgreSQL as its storage backend.
 
 DOCUMENTATION
 -------------
+The full goiardi documentation has been moved out of this README because it was
+getting too big to be easily manageable. It now uses sphinx to manage and format
+the documentation, which can be found under the `docs/` directory. To learn
+about sphinx-doc, see http://sphinx-doc.org/. The documentation can also be
+found online at http://goiardi.readthedocs.org/en/latest/.
+
 In addition to the aforementioned Chef documentation at http://docs.opscode.com,
 more documentation specific to goiardi can be viewed with godoc. See
 http://godoc.org/code.google.com/p/go.tools/cmd/godoc for an explanation of how
