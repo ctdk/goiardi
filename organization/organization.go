@@ -17,8 +17,10 @@
 package organization
 
 import (
+	"bytes"
 	"github.com/codeskyblue/go-uuid"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 )
 
@@ -26,7 +28,20 @@ type Organization struct {
 	Name string `json:"name"`
 	FullName string `json:"full_name"`
 	GUID string `json:"guid"`
-	UUID uuid.UUID
+	uuID uuid.UUID
+	id int
+}
+
+type privOrganization struct {
+	Name *string
+	FullName *string
+	GUID *string
+	UUID *uuid.UUID
+	ID *int
+}
+
+func New(name, fullName string) (*Organization, util.Gerror) {
+
 }
 
 func Get(orgName string) (Organization, util.Gerror) {
@@ -36,4 +51,52 @@ func Get(orgName string) (Organization, util.Gerror) {
 
 func (o *Organization) CheckActor(opUser actor.Actor) util.Gerror {
 
+}
+
+func (o *Organization) Save() util.Gerror {
+
+}
+
+func (o *Organization) Delete() util.Gerror {
+
+}
+
+/* Hmm. Orgs themselves don't have much that needs updating, but it'll get more
+ * interesting when RBAC comes along.
+ *
+ * TODO: Come back soon and investigate.
+ */
+
+func GetList() []string {
+
+}
+
+func AllOrganizations() []*Organization {
+
+}
+
+func (o *Organization) export() *privOrganization {
+	return &privOrganization{ Name: &o.Name, FullName: &o.FullName, GUID: &o.GUID, UUID: &o.uuID, ID: &o.id }
+}
+
+func (o *Organization) GobEncode() ([]byte, error) {
+	prv := o.export()
+	buf := new(bytes.Buffer)
+	decoder := gob.NewEncoder(buf)
+	if err := decoder.Encode(prv); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (o *Organization) GobDecode(b []byte) error {
+	prv := r.export()
+	buf := bytes.NewReader(b)
+	encoder := gob.NewDecoder(buf)
+	err := encoder.Decode(prv)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -259,7 +259,6 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			logger.Errorf("Authorization failure: %s\n", herr.Error())
 			w.Header().Set("Www-Authenticate", `X-Ops-Sign version="1.0" version="1.1" version="1.2"`)
-			//http.Error(w, herr.Error(), herr.Status())
 			jsonErrorReport(w, r, herr.Error(), herr.Status())
 			return
 		}
@@ -297,6 +296,7 @@ func cleanPath(p string) string {
 	return np
 }
 
+// TODO: this has to change for organizations.
 func createDefaultActors() {
 	if cwebui, _ := client.Get("chef-webui"); cwebui == nil {
 		if webui, nerr := client.New("chef-webui"); nerr != nil {

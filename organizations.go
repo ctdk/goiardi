@@ -56,6 +56,25 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch op {
-
+		case "authenticate_user":
+		case "clients":
+		case "cookbooks":
+		case "data":
+		case "environments":
+		case "nodes":
+		case "principals":
+		case "roles":
+		case "sandboxes":
+		case "search":
+		case "file_store":
+		case "events":
+		case "reports":
+		case "universe":
+		case "events":
+		case "reports":
+		case "universe":
+		case "shovey":
+		case "status":
+		default:
 	}
 }

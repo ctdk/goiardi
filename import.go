@@ -16,6 +16,8 @@
 
 package main
 
+// TODO: This will need org support
+
 import (
 	"bytes"
 	"encoding/base64"
@@ -55,6 +57,12 @@ func importAll(fileName string) error {
 
 	if exportedData.MajorVersion == 1 && (exportedData.MinorVersion == 0 || exportedData.MinorVersion == 1) {
 		logger.Infof("Importing data, version %d.%d created on %s", exportedData.MajorVersion, exportedData.MinorVersion, exportedData.CreatedTime)
+
+		// Org mode stuff -- 1.2 or greater
+		if exportedData.MinorVersion > 1 {
+
+		}
+		// otherwise everything goes into the default organization
 
 		// load clients
 		logger.Infof("Loading clients")
@@ -269,7 +277,8 @@ func importAll(fileName string) error {
 			}
 		}
 
-		if exportedData.MinorVersion == 1 {
+		// version 1.1 or greater
+		if exportedData.MinorVersion > 0 {
 			// import shovey jobs, run, and streams, and node
 			// statuses
 			logger.Infof("Loading node statuses...")
@@ -306,6 +315,8 @@ func importAll(fileName string) error {
 				}
 			}
 		}
+
+		
 
 	} else {
 		err := fmt.Errorf("goiardi export data version %d.%d is not supported by this version of goiardi", exportedData.MajorVersion, exportedData.MinorVersion)

@@ -16,6 +16,8 @@
 
 package main
 
+// TODO: This needs org support
+
 import (
 	"encoding/json"
 	"fmt"
