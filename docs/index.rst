@@ -12,8 +12,7 @@ Like all software, it is a work in progress. Goiardi now, though, should have al
 
 Many go tests are present as well in different goiardi subdirectories.
 
-
-Contents:
+The goiardi manual is licensed under a Creative Commons Attribution 4.0 License (http://creativecommons.org/licenses/by/4.0/).
 
 .. toctree::
    :maxdepth: 3
