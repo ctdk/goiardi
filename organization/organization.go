@@ -18,10 +18,14 @@ package organization
 
 import (
 	"bytes"
+	"encoding/gob"
+	"fmt"
 	"github.com/codeskyblue/go-uuid"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
+	"net/http"
 )
 
 type Organization struct {
@@ -41,24 +45,80 @@ type privOrganization struct {
 }
 
 func New(name, fullName string) (*Organization, util.Gerror) {
+	var found bool
+	uuID := uuid.NewRandom()
+	if config.UsingDB() {
 
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get("organization", name)
+	}
+	if found {
+		err := util.Errorf("an organization with this name already exists")
+		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
+	guid := fmt.Sprintf("%32x", []byte(uuID))
+	if _, sterr := util.ValidateAsString(name); sterr != nil {
+		gerr := util.Errorf("organization name invalid or missing")
+		return nil, gerr
+	}
+	if _, sterr := util.ValidateAsString(fullName); sterr != nil {
+		gerr := util.Errorf("organization full name invalid or missing")
+		return nil, gerr
+	}
+
+	o := &Organization{ Name: name, FullName: fullName, GUID: guid, uuID: uuID }
+	err := o.Save()
+	if err != nil {
+		return nil, err
+	}
+	return o, nil
 }
 
-func Get(orgName string) (Organization, util.Gerror) {
+func Get(orgName string) (*Organization, util.Gerror) {
+	var org *Organization
+	var found bool
+	if config.UsingDB() {
 
+	} else {
+		ds := datastore.New()
+		var o interface{}
+		o, found = ds.Get("organization", orgName)
+		if o != nil {
+			org = o.(*Organization)
+		}
+	}
+	if !found {
+		err := util.Errorf("Organization %s not found", orgName)
+		err.SetStatus(http.StatusNotFound)
+		return nil, err
+	}
+	return org, nil
 }
 
 
 func (o *Organization) CheckActor(opUser actor.Actor) util.Gerror {
 
+	return nil
 }
 
 func (o *Organization) Save() util.Gerror {
-
+	if config.UsingDB(){
+		
+	}
+	ds := datastore.New()
+	ds.Set("organization", o.Name, o)
+	return nil
 }
 
 func (o *Organization) Delete() util.Gerror {
+	if config.UsingDB() {
 
+	}
+	ds := datastore.New()
+	ds.Delete("organization", o.Name)
+	return nil
 }
 
 /* Hmm. Orgs themselves don't have much that needs updating, but it'll get more
@@ -68,11 +128,29 @@ func (o *Organization) Delete() util.Gerror {
  */
 
 func GetList() []string {
+	var orgList []string
+	if config.UsingDB() {
 
+	} else {
+		ds := datastore.New()
+		orgList = ds.GetList("organization")
+	}
+	return orgList
 }
 
 func AllOrganizations() []*Organization {
+	if config.UsingDB() {
 
+	}
+	orgList := GetList()
+	orgs := make([]*Organization, 0, len(orgList))
+	for _, o := range orgList {
+		org, _ := Get(o)
+		if org != nil {
+			orgs = append(orgs, org)
+		}
+	}
+	return orgs
 }
 
 func (o *Organization) export() *privOrganization {
@@ -90,7 +168,7 @@ func (o *Organization) GobEncode() ([]byte, error) {
 }
 
 func (o *Organization) GobDecode(b []byte) error {
-	prv := r.export()
+	prv := o.export()
 	buf := bytes.NewReader(b)
 	encoder := gob.NewDecoder(buf)
 	err := encoder.Decode(prv)

@@ -17,7 +17,59 @@
 package organization
 
 import (
+	"encoding/gob"
 	"testing"
 )
 
+func TestOrgCreation(t *testing.T) {
+	z := new(Organization)
+	gob.Register(z)
+	name := "hlumph"
+	fullName := "Hlumphers, Inc."
+	o, err := New(name, fullName)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if o.Name != name {
+		t.Errorf("org names did not match! %s and %s", o.Name, name)
+	}
+	if o.FullName != fullName {
+		t.Errorf("org full name did not match! %s and %s", o.FullName, fullName)
+	}
+	if len(o.GUID) != 32 {
+		t.Errorf("Org GUID should have been 32 characters long, got '%s' of %d chars instead", o.GUID, len(o.GUID))
+	}
+	err = o.Save()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+}
 
+func TestOrgDeletion(t *testing.T) {
+	o, err := Get("hlumph")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	o.Delete()
+	o2, _ := Get("hlumph")
+	if o2 != nil {
+		t.Errorf("should not have fetched organization, but got '%v' back", o2)
+	}
+}
+
+func TestOrgGet(t *testing.T) {
+	name := "hlumph"
+	fullName := "Hlumphers, Inc."
+	o, err := New(name, fullName)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	err = o.Save()
+	o2, err := Get(name)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if o.Name != o2.Name {
+		t.Errorf("names did not match, got %s and %s", o.Name, o2.Name)
+	}
+}
