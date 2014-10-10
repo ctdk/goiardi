@@ -26,13 +26,15 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"strings"
 )
 
-func environmentHandler(w http.ResponseWriter, r *http.Request) {
+func environmentHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	accErr := checkAccept(w, r, "application/json")
 	if accErr != nil {
@@ -46,7 +48,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pathArray := splitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)[2:]
 	envResponse := make(map[string]interface{})
 	var numResults string
 	r.ParseForm()

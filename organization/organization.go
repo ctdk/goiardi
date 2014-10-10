@@ -121,6 +121,14 @@ func (o *Organization) Delete() util.Gerror {
 	return nil
 }
 
+func (o *Organization) ToJSON() map[string]interface{} {
+	orgJSON := make(map[string]interface{}, 3)
+	orgJSON["name"] = o.Name
+	orgJSON["full_name"] = o.FullName
+	orgJSON["guid"] = o.GUID
+	return orgJSON
+}
+
 /* Hmm. Orgs themselves don't have much that needs updating, but it'll get more
  * interesting when RBAC comes along.
  *

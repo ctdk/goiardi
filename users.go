@@ -20,17 +20,29 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/loginfo"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
+func orgUserHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
+	userHandler(w, r)
+}
+
 func userHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	path := splitPath(r.URL.Path)
-	userName := path[1]
+	var userName string
+	if path[0] == "users" {
+		userName = path[1]
+	} else {
+		userName = path[3]
+	}
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
@@ -201,5 +213,109 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		jsonErrorReport(w, r, "Unrecognized method for user!", http.StatusMethodNotAllowed)
+	}
+}
+
+func orgUserListHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org // do something with this soon, yo
+	userListHandler(w, r)
+}
+func userListHandler(w http.ResponseWriter, r *http.Request) {
+	userResponse := make(map[string]string)
+	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
+	switch r.Method {
+	case "GET":
+		userList := user.GetList()
+		for _, k := range userList {
+			/* Make sure it's a client and not a user. */
+			itemURL := fmt.Sprintf("/users/%s", k)
+			userResponse[k] = util.CustomURL(itemURL)
+		}
+	case "POST":
+		userData, jerr := parseObjJSON(r.Body)
+		if jerr != nil {
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			return
+		}
+		if averr := util.CheckAdminPlusValidator(userData); averr != nil {
+			jsonErrorReport(w, r, averr.Error(), averr.Status())
+			return
+		}
+		if !opUser.IsAdmin() && !opUser.IsValidator() {
+			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			return
+		} else if !opUser.IsAdmin() && opUser.IsValidator() {
+			if aerr := opUser.CheckPermEdit(userData, "admin"); aerr != nil {
+				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+				return
+			}
+			if verr := opUser.CheckPermEdit(userData, "validator"); verr != nil {
+				jsonErrorReport(w, r, verr.Error(), verr.Status())
+				return
+			}
+
+		}
+		userName, sterr := util.ValidateAsString(userData["name"])
+		if sterr != nil || userName == "" {
+			err := fmt.Errorf("Field 'name' missing")
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		chefUser, err := user.NewFromJSON(userData)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+
+		if publicKey, pkok := userData["public_key"]; !pkok {
+			var perr error
+			if userResponse["private_key"], perr = chefUser.GenerateKeys(); perr != nil {
+				jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			switch publicKey := publicKey.(type) {
+			case string:
+				if pkok, pkerr := user.ValidatePublicKey(publicKey); !pkok {
+					jsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
+					return
+				}
+				chefUser.SetPublicKey(publicKey)
+			case nil:
+
+				var perr error
+				if userResponse["private_key"], perr = chefUser.GenerateKeys(); perr != nil {
+					jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
+					return
+				}
+			default:
+				jsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
+				return
+			}
+		}
+		/* If we make it here, we want the public key in the
+		 * response. I think. */
+		userResponse["public_key"] = chefUser.PublicKey()
+
+		chefUser.Save()
+		if lerr := loginfo.LogEvent(opUser, chefUser, "create"); lerr != nil {
+			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+			return
+		}
+		userResponse["uri"] = util.ObjURL(chefUser)
+		w.WriteHeader(http.StatusCreated)
+	default:
+		jsonErrorReport(w, r, "Method not allowed for clients or users", http.StatusMethodNotAllowed)
+		return
+	}
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&userResponse); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }

@@ -24,14 +24,16 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/loginfo"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
-func dataHandler(w http.ResponseWriter, r *http.Request) {
+func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
 
-	pathArray := splitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)[2:]
 
 	dbResponse := make(map[string]interface{})
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))

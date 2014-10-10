@@ -21,12 +21,19 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/organizations"
 	"net/http"
 )
 
-func principalHandler(w http.ResponseWriter, r *http.Request) {
+func principalHandler(org *organization.Organiztion, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
-	principalName := r.URL.Path[12:]
+	pathArray := splitPath(r.URL.Path)
+	if len(pathArray) != 4 {
+		jsonErrorReport(w, r, "no principal name given", http.StatusBadRequest)
+		return
+	}
+	principalName := pathArray[3]
 	switch r.Method {
 	case "GET":
 		chefActor, err := actor.GetReqUser(principalName)

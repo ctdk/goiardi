@@ -24,13 +24,15 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/loginfo"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
-func cookbookHandler(w http.ResponseWriter, r *http.Request) {
+func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
-	pathArray := splitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)[2:]
 	cookbookResponse := make(map[string]interface{})
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))

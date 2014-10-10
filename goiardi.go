@@ -43,6 +43,7 @@ import (
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/organization"
 	serfclient "github.com/hashicorp/serf/client"
 	"net/http"
 	"os"
@@ -149,26 +150,27 @@ func main() {
 	handleSignals()
 
 	/* Register the various handlers, found in their own source files. */
+	// Under /organizations? Maybe, maybe not.
 	http.HandleFunc("/authenticate_user", authenticateUserHandler)
-	http.HandleFunc("/clients", listHandler)
+	//http.HandleFunc("/clients", listHandler)
 	http.HandleFunc("/clients/", clientHandler)
-	http.HandleFunc("/cookbooks", cookbookHandler)
-	http.HandleFunc("/cookbooks/", cookbookHandler)
-	http.HandleFunc("/data", dataHandler)
-	http.HandleFunc("/data/", dataHandler)
-	http.HandleFunc("/environments", environmentHandler)
-	http.HandleFunc("/environments/", environmentHandler)
-	http.HandleFunc("/nodes", listHandler)
+	//http.HandleFunc("/cookbooks", cookbookHandler)
+	//http.HandleFunc("/cookbooks/", cookbookHandler)
+	//http.HandleFunc("/data", dataHandler)
+	//http.HandleFunc("/data/", dataHandler)
+	//http.HandleFunc("/environments", environmentHandler)
+	//http.HandleFunc("/environments/", environmentHandler)
+	//http.HandleFunc("/nodes", listHandler)
 	http.HandleFunc("/nodes/", nodeHandler)
-	http.HandleFunc("/principals/", principalHandler)
-	http.HandleFunc("/roles", listHandler)
+	//http.HandleFunc("/principals/", principalHandler)
+	//http.HandleFunc("/roles", listHandler)
 	http.HandleFunc("/roles/", roleHandler)
 	http.HandleFunc("/sandboxes", sandboxHandler)
 	http.HandleFunc("/sandboxes/", sandboxHandler)
 	http.HandleFunc("/search", searchHandler)
 	http.HandleFunc("/search/", searchHandler)
 	http.HandleFunc("/search/reindex", reindexHandler)
-	http.HandleFunc("/users", listHandler)
+	http.HandleFunc("/users", userListHandler)
 	http.HandleFunc("/users/", userHandler)
 	http.HandleFunc("/file_store/", fileStoreHandler)
 	http.HandleFunc("/events", eventListHandler)
@@ -176,7 +178,9 @@ func main() {
 	http.HandleFunc("/reports/", reportHandler)
 	http.HandleFunc("/universe", universeHandler)
 	http.HandleFunc("/shovey/", shoveyHandler)
-	http.HandleFunc("/status/", statusHandler)
+	// http.HandleFunc("/status/", statusHandler)
+	http.HandleFunc("/organizations", orgHandler)
+	http.HandleFunc("/organizations/", orgHandler)
 
 	/* TODO: figure out how to handle the root & not found pages */
 	http.HandleFunc("/", rootHandler)
@@ -298,6 +302,19 @@ func cleanPath(p string) string {
 
 // TODO: this has to change for organizations.
 func createDefaultActors() {
+	// TEMPORARY - make a default org
+	if cworg, _ := organization.Get("default"); cworg == nil {
+		if org, oerr := organization.New("default", "default org"); oerr != nil {
+			logger.Criticalf(oerr.Error())
+			os.Exit(1)
+		} else {
+			err := org.Save()
+			if err != nil {
+				logger.Criticalf(err.Error())
+				os.Exit(1)
+			}
+		}
+	}
 	if cwebui, _ := client.Get("chef-webui"); cwebui == nil {
 		if webui, nerr := client.New("chef-webui"); nerr != nil {
 			logger.Criticalf(nerr.Error())
@@ -477,6 +494,8 @@ func gobRegister() {
 	gob.Register(ns)
 	msi := make(map[string][]int)
 	gob.Register(msi)
+	o := new(organization.Organization)
+	gob.Register(o)
 }
 
 func setSaveTicker() {

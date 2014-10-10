@@ -25,25 +25,24 @@ import (
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
-	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
-func listHandler(w http.ResponseWriter, r *http.Request) {
+func listHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	pathArray := splitPath(r.URL.Path)
-	op := pathArray[0]
+	op := pathArray[2]
+	_ = org
 	var listData map[string]string
 	switch op {
 	case "nodes":
 		listData = nodeHandling(w, r)
 	case "clients":
 		listData = clientHandling(w, r)
-	case "users":
-		listData = userHandling(w, r)
 	case "roles":
 		listData = roleHandling(w, r)
 	default:
@@ -222,104 +221,6 @@ func clientHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 		return nil
 	}
 	return clientResponse
-}
-
-// user handling
-func userHandling(w http.ResponseWriter, r *http.Request) map[string]string {
-	userResponse := make(map[string]string)
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return nil
-	}
-
-	switch r.Method {
-	case "GET":
-		userList := user.GetList()
-		for _, k := range userList {
-			/* Make sure it's a client and not a user. */
-			itemURL := fmt.Sprintf("/users/%s", k)
-			userResponse[k] = util.CustomURL(itemURL)
-		}
-	case "POST":
-		userData, jerr := parseObjJSON(r.Body)
-		if jerr != nil {
-			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-			return nil
-		}
-		if averr := util.CheckAdminPlusValidator(userData); averr != nil {
-			jsonErrorReport(w, r, averr.Error(), averr.Status())
-			return nil
-		}
-		if !opUser.IsAdmin() && !opUser.IsValidator() {
-			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-			return nil
-		} else if !opUser.IsAdmin() && opUser.IsValidator() {
-			if aerr := opUser.CheckPermEdit(userData, "admin"); aerr != nil {
-				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
-				return nil
-			}
-			if verr := opUser.CheckPermEdit(userData, "validator"); verr != nil {
-				jsonErrorReport(w, r, verr.Error(), verr.Status())
-				return nil
-			}
-
-		}
-		userName, sterr := util.ValidateAsString(userData["name"])
-		if sterr != nil || userName == "" {
-			err := fmt.Errorf("Field 'name' missing")
-			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-			return nil
-		}
-
-		chefUser, err := user.NewFromJSON(userData)
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return nil
-		}
-
-		if publicKey, pkok := userData["public_key"]; !pkok {
-			var perr error
-			if userResponse["private_key"], perr = chefUser.GenerateKeys(); perr != nil {
-				jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
-				return nil
-			}
-		} else {
-			switch publicKey := publicKey.(type) {
-			case string:
-				if pkok, pkerr := user.ValidatePublicKey(publicKey); !pkok {
-					jsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
-					return nil
-				}
-				chefUser.SetPublicKey(publicKey)
-			case nil:
-
-				var perr error
-				if userResponse["private_key"], perr = chefUser.GenerateKeys(); perr != nil {
-					jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
-					return nil
-				}
-			default:
-				jsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
-				return nil
-			}
-		}
-		/* If we make it here, we want the public key in the
-		 * response. I think. */
-		userResponse["public_key"] = chefUser.PublicKey()
-
-		chefUser.Save()
-		if lerr := loginfo.LogEvent(opUser, chefUser, "create"); lerr != nil {
-			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
-			return nil
-		}
-		userResponse["uri"] = util.ObjURL(chefUser)
-		w.WriteHeader(http.StatusCreated)
-	default:
-		jsonErrorReport(w, r, "Method not allowed for clients or users", http.StatusMethodNotAllowed)
-		return nil
-	}
-	return userResponse
 }
 
 func roleHandling(w http.ResponseWriter, r *http.Request) map[string]string {
