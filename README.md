@@ -66,7 +66,11 @@ LICENSE
 Like many Chef ecosystem programs, goairdi is licensed under the Apache 2.0
 License. See the LICENSE file for details.
 
-Chef is copyright (c) 2008-2013 Opscode, Inc. and its various contributors.
+The goiardi documentation in the `docs` directory is licensed under a Creative
+Commons Attribution 4.0 International (CC-BY 4.0) License.
+
+Chef is copyright (c) 2008-2014 Chef Software (formerly Opscode, Inc.) and its
+various contributors.
 
 Thanks go out to the fine folks of Opscode and the Chef community for all their
 hard work.

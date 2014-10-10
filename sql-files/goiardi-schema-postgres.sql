@@ -1862,7 +1862,7 @@ SELECT pg_catalog.setval('data_bags_id_seq', 1, false);
 --
 
 COPY environments (id, name, organization_id, description, default_attr, override_attr, cookbook_vers, created_at, updated_at) FROM stdin;
-1	_default	1	The default Chef environment	\N	\N	\N	2014-09-24 21:30:12.917239-07	2014-09-24 21:30:12.917239-07
+1	_default	1	The default Chef environment	\N	\N	\N	2014-10-06 09:09:27.752267-07	2014-10-06 09:09:27.752267-07
 \.
 
 
@@ -1938,7 +1938,7 @@ SELECT pg_catalog.setval('nodes_id_seq', 1, false);
 --
 
 COPY organizations (id, name, description, created_at, updated_at) FROM stdin;
-1	default	\N	2014-09-24 21:30:13.1535-07	2014-09-24 21:30:13.1535-07
+1	default	\N	2014-10-06 09:09:27.988367-07	2014-10-06 09:09:27.988367-07
 \.
 
 
@@ -2061,43 +2061,43 @@ SET search_path = sqitch, pg_catalog;
 --
 
 COPY changes (change_id, change, project, note, committed_at, committer_name, committer_email, planned_at, planner_name, planner_email) FROM stdin;
-c89b0e25c808b327036c88e6c9750c7526314c86	goiardi_schema	goiardi_postgres	Add schema for goiardi-postgres	2014-09-24 21:30:12.90365-07	Jeremy Bingham	jbingham@gmail.com	2014-05-27 14:09:07-07	Jeremy Bingham	jbingham@gmail.com
-367c28670efddf25455b9fd33c23a5a278b08bb4	environments	goiardi_postgres	Environments for postgres	2014-09-24 21:30:12.926336-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 00:40:11-07	Jeremy Bingham	jbingham@gmail.com
-911c456769628c817340ee77fc8d2b7c1d697782	nodes	goiardi_postgres	Create node table	2014-09-24 21:30:12.947705-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 10:37:46-07	Jeremy Bingham	jbingham@gmail.com
-faa3571aa479de60f25785e707433b304ba3d2c7	clients	goiardi_postgres	Create client table	2014-09-24 21:30:12.967307-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:05:33-07	Jeremy Bingham	jbingham@gmail.com
-bb82d8869ffca8ba3d03a1502c50dbb3eee7a2e0	users	goiardi_postgres	Create user table	2014-09-24 21:30:12.993409-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:15:02-07	Jeremy Bingham	jbingham@gmail.com
-138bc49d92c0bbb024cea41532a656f2d7f9b072	cookbooks	goiardi_postgres	Create cookbook  table	2014-09-24 21:30:13.01181-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:27:27-07	Jeremy Bingham	jbingham@gmail.com
-f529038064a0259bdecbdab1f9f665e17ddb6136	cookbook_versions	goiardi_postgres	Create cookbook versions table	2014-09-24 21:30:13.030329-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:31:34-07	Jeremy Bingham	jbingham@gmail.com
-85483913f96710c1267c6abacb6568cef9327f15	data_bags	goiardi_postgres	Create cookbook data bags table	2014-09-24 21:30:13.049359-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:42:04-07	Jeremy Bingham	jbingham@gmail.com
-feddf91b62caed36c790988bd29222591980433b	data_bag_items	goiardi_postgres	Create data bag items table	2014-09-24 21:30:13.069486-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:02:31-07	Jeremy Bingham	jbingham@gmail.com
-6a4489d9436ba1541d272700b303410cc906b08f	roles	goiardi_postgres	Create roles table	2014-09-24 21:30:13.088709-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:09:28-07	Jeremy Bingham	jbingham@gmail.com
-c4b32778f2911930f583ce15267aade320ac4dcd	sandboxes	goiardi_postgres	Create sandboxes table	2014-09-24 21:30:13.107075-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:14:48-07	Jeremy Bingham	jbingham@gmail.com
-81003655b93b41359804027fc202788aa0ddd9a9	log_infos	goiardi_postgres	Create log_infos table	2014-09-24 21:30:13.140757-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:19:10-07	Jeremy Bingham	jbingham@gmail.com
-fce5b7aeed2ad742de1309d7841577cff19475a7	organizations	goiardi_postgres	Create organizations table	2014-09-24 21:30:13.160911-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:46:28-07	Jeremy Bingham	jbingham@gmail.com
-f2621482d1c130ea8fee15d09f966685409bf67c	file_checksums	goiardi_postgres	Create file checksums table	2014-09-24 21:30:13.178938-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:49:19-07	Jeremy Bingham	jbingham@gmail.com
-db1eb360cd5e6449a468ceb781d82b45dafb5c2d	reports	goiardi_postgres	Create reports table	2014-09-24 21:30:13.202293-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 13:02:49-07	Jeremy Bingham	jbingham@gmail.com
-c8b38382f7e5a18f36c621327f59205aa8aa9849	client_insert_duplicate	goiardi_postgres	Function to emulate insert ... on duplicate update for clients	2014-09-24 21:30:13.219935-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 23:00:04-07	Jeremy Bingham	jbingham@gmail.com
-30774a960a0efb6adfbb1d526b8cdb1a45c7d039	client_rename	goiardi_postgres	Function to rename clients	2014-09-24 21:30:13.233813-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 10:22:50-07	Jeremy Bingham	jbingham@gmail.com
-2d1fdc8128b0632e798df7346e76f122ed5915ec	user_insert_duplicate	goiardi_postgres	Function to emulate insert ... on duplicate update for clients	2014-09-24 21:30:13.248671-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 13:07:46-07	Jeremy Bingham	jbingham@gmail.com
-f336c149ab32530c9c6ae4408c11558a635f39a1	user_rename	goiardi_postgres	Function to rename users	2014-09-24 21:30:13.263073-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 13:15:45-07	Jeremy Bingham	jbingham@gmail.com
-841a7d554d44f9d0d0b8a1a5a9d0a06ce71a2453	cookbook_insert_update	goiardi_postgres	Cookbook insert/update	2014-09-24 21:30:13.279608-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 23:55:23-07	Jeremy Bingham	jbingham@gmail.com
-085e2f6281914c9fa6521d59fea81f16c106b59f	cookbook_versions_insert_update	goiardi_postgres	Cookbook versions insert/update	2014-09-24 21:30:13.299112-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 23:56:05-07	Jeremy Bingham	jbingham@gmail.com
-04bea39d649e4187d9579bd946fd60f760240d10	data_bag_insert_update	goiardi_postgres	Insert/update data bags	2014-09-24 21:30:13.313633-07	Jeremy Bingham	jbingham@gmail.com	2014-05-31 23:25:44-07	Jeremy Bingham	jbingham@gmail.com
-092885e8b5d94a9c1834bf309e02dc0f955ff053	environment_insert_update	goiardi_postgres	Insert/update environments	2014-09-24 21:30:13.328078-07	Jeremy Bingham	jbingham@gmail.com	2014-06-01 12:55:34-07	Jeremy Bingham	jbingham@gmail.com
-6d9587fa4275827c93ca9d7e0166ad1887b76cad	file_checksum_insert_ignore	goiardi_postgres	Insert ignore for file checksums	2014-09-24 21:30:13.343398-07	Jeremy Bingham	jbingham@gmail.com	2014-06-01 23:13:48-07	Jeremy Bingham	jbingham@gmail.com
-82a95e5e6cbd8ba51fea33506e1edb2a12e37a92	node_insert_update	goiardi_postgres	Insert/update for nodes	2014-09-24 21:30:13.357275-07	Jeremy Bingham	jbingham@gmail.com	2014-06-01 23:25:20-07	Jeremy Bingham	jbingham@gmail.com
-d052a8267a6512581e5cab1f89a2456f279727b9	report_insert_update	goiardi_postgres	Insert/update for reports	2014-09-24 21:30:13.371444-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 10:10:25-07	Jeremy Bingham	jbingham@gmail.com
-acf76029633d50febbec7c4763b7173078eddaf7	role_insert_update	goiardi_postgres	Insert/update for roles	2014-09-24 21:30:13.385837-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 10:27:32-07	Jeremy Bingham	jbingham@gmail.com
-b8ef36df686397ecb0fe67eb097e84aa0d78ac6b	sandbox_insert_update	goiardi_postgres	Insert/update for sandboxes	2014-09-24 21:30:13.400189-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 10:34:39-07	Jeremy Bingham	jbingham@gmail.com
-93dbbda50a25da0a586e89ccee8fcfa2ddcb7c64	data_bag_item_insert	goiardi_postgres	Insert for data bag items	2014-09-24 21:30:13.414725-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 14:03:22-07	Jeremy Bingham	jbingham@gmail.com
-c80c561c22f6e139165cdb338c7ce6fff8ff268d	bytea_to_json	goiardi_postgres	Change most postgres bytea fields to json, because in this peculiar case json is way faster than gob	2014-09-24 21:30:13.464361-07	Jeremy Bingham	jbingham@gmail.com	2014-07-20 02:41:22-07	Jeremy Bingham	jbingham@gmail.com
-9966894e0fc0da573243f6a3c0fc1432a2b63043	joined_cookbkook_version	goiardi_postgres	a convenient view for joined versions for cookbook versions, adapted from erchef's joined_cookbook_version	2014-09-24 21:30:13.48656-07	Jeremy Bingham	jbingham@gmail.com	2014-07-20 03:21:28-07	Jeremy Bingham	jbingham@gmail.com
-163ba4a496b9b4210d335e0e4ea5368a9ea8626c	node_statuses	goiardi_postgres	Create node_status table for node statuses	2014-09-24 21:30:13.507404-07	Jeremy Bingham	jbingham@gmail.com	2014-07-10 23:01:54-07	Jeremy Bingham	jeremy@terqa.local
-8bb822f391b499585cfb2fc7248be469b0200682	node_status_insert	goiardi_postgres	insert function for node_statuses	2014-09-24 21:30:13.522012-07	Jeremy Bingham	jbingham@gmail.com	2014-07-11 00:01:31-07	Jeremy Bingham	jeremy@terqa.local
-7c429aac08527adc774767584201f668408b04a6	add_down_column_nodes	goiardi_postgres	Add is_down column to the nodes table	2014-09-24 21:30:13.54229-07	Jeremy Bingham	jbingham@gmail.com	2014-07-15 20:18:05-07	Jeremy Bingham	jbingham@gmail.com
-82bcace325dbdc905eb6e677f800d14a0506a216	shovey	goiardi_postgres	add shovey tables	2014-09-24 21:30:13.574564-07	Jeremy Bingham	jbingham@gmail.com	2014-07-15 22:07:12-07	Jeremy Bingham	jeremy@terqa.local
-62046d2fb96bbaedce2406252d312766452551c0	node_latest_statuses	goiardi_postgres	Add a view to easily get nodes by their latest status	2014-09-24 21:30:13.597724-07	Jeremy Bingham	jbingham@gmail.com	2014-07-26 13:32:02-07	Jeremy Bingham	jbingham@gmail.com
-68f90e1fd2aac6a117d7697626741a02b8d0ebbe	shovey_insert_update	goiardi_postgres	insert/update functions for shovey	2014-09-24 21:30:13.61655-07	Jeremy Bingham	jbingham@gmail.com	2014-08-27 00:46:20-07	Jeremy Bingham	jbingham@gmail.com
+c89b0e25c808b327036c88e6c9750c7526314c86	goiardi_schema	goiardi_postgres	Add schema for goiardi-postgres	2014-10-06 09:09:27.74018-07	Jeremy Bingham	jbingham@gmail.com	2014-05-27 14:09:07-07	Jeremy Bingham	jbingham@gmail.com
+367c28670efddf25455b9fd33c23a5a278b08bb4	environments	goiardi_postgres	Environments for postgres	2014-10-06 09:09:27.759827-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 00:40:11-07	Jeremy Bingham	jbingham@gmail.com
+911c456769628c817340ee77fc8d2b7c1d697782	nodes	goiardi_postgres	Create node table	2014-10-06 09:09:27.780281-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 10:37:46-07	Jeremy Bingham	jbingham@gmail.com
+faa3571aa479de60f25785e707433b304ba3d2c7	clients	goiardi_postgres	Create client table	2014-10-06 09:09:27.798298-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:05:33-07	Jeremy Bingham	jbingham@gmail.com
+bb82d8869ffca8ba3d03a1502c50dbb3eee7a2e0	users	goiardi_postgres	Create user table	2014-10-06 09:09:27.823943-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:15:02-07	Jeremy Bingham	jbingham@gmail.com
+138bc49d92c0bbb024cea41532a656f2d7f9b072	cookbooks	goiardi_postgres	Create cookbook  table	2014-10-06 09:09:27.844291-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:27:27-07	Jeremy Bingham	jbingham@gmail.com
+f529038064a0259bdecbdab1f9f665e17ddb6136	cookbook_versions	goiardi_postgres	Create cookbook versions table	2014-10-06 09:09:27.864516-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:31:34-07	Jeremy Bingham	jbingham@gmail.com
+85483913f96710c1267c6abacb6568cef9327f15	data_bags	goiardi_postgres	Create cookbook data bags table	2014-10-06 09:09:27.883223-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:42:04-07	Jeremy Bingham	jbingham@gmail.com
+feddf91b62caed36c790988bd29222591980433b	data_bag_items	goiardi_postgres	Create data bag items table	2014-10-06 09:09:27.905588-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:02:31-07	Jeremy Bingham	jbingham@gmail.com
+6a4489d9436ba1541d272700b303410cc906b08f	roles	goiardi_postgres	Create roles table	2014-10-06 09:09:27.925267-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:09:28-07	Jeremy Bingham	jbingham@gmail.com
+c4b32778f2911930f583ce15267aade320ac4dcd	sandboxes	goiardi_postgres	Create sandboxes table	2014-10-06 09:09:27.943321-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:14:48-07	Jeremy Bingham	jbingham@gmail.com
+81003655b93b41359804027fc202788aa0ddd9a9	log_infos	goiardi_postgres	Create log_infos table	2014-10-06 09:09:27.973688-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:19:10-07	Jeremy Bingham	jbingham@gmail.com
+fce5b7aeed2ad742de1309d7841577cff19475a7	organizations	goiardi_postgres	Create organizations table	2014-10-06 09:09:27.995677-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:46:28-07	Jeremy Bingham	jbingham@gmail.com
+f2621482d1c130ea8fee15d09f966685409bf67c	file_checksums	goiardi_postgres	Create file checksums table	2014-10-06 09:09:28.01302-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:49:19-07	Jeremy Bingham	jbingham@gmail.com
+db1eb360cd5e6449a468ceb781d82b45dafb5c2d	reports	goiardi_postgres	Create reports table	2014-10-06 09:09:28.035049-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 13:02:49-07	Jeremy Bingham	jbingham@gmail.com
+c8b38382f7e5a18f36c621327f59205aa8aa9849	client_insert_duplicate	goiardi_postgres	Function to emulate insert ... on duplicate update for clients	2014-10-06 09:09:28.058351-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 23:00:04-07	Jeremy Bingham	jbingham@gmail.com
+30774a960a0efb6adfbb1d526b8cdb1a45c7d039	client_rename	goiardi_postgres	Function to rename clients	2014-10-06 09:09:28.074033-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 10:22:50-07	Jeremy Bingham	jbingham@gmail.com
+2d1fdc8128b0632e798df7346e76f122ed5915ec	user_insert_duplicate	goiardi_postgres	Function to emulate insert ... on duplicate update for clients	2014-10-06 09:09:28.089358-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 13:07:46-07	Jeremy Bingham	jbingham@gmail.com
+f336c149ab32530c9c6ae4408c11558a635f39a1	user_rename	goiardi_postgres	Function to rename users	2014-10-06 09:09:28.10569-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 13:15:45-07	Jeremy Bingham	jbingham@gmail.com
+841a7d554d44f9d0d0b8a1a5a9d0a06ce71a2453	cookbook_insert_update	goiardi_postgres	Cookbook insert/update	2014-10-06 09:09:28.12045-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 23:55:23-07	Jeremy Bingham	jbingham@gmail.com
+085e2f6281914c9fa6521d59fea81f16c106b59f	cookbook_versions_insert_update	goiardi_postgres	Cookbook versions insert/update	2014-10-06 09:09:28.135384-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 23:56:05-07	Jeremy Bingham	jbingham@gmail.com
+04bea39d649e4187d9579bd946fd60f760240d10	data_bag_insert_update	goiardi_postgres	Insert/update data bags	2014-10-06 09:09:28.15004-07	Jeremy Bingham	jbingham@gmail.com	2014-05-31 23:25:44-07	Jeremy Bingham	jbingham@gmail.com
+092885e8b5d94a9c1834bf309e02dc0f955ff053	environment_insert_update	goiardi_postgres	Insert/update environments	2014-10-06 09:09:28.164938-07	Jeremy Bingham	jbingham@gmail.com	2014-06-01 12:55:34-07	Jeremy Bingham	jbingham@gmail.com
+6d9587fa4275827c93ca9d7e0166ad1887b76cad	file_checksum_insert_ignore	goiardi_postgres	Insert ignore for file checksums	2014-10-06 09:09:28.182752-07	Jeremy Bingham	jbingham@gmail.com	2014-06-01 23:13:48-07	Jeremy Bingham	jbingham@gmail.com
+82a95e5e6cbd8ba51fea33506e1edb2a12e37a92	node_insert_update	goiardi_postgres	Insert/update for nodes	2014-10-06 09:09:28.201056-07	Jeremy Bingham	jbingham@gmail.com	2014-06-01 23:25:20-07	Jeremy Bingham	jbingham@gmail.com
+d052a8267a6512581e5cab1f89a2456f279727b9	report_insert_update	goiardi_postgres	Insert/update for reports	2014-10-06 09:09:28.216774-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 10:10:25-07	Jeremy Bingham	jbingham@gmail.com
+acf76029633d50febbec7c4763b7173078eddaf7	role_insert_update	goiardi_postgres	Insert/update for roles	2014-10-06 09:09:28.23307-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 10:27:32-07	Jeremy Bingham	jbingham@gmail.com
+b8ef36df686397ecb0fe67eb097e84aa0d78ac6b	sandbox_insert_update	goiardi_postgres	Insert/update for sandboxes	2014-10-06 09:09:28.249112-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 10:34:39-07	Jeremy Bingham	jbingham@gmail.com
+93dbbda50a25da0a586e89ccee8fcfa2ddcb7c64	data_bag_item_insert	goiardi_postgres	Insert for data bag items	2014-10-06 09:09:28.264223-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 14:03:22-07	Jeremy Bingham	jbingham@gmail.com
+c80c561c22f6e139165cdb338c7ce6fff8ff268d	bytea_to_json	goiardi_postgres	Change most postgres bytea fields to json, because in this peculiar case json is way faster than gob	2014-10-06 09:09:28.310696-07	Jeremy Bingham	jbingham@gmail.com	2014-07-20 02:41:22-07	Jeremy Bingham	jbingham@gmail.com
+9966894e0fc0da573243f6a3c0fc1432a2b63043	joined_cookbkook_version	goiardi_postgres	a convenient view for joined versions for cookbook versions, adapted from erchef's joined_cookbook_version	2014-10-06 09:09:28.333866-07	Jeremy Bingham	jbingham@gmail.com	2014-07-20 03:21:28-07	Jeremy Bingham	jbingham@gmail.com
+163ba4a496b9b4210d335e0e4ea5368a9ea8626c	node_statuses	goiardi_postgres	Create node_status table for node statuses	2014-10-06 09:09:28.356265-07	Jeremy Bingham	jbingham@gmail.com	2014-07-10 23:01:54-07	Jeremy Bingham	jeremy@terqa.local
+8bb822f391b499585cfb2fc7248be469b0200682	node_status_insert	goiardi_postgres	insert function for node_statuses	2014-10-06 09:09:28.372225-07	Jeremy Bingham	jbingham@gmail.com	2014-07-11 00:01:31-07	Jeremy Bingham	jeremy@terqa.local
+7c429aac08527adc774767584201f668408b04a6	add_down_column_nodes	goiardi_postgres	Add is_down column to the nodes table	2014-10-06 09:09:28.392036-07	Jeremy Bingham	jbingham@gmail.com	2014-07-15 20:18:05-07	Jeremy Bingham	jbingham@gmail.com
+82bcace325dbdc905eb6e677f800d14a0506a216	shovey	goiardi_postgres	add shovey tables	2014-10-06 09:09:28.422056-07	Jeremy Bingham	jbingham@gmail.com	2014-07-15 22:07:12-07	Jeremy Bingham	jeremy@terqa.local
+62046d2fb96bbaedce2406252d312766452551c0	node_latest_statuses	goiardi_postgres	Add a view to easily get nodes by their latest status	2014-10-06 09:09:28.444724-07	Jeremy Bingham	jbingham@gmail.com	2014-07-26 13:32:02-07	Jeremy Bingham	jbingham@gmail.com
+68f90e1fd2aac6a117d7697626741a02b8d0ebbe	shovey_insert_update	goiardi_postgres	insert/update functions for shovey	2014-10-06 09:09:28.463098-07	Jeremy Bingham	jbingham@gmail.com	2014-08-27 00:46:20-07	Jeremy Bingham	jbingham@gmail.com
 \.
 
 
@@ -2163,43 +2163,43 @@ b8ef36df686397ecb0fe67eb097e84aa0d78ac6b	require	goiardi_schema	c89b0e25c808b327
 --
 
 COPY events (event, change_id, change, project, note, requires, conflicts, tags, committed_at, committer_name, committer_email, planned_at, planner_name, planner_email) FROM stdin;
-deploy	c89b0e25c808b327036c88e6c9750c7526314c86	goiardi_schema	goiardi_postgres	Add schema for goiardi-postgres	{}	{}	{}	2014-09-24 21:30:12.905964-07	Jeremy Bingham	jbingham@gmail.com	2014-05-27 14:09:07-07	Jeremy Bingham	jbingham@gmail.com
-deploy	367c28670efddf25455b9fd33c23a5a278b08bb4	environments	goiardi_postgres	Environments for postgres	{goiardi_schema}	{}	{}	2014-09-24 21:30:12.928508-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 00:40:11-07	Jeremy Bingham	jbingham@gmail.com
-deploy	911c456769628c817340ee77fc8d2b7c1d697782	nodes	goiardi_postgres	Create node table	{goiardi_schema}	{}	{}	2014-09-24 21:30:12.94921-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 10:37:46-07	Jeremy Bingham	jbingham@gmail.com
-deploy	faa3571aa479de60f25785e707433b304ba3d2c7	clients	goiardi_postgres	Create client table	{goiardi_schema}	{}	{}	2014-09-24 21:30:12.969599-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:05:33-07	Jeremy Bingham	jbingham@gmail.com
-deploy	bb82d8869ffca8ba3d03a1502c50dbb3eee7a2e0	users	goiardi_postgres	Create user table	{goiardi_schema}	{}	{}	2014-09-24 21:30:12.995205-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:15:02-07	Jeremy Bingham	jbingham@gmail.com
-deploy	138bc49d92c0bbb024cea41532a656f2d7f9b072	cookbooks	goiardi_postgres	Create cookbook  table	{goiardi_schema}	{}	{}	2014-09-24 21:30:13.013206-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:27:27-07	Jeremy Bingham	jbingham@gmail.com
-deploy	f529038064a0259bdecbdab1f9f665e17ddb6136	cookbook_versions	goiardi_postgres	Create cookbook versions table	{cookbooks,goiardi_schema}	{}	{}	2014-09-24 21:30:13.031793-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:31:34-07	Jeremy Bingham	jbingham@gmail.com
-deploy	85483913f96710c1267c6abacb6568cef9327f15	data_bags	goiardi_postgres	Create cookbook data bags table	{goiardi_schema}	{}	{}	2014-09-24 21:30:13.050839-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:42:04-07	Jeremy Bingham	jbingham@gmail.com
-deploy	feddf91b62caed36c790988bd29222591980433b	data_bag_items	goiardi_postgres	Create data bag items table	{data_bags,goiardi_schema}	{}	{}	2014-09-24 21:30:13.070789-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:02:31-07	Jeremy Bingham	jbingham@gmail.com
-deploy	6a4489d9436ba1541d272700b303410cc906b08f	roles	goiardi_postgres	Create roles table	{goiardi_schema}	{}	{}	2014-09-24 21:30:13.0901-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:09:28-07	Jeremy Bingham	jbingham@gmail.com
-deploy	c4b32778f2911930f583ce15267aade320ac4dcd	sandboxes	goiardi_postgres	Create sandboxes table	{goiardi_schema}	{}	{}	2014-09-24 21:30:13.108413-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:14:48-07	Jeremy Bingham	jbingham@gmail.com
-deploy	81003655b93b41359804027fc202788aa0ddd9a9	log_infos	goiardi_postgres	Create log_infos table	{clients,users,goiardi_schema}	{}	{}	2014-09-24 21:30:13.142359-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:19:10-07	Jeremy Bingham	jbingham@gmail.com
-deploy	fce5b7aeed2ad742de1309d7841577cff19475a7	organizations	goiardi_postgres	Create organizations table	{}	{}	{}	2014-09-24 21:30:13.16193-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:46:28-07	Jeremy Bingham	jbingham@gmail.com
-deploy	f2621482d1c130ea8fee15d09f966685409bf67c	file_checksums	goiardi_postgres	Create file checksums table	{}	{}	{}	2014-09-24 21:30:13.18021-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:49:19-07	Jeremy Bingham	jbingham@gmail.com
-deploy	db1eb360cd5e6449a468ceb781d82b45dafb5c2d	reports	goiardi_postgres	Create reports table	{}	{}	{}	2014-09-24 21:30:13.203369-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 13:02:49-07	Jeremy Bingham	jbingham@gmail.com
-deploy	c8b38382f7e5a18f36c621327f59205aa8aa9849	client_insert_duplicate	goiardi_postgres	Function to emulate insert ... on duplicate update for clients	{clients,goiardi_schema}	{}	{}	2014-09-24 21:30:13.221215-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 23:00:04-07	Jeremy Bingham	jbingham@gmail.com
-deploy	30774a960a0efb6adfbb1d526b8cdb1a45c7d039	client_rename	goiardi_postgres	Function to rename clients	{clients,goiardi_schema}	{}	{}	2014-09-24 21:30:13.235098-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 10:22:50-07	Jeremy Bingham	jbingham@gmail.com
-deploy	2d1fdc8128b0632e798df7346e76f122ed5915ec	user_insert_duplicate	goiardi_postgres	Function to emulate insert ... on duplicate update for clients	{users,goiardi_schema}	{}	{}	2014-09-24 21:30:13.249911-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 13:07:46-07	Jeremy Bingham	jbingham@gmail.com
-deploy	f336c149ab32530c9c6ae4408c11558a635f39a1	user_rename	goiardi_postgres	Function to rename users	{users,goiardi_schema}	{}	{}	2014-09-24 21:30:13.264442-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 13:15:45-07	Jeremy Bingham	jbingham@gmail.com
-deploy	841a7d554d44f9d0d0b8a1a5a9d0a06ce71a2453	cookbook_insert_update	goiardi_postgres	Cookbook insert/update	{cookbooks,goiardi_schema}	{}	{}	2014-09-24 21:30:13.281444-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 23:55:23-07	Jeremy Bingham	jbingham@gmail.com
-deploy	085e2f6281914c9fa6521d59fea81f16c106b59f	cookbook_versions_insert_update	goiardi_postgres	Cookbook versions insert/update	{cookbook_versions,goiardi_schema}	{}	{}	2014-09-24 21:30:13.300569-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 23:56:05-07	Jeremy Bingham	jbingham@gmail.com
-deploy	04bea39d649e4187d9579bd946fd60f760240d10	data_bag_insert_update	goiardi_postgres	Insert/update data bags	{data_bags,goiardi_schema}	{}	{}	2014-09-24 21:30:13.314896-07	Jeremy Bingham	jbingham@gmail.com	2014-05-31 23:25:44-07	Jeremy Bingham	jbingham@gmail.com
-deploy	092885e8b5d94a9c1834bf309e02dc0f955ff053	environment_insert_update	goiardi_postgres	Insert/update environments	{environments,goiardi_schema}	{}	{}	2014-09-24 21:30:13.32947-07	Jeremy Bingham	jbingham@gmail.com	2014-06-01 12:55:34-07	Jeremy Bingham	jbingham@gmail.com
-deploy	6d9587fa4275827c93ca9d7e0166ad1887b76cad	file_checksum_insert_ignore	goiardi_postgres	Insert ignore for file checksums	{file_checksums,goiardi_schema}	{}	{}	2014-09-24 21:30:13.344726-07	Jeremy Bingham	jbingham@gmail.com	2014-06-01 23:13:48-07	Jeremy Bingham	jbingham@gmail.com
-deploy	82a95e5e6cbd8ba51fea33506e1edb2a12e37a92	node_insert_update	goiardi_postgres	Insert/update for nodes	{nodes,goiardi_schema}	{}	{}	2014-09-24 21:30:13.358592-07	Jeremy Bingham	jbingham@gmail.com	2014-06-01 23:25:20-07	Jeremy Bingham	jbingham@gmail.com
-deploy	d052a8267a6512581e5cab1f89a2456f279727b9	report_insert_update	goiardi_postgres	Insert/update for reports	{reports,goiardi_schema}	{}	{}	2014-09-24 21:30:13.372684-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 10:10:25-07	Jeremy Bingham	jbingham@gmail.com
-deploy	acf76029633d50febbec7c4763b7173078eddaf7	role_insert_update	goiardi_postgres	Insert/update for roles	{roles,goiardi_schema}	{}	{}	2014-09-24 21:30:13.387215-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 10:27:32-07	Jeremy Bingham	jbingham@gmail.com
-deploy	b8ef36df686397ecb0fe67eb097e84aa0d78ac6b	sandbox_insert_update	goiardi_postgres	Insert/update for sandboxes	{sandboxes,goiardi_schema}	{}	{}	2014-09-24 21:30:13.401409-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 10:34:39-07	Jeremy Bingham	jbingham@gmail.com
-deploy	93dbbda50a25da0a586e89ccee8fcfa2ddcb7c64	data_bag_item_insert	goiardi_postgres	Insert for data bag items	{data_bag_items,data_bags,goiardi_schema}	{}	{@v0.6.0}	2014-09-24 21:30:13.417742-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 14:03:22-07	Jeremy Bingham	jbingham@gmail.com
-deploy	c80c561c22f6e139165cdb338c7ce6fff8ff268d	bytea_to_json	goiardi_postgres	Change most postgres bytea fields to json, because in this peculiar case json is way faster than gob	{}	{}	{}	2014-09-24 21:30:13.465841-07	Jeremy Bingham	jbingham@gmail.com	2014-07-20 02:41:22-07	Jeremy Bingham	jbingham@gmail.com
-deploy	9966894e0fc0da573243f6a3c0fc1432a2b63043	joined_cookbkook_version	goiardi_postgres	a convenient view for joined versions for cookbook versions, adapted from erchef's joined_cookbook_version	{}	{}	{@v0.7.0}	2014-09-24 21:30:13.489334-07	Jeremy Bingham	jbingham@gmail.com	2014-07-20 03:21:28-07	Jeremy Bingham	jbingham@gmail.com
-deploy	163ba4a496b9b4210d335e0e4ea5368a9ea8626c	node_statuses	goiardi_postgres	Create node_status table for node statuses	{nodes}	{}	{}	2014-09-24 21:30:13.508688-07	Jeremy Bingham	jbingham@gmail.com	2014-07-10 23:01:54-07	Jeremy Bingham	jeremy@terqa.local
-deploy	8bb822f391b499585cfb2fc7248be469b0200682	node_status_insert	goiardi_postgres	insert function for node_statuses	{node_statuses}	{}	{}	2014-09-24 21:30:13.52333-07	Jeremy Bingham	jbingham@gmail.com	2014-07-11 00:01:31-07	Jeremy Bingham	jeremy@terqa.local
-deploy	7c429aac08527adc774767584201f668408b04a6	add_down_column_nodes	goiardi_postgres	Add is_down column to the nodes table	{nodes}	{}	{}	2014-09-24 21:30:13.54375-07	Jeremy Bingham	jbingham@gmail.com	2014-07-15 20:18:05-07	Jeremy Bingham	jbingham@gmail.com
-deploy	82bcace325dbdc905eb6e677f800d14a0506a216	shovey	goiardi_postgres	add shovey tables	{}	{}	{}	2014-09-24 21:30:13.576541-07	Jeremy Bingham	jbingham@gmail.com	2014-07-15 22:07:12-07	Jeremy Bingham	jeremy@terqa.local
-deploy	62046d2fb96bbaedce2406252d312766452551c0	node_latest_statuses	goiardi_postgres	Add a view to easily get nodes by their latest status	{node_statuses}	{}	{}	2014-09-24 21:30:13.599649-07	Jeremy Bingham	jbingham@gmail.com	2014-07-26 13:32:02-07	Jeremy Bingham	jbingham@gmail.com
-deploy	68f90e1fd2aac6a117d7697626741a02b8d0ebbe	shovey_insert_update	goiardi_postgres	insert/update functions for shovey	{shovey}	{}	{@v0.8.0}	2014-09-24 21:30:13.618819-07	Jeremy Bingham	jbingham@gmail.com	2014-08-27 00:46:20-07	Jeremy Bingham	jbingham@gmail.com
+deploy	c89b0e25c808b327036c88e6c9750c7526314c86	goiardi_schema	goiardi_postgres	Add schema for goiardi-postgres	{}	{}	{}	2014-10-06 09:09:27.741923-07	Jeremy Bingham	jbingham@gmail.com	2014-05-27 14:09:07-07	Jeremy Bingham	jbingham@gmail.com
+deploy	367c28670efddf25455b9fd33c23a5a278b08bb4	environments	goiardi_postgres	Environments for postgres	{goiardi_schema}	{}	{}	2014-10-06 09:09:27.761544-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 00:40:11-07	Jeremy Bingham	jbingham@gmail.com
+deploy	911c456769628c817340ee77fc8d2b7c1d697782	nodes	goiardi_postgres	Create node table	{goiardi_schema}	{}	{}	2014-10-06 09:09:27.781582-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 10:37:46-07	Jeremy Bingham	jbingham@gmail.com
+deploy	faa3571aa479de60f25785e707433b304ba3d2c7	clients	goiardi_postgres	Create client table	{goiardi_schema}	{}	{}	2014-10-06 09:09:27.799713-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:05:33-07	Jeremy Bingham	jbingham@gmail.com
+deploy	bb82d8869ffca8ba3d03a1502c50dbb3eee7a2e0	users	goiardi_postgres	Create user table	{goiardi_schema}	{}	{}	2014-10-06 09:09:27.826416-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:15:02-07	Jeremy Bingham	jbingham@gmail.com
+deploy	138bc49d92c0bbb024cea41532a656f2d7f9b072	cookbooks	goiardi_postgres	Create cookbook  table	{goiardi_schema}	{}	{}	2014-10-06 09:09:27.845756-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:27:27-07	Jeremy Bingham	jbingham@gmail.com
+deploy	f529038064a0259bdecbdab1f9f665e17ddb6136	cookbook_versions	goiardi_postgres	Create cookbook versions table	{cookbooks,goiardi_schema}	{}	{}	2014-10-06 09:09:27.866026-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:31:34-07	Jeremy Bingham	jbingham@gmail.com
+deploy	85483913f96710c1267c6abacb6568cef9327f15	data_bags	goiardi_postgres	Create cookbook data bags table	{goiardi_schema}	{}	{}	2014-10-06 09:09:27.884437-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 11:42:04-07	Jeremy Bingham	jbingham@gmail.com
+deploy	feddf91b62caed36c790988bd29222591980433b	data_bag_items	goiardi_postgres	Create data bag items table	{data_bags,goiardi_schema}	{}	{}	2014-10-06 09:09:27.906938-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:02:31-07	Jeremy Bingham	jbingham@gmail.com
+deploy	6a4489d9436ba1541d272700b303410cc906b08f	roles	goiardi_postgres	Create roles table	{goiardi_schema}	{}	{}	2014-10-06 09:09:27.926478-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:09:28-07	Jeremy Bingham	jbingham@gmail.com
+deploy	c4b32778f2911930f583ce15267aade320ac4dcd	sandboxes	goiardi_postgres	Create sandboxes table	{goiardi_schema}	{}	{}	2014-10-06 09:09:27.944572-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:14:48-07	Jeremy Bingham	jbingham@gmail.com
+deploy	81003655b93b41359804027fc202788aa0ddd9a9	log_infos	goiardi_postgres	Create log_infos table	{clients,users,goiardi_schema}	{}	{}	2014-10-06 09:09:27.975846-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:19:10-07	Jeremy Bingham	jbingham@gmail.com
+deploy	fce5b7aeed2ad742de1309d7841577cff19475a7	organizations	goiardi_postgres	Create organizations table	{}	{}	{}	2014-10-06 09:09:27.996642-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:46:28-07	Jeremy Bingham	jbingham@gmail.com
+deploy	f2621482d1c130ea8fee15d09f966685409bf67c	file_checksums	goiardi_postgres	Create file checksums table	{}	{}	{}	2014-10-06 09:09:28.0141-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 12:49:19-07	Jeremy Bingham	jbingham@gmail.com
+deploy	db1eb360cd5e6449a468ceb781d82b45dafb5c2d	reports	goiardi_postgres	Create reports table	{}	{}	{}	2014-10-06 09:09:28.036056-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 13:02:49-07	Jeremy Bingham	jbingham@gmail.com
+deploy	c8b38382f7e5a18f36c621327f59205aa8aa9849	client_insert_duplicate	goiardi_postgres	Function to emulate insert ... on duplicate update for clients	{clients,goiardi_schema}	{}	{}	2014-10-06 09:09:28.059708-07	Jeremy Bingham	jbingham@gmail.com	2014-05-29 23:00:04-07	Jeremy Bingham	jbingham@gmail.com
+deploy	30774a960a0efb6adfbb1d526b8cdb1a45c7d039	client_rename	goiardi_postgres	Function to rename clients	{clients,goiardi_schema}	{}	{}	2014-10-06 09:09:28.075216-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 10:22:50-07	Jeremy Bingham	jbingham@gmail.com
+deploy	2d1fdc8128b0632e798df7346e76f122ed5915ec	user_insert_duplicate	goiardi_postgres	Function to emulate insert ... on duplicate update for clients	{users,goiardi_schema}	{}	{}	2014-10-06 09:09:28.090664-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 13:07:46-07	Jeremy Bingham	jbingham@gmail.com
+deploy	f336c149ab32530c9c6ae4408c11558a635f39a1	user_rename	goiardi_postgres	Function to rename users	{users,goiardi_schema}	{}	{}	2014-10-06 09:09:28.106902-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 13:15:45-07	Jeremy Bingham	jbingham@gmail.com
+deploy	841a7d554d44f9d0d0b8a1a5a9d0a06ce71a2453	cookbook_insert_update	goiardi_postgres	Cookbook insert/update	{cookbooks,goiardi_schema}	{}	{}	2014-10-06 09:09:28.121652-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 23:55:23-07	Jeremy Bingham	jbingham@gmail.com
+deploy	085e2f6281914c9fa6521d59fea81f16c106b59f	cookbook_versions_insert_update	goiardi_postgres	Cookbook versions insert/update	{cookbook_versions,goiardi_schema}	{}	{}	2014-10-06 09:09:28.136711-07	Jeremy Bingham	jbingham@gmail.com	2014-05-30 23:56:05-07	Jeremy Bingham	jbingham@gmail.com
+deploy	04bea39d649e4187d9579bd946fd60f760240d10	data_bag_insert_update	goiardi_postgres	Insert/update data bags	{data_bags,goiardi_schema}	{}	{}	2014-10-06 09:09:28.151337-07	Jeremy Bingham	jbingham@gmail.com	2014-05-31 23:25:44-07	Jeremy Bingham	jbingham@gmail.com
+deploy	092885e8b5d94a9c1834bf309e02dc0f955ff053	environment_insert_update	goiardi_postgres	Insert/update environments	{environments,goiardi_schema}	{}	{}	2014-10-06 09:09:28.166164-07	Jeremy Bingham	jbingham@gmail.com	2014-06-01 12:55:34-07	Jeremy Bingham	jbingham@gmail.com
+deploy	6d9587fa4275827c93ca9d7e0166ad1887b76cad	file_checksum_insert_ignore	goiardi_postgres	Insert ignore for file checksums	{file_checksums,goiardi_schema}	{}	{}	2014-10-06 09:09:28.184484-07	Jeremy Bingham	jbingham@gmail.com	2014-06-01 23:13:48-07	Jeremy Bingham	jbingham@gmail.com
+deploy	82a95e5e6cbd8ba51fea33506e1edb2a12e37a92	node_insert_update	goiardi_postgres	Insert/update for nodes	{nodes,goiardi_schema}	{}	{}	2014-10-06 09:09:28.202431-07	Jeremy Bingham	jbingham@gmail.com	2014-06-01 23:25:20-07	Jeremy Bingham	jbingham@gmail.com
+deploy	d052a8267a6512581e5cab1f89a2456f279727b9	report_insert_update	goiardi_postgres	Insert/update for reports	{reports,goiardi_schema}	{}	{}	2014-10-06 09:09:28.218174-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 10:10:25-07	Jeremy Bingham	jbingham@gmail.com
+deploy	acf76029633d50febbec7c4763b7173078eddaf7	role_insert_update	goiardi_postgres	Insert/update for roles	{roles,goiardi_schema}	{}	{}	2014-10-06 09:09:28.234368-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 10:27:32-07	Jeremy Bingham	jbingham@gmail.com
+deploy	b8ef36df686397ecb0fe67eb097e84aa0d78ac6b	sandbox_insert_update	goiardi_postgres	Insert/update for sandboxes	{sandboxes,goiardi_schema}	{}	{}	2014-10-06 09:09:28.250305-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 10:34:39-07	Jeremy Bingham	jbingham@gmail.com
+deploy	93dbbda50a25da0a586e89ccee8fcfa2ddcb7c64	data_bag_item_insert	goiardi_postgres	Insert for data bag items	{data_bag_items,data_bags,goiardi_schema}	{}	{@v0.6.0}	2014-10-06 09:09:28.267134-07	Jeremy Bingham	jbingham@gmail.com	2014-06-02 14:03:22-07	Jeremy Bingham	jbingham@gmail.com
+deploy	c80c561c22f6e139165cdb338c7ce6fff8ff268d	bytea_to_json	goiardi_postgres	Change most postgres bytea fields to json, because in this peculiar case json is way faster than gob	{}	{}	{}	2014-10-06 09:09:28.312021-07	Jeremy Bingham	jbingham@gmail.com	2014-07-20 02:41:22-07	Jeremy Bingham	jbingham@gmail.com
+deploy	9966894e0fc0da573243f6a3c0fc1432a2b63043	joined_cookbkook_version	goiardi_postgres	a convenient view for joined versions for cookbook versions, adapted from erchef's joined_cookbook_version	{}	{}	{@v0.7.0}	2014-10-06 09:09:28.336901-07	Jeremy Bingham	jbingham@gmail.com	2014-07-20 03:21:28-07	Jeremy Bingham	jbingham@gmail.com
+deploy	163ba4a496b9b4210d335e0e4ea5368a9ea8626c	node_statuses	goiardi_postgres	Create node_status table for node statuses	{nodes}	{}	{}	2014-10-06 09:09:28.357459-07	Jeremy Bingham	jbingham@gmail.com	2014-07-10 23:01:54-07	Jeremy Bingham	jeremy@terqa.local
+deploy	8bb822f391b499585cfb2fc7248be469b0200682	node_status_insert	goiardi_postgres	insert function for node_statuses	{node_statuses}	{}	{}	2014-10-06 09:09:28.373457-07	Jeremy Bingham	jbingham@gmail.com	2014-07-11 00:01:31-07	Jeremy Bingham	jeremy@terqa.local
+deploy	7c429aac08527adc774767584201f668408b04a6	add_down_column_nodes	goiardi_postgres	Add is_down column to the nodes table	{nodes}	{}	{}	2014-10-06 09:09:28.393238-07	Jeremy Bingham	jbingham@gmail.com	2014-07-15 20:18:05-07	Jeremy Bingham	jbingham@gmail.com
+deploy	82bcace325dbdc905eb6e677f800d14a0506a216	shovey	goiardi_postgres	add shovey tables	{}	{}	{}	2014-10-06 09:09:28.423646-07	Jeremy Bingham	jbingham@gmail.com	2014-07-15 22:07:12-07	Jeremy Bingham	jeremy@terqa.local
+deploy	62046d2fb96bbaedce2406252d312766452551c0	node_latest_statuses	goiardi_postgres	Add a view to easily get nodes by their latest status	{node_statuses}	{}	{}	2014-10-06 09:09:28.446468-07	Jeremy Bingham	jbingham@gmail.com	2014-07-26 13:32:02-07	Jeremy Bingham	jbingham@gmail.com
+deploy	68f90e1fd2aac6a117d7697626741a02b8d0ebbe	shovey_insert_update	goiardi_postgres	insert/update functions for shovey	{shovey}	{}	{@v0.8.0}	2014-10-06 09:09:28.465485-07	Jeremy Bingham	jbingham@gmail.com	2014-08-27 00:46:20-07	Jeremy Bingham	jbingham@gmail.com
 \.
 
 
@@ -2208,7 +2208,7 @@ deploy	68f90e1fd2aac6a117d7697626741a02b8d0ebbe	shovey_insert_update	goiardi_pos
 --
 
 COPY projects (project, uri, created_at, creator_name, creator_email) FROM stdin;
-goiardi_postgres	http://ctdk.github.com/goiardi/postgres-support	2014-09-24 21:30:12.879145-07	Jeremy Bingham	jbingham@gmail.com
+goiardi_postgres	http://ctdk.github.com/goiardi/postgres-support	2014-10-06 09:09:27.712414-07	Jeremy Bingham	jbingham@gmail.com
 \.
 
 
@@ -2217,9 +2217,9 @@ goiardi_postgres	http://ctdk.github.com/goiardi/postgres-support	2014-09-24 21:3
 --
 
 COPY tags (tag_id, tag, project, change_id, note, committed_at, committer_name, committer_email, planned_at, planner_name, planner_email) FROM stdin;
-fd6ca4c1426a85718d19687591885a2c2a516952	@v0.6.0	goiardi_postgres	93dbbda50a25da0a586e89ccee8fcfa2ddcb7c64	Tag v0.6.0 for release	2014-09-24 21:30:13.416167-07	Jeremy Bingham	jbingham@gmail.com	2014-06-27 00:20:56-07	Jeremy Bingham	jbingham@gmail.com
-10ec54c07a54a2138c04d471dd6d4a2ce25677b1	@v0.7.0	goiardi_postgres	9966894e0fc0da573243f6a3c0fc1432a2b63043	Tag 0.7.0 postgres schema	2014-09-24 21:30:13.48789-07	Jeremy Bingham	jbingham@gmail.com	2014-07-20 23:04:53-07	Jeremy Bingham	jeremy@terqa.local
-644417084f02f0e8c6249f6ee0c9bf17b3a037b2	@v0.8.0	goiardi_postgres	68f90e1fd2aac6a117d7697626741a02b8d0ebbe	Tag v0.8.0	2014-09-24 21:30:13.617806-07	Jeremy Bingham	jbingham@gmail.com	2014-09-24 21:17:41-07	Jeremy Bingham	jbingham@gmail.com
+fd6ca4c1426a85718d19687591885a2c2a516952	@v0.6.0	goiardi_postgres	93dbbda50a25da0a586e89ccee8fcfa2ddcb7c64	Tag v0.6.0 for release	2014-10-06 09:09:28.265634-07	Jeremy Bingham	jbingham@gmail.com	2014-06-27 00:20:56-07	Jeremy Bingham	jbingham@gmail.com
+10ec54c07a54a2138c04d471dd6d4a2ce25677b1	@v0.7.0	goiardi_postgres	9966894e0fc0da573243f6a3c0fc1432a2b63043	Tag 0.7.0 postgres schema	2014-10-06 09:09:28.335305-07	Jeremy Bingham	jbingham@gmail.com	2014-07-20 23:04:53-07	Jeremy Bingham	jeremy@terqa.local
+644417084f02f0e8c6249f6ee0c9bf17b3a037b2	@v0.8.0	goiardi_postgres	68f90e1fd2aac6a117d7697626741a02b8d0ebbe	Tag v0.8.0	2014-10-06 09:09:28.464434-07	Jeremy Bingham	jbingham@gmail.com	2014-09-24 21:17:41-07	Jeremy Bingham	jbingham@gmail.com
 \.
 
 
@@ -2805,16 +2805,6 @@ ALTER TABLE ONLY tags
 
 ALTER TABLE ONLY tags
     ADD CONSTRAINT tags_project_fkey FOREIGN KEY (project) REFERENCES projects(project) ON UPDATE CASCADE;
-
-
---
--- Name: public; Type: ACL; Schema: -; Owner: -
---
-
-REVOKE ALL ON SCHEMA public FROM PUBLIC;
-REVOKE ALL ON SCHEMA public FROM jeremy;
-GRANT ALL ON SCHEMA public TO jeremy;
-GRANT ALL ON SCHEMA public TO PUBLIC;
 
 
 --
