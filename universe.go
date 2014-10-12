@@ -19,10 +19,12 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/cookbook"
+	"github.com/ctdk/goiardi/organization"
 	"net/http"
 )
 
-func universeHandler(w http.ResponseWriter, r *http.Request) {
+func universeHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method != "GET" {
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)

@@ -21,12 +21,14 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
-func sandboxHandler(w http.ResponseWriter, r *http.Request) {
+func sandboxHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	pathArray := splitPath(r.URL.Path)
 	sboxResponse := make(map[string]interface{})

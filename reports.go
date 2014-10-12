@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
@@ -27,7 +28,8 @@ import (
 	"time"
 )
 
-func reportHandler(w http.ResponseWriter, r *http.Request) {
+func reportHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
 
 	protocolVersion := r.Header.Get("X-Ops-Reporting-Protocol-Version")

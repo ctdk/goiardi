@@ -21,11 +21,13 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
-func statusHandler(w http.ResponseWriter, r *http.Request) {
+func statusHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {

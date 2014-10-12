@@ -22,13 +22,15 @@ import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"strconv"
 )
 
-func shoveyHandler(w http.ResponseWriter, r *http.Request) {
+func shoveyHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {

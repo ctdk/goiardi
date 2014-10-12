@@ -176,7 +176,7 @@ func main() {
 	http.HandleFunc("/events", eventListHandler)
 	http.HandleFunc("/events/", eventHandler)
 	http.HandleFunc("/reports/", reportHandler)
-	http.HandleFunc("/universe", universeHandler)
+	//http.HandleFunc("/universe", universeHandler)
 	http.HandleFunc("/shovey/", shoveyHandler)
 	// http.HandleFunc("/status/", statusHandler)
 	http.HandleFunc("/organizations", orgHandler)

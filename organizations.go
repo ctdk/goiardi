@@ -69,13 +69,19 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			case "principals":
 				principalHandler(org, w, r)
 			case "sandboxes":
+				sandboxHandler(org, w, r)
 			case "search":
 			case "file_store":
 			case "events":
+				
 			case "reports":
+				reportHandler(org, w, r)
 			case "universe":
+				universeHandler(org, w, r)
 			case "shovey":
+				shoveyHandler(org, w, r)
 			case "status":
+				statusHandler(org, w, r)
 			case "users":
 				// Users may live both under and outside of
 				// organizations... Maybe. Docs so far are not
@@ -86,6 +92,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 					orgUserHandler(org, w, r)
 				}
 			default:
+				jsonErrorReport(w, r, "Unknown endpoint", http.StatusNotFound)
 		}
 		return
 
