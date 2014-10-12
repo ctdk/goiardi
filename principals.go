@@ -21,11 +21,11 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/organizations"
+	"github.com/ctdk/goiardi/organization"
 	"net/http"
 )
 
-func principalHandler(org *organization.Organiztion, w http.ResponseWriter, r *http.Request) {
+func principalHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
 	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	pathArray := splitPath(r.URL.Path)
