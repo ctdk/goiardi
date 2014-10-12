@@ -23,13 +23,15 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/loginfo"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"strconv"
 )
 
 // The whole list
-func eventListHandler(w http.ResponseWriter, r *http.Request) {
+func eventListHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
@@ -159,14 +161,16 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Individual log events
-func eventHandler(w http.ResponseWriter, r *http.Request) {
+func eventHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	eventID, aerr := strconv.Atoi(r.URL.Path[8:])
+	pathArray := splitPath(r.URL.Path)[2:]
+	eventID, aerr := strconv.Atoi(pathArray[1])
 	if aerr != nil {
 		jsonErrorReport(w, r, aerr.Error(), http.StatusBadRequest)
 		return

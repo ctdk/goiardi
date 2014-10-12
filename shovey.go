@@ -47,7 +47,7 @@ func shoveyHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 		return
 	}
 
-	pathArray := splitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)[2:]
 	pathArrayLen := len(pathArray)
 
 	if pathArrayLen < 2 || pathArrayLen > 4 || pathArray[1] == "" {

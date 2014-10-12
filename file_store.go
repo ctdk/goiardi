@@ -23,13 +23,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/filestore"
+	"github.com/ctdk/goiardi/organization"
 	"net/http"
 )
 
-func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
+func fileStoreHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	/* We *don't* always set the the content-type to application/json here,
 	 * for obvious reasons. Still do for the PUT/POST though. */
-	chksum := r.URL.Path[12:]
+	pathArray := splitPath(r.URL.Path)[2:]
+	chksum := pathArray[1]
 
 	/* Eventually, both local storage (in-memory or on disk, depending) or
 	 * uploading to s3 or a similar cloud storage provider needs to be

@@ -38,7 +38,7 @@ func statusHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 		jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 		return
 	}
-	pathArray := splitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)[2:]
 
 	if len(pathArray) < 3 {
 		jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)

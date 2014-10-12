@@ -56,9 +56,19 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 
 		switch op {
 			case "authenticate_user":
+				jsonErrorReport(w, r, "so we do use this", http.StatusBadRequest)
 			case "clients", "nodes", "roles":
 				if pathArrayLen == 3 {
 					listHandler(org, w, r)
+				} else {
+					switch op {
+					case "clients":
+						clientHandler(org, w, r)
+					case "nodes":
+						nodeHandler(org, w, r)
+					case "roles":
+						roleHandler(org, w, r)
+					}
 				}
 			case "cookbooks":
 				cookbookHandler(org, w, r)
@@ -71,9 +81,19 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			case "sandboxes":
 				sandboxHandler(org, w, r)
 			case "search":
+				if pathArray[3] == "reindex" {
+					reindexHandler(org, w, r)
+				} else {
+					searchHandler(org, w, r)
+				}
 			case "file_store":
+				fileStoreHandler(org, w, r)
 			case "events":
-				
+				if pathArrayLen == 3 {
+					eventListHandler(org, w, r)
+				} else {
+					eventHandler(org, w, r)
+				}
 			case "reports":
 				reportHandler(org, w, r)
 			case "universe":

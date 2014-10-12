@@ -23,12 +23,14 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/loginfo"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
-func roleHandler(w http.ResponseWriter, r *http.Request) {
+func roleHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
@@ -41,7 +43,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 	 * /roles/NAME/environments and /roles/NAME/environments/NAME, so we'll
 	 * split up the whole path to get those values. */
 
-	pathArray := splitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)[2:]
 	roleName := pathArray[1]
 
 	chefRole, err := role.Get(roleName)

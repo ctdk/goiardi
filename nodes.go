@@ -24,14 +24,17 @@ import (
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
 
-func nodeHandler(w http.ResponseWriter, r *http.Request) {
+func nodeHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
 
-	nodeName := r.URL.Path[7:]
+	pathArray := splitPath(r.URL.Path)[2:]
+	nodeName := pathArray[1]
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {

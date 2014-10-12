@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/search"
 	"github.com/ctdk/goiardi/util"
@@ -36,12 +37,12 @@ import (
 	"strconv"
 )
 
-func searchHandler(w http.ResponseWriter, r *http.Request) {
+func searchHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
 	/* ... and we need search to run the environment tests, so here we
 	 * go. */
 	w.Header().Set("Content-Type", "application/json")
 	searchResponse := make(map[string]interface{})
-	pathArray := splitPath(r.URL.Path)
+	pathArray := splitPath(r.URL.Path)[2:]
 	pathArrayLen := len(pathArray)
 
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
@@ -206,7 +207,8 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func reindexHandler(w http.ResponseWriter, r *http.Request) {
+func reindexHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	reindexResponse := make(map[string]interface{})
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
