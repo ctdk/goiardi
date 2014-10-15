@@ -42,6 +42,7 @@ var NoDBConfigured = &gerror{msg: "no db configured, but you tried to use one", 
 type GoiardiObj interface {
 	GetName() string
 	URLType() string
+	OrgName() string
 }
 
 type gerror struct {
@@ -97,6 +98,15 @@ func (e *gerror) Status() int {
 // ObjURL crafts a URL for an object.
 func ObjURL(obj GoiardiObj) string {
 	baseURL := config.ServerBaseURL()
+
+	fullURL := fmt.Sprintf("%s/organizations/%s/%s/%s", baseURL, obj.OrgName(), obj.URLType(), obj.GetName())
+	return fullURL
+}
+
+// BaseObjURL crafts a URL for an object outside of an organization.
+func BaseObjURL(obj GoiardiObj) string {
+	baseURL := config.ServerBaseURL()
+
 	fullURL := fmt.Sprintf("%s/%s/%s", baseURL, obj.URLType(), obj.GetName())
 	return fullURL
 }
@@ -313,4 +323,11 @@ func stringify(source interface{}) string {
 		str := fmt.Sprintf("%v", s)
 		return str
 	}
+}
+
+// JoinStr joins strings together. It's just a wrapper around strings.Join at
+// the moment, but could be replaced by another method should something else
+// pop up.
+func JoinStr(str ...string) string {
+	return strings.Join(str, "")
 }

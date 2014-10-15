@@ -35,6 +35,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
@@ -53,6 +54,7 @@ type Client struct {
 	pubKey      string
 	Admin       bool   `json:"admin"`
 	Certificate string `json:"certificate"`
+	org *organization.Organization
 }
 
 // for gob encoding. Needed the json tags for flattening, but that's handled
@@ -84,7 +86,7 @@ type flatClient struct {
 }
 
 // New creates a new client.
-func New(clientname string) (*Client, util.Gerror) {
+func New(org *organization.Organization, clientname string) (*Client, util.Gerror) {
 	var found bool
 	var err util.Gerror
 	if config.UsingDB() {
@@ -113,16 +115,17 @@ func New(clientname string) (*Client, util.Gerror) {
 		ChefType:    "client",
 		JSONClass:   "Chef::ApiClient",
 		Validator:   false,
-		Orgname:     "",
+		Orgname:     org.Name,
 		pubKey:      "",
 		Admin:       false,
 		Certificate: "",
+		org: org,
 	}
 	return client, nil
 }
 
 // Get gets a client from the data store.
-func Get(clientname string) (*Client, util.Gerror) {
+func Get(org *organization.Organization, clientname string) (*Client, util.Gerror) {
 	var client *Client
 	var err error
 
@@ -141,7 +144,7 @@ func Get(clientname string) (*Client, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		c, found := ds.Get("client", clientname)
+		c, found := ds.Get(util.JoinStr("client-", org.Name), clientname)
 		if !found {
 			gerr := util.Errorf("Client %s not found", clientname)
 			gerr.SetStatus(http.StatusNotFound)
@@ -149,6 +152,7 @@ func Get(clientname string) (*Client, util.Gerror) {
 		}
 		if c != nil {
 			client = c.(*Client)
+			client.org = org
 		}
 	}
 	return client, nil
@@ -172,7 +176,7 @@ func (c *Client) Save() error {
 			return err
 		}
 		ds := datastore.New()
-		ds.Set("client", c.Name, c)
+		ds.Set(util.JoinStr("client-", org.Name), c.Name, c)
 	}
 	indexer.IndexObj(c)
 	return nil
@@ -195,7 +199,7 @@ func (c *Client) Delete() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Delete("client", c.Name)
+		ds.Delete(util.JoinStr("client-", org.Name), c.Name)
 	}
 	indexer.DeleteItemFromCollection("client", c.Name)
 	return nil
@@ -265,24 +269,24 @@ func (c *Client) Rename(newName string) util.Gerror {
 			return gerr
 		}
 		ds := datastore.New()
-		if _, found := ds.Get("client", newName); found {
+		if _, found := ds.Get(util.JoinStr("client-", org.Name), newName); found {
 			err := util.Errorf("Client %s already exists, cannot rename %s", newName, c.Name)
 			err.SetStatus(http.StatusConflict)
 			return err
 		}
-		ds.Delete("client", c.Name)
+		ds.Delete(util.JoinStr("client-", org.Name), c.Name)
 	}
 	c.Name = newName
 	return nil
 }
 
 // NewFromJSON builds a new client/user from a json object.
-func NewFromJSON(jsonActor map[string]interface{}) (*Client, util.Gerror) {
+func NewFromJSON(org *organization.Organization, jsonActor map[string]interface{}) (*Client, util.Gerror) {
 	actorName, nerr := util.ValidateAsString(jsonActor["name"])
 	if nerr != nil {
 		return nil, nerr
 	}
-	client, err := New(actorName)
+	client, err := New(org, actorName)
 	if err != nil {
 		return nil, err
 	}
@@ -394,13 +398,13 @@ func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
 }
 
 // GetList returns a list of clients.
-func GetList() []string {
+func GetList(org *organization.Organization) []string {
 	var clientList []string
 	if config.UsingDB() {
 		clientList = getListSQL()
 	} else {
 		ds := datastore.New()
-		clientList = ds.GetList("client")
+		clientList = ds.GetList(util.JoinStr("client-", org.Name))
 	}
 	return clientList
 }
@@ -426,6 +430,11 @@ func (c *Client) GetName() string {
 func (c *Client) URLType() string {
 	urlType := fmt.Sprintf("%ss", c.ChefType)
 	return urlType
+}
+
+// OrgName returns the organization this client belongs to.
+func (c *Client) OrgName() string {
+	return c.org.Name
 }
 
 func validateClientName(name string) util.Gerror {
@@ -572,13 +581,14 @@ func (c *Client) GobDecode(b []byte) error {
 	return nil
 }
 
-// AllClients returns a slice of all the clients on this server.
-func AllClients() []*Client {
+// AllOrgClients returns a slice of all clients belonging to this organization.
+func AllOrgClients(org *organization.Organization) []*Client {
 	var clients []*Client
 	if config.UsingDB() {
 		clients = allClientsSQL()
 	} else {
-		clientList := GetList()
+		clientList := GetList(org)
+		clients = make([]*Client, 0, len(clientList))
 		for _, c := range clientList {
 			cl, err := Get(c)
 			if err != nil {
@@ -586,6 +596,19 @@ func AllClients() []*Client {
 			}
 			clients = append(clients, cl)
 		}
+	}
+	return clients
+}
+
+// AllClients returns a slice of all the clients on this server.
+fuck AllClients() []*Client {
+	var clients []*Client
+	for _, o := organization.AllOrganizations() {
+		cs := AllOrgClients(o)
+		newClients := make([]*Client, len(clients), len(clients) + len(cs))
+		copy(newClients, clients)
+		newClients = append(newClients, cs...)
+		clients = newClients
 	}
 	return clients
 }
@@ -601,6 +624,9 @@ func ExportAllClients() []interface{} {
 }
 
 func chkInMemUser(name string) error {
+	// TODO: Come back. This has to check for users *attached to this
+	// organization*, but it might be OK to have clients with the name name
+	// as users in other organizations.
 	var err error
 	ds := datastore.New()
 	if _, found := ds.Get("users", name); found {

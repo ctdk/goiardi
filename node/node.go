@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
@@ -40,10 +41,11 @@ type Node struct {
 	Default         map[string]interface{} `json:"default"`
 	Override        map[string]interface{} `json:"override"`
 	isDown          bool
+	org 		*organization.Organization
 }
 
 // New makes a new node.
-func New(name string) (*Node, util.Gerror) {
+func New(org *organization.Organization, name string) (*Node, util.Gerror) {
 	/* check for an existing node with this name */
 	if !util.ValidateDBagName(name) {
 		err := util.Errorf("Field 'name' invalid")
@@ -62,7 +64,7 @@ func New(name string) (*Node, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("node", name)
+		_, found = ds.Get(util.JoinStr("node-", org.Name), name)
 	}
 	if found {
 		err := util.Errorf("Node %s already exists", name)
@@ -81,17 +83,18 @@ func New(name string) (*Node, util.Gerror) {
 		Normal:          map[string]interface{}{},
 		Default:         map[string]interface{}{},
 		Override:        map[string]interface{}{},
+		org: 		 org,
 	}
 	return node, nil
 }
 
 // NewFromJSON creates a new node from the uploaded JSON.
-func NewFromJSON(jsonNode map[string]interface{}) (*Node, util.Gerror) {
+func NewFromJSON(org *organization.Organization, jsonNode map[string]interface{}) (*Node, util.Gerror) {
 	nodeName, nerr := util.ValidateAsString(jsonNode["name"])
 	if nerr != nil {
 		return nil, nerr
 	}
-	node, err := New(nodeName)
+	node, err := New(org, nodeName)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +106,7 @@ func NewFromJSON(jsonNode map[string]interface{}) (*Node, util.Gerror) {
 }
 
 // Get a node.
-func Get(nodeName string) (*Node, util.Gerror) {
+func Get(org *organization.Organization, nodeName string) (*Node, util.Gerror) {
 	var node *Node
 	var found bool
 	if config.UsingDB() {
@@ -121,9 +124,10 @@ func Get(nodeName string) (*Node, util.Gerror) {
 	} else {
 		ds := datastore.New()
 		var n interface{}
-		n, found = ds.Get("node", nodeName)
+		n, found = ds.Get(util.JoinStr("node-", org.Name), nodeName)
 		if n != nil {
 			node = n.(*Node)
+			node.org = org
 		}
 	}
 	if !found {
@@ -240,7 +244,7 @@ func (n *Node) Save() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Set("node", n.Name, n)
+		ds.Set(util.JoinStr("node-", org.Name), n.Name, n)
 	}
 	/* TODO Later: excellent candidate for a goroutine */
 	indexer.IndexObj(n)
@@ -255,7 +259,7 @@ func (n *Node) Delete() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Delete("node", n.Name)
+		ds.Delete(util.JoinStr("node-", org.Name), n.Name)
 		// TODO: This may need a different config flag?
 		if config.Config.UseSerf {
 			n.deleteStatuses()
@@ -266,24 +270,24 @@ func (n *Node) Delete() error {
 }
 
 // GetList gets a list of the nodes on this server.
-func GetList() []string {
+func GetList(org *organization.Organization) []string {
 	var nodeList []string
 	if config.UsingDB() {
 		nodeList = getListSQL()
 	} else {
 		ds := datastore.New()
-		nodeList = ds.GetList("node")
+		nodeList = ds.GetList(util.JoinStr("node-", org.Name))
 	}
 	return nodeList
 }
 
 // GetFromEnv returns all nodes that belong to the given environment.
-func GetFromEnv(envName string) ([]*Node, error) {
+func GetFromEnv(org *organization.Organization, envName string) ([]*Node, error) {
 	if config.UsingDB() {
 		return getNodesInEnvSQL(envName)
 	}
 	var envNodes []*Node
-	nodeList := GetList()
+	nodeList := GetList(org)
 	for _, n := range nodeList {
 		chefNode, _ := Get(n)
 		if chefNode == nil {
@@ -304,6 +308,11 @@ func (n *Node) GetName() string {
 // URLType returns the base element of a node's URL.
 func (n *Node) URLType() string {
 	return "nodes"
+}
+
+// OrgName returns the name of the organization this node belongs to.
+func (n *Node) OrgName() string {
+	return n.org.Name
 }
 
 /* Functions to support indexing */
@@ -331,13 +340,20 @@ func AllNodes() []*Node {
 	if config.UsingDB() {
 		nodes = allNodesSQL()
 	} else {
-		nodeList := GetList()
-		for _, n := range nodeList {
-			no, err := Get(n)
-			if err != nil {
-				continue
+		for _, o := organization.AllOrganizations() {
+			nodeList := GetList(o.Name)
+			ns := make([]*Node, 0, len(nodeList))
+			for _, n := range nodeList {
+				no, err := Get(n)
+				if err != nil {
+					continue
+				}
+				ns = append(ns, no)
 			}
-			nodes = append(nodes, no)
+			newNodes := make([]*Node, len(nodes), len(nodes) + len(ns))
+			copy(newNodes, nodes)
+			newNodes = append(newNodes, ns...)
+			nodes = newNodes
 		}
 	}
 	return nodes

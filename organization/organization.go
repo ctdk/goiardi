@@ -98,6 +98,7 @@ func Get(orgName string) (*Organization, util.Gerror) {
 }
 
 
+// This may be better moved out somewhere else.
 func (o *Organization) CheckActor(opUser actor.Actor) util.Gerror {
 
 	return nil
