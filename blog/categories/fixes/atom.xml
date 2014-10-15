@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Fixes | Goiardi]]></title>
+  <link href="http://ctdk.github.io/goiardi/blog/categories/fixes/atom.xml" rel="self"/>
+  <link href="http://ctdk.github.io/goiardi/"/>
+  <updated>2014-10-15T14:52:03-07:00</updated>
+  <id>http://ctdk.github.io/goiardi/</id>
+  <author>
+    <name><![CDATA[Jeremy Bingham]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Version 0.8.1 and Schob Version 0.1.1 - Hand of Ishtar, Hand of Nergal]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/10/15/goiardi-version-0-dot-8-1-and-schob-version-0-dot-1-1-hand-of-ishtar-hand-of-nergal/"/>
+    <updated>2014-10-15T13:17:58-07:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/10/15/goiardi-version-0-dot-8-1-and-schob-version-0-dot-1-1-hand-of-ishtar-hand-of-nergal</id>
+    <content type="html"><![CDATA[<p>In ancient Mesopotamia, diseases were often referred to as being the &ldquo;hand&rdquo; of some god. The hand of Nergal was a plague of some kind, while the hand of Ishtar was some kind of STD. Ishtar is generally identified with the Greek Aphrodite and Roman Venus as a goddess of love (although she was by no means identical to Aphrodite and Venus), so the name&rsquo;s quite appropriate. The word &ldquo;venereal&rdquo; ultimately derives from &ldquo;Venus&rdquo;, after all.</p>
+
+<p>These are two minor releases. <a href="https://github.com/ctdk/goiardi/releases/tag/v0.8.1">Goiardi version 0.8.1</a> moves the bulk of the documentation from the README to <a href="http://goiardi.readthedocs.org/en/latest/index.html">readthedocs</a>, where it should be much easier to read and work on, and disables SSLv3. <a href="https://github.com/ctdk/schob/releases/tag/v0.1.1">Schob 0.1.1</a>  adds a fix to allow building schob on 32 bit platforms and on Windows, and updates links to the goiardi shovey documentation.</p>
+]]></content>
+  </entry>
+  
+</feed>
