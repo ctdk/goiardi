@@ -1,3 +1,8 @@
+0.8.1
+-----
+* Disable SSLv3 when using TLS.
+* The main goiardi docs are now located at http://goiardi.readthedocs.org/en/latest/
+
 0.8.0
 -----
 * Introducing shovey, a facility for running commands on nodes without a full
