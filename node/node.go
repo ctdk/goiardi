@@ -56,7 +56,7 @@ func New(org *organization.Organization, name string) (*Node, util.Gerror) {
 	if config.UsingDB() {
 		// will need redone if orgs ever get implemented
 		var err error
-		found, err = checkForNodeSQL(datastore.Dbh, name)
+		found, err = checkForNodeSQL(datastore.Dbh, org, name)
 		if err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -335,25 +335,19 @@ func (n *Node) Flatten() []string {
 }
 
 // AllNodes returns all the nodes on the server
-func AllNodes() []*Node {
+func AllNodes(org *organization.Organization) []*Node {
 	var nodes []*Node
 	if config.UsingDB() {
-		nodes = allNodesSQL()
+		nodes = allNodesSQL(org)
 	} else {
-		for _, o := organization.AllOrganizations() {
-			nodeList := GetList(o.Name)
-			ns := make([]*Node, 0, len(nodeList))
-			for _, n := range nodeList {
-				no, err := Get(n)
-				if err != nil {
-					continue
-				}
-				ns = append(ns, no)
+		nodeList := GetList(org.Name)
+		nodes = make([]*Node, 0, len(nodeList))
+		for _, n := range nodeList {
+			no, err := Get(org, n)
+			if err != nil {
+				continue
 			}
-			newNodes := make([]*Node, len(nodes), len(nodes) + len(ns))
-			copy(newNodes, nodes)
-			newNodes = append(newNodes, ns...)
-			nodes = newNodes
+			nodes = append(nodes, no)
 		}
 	}
 	return nodes

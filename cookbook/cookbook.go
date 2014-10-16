@@ -27,6 +27,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/filestore"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"regexp"
@@ -47,6 +48,7 @@ type Cookbook struct {
 	latest      *CookbookVersion
 	numVersions *int
 	id          int32
+	org *organization.Organization
 }
 
 /* We... want the JSON tags for this. */
@@ -72,6 +74,7 @@ type CookbookVersion struct {
 	Metadata     map[string]interface{}   `json:"metadata"`
 	id           int32
 	cookbookID   int32
+	org *organization.Organization
 }
 
 /* Cookbook methods and functions */
@@ -86,6 +89,11 @@ func (c *Cookbook) URLType() string {
 	return "cookbooks"
 }
 
+// OrgName returns the organization this cookbook belongs to.
+func (c *Cookbook) OrgName() string {
+	return c.org.Name
+}
+
 // GetName returns the name of the cookbook version.
 func (cbv *CookbookVersion) GetName() string {
 	return cbv.Name
@@ -96,8 +104,13 @@ func (cbv *CookbookVersion) URLType() string {
 	return "cookbooks"
 }
 
+// OrgName returns the organization this cookbook version belongs to.
+func (cbv *CookbookVersion) OrgName() string {
+	return cbv.org.Name
+}
+
 // New creates a new cookbook.
-func New(name string) (*Cookbook, util.Gerror) {
+func New(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 	var found bool
 	if !util.ValidateEnvName(name) {
 		err := util.Errorf("Invalid cookbook name '%s' using regex: 'Malformed cookbook name. Must only contain A-Z, a-z, 0-9, _ or -'.", name)
@@ -105,7 +118,7 @@ func New(name string) (*Cookbook, util.Gerror) {
 	}
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForCookbookSQL(datastore.Dbh, name)
+		found, cerr = checkForCookbookSQL(datastore.Dbh, org, name)
 		if cerr != nil {
 			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
@@ -113,7 +126,7 @@ func New(name string) (*Cookbook, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("cookbook", name)
+		_, found = ds.Get(util.JoinStr("cookbook-", org.Name), name)
 	}
 	if found {
 		err := util.Errorf("Cookbook %s already exists", name)
@@ -122,6 +135,7 @@ func New(name string) (*Cookbook, util.Gerror) {
 	cookbook := &Cookbook{
 		Name:     name,
 		Versions: make(map[string]*CookbookVersion),
+		org: org
 	}
 	return cookbook, nil
 }
@@ -138,17 +152,17 @@ func (c *Cookbook) NumVersions() int {
 }
 
 // AllCookbooks returns all the cookbooks that have been uploaded to this server.
-func AllCookbooks() (cookbooks []*Cookbook) {
+func AllCookbooks(org *organization.Organization) (cookbooks []*Cookbook) {
 	if config.UsingDB() {
-		cookbooks = allCookbooksSQL()
+		cookbooks = allCookbooksSQL(org)
 		for _, c := range cookbooks {
 			// populate the versions hash
 			c.sortedVersions()
 		}
 	} else {
-		cookbookList := GetList()
+		cookbookList := GetList(org)
 		for _, c := range cookbookList {
-			cb, err := Get(c)
+			cb, err := Get(org, c)
 			if err != nil {
 				logger.Debugf("Curious. Cookbook %s was in the cookbook list, but wasn't found when fetched. Continuing.", c)
 				continue
@@ -160,12 +174,12 @@ func AllCookbooks() (cookbooks []*Cookbook) {
 }
 
 // Get a cookbook.
-func Get(name string) (*Cookbook, util.Gerror) {
+func Get(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 	var cookbook *Cookbook
 	var found bool
 	if config.UsingDB() {
 		var err error
-		cookbook, err = getCookbookSQL(name)
+		cookbook, err = getCookbookSQL(org, name)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -180,9 +194,10 @@ func Get(name string) (*Cookbook, util.Gerror) {
 	} else {
 		ds := datastore.New()
 		var c interface{}
-		c, found = ds.Get("cookbook", name)
+		c, found = ds.Get(util.JoinStr("cookbook-", org.Name), name)
 		if c != nil {
 			cookbook = c.(*Cookbook)
+			cookbook.org = org
 		}
 		/* hrm. */
 		if cookbook != nil && config.Config.UseUnsafeMemStore {
@@ -208,7 +223,7 @@ func (c *Cookbook) Save() error {
 		err = c.saveCookbookPostgreSQL()
 	} else {
 		ds := datastore.New()
-		ds.Set("cookbook", c.Name, c)
+		ds.Set(util.JoinStr("cookbook-", org.Name), c.Name, c)
 	}
 	if err != nil {
 		return err
@@ -223,7 +238,7 @@ func (c *Cookbook) Delete() error {
 		err = c.deleteCookbookSQL()
 	} else {
 		ds := datastore.New()
-		ds.Delete("cookbook", c.Name)
+		ds.Delete(util.JoinStr("cookbook-", org.Name), c.Name)
 	}
 	if err != nil {
 		return err
@@ -232,12 +247,12 @@ func (c *Cookbook) Delete() error {
 }
 
 // GetList gets a list of all cookbooks on this server.
-func GetList() []string {
+func GetList(org *organization.Organization) []string {
 	if config.UsingDB() {
-		return getCookbookListSQL()
+		return getCookbookListSQL(org)
 	}
 	ds := datastore.New()
-	cbList := ds.GetList("cookbook")
+	cbList := ds.GetList(util.JoinStr("cookbook-", org.Name))
 	return cbList
 }
 
@@ -289,12 +304,12 @@ func (c *Cookbook) LatestVersion() *CookbookVersion {
 
 // CookbookLister lists all of the cookbooks on the server, along with some
 // information like URL, available versions, etc.
-func CookbookLister(numResults interface{}) map[string]interface{} {
+func CookbookLister(org *organization.Organization, numResults interface{}) map[string]interface{} {
 	if config.UsingDB() {
-		return cookbookListerSQL(numResults)
+		return cookbookListerSQL(org, numResults)
 	}
 	cr := make(map[string]interface{})
-	for _, cb := range AllCookbooks() {
+	for _, cb := range AllCookbooks(org) {
 		cr[cb.Name] = cb.InfoHash(numResults)
 	}
 	return cr
@@ -302,17 +317,17 @@ func CookbookLister(numResults interface{}) map[string]interface{} {
 
 // CookbookLatest returns the URL of the latest version of each cookbook on the
 // server.
-func CookbookLatest() map[string]interface{} {
+func CookbookLatest(org *organization.Organization) map[string]interface{} {
 	latest := make(map[string]interface{})
 	if config.UsingDB() {
-		cs := CookbookLister("")
+		cs := CookbookLister(org, "")
 		for name, cbdata := range cs {
 			if len(cbdata.(map[string]interface{})["versions"].([]interface{})) > 0 {
 				latest[name] = cbdata.(map[string]interface{})["versions"].([]interface{})[0].(map[string]string)["url"]
 			}
 		}
 	} else {
-		for _, cb := range AllCookbooks() {
+		for _, cb := range AllCookbooks(org) {
 			latest[cb.Name] = util.CustomObjURL(cb, cb.LatestVersion().Version)
 		}
 	}
@@ -321,12 +336,16 @@ func CookbookLatest() map[string]interface{} {
 
 // CookbookRecipes returns a list of all the recipes on the server in the latest
 // version of each cookbook.
-func CookbookRecipes() ([]string, util.Gerror) {
+func CookbookRecipes(org *organization.Organization) ([]string, util.Gerror) {
 	if config.UsingDB() {
-		return cookbookRecipesSQL()
+		return cookbookRecipesSQL(org)
 	}
-	rlist := make([]string, 0)
-	for _, cb := range AllCookbooks() {
+	// TODO: getting a number of how many cookbooks are on the server would
+	// be handy and probably make this faster
+	ds := datastore.New()
+	rlen := ds.GetListLen(util.JoinStr("cookbooks-", org.Name))
+	rlist := make([]string, 0, rlen)
+	for _, cb := range AllCookbooks(org) {
 		/* Damn it, this sends back an array of
 		 * all the recipes. Fill it in, and send
 		 * back the JSON ourselves. */
@@ -355,7 +374,7 @@ func (c *Cookbook) ConstrainedInfoHash(numResults interface{}, constraint string
 
 // DependsCookbooks will, for the given run list and environment constraints,
 // return the cookbook dependencies.
-func DependsCookbooks(runList []string, envConstraints map[string]string) (map[string]interface{}, error) {
+func DependsCookbooks(org *organization.Organization, runList []string, envConstraints map[string]string) (map[string]interface{}, error) {
 	cdList := make(map[string][]string, len(runList))
 	runListRef := make([]string, len(runList))
 
@@ -425,8 +444,10 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 	}
 
 	/* Build a slice holding all the needed cookbooks. */
+	// TODO: in SQL mode, at least, it's totally possible to fetch all of
+	// the cookbooks at once. We should do that.
 	for _, cbName := range runListRef {
-		c, err := Get(cbName)
+		c, err := Get(org, cbName)
 		if err != nil {
 			return nil, err
 		}
@@ -443,7 +464,7 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 
 	cookbookDeps := make(map[string]interface{}, len(cdList))
 	for cname, traints := range cdList {
-		cb, err := Get(cname)
+		cb, err := Get(org, cname)
 		/* Although we would have already seen this, but being careful
 		 * rarely hurt. */
 		if err != nil {
@@ -499,7 +520,7 @@ func (cbv *CookbookVersion) resolveDependencies(cdList map[string][]string) erro
 
 	for r, c2 := range depList {
 		c := c2.(string)
-		depCb, err := Get(r)
+		depCb, err := Get(cbv.org, r)
 		if err != nil {
 			return err
 		}
@@ -645,13 +666,13 @@ func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion {
 // Universe returns a hash of the cookbooks stored on this server, with a list
 // of each version of each cookbook formatted to be compatible with the
 // supermarket/berks /universe endpoint.
-func Universe() map[string]map[string]interface{} {
+func Universe(org *organization.Organization) map[string]map[string]interface{} {
 	if config.UsingDB() {
-		return universeSQL()
+		return universeSQL(org)
 	}
 	universe := make(map[string]map[string]interface{})
 
-	for _, cb := range AllCookbooks() {
+	for _, cb := range AllCookbooks(org) {
 		universe[cb.Name] = cb.universeFormat()
 	}
 	return universe
@@ -688,6 +709,7 @@ func (c *Cookbook) NewVersion(cbVersion string, cbvData map[string]interface{}) 
 		JSONClass:    "Chef::CookbookVersion",
 		IsFrozen:     false,
 		cookbookID:   c.id, // should be ok even with in-mem
+		org: c.org
 	}
 	err := cbv.UpdateVersion(cbvData, "")
 	if err != nil {
@@ -787,7 +809,7 @@ func (c *Cookbook) deleteHashes(fhashes []string) {
 	/* And remove the unused hashes. Currently, sigh, this involves checking
 	 * every cookbook. Probably will be easier with an actual database, I
 	 * imagine. */
-	ac := AllCookbooks()
+	ac := AllCookbooks(c.org)
 	for _, cb := range ac {
 		/* just move on if we don't find it somehow */
 		// if we get to this cookbook, check the versions currently in
@@ -982,7 +1004,7 @@ ValidElem:
 	/* Clean cookbook hashes */
 	if len(fhashes) > 0 {
 		// Get our parent. Bravely assuming that if it exists we exist.
-		cbook, _ := Get(cbv.CookbookName)
+		cbook, _ := Get(cbv.org, cbv.CookbookName)
 		cbook.Versions[cbv.Version] = cbv
 		cbook.deleteHashes(fhashes)
 	}

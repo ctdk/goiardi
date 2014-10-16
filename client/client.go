@@ -99,7 +99,7 @@ func New(org *organization.Organization, clientname string) (*Client, util.Gerro
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("client", clientname)
+		_, found = ds.Get(util.JoinStr("client-", org.Name), clientname)
 	}
 	if found {
 		err = util.Errorf("Client already exists")
@@ -227,7 +227,7 @@ func (c *Client) isLastAdmin() bool {
 		} else {
 			clist := GetList()
 			for _, cc := range clist {
-				c1, _ := Get(cc)
+				c1, _ := Get(c.org, cc)
 				if c1 != nil && c1.Admin {
 					numAdmins++
 				}
@@ -581,16 +581,16 @@ func (c *Client) GobDecode(b []byte) error {
 	return nil
 }
 
-// AllOrgClients returns a slice of all clients belonging to this organization.
-func AllOrgClients(org *organization.Organization) []*Client {
+// AllClients returns a slice of all clients belonging to this organization.
+func AllClients(org *organization.Organization) []*Client {
 	var clients []*Client
 	if config.UsingDB() {
-		clients = allClientsSQL()
+		clients = allClientsSQL(org)
 	} else {
 		clientList := GetList(org)
 		clients = make([]*Client, 0, len(clientList))
 		for _, c := range clientList {
-			cl, err := Get(c)
+			cl, err := Get(org, c)
 			if err != nil {
 				continue
 			}
@@ -600,22 +600,9 @@ func AllOrgClients(org *organization.Organization) []*Client {
 	return clients
 }
 
-// AllClients returns a slice of all the clients on this server.
-fuck AllClients() []*Client {
-	var clients []*Client
-	for _, o := organization.AllOrganizations() {
-		cs := AllOrgClients(o)
-		newClients := make([]*Client, len(clients), len(clients) + len(cs))
-		copy(newClients, clients)
-		newClients = append(newClients, cs...)
-		clients = newClients
-	}
-	return clients
-}
-
 // ExportAllClients returns all clients in a fashion suitable for exporting.
-func ExportAllClients() []interface{} {
-	clients := AllClients()
+func ExportAllClients(org *organization.Organization) []interface{} {
+	clients := AllClients(org)
 	export := make([]interface{}, len(clients))
 	for i, c := range clients {
 		export[i] = c.export()
