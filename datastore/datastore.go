@@ -190,6 +190,10 @@ func (ds *DataStore) GetList(keyType string) []string {
 	return j
 }
 
+func (ds *DataStore) GetListLen(keyType string) int {
+	return len(ds.objList[keyType])
+}
+
 // SetNodeStatus updates a node's status using the in-memory data store.
 func (ds *DataStore) SetNodeStatus(nodeName string, obj interface{}, nsID ...int) error {
 	ds.m.Lock()
