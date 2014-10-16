@@ -21,6 +21,7 @@ package main
 
 import (
 	"compress/gzip"
+	"crypto/tls"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
@@ -187,10 +188,12 @@ func main() {
 
 	listenAddr := config.ListenAddr()
 	var err error
+	srv := &http.Server{ Addr: listenAddr, Handler: &interceptHandler{} }
 	if config.Config.UseSSL {
-		err = http.ListenAndServeTLS(listenAddr, config.Config.SSLCert, config.Config.SSLKey, &interceptHandler{})
+		srv.TLSConfig = &tls.Config{ MinVersion: tls.VersionTLS10 }
+		err = srv.ListenAndServeTLS(config.Config.SSLCert, config.Config.SSLKey)
 	} else {
-		err = http.ListenAndServe(listenAddr, &interceptHandler{})
+		err = srv.ListenAndServe()
 	}
 	if err != nil {
 		logger.Criticalf("ListenAndServe: %s", err.Error())
