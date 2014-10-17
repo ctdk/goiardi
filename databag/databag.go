@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"io"
 	"net/http"
@@ -39,6 +40,7 @@ type DataBag struct {
 	Name         string
 	DataBagItems map[string]*DataBagItem
 	id           int32
+	org *organization.Organization
 }
 
 // DataBagItem is an individual item within a data bag.
@@ -51,12 +53,13 @@ type DataBagItem struct {
 	id          int32
 	dataBagID   int32
 	origName    string
+	org *organization.Organization
 }
 
 /* Data bag functions and methods */
 
 // New creates an empty data bag, and kicks off adding it to the index.
-func New(name string) (*DataBag, util.Gerror) {
+func New(org *organization.Organization, name string) (*DataBag, util.Gerror) {
 	var found bool
 	var err util.Gerror
 
@@ -74,7 +77,7 @@ func New(name string) (*DataBag, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("data_bag", name)
+		_, found = ds.Get(util.JoinStr("data_bag-", org.Name), name)
 	}
 	if found {
 		err = util.Errorf("Data bag %s already exists", name)
@@ -92,7 +95,7 @@ func New(name string) (*DataBag, util.Gerror) {
 }
 
 // Get a data bag.
-func Get(dbName string) (*DataBag, util.Gerror) {
+func Get(org *organization.Organization, dbName string) (*DataBag, util.Gerror) {
 	var dataBag *DataBag
 	var err error
 	if config.UsingDB() {
@@ -110,7 +113,7 @@ func Get(dbName string) (*DataBag, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		d, found := ds.Get("data_bag", dbName)
+		d, found := ds.Get(util.JoinStr("data_bag-", org.Name), dbName)
 		if !found {
 			err := util.Errorf("Cannot load data bag %s", dbName)
 			err.SetStatus(http.StatusNotFound)
@@ -118,7 +121,9 @@ func Get(dbName string) (*DataBag, util.Gerror) {
 		}
 		if d != nil {
 			dataBag = d.(*DataBag)
+			dataBag.org = org
 			for _, v := range dataBag.DataBagItems {
+				v.org = org
 				z := datastore.WalkMapForNil(v.RawData)
 				v.RawData = z.(map[string]interface{})
 			}
@@ -135,7 +140,7 @@ func (db *DataBag) Save() error {
 		return db.savePostgreSQL()
 	} else {
 		ds := datastore.New()
-		ds.Set("data_bag", db.Name, db)
+		ds.Set(util.JoinStr("data_bag-", db.org.Name), db.Name, db)
 	}
 	return nil
 }
@@ -153,20 +158,20 @@ func (db *DataBag) Delete() error {
 		for dbiName := range db.DataBagItems {
 			db.DeleteDBItem(dbiName)
 		}
-		ds.Delete("data_bag", db.Name)
+		ds.Delete(util.JoinStr("data_bag-", db.org.Name), db.Name)
 	}
 	indexer.DeleteCollection(db.Name)
 	return nil
 }
 
 // GetList returns a list of data bags on the server.
-func GetList() []string {
+func GetList(org *organization.Organization) []string {
 	var dbList []string
 	if config.UsingDB() {
 		dbList = getListSQL()
 	} else {
 		ds := datastore.New()
-		dbList = ds.GetList("data_bag")
+		dbList = ds.GetList(util.JoinStr("data_bag-", org.Name))
 	}
 	return dbList
 }
@@ -181,6 +186,11 @@ func (db *DataBag) URLType() string {
 	return "data"
 }
 
+// OrgName returns the organization this data bag belongs to.
+func (db *DataBag) OrgName() string {
+	return db.org.Name
+}
+
 // GetName returns the data bag item's identifier.
 func (dbi *DataBagItem) GetName() string {
 	return dbi.DocID()
@@ -189,6 +199,11 @@ func (dbi *DataBagItem) GetName() string {
 // URLType returns the base element of a data bag's URL.
 func (dbi *DataBagItem) URLType() string {
 	return "data"
+}
+
+// OrgName returns the organization this data bag item belongs to.
+func (dbi *DataBagItem) OrgName() string {
+	return dbi.org.Name
 }
 
 /* Data bag item functions and methods */
@@ -247,6 +262,7 @@ func (db *DataBag) NewDBItem(rawDbagItem map[string]interface{}) (*DataBagItem, 
 			JSONClass:   "Chef::DataBagItem",
 			DataBagName: db.Name,
 			RawData:     rawDbagItem,
+			org: db.org,
 		}
 		db.DataBagItems[dbiID] = dbagItem
 	}
@@ -322,6 +338,7 @@ func (db *DataBag) GetDBItem(dbItemName string) (*DataBagItem, error) {
 		err := fmt.Errorf("data bag item %s in %s not found", dbItemName, db.Name)
 		return nil, err
 	}
+	dbi.org = db.org
 	return dbi, nil
 }
 
@@ -356,7 +373,8 @@ func (db *DataBag) NumDBItems() int {
 }
 
 func (db *DataBag) fullDBItemName(dbItemName string) string {
-	return fmt.Sprintf("data_bag_item_%s_%s", db.Name, dbItemName)
+	//return fmt.Sprintf("data_bag_item_%s_%s", db.Name, dbItemName)
+	return util.JoinStr("data_bag_item_", db.Name, "_", dbItemName)
 }
 
 // RawDataBagJSON extract the data bag item's raw data from the request, saving
@@ -428,14 +446,15 @@ func (dbi *DataBagItem) Flatten() []string {
 }
 
 // AllDataBags returns all data bags on this server, and all their items.
-func AllDataBags() []*DataBag {
+func AllDataBags(org *organization.Organization) []*DataBag {
 	var dataBags []*DataBag
 	if config.UsingDB() {
 		dataBags = allDataBagsSQL()
 	} else {
-		dbagList := GetList()
+		dbagList := GetList(org)
+		dataBags = make([]*DataBag, 0, len(dbagList))
 		for _, d := range dbagList {
-			db, err := Get(d)
+			db, err := Get(org, d)
 			if err != nil {
 				continue
 			}

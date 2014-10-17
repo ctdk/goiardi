@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"sort"
@@ -43,11 +44,12 @@ type ChefEnvironment struct {
 	Default          map[string]interface{} `json:"default_attributes"`
 	Override         map[string]interface{} `json:"override_attributes"`
 	CookbookVersions map[string]string      `json:"cookbook_versions"`
+	org *organization.Organization
 }
 
 // New creates a new environment, returning an error if the environment already
 // exists or you try to create an environment named "_default".
-func New(name string) (*ChefEnvironment, util.Gerror) {
+func New(org *organization.Organization, name string) (*ChefEnvironment, util.Gerror) {
 	if !util.ValidateEnvName(name) {
 		err := util.Errorf("Field 'name' invalid")
 		err.SetStatus(http.StatusBadRequest)
@@ -65,7 +67,7 @@ func New(name string) (*ChefEnvironment, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("env", name)
+		_, found = ds.Get(util.JoinStr("env-", org.Name), name)
 	}
 	if found || name == "_default" {
 		err := util.Errorf("Environment already exists")
@@ -79,13 +81,14 @@ func New(name string) (*ChefEnvironment, util.Gerror) {
 		Default:          map[string]interface{}{},
 		Override:         map[string]interface{}{},
 		CookbookVersions: map[string]string{},
+		org *organization.Organization,
 	}
 	return env, nil
 }
 
 // NewFromJSON creates a new environment from JSON uploaded to the server.
-func NewFromJSON(jsonEnv map[string]interface{}) (*ChefEnvironment, util.Gerror) {
-	env, err := New(jsonEnv["name"].(string))
+func NewFromJSON(org *organization.Organization, jsonEnv map[string]interface{}) (*ChefEnvironment, util.Gerror) {
+	env, err := New(org, jsonEnv["name"].(string))
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +211,7 @@ ValidElem:
 }
 
 // Get an environment.
-func Get(envName string) (*ChefEnvironment, util.Gerror) {
+func Get(org *organization.Organization, envName string) (*ChefEnvironment, util.Gerror) {
 	if envName == "_default" {
 		return defaultEnvironment(), nil
 	}
@@ -231,9 +234,10 @@ func Get(envName string) (*ChefEnvironment, util.Gerror) {
 	} else {
 		ds := datastore.New()
 		var e interface{}
-		e, found = ds.Get("env", envName)
+		e, found = ds.Get(util.JoinStr("env-", org.Name), envName)
 		if e != nil {
 			env = e.(*ChefEnvironment)
+			env.org = org
 		}
 	}
 	if !found {
@@ -246,7 +250,7 @@ func Get(envName string) (*ChefEnvironment, util.Gerror) {
 }
 
 // MakeDefaultEnvironment creates the default environment on startup.
-func MakeDefaultEnvironment() {
+func MakeDefaultEnvironment(org *organization.Organization) {
 	var de *ChefEnvironment
 	if config.UsingDB() {
 		// The default environment is pre-created in the db schema when
@@ -254,21 +258,21 @@ func MakeDefaultEnvironment() {
 		// hurt anything though, so just get the usual default env and
 		// index it, not bothering with these other steps that are
 		// easier to do with the in-memory mode.
-		de = defaultEnvironment()
+		de = defaultEnvironment(org)
 	} else {
 		ds := datastore.New()
 		// only create the new default environment if we don't already have one
 		// saved
-		if _, found := ds.Get("env", "_default"); found {
+		if _, found := ds.Get(util.JoinStr("env-", org.Name), "_default"); found {
 			return
 		}
-		de = defaultEnvironment()
-		ds.Set("env", de.Name, de)
+		de = defaultEnvironment(org)
+		ds.Set(util.JoinStr("env-", org.Name), de.Name, de)
 	}
 	indexer.IndexObj(de)
 }
 
-func defaultEnvironment() *ChefEnvironment {
+func defaultEnvironment(org *organization.Organization) *ChefEnvironment {
 	return &ChefEnvironment{
 		Name:             "_default",
 		ChefType:         "environment",
@@ -277,6 +281,7 @@ func defaultEnvironment() *ChefEnvironment {
 		Default:          map[string]interface{}{},
 		Override:         map[string]interface{}{},
 		CookbookVersions: map[string]string{},
+		org: org,
 	}
 }
 
@@ -300,7 +305,7 @@ func (e *ChefEnvironment) Save() util.Gerror {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Set("env", e.Name, e)
+		ds.Set(util.JoinStr("env-", e.org.Name), e.Name, e)
 	}
 	indexer.IndexObj(e)
 	return nil
@@ -319,20 +324,20 @@ func (e *ChefEnvironment) Delete() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Delete("env", e.Name)
+		ds.Delete(util.JoinStr("env-", e.org.Name), e.Name)
 	}
 	indexer.DeleteItemFromCollection("environment", e.Name)
 	return nil
 }
 
 // GetList gets a list of all environments on this server.
-func GetList() []string {
+func GetList(org *organization.Organization) []string {
 	var envList []string
 	if config.UsingDB() {
 		envList = getEnvironmentList()
 	} else {
 		ds := datastore.New()
-		envList = ds.GetList("env")
+		envList = ds.GetList(util.JoinStr("env-", org.Name))
 		envList = append(envList, "_default")
 	}
 	return envList
@@ -348,8 +353,13 @@ func (e *ChefEnvironment) URLType() string {
 	return "environments"
 }
 
+// OrgName returns the organization this environment belongs to.
+func (e *ChefEnvironment) OrgName() string {
+	return e.org.Name
+}
+
 func (e *ChefEnvironment) cookbookList() []*cookbook.Cookbook {
-	return cookbook.AllCookbooks()
+	return cookbook.AllCookbooks(e.org)
 }
 
 // AllCookbookHash returns a hash of the cookbooks and their versions available
@@ -414,14 +424,15 @@ func (e *ChefEnvironment) Flatten() []string {
 }
 
 // AllEnvironments returns a slice of all environments on this server.
-func AllEnvironments() []*ChefEnvironment {
+func AllEnvironments(org *organization.Organization) []*ChefEnvironment {
 	var environments []*ChefEnvironment
 	if config.UsingDB() {
 		environments = allEnvironmentsSQL()
 	} else {
-		envList := GetList()
+		envList := GetList(org)
+		environments = make([]*ChefEnvironment, 0, len(envList))
 		for _, e := range envList {
-			en, err := Get(e)
+			en, err := Get(org, e)
 			if err != nil {
 				continue
 			}

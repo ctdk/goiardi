@@ -26,6 +26,8 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"path"
+	"os"
 )
 
 type Organization struct {
@@ -66,6 +68,15 @@ func New(name, fullName string) (*Organization, util.Gerror) {
 	if _, sterr := util.ValidateAsString(fullName); sterr != nil {
 		gerr := util.Errorf("organization full name invalid or missing")
 		return nil, gerr
+	}
+
+	// create the filestore dir
+	if config.Config.LocalFstoreDir != "" {
+		p := path.Join(config.Config.LocalFstoreDir, name)
+		err := os.Mkdir(p)
+		if err != nil && !os.IsExist(err) {
+			return nil, err
+		}
 	}
 
 	o := &Organization{ Name: name, FullName: fullName, GUID: guid, uuID: uuID }
