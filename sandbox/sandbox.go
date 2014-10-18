@@ -30,6 +30,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/filestore"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"io"
 	"time"
@@ -44,13 +45,14 @@ type Sandbox struct {
 	CreationTime time.Time
 	Completed    bool
 	Checksums    []string
+	org *organization.Organization
 }
 
 /* We actually generate the sandboxID ourselves, so we don't pass that in. */
 
 // New creates a new sandbox, given a map of null values with file checksums as
 // keys.
-func New(checksumHash map[string]interface{}) (*Sandbox, error) {
+func New(org *organization.Organization, checksumHash map[string]interface{}) (*Sandbox, error) {
 	/* For some reason the checksums come in a JSON hash that looks like
 	 * this:
 	 * { "checksums": {
@@ -73,7 +75,7 @@ func New(checksumHash map[string]interface{}) (*Sandbox, error) {
 			/* Something went very wrong. */
 			return nil, err
 		}
-		if s, _ := Get(sandboxID); s != nil {
+		if s, _ := Get(org, sandboxID); s != nil {
 			logger.Infof("Collision! Somehow %s already existed as a sandbox id on attempt %d. Trying again.", sandboxID, i)
 			sandboxID = ""
 		}
@@ -95,6 +97,7 @@ func New(checksumHash map[string]interface{}) (*Sandbox, error) {
 		CreationTime: time.Now(),
 		Completed:    false,
 		Checksums:    checksums,
+		org: org,
 	}
 	return sbox, nil
 }
@@ -113,7 +116,7 @@ func generateSandboxID() (string, error) {
 }
 
 // Get a sandbox.
-func Get(sandboxID string) (*Sandbox, error) {
+func Get(org *organization.Organization, sandboxID string) (*Sandbox, error) {
 	var sandbox *Sandbox
 	var found bool
 
@@ -132,9 +135,10 @@ func Get(sandboxID string) (*Sandbox, error) {
 	} else {
 		ds := datastore.New()
 		var s interface{}
-		s, found = ds.Get("sandbox", sandboxID)
+		s, found = ds.Get(org.DataKey("sandbox"), sandboxID)
 		if s != nil {
 			sandbox = s.(*Sandbox)
+			sandbox.org = org
 		}
 	}
 
@@ -157,7 +161,7 @@ func (s *Sandbox) Save() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Set("sandbox", s.ID, s)
+		ds.Set(s.org.DataKey("sandbox"), s.ID, s)
 	}
 	return nil
 }
@@ -170,19 +174,19 @@ func (s *Sandbox) Delete() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Delete("sandbox", s.ID)
+		ds.Delete(s.org.DataKey("sandbox"), s.ID)
 	}
 	return nil
 }
 
 // GetList returns a list of the ids of all the sandboxes on the system.
-func GetList() []string {
+func GetList(org *organization.Organization) []string {
 	var sandboxList []string
 	if config.UsingDB() {
 		sandboxList = getListSQL()
 	} else {
 		ds := datastore.New()
-		sandboxList = ds.GetList("sandbox")
+		sandboxList = ds.GetList(org.DataKey("sandbox"))
 	}
 	return sandboxList
 }
@@ -198,7 +202,7 @@ func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 		if k != nil {
 			chksumStats[chk]["needs_upload"] = false
 		} else {
-			itemURL := fmt.Sprintf("/file_store/%s", chk)
+			itemURL := util.JoinStr("/organization/", org.Name, "/file_store/", chk)
 			chksumStats[chk]["url"] = util.CustomURL(itemURL)
 			chksumStats[chk]["needs_upload"] = true
 		}
@@ -210,7 +214,7 @@ func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 // IsComplete returns true if the sandbox is complete.
 func (s *Sandbox) IsComplete() error {
 	for _, chk := range s.Checksums {
-		k, _ := filestore.Get(chk)
+		k, _ := filestore.Get(s.org, chk)
 		if k == nil {
 			err := fmt.Errorf("Checksum %s not uploaded yet, %s not complete, cannot commit yet.", chk, s.ID)
 			return err
@@ -229,15 +233,21 @@ func (s *Sandbox) URLType() string {
 	return "sandboxes"
 }
 
+// OrgName returns the organization this sandbox belongs to.
+func (s *Sandbox) OrgName() string {
+	return s.org.Name
+}
+
 // AllSandboxes returns all sandboxes on the server.
-func AllSandboxes() []*Sandbox {
+func AllSandboxes(org *organization.Organization) []*Sandbox {
 	var sandboxes []*Sandbox
 	if config.UsingDB() {
 		sandboxes = allSandboxesSQL()
 	} else {
-		sandboxList := GetList()
+		sandboxList := GetList(org)
+		sandboxes = make([]*Sandbox, 0, len(sandboxList))
 		for _, s := range sandboxList {
-			sb, err := Get(s)
+			sb, err := Get(org, s)
 			if err != nil {
 				continue
 			}

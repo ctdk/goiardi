@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/util"
 	serfclient "github.com/hashicorp/serf/client"
@@ -53,6 +54,7 @@ type Shovey struct {
 	Status    string        `json:"status"`
 	Timeout   time.Duration `json:"timeout"`
 	Quorum    string        `json:"quorum"`
+	org *organization.Organization
 }
 
 // ShoveyRun represents a node's shovey run.
@@ -65,6 +67,7 @@ type ShoveyRun struct {
 	EndTime    time.Time `json:"end_time"`
 	Error      string    `json:"error"`
 	ExitStatus uint8     `json:"exit_status"`
+	org *organization.Organization
 }
 
 // ShoveyRunStream holds a chunk of output from a shovey run.
@@ -76,6 +79,7 @@ type ShoveyRunStream struct {
 	Output     string
 	IsLast     bool
 	CreatedAt  time.Time
+	org *organization.Organization
 }
 
 // BySeq is a type used to sort ShoveyRunStreams.
@@ -157,7 +161,7 @@ func (e *qerror) SetDownNodes(d []string) {
 }
 
 // New creates a new shovey instance.
-func New(command string, timeout int, quorumStr string, nodeNames []string) (*Shovey, util.Gerror) {
+func New(org *organization.Organization, command string, timeout int, quorumStr string, nodeNames []string) (*Shovey, util.Gerror) {
 	var found bool
 	runID := uuid.New()
 
@@ -172,7 +176,7 @@ func New(command string, timeout int, quorumStr string, nodeNames []string) (*Sh
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("shovey", runID)
+		_, found = ds.Get(org.DataKey("shovey"), runID)
 	}
 
 	// unlikely
@@ -181,7 +185,7 @@ func New(command string, timeout int, quorumStr string, nodeNames []string) (*Sh
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
-	s := &Shovey{RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout), Quorum: quorumStr, Status: "submitted"}
+	s := &Shovey{RunID: runID, NodeNames: nodeNames, Command: command, Timeout: time.Duration(timeout), Quorum: quorumStr, Status: "submitted", org: org}
 
 	s.CreatedAt = time.Now()
 	s.UpdatedAt = time.Now()
@@ -214,7 +218,7 @@ func (s *Shovey) save() util.Gerror {
 	s.UpdatedAt = time.Now()
 
 	ds := datastore.New()
-	ds.Set("shovey", s.RunID, s)
+	ds.Set(s.org.DataKey("shovey"), s.RunID, s)
 
 	return nil
 }
@@ -224,7 +228,7 @@ func (sr *ShoveyRun) save() util.Gerror {
 		return sr.saveSQL()
 	}
 	ds := datastore.New()
-	ds.Set("shovey_run", sr.ShoveyUUID+sr.NodeName, sr)
+	ds.Set(s.org.DataKey("shovey_run"), sr.ShoveyUUID+sr.NodeName, sr)
 	return nil
 }
 
@@ -236,7 +240,7 @@ func (s *Shovey) GetRun(nodeName string) (*ShoveyRun, util.Gerror) {
 	}
 	var shoveyRun *ShoveyRun
 	ds := datastore.New()
-	sr, found := ds.Get("shovey_run", s.RunID+nodeName)
+	sr, found := ds.Get(org.DataKey("shovey_run"), s.RunID+nodeName)
 	if !found {
 		err := util.Errorf("run %s for node %s not found", s.RunID, nodeName)
 		err.SetStatus(http.StatusNotFound)
@@ -244,6 +248,7 @@ func (s *Shovey) GetRun(nodeName string) (*ShoveyRun, util.Gerror) {
 	}
 	if sr != nil {
 		shoveyRun = sr.(*ShoveyRun)
+		shoveyRun.org = s.org
 	}
 	return shoveyRun, nil
 }
@@ -253,7 +258,7 @@ func (s *Shovey) GetNodeRuns() ([]*ShoveyRun, util.Gerror) {
 	if config.UsingDB() {
 		return s.getShoveyNodeRunsSQL()
 	}
-	var runs []*ShoveyRun
+	runs := make([]*ShoveyRun, 0, len(s.NodeNames))
 	for _, n := range s.NodeNames {
 		sr, err := s.GetRun(n)
 		if err != nil {
@@ -268,15 +273,16 @@ func (s *Shovey) GetNodeRuns() ([]*ShoveyRun, util.Gerror) {
 }
 
 // Get a shovey instance with the given run id.
-func Get(runID string) (*Shovey, util.Gerror) {
+func Get(org *organization.Organization, runID string) (*Shovey, util.Gerror) {
 	if config.UsingDB() {
 		return getShoveySQL(runID)
 	}
 	var shove *Shovey
 	ds := datastore.New()
-	s, found := ds.Get("shovey", runID)
+	s, found := ds.Get(org.DataKey("shovey"), runID)
 	if s != nil {
 		shove = s.(*Shovey)
+		shove.org = org
 	}
 	if !found {
 		err := util.Errorf("shovey job %s not found", runID)
@@ -528,30 +534,31 @@ func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
 }
 
 // AllShoveyIDs returns all shovey run ids.
-func AllShoveyIDs() ([]string, util.Gerror) {
+func AllShoveyIDs(org *organization.Organization) ([]string, util.Gerror) {
 	if config.UsingDB() {
 		return allShoveyIDsSQL()
 	}
 	ds := datastore.New()
-	list := ds.GetList("shovey")
+	list := ds.GetList(org.DataKey("shovey"))
 	return list, nil
 }
 
 // GetList returns a list of all shovey ids.
-func GetList() []string {
-	list, _ := AllShoveyIDs()
+func GetList(org *organization.Organization) []string {
+	list, _ := AllShoveyIDs(org)
 	return list
 }
 
 // AllShoveys returns all shovey objects on the server
-func AllShoveys() ([]*Shovey) {
+func AllShoveys(org *organization.Organization) ([]*Shovey) {
 	var shoveys []*Shovey
 	if config.UsingDB() {
 		return allShoveysSQL()
 	} else {
 		shoveList := GetList()
+		shoveys = make([]*Shovey, 0, len(shoveList))
 		for _, s := range shoveList {
-			sh, err := Get(s)
+			sh, err := Get(org, s)
 			if err != nil {
 				logger.Criticalf(err.Error())
 				os.Exit(1)
@@ -562,11 +569,14 @@ func AllShoveys() ([]*Shovey) {
 	return shoveys
 }
 
-func AllShoveyRuns() ([]*ShoveyRun) {
+func AllShoveyRuns(org *organization.Organization) ([]*ShoveyRun) {
 	var shoveyRuns []*ShoveyRun
-	shoveys := AllShoveys()
+	shoveys := AllShoveys(org)
 	for _, s := range shoveys {
 		runs, err := s.GetNodeRuns()
+		s := make([]*ShoveyRun, 0, len(shoveyRuns) + len(runs))
+		copy(s, shoveyRuns)
+		shoveyRuns = s
 		if err != nil {
 			logger.Criticalf(err.Error())
 			os.Exit(1)
@@ -576,13 +586,16 @@ func AllShoveyRuns() ([]*ShoveyRun) {
 	return shoveyRuns
 }
 
-func AllShoveyRunStreams() ([]*ShoveyRunStream) {
+func AllShoveyRunStreams(org *organization.Organization) ([]*ShoveyRunStream) {
 	var streams []*ShoveyRunStream
-	shoveyRuns := AllShoveyRuns()
+	shoveyRuns := AllShoveyRuns(org)
 	outputTypes := []string{ "stdout", "stderr" }
 	for _, sr := range shoveyRuns {
 		for _, t := range outputTypes {
 			srs, err := sr.GetStreamOutput(t, 0)
+			s := make([]*ShoveyRunStream, 0, len(streams) + len(srs))
+			copy(s, streams)
+			streams = s
 			if err != nil {
 				logger.Criticalf(err.Error())
 				os.Exit(1)
@@ -619,7 +632,7 @@ func (sr *ShoveyRun) UpdateFromJSON(srData map[string]interface{}) util.Gerror {
 }
 
 func (sr *ShoveyRun) notifyParent() {
-	s, _ := Get(sr.ShoveyUUID)
+	s, _ := Get(sr.org, sr.ShoveyUUID)
 	s.checkCompleted()
 }
 
@@ -633,7 +646,7 @@ func (sr *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, 
 	ds := datastore.New()
 	streamKey := fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, seq)
 	logger.Debugf("Setting %s", streamKey)
-	_, found := ds.Get("shovey_run_stream", streamKey)
+	_, found := ds.Get(sr.org.DataKey("shovey_run_stream"), streamKey)
 	if found {
 		err := util.Errorf("sequence %d for %s - %s already exists", seq, sr.ShoveyUUID, sr.NodeName)
 		err.SetStatus(http.StatusConflict)
@@ -654,7 +667,8 @@ func (sr *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunSt
 	ds := datastore.New()
 	for i := seq; ; i++ {
 		logger.Debugf("Getting %s", fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, i))
-		s, found := ds.Get("shovey_run_stream", fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, i))
+		s, found := ds.Get(sr.org.DataKey("shovey_run_stream"), fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, i))
+		s.org = sr.org
 		if !found {
 			break
 		}
@@ -749,7 +763,7 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 	sort.Strings(pkeys)
 	parr := make([]string, len(pkeys))
 	for u, k := range pkeys {
-		parr[u] = fmt.Sprintf("%s: %s", k, payload[k])
+		parr[u] = util.JoinStr(k, ": ", payload[k])
 	}
 	payloadBlock := strings.Join(parr, "\n")
 
@@ -763,7 +777,7 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 }
 
 // ImportShovey is used to import shovey jobs from the exported JSON dump.
-func ImportShovey(shoveyJSON map[string]interface{}) error {
+func ImportShovey(org *organization.Organization, shoveyJSON map[string]interface{}) error {
 	runID := shoveyJSON["id"].(string)
 	nn := shoveyJSON["nodes"].([]interface{})
 	nodeNames := make([]string, len(nn))
@@ -784,12 +798,12 @@ func ImportShovey(shoveyJSON map[string]interface{}) error {
 	status := shoveyJSON["status"].(string)
 	timeout := time.Duration(shoveyJSON["timeout"].(float64))
 	quorum := shoveyJSON["quorum"].(string)
-	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, CreatedAt: createdAt, UpdatedAt: updatedAt, Status: status, Timeout: timeout, Quorum: quorum }
+	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, CreatedAt: createdAt, UpdatedAt: updatedAt, Status: status, Timeout: timeout, Quorum: quorum, org: org }
 	return s.importSave()
 }
 
 // ImportShoveyRun is used to import shovey jobs from the exported JSON dump.
-func ImportShoveyRun(sRunJSON map[string]interface{}) error {
+func ImportShoveyRun(org *organization.Organization, sRunJSON map[string]interface{}) error {
 	shoveyUUID := sRunJSON["run_id"].(string)
 	nodeName := sRunJSON["node_name"].(string)
 	status := sRunJSON["status"].(string)
@@ -808,14 +822,14 @@ func ImportShoveyRun(sRunJSON map[string]interface{}) error {
 	}
 	errMsg := sRunJSON["error"].(string)
 	exitStatus := uint8(sRunJSON["exit_status"].(float64))
-	sr := &ShoveyRun{ ShoveyUUID: shoveyUUID, NodeName: nodeName, Status: status, AckTime: ackTime, EndTime: endTime, Error: errMsg, ExitStatus: exitStatus }
+	sr := &ShoveyRun{ ShoveyUUID: shoveyUUID, NodeName: nodeName, Status: status, AckTime: ackTime, EndTime: endTime, Error: errMsg, ExitStatus: exitStatus, org: org }
 	// This can use the normal save function
 	return sr.save()
 }
 
 // ImportShoveyRunStream is used to import shovey jobs from the exported JSON 
 // dump.
-func ImportShoveyRunStream(srStreamJSON map[string]interface{}) error {
+func ImportShoveyRunStream(org *organization.Organization, srStreamJSON map[string]interface{}) error {
 	shoveyUUID := srStreamJSON["ShoveyUUID"].(string)
 	nodeName := srStreamJSON["NodeName"].(string)
 	seq := int(srStreamJSON["Seq"].(float64))
@@ -827,16 +841,16 @@ func ImportShoveyRunStream(srStreamJSON map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-	srs := &ShoveyRunStream{ ShoveyUUID: shoveyUUID, NodeName: nodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: createdAt }
+	srs := &ShoveyRunStream{ ShoveyUUID: shoveyUUID, NodeName: nodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: createdAt, org: org }
 	return srs.importSave()
 }
 
-func (s *Shovey) importSave() error {
+func (s *Shovey) importSave(org *organization.Organization) error {
 	if config.UsingDB() {
 		return s.importSaveSQL()
 	}
 	ds := datastore.New()
-	ds.Set("shovey", s.RunID, s)
+	ds.Set(org.DataKey("shovey"), s.RunID, s)
 	return nil
 }
 
@@ -846,7 +860,7 @@ func (srs *ShoveyRunStream) importSave() error {
 	}
 	ds := datastore.New()
 	skey := fmt.Sprintf("%s_%s_%s_%d", srs.ShoveyUUID, srs.NodeName, srs.OutputType, srs.Seq)
-	ds.Set("shovey_run_stream", skey, srs)
+	ds.Set(srs.org.DataKey("shovey_run_stream"), skey, srs)
 	return nil
 }
 
