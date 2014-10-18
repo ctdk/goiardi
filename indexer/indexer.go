@@ -41,6 +41,13 @@ type Indexable interface {
 	DocID() string
 	Index() string
 	Flatten() []string
+	OrgName() string
+}
+
+// Orgdex holds a map of search indexes, organized by organization.
+type Orgdex struct {
+	m sync.RWMutex
+	indexes map[string]*Index
 }
 
 // Index holds a map of document collections.

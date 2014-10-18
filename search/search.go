@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
 	"net/url"
 )
@@ -35,11 +36,12 @@ type SolrQuery struct {
 	queryChain Queryable
 	idxName    string
 	docs       map[string]*indexer.IdxDoc
+	org *organization.Organization
 }
 
 // Search parses the given query string and search the given index for any
 // matching results.
-func Search(idx string, q string) ([]indexer.Indexable, error) {
+func Search(org *organization.Organization, idx string, q string) ([]indexer.Indexable, error) {
 	/* Eventually we'll want more prep. To start, look right in the index */
 	query, qerr := url.QueryUnescape(q)
 	if qerr != nil {
@@ -53,7 +55,7 @@ func Search(idx string, q string) ([]indexer.Indexable, error) {
 	qq.Execute()
 	qchain := qq.Evaluate()
 	d := make(map[string]*indexer.IdxDoc)
-	solrQ := &SolrQuery{queryChain: qchain, idxName: idx, docs: d}
+	solrQ := &SolrQuery{queryChain: qchain, idxName: idx, docs: d, org: org}
 
 	_, err := solrQ.execute()
 	if err != nil {
@@ -79,10 +81,10 @@ func (sq *SolrQuery) execute() (map[string]*indexer.IdxDoc, error) {
 			}
 			s = nend
 			d := make(map[string]*indexer.IdxDoc)
-			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d}
+			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d, org: org}
 			r, err = nsq.execute()
 		default:
-			r, err = s.SearchIndex(sq.idxName)
+			r, err = s.SearchIndex(sq.org.Name, sq.idxName)
 		}
 		if err != nil {
 			return nil, err

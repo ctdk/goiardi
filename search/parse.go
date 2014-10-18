@@ -24,6 +24,7 @@ package search
 import (
 	"fmt"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/util"
 )
 
 // Op is a search operator
@@ -123,7 +124,7 @@ type SubQuery struct {
 // be able to implement to search the index.
 type Queryable interface {
 	// Search the index for the given term.
-	SearchIndex(string) (map[string]*indexer.IdxDoc, error)
+	SearchIndex(string, string) (map[string]*indexer.IdxDoc, error)
 	// Add an operator to this query chain link.
 	AddOp(Op)
 	// Get this query chain link's op.
@@ -153,17 +154,17 @@ type groupQueryHolder struct {
 	res map[string]*indexer.IdxDoc
 }
 
-func (q *BasicQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
+func (q *BasicQuery) SearchIndex(orgName string, idxName string) (map[string]*indexer.IdxDoc, error) {
 	notop := false
 	if (q.term.mod == OpUnaryNot) || (q.term.mod == OpUnaryPro) {
 		notop = true
 	}
 	if q.field == "" {
-		res, err := indexer.SearchText(idxName, string(q.term.term), notop)
+		res, err := indexer.SearchText(orgName, idxName, string(q.term.term), notop)
 		return res, err
 	}
-	searchTerm := fmt.Sprintf("%s:%s", q.field, q.term.term)
-	res, err := indexer.SearchIndex(idxName, searchTerm, notop)
+	searchTerm := util.JoinStr(q.field, ":", q.term.term)
+	res, err := indexer.SearchIndex(orgName, idxName, searchTerm, notop)
 
 	return res, err
 }
@@ -315,7 +316,7 @@ func (q *RangeQuery) AddFuzzParam(s string) {
 
 }
 
-func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
+func (q *GroupedQuery) SearchIndex(orgName string, idxName string) (map[string]*indexer.IdxDoc, error) {
 	tmpRes := make([]groupQueryHolder, len(q.terms))
 	for i, v := range q.terms {
 		tmpRes[i].op = v.mod
@@ -323,8 +324,8 @@ func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, 
 		if v.mod == OpUnaryNot || v.mod == OpUnaryPro {
 			notop = true
 		}
-		searchTerm := fmt.Sprintf("%s:%s", q.field, v.term)
-		r, err := indexer.SearchIndex(idxName, searchTerm, notop)
+		searchTerm := util.JoinStr(q.field, ":", v.term)
+		r, err := indexer.SearchIndex(orgName, idxName, searchTerm, notop)
 		if err != nil {
 			return nil, err
 		}
@@ -359,12 +360,12 @@ func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, 
 	return res, nil
 }
 
-func (q *RangeQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
-	res, err := indexer.SearchRange(idxName, string(q.field), string(q.start), string(q.end), q.inclusive)
+func (q *RangeQuery) SearchIndex(orgName string, idxName string) (map[string]*indexer.IdxDoc, error) {
+	res, err := indexer.SearchRange(orgName, idxName, string(q.field), string(q.start), string(q.end), q.inclusive)
 	return res, err
 }
 
-func (q *SubQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
+func (q *SubQuery) SearchIndex(orgName string, idxName string) (map[string]*indexer.IdxDoc, error) {
 	return nil, nil
 }
 
