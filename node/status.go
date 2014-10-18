@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"os"
 	"time"
 )
@@ -55,12 +56,12 @@ func (n *Node) UpdateStatus(status string) error {
 	}
 	s.UpdatedAt = time.Now()
 	ds := datastore.New()
-	return ds.SetNodeStatus(n.Name, s)
+	return ds.SetNodeStatus(n.Name, n.org.Name, s)
 }
 
 // ImportStatus is used by the import function to import node statuses from the
 // exported JSON dump.
-func ImportStatus(nodeJSON map[string]interface{}) error {
+func ImportStatus(org *organization.Organization, nodeJSON map[string]interface{}) error {
 	n := nodeJSON["Node"].(map[string]interface{})
 	status := nodeJSON["Status"].(string)
 	ut := nodeJSON["UpdatedAt"].(string)
@@ -68,7 +69,7 @@ func ImportStatus(nodeJSON map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-	nodeP, err := Get(n["name"].(string))
+	nodeP, err := Get(org, n["name"].(string))
 	if err != nil {
 		return nil
 	}
@@ -78,7 +79,7 @@ func ImportStatus(nodeJSON map[string]interface{}) error {
 	}
 	ds := datastore.New()
 	nodeP.Save()
-	return ds.SetNodeStatus(nodeP.Name, ns)
+	return ds.SetNodeStatus(nodeP.Name, org.Name, ns)
 }
 
 // LatestStatus returns the node's latest status.
@@ -87,7 +88,7 @@ func (n *Node) LatestStatus() (*NodeStatus, error) {
 		return n.latestStatusSQL()
 	}
 	ds := datastore.New()
-	s, err := ds.LatestNodeStatus(n.Name)
+	s, err := ds.LatestNodeStatus(n.Name, n.org.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +102,7 @@ func (n *Node) AllStatuses() ([]*NodeStatus, error) {
 		return n.allStatusesSQL()
 	}
 	ds := datastore.New()
-	arr, err := ds.AllNodeStatuses(n.Name)
+	arr, err := ds.AllNodeStatuses(n.Name, n.org.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -112,11 +113,11 @@ func (n *Node) AllStatuses() ([]*NodeStatus, error) {
 	return ns, nil
 }
 
-// AllNodeStatuses returns all node status reports on the server, from all
-// nodes.
-func AllNodeStatuses() ([]*NodeStatus) {
+// AllNodeStatuses returns all node status reports from the organization, from 
+// all nodes.
+func AllNodeStatuses(org *organization.Organization) ([]*NodeStatus) {
 	var allStatus []*NodeStatus
-	nodes := AllNodes()
+	nodes := AllNodes(org)
 	for _, n := range nodes {
 		ns, err := n.AllStatuses()
 		if err != nil {
@@ -135,7 +136,7 @@ func (n *Node) deleteStatuses() error {
 		return err
 	}
 	ds := datastore.New()
-	return ds.DeleteNodeStatus(n.Name)
+	return ds.DeleteNodeStatus(n.Name, n.org)
 }
 
 // ToJSON formats a node status report for export to JSON.
@@ -148,12 +149,12 @@ func (ns *NodeStatus) ToJSON() map[string]string {
 }
 
 // UnseenNodes returns all nodes that have not sent status reports for a while.
-func UnseenNodes() ([]*Node, error) {
+func UnseenNodes(org *organization.Organization) ([]*Node, error) {
 	if config.UsingDB() {
 		return unseenNodesSQL()
 	}
 	var downNodes []*Node
-	nodes := AllNodes()
+	nodes := AllNodes(org)
 	t := time.Now().Add(-10 * time.Minute)
 	for _, n := range nodes {
 		ns, _ := n.LatestStatus()
@@ -170,16 +171,17 @@ func UnseenNodes() ([]*Node, error) {
 // GetNodesByStatus returns the nodes that currently have the given status.
 func GetNodesByStatus(nodeNames []string, status string) ([]*Node, error) {
 	if config.UsingDB() {
-		return getNodesByStatusSQL(nodeNames, status)
+		return getNodesByStatusSQL(org *organization.Organization, nodeNames, status)
 	}
 	var statNodes []*Node
 	nodes := make([]*Node, 0, len(nodeNames))
 	for _, name := range nodeNames {
-		n, _ := Get(name)
+		n, _ := Get(org, name)
 		if n != nil {
 			nodes = append(nodes, n)
 		}
 	}
+	statNodes = make([]*Node, 0, len(nodes))
 	for _, n := range nodes {
 		ns, _ := n.LatestStatus()
 		if ns == nil {

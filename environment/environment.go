@@ -67,7 +67,7 @@ func New(org *organization.Organization, name string) (*ChefEnvironment, util.Ge
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get(util.JoinStr("env-", org.Name), name)
+		_, found = ds.Get(org.DataKey("env"), name)
 	}
 	if found || name == "_default" {
 		err := util.Errorf("Environment already exists")
@@ -234,7 +234,7 @@ func Get(org *organization.Organization, envName string) (*ChefEnvironment, util
 	} else {
 		ds := datastore.New()
 		var e interface{}
-		e, found = ds.Get(util.JoinStr("env-", org.Name), envName)
+		e, found = ds.Get(org.DataKey("env"), envName)
 		if e != nil {
 			env = e.(*ChefEnvironment)
 			env.org = org
@@ -263,11 +263,11 @@ func MakeDefaultEnvironment(org *organization.Organization) {
 		ds := datastore.New()
 		// only create the new default environment if we don't already have one
 		// saved
-		if _, found := ds.Get(util.JoinStr("env-", org.Name), "_default"); found {
+		if _, found := ds.Get(org.DataKey("env"), "_default"); found {
 			return
 		}
 		de = defaultEnvironment(org)
-		ds.Set(util.JoinStr("env-", org.Name), de.Name, de)
+		ds.Set(org.DataKey("env"), de.Name, de)
 	}
 	indexer.IndexObj(de)
 }
@@ -305,7 +305,7 @@ func (e *ChefEnvironment) Save() util.Gerror {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Set(util.JoinStr("env-", e.org.Name), e.Name, e)
+		ds.Set(e.org.DataKey("env"), e.Name, e)
 	}
 	indexer.IndexObj(e)
 	return nil
@@ -324,7 +324,7 @@ func (e *ChefEnvironment) Delete() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Delete(util.JoinStr("env-", e.org.Name), e.Name)
+		ds.Delete(e.org.DataKey("env"), e.Name)
 	}
 	indexer.DeleteItemFromCollection("environment", e.Name)
 	return nil
@@ -337,7 +337,7 @@ func GetList(org *organization.Organization) []string {
 		envList = getEnvironmentList()
 	} else {
 		ds := datastore.New()
-		envList = ds.GetList(util.JoinStr("env-", org.Name))
+		envList = ds.GetList(org.DataKey("env"))
 		envList = append(envList, "_default")
 	}
 	return envList

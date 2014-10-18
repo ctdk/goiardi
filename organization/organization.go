@@ -141,6 +141,10 @@ func (o *Organization) ToJSON() map[string]interface{} {
 	return orgJSON
 }
 
+func (o *Organization) DataKey(type string) string {
+	return util.JoinStr(type, "-", o.Name)
+}
+
 /* Hmm. Orgs themselves don't have much that needs updating, but it'll get more
  * interesting when RBAC comes along.
  *

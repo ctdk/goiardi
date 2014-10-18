@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
@@ -42,10 +43,11 @@ type Role struct {
 	Description string                 `json:"description"`
 	Default     map[string]interface{} `json:"default_attributes"`
 	Override    map[string]interface{} `json:"override_attributes"`
+	org *organization.Organization
 }
 
 // New creates a new role.
-func New(name string) (*Role, util.Gerror) {
+func New(org *organization.Organization, name string) (*Role, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var err error
@@ -57,7 +59,7 @@ func New(name string) (*Role, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("role", name)
+		_, found = ds.Get(org.DataKey("role"), name)
 	}
 	if found {
 		err := util.Errorf("Role %s already exists", name)
@@ -77,14 +79,15 @@ func New(name string) (*Role, util.Gerror) {
 		EnvRunLists: map[string][]string{},
 		Default:     map[string]interface{}{},
 		Override:    map[string]interface{}{},
+		org: org,
 	}
 
 	return role, nil
 }
 
 // NewFromJSON creates a new role from the uploaded JSON.
-func NewFromJSON(jsonRole map[string]interface{}) (*Role, util.Gerror) {
-	role, err := New(jsonRole["name"].(string))
+func NewFromJSON(org *organization.Organization, jsonRole map[string]interface{}) (*Role, util.Gerror) {
+	role, err := New(org, jsonRole["name"].(string))
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +188,7 @@ ValidElem:
 }
 
 // Get a role.
-func Get(roleName string) (*Role, error) {
+func Get(org *organization.Organization, roleName string) (*Role, error) {
 	var role *Role
 	var found bool
 	if config.UsingDB() {
@@ -203,9 +206,10 @@ func Get(roleName string) (*Role, error) {
 	} else {
 		ds := datastore.New()
 		var r interface{}
-		r, found = ds.Get("role", roleName)
+		r, found = ds.Get(org.DataKey("role"), roleName)
 		if r != nil {
 			role = r.(*Role)
+			role.org = org
 		}
 	}
 	if !found {
@@ -227,7 +231,7 @@ func (r *Role) Save() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Set("role", r.Name, r)
+		ds.Set(r.org.DataKey("role"), r.Name, r)
 	}
 	indexer.IndexObj(r)
 	return nil
@@ -241,20 +245,20 @@ func (r *Role) Delete() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Delete("role", r.Name)
+		ds.Delete(r.org.DataKey("role"), r.Name)
 	}
 	indexer.DeleteItemFromCollection("role", r.Name)
 	return nil
 }
 
 // GetList gets a list of the roles on this server.
-func GetList() []string {
+func GetList(org *organization.Organization) []string {
 	var roleList []string
 	if config.UsingDB() {
 		roleList = getListSQL()
 	} else {
 		ds := datastore.New()
-		roleList = ds.GetList("role")
+		roleList = ds.GetList(org.DataKey("role"))
 	}
 	return roleList
 }
@@ -267,6 +271,11 @@ func (r *Role) GetName() string {
 // URLType returns the base element of a role's URL.
 func (r *Role) URLType() string {
 	return "roles"
+}
+
+// OrgName returns the organization this role belongs to.
+func (r *Role) OrgName() string {
+	return r.org.Name
 }
 
 // DocID returns the role's name.
@@ -287,14 +296,15 @@ func (r *Role) Flatten() []string {
 }
 
 // AllRoles returns all the roles on the server
-func AllRoles() []*Role {
+func AllRoles(org *organization.Organization) []*Role {
 	var roles []*Role
 	if config.UsingDB() {
 		roles = allRolesSQL()
 	} else {
-		roleList := GetList()
+		roleList := GetList(org)
+		roles = make([]*Role, 0, len(roleList))
 		for _, r := range roleList {
-			ro, err := Get(r)
+			ro, err := Get(org, r)
 			if err != nil {
 				continue
 			}

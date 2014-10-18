@@ -77,7 +77,7 @@ func New(org *organization.Organization, name string) (*DataBag, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get(util.JoinStr("data_bag-", org.Name), name)
+		_, found = ds.Get(org.DataKey("data_bag"), name)
 	}
 	if found {
 		err = util.Errorf("Data bag %s already exists", name)
@@ -113,7 +113,7 @@ func Get(org *organization.Organization, dbName string) (*DataBag, util.Gerror) 
 		}
 	} else {
 		ds := datastore.New()
-		d, found := ds.Get(util.JoinStr("data_bag-", org.Name), dbName)
+		d, found := ds.Get(org.DataKey("data_bag"), dbName)
 		if !found {
 			err := util.Errorf("Cannot load data bag %s", dbName)
 			err.SetStatus(http.StatusNotFound)
@@ -140,7 +140,7 @@ func (db *DataBag) Save() error {
 		return db.savePostgreSQL()
 	} else {
 		ds := datastore.New()
-		ds.Set(util.JoinStr("data_bag-", db.org.Name), db.Name, db)
+		ds.Set(db.org.DataKey("data_bag"), db.Name, db)
 	}
 	return nil
 }
@@ -158,7 +158,7 @@ func (db *DataBag) Delete() error {
 		for dbiName := range db.DataBagItems {
 			db.DeleteDBItem(dbiName)
 		}
-		ds.Delete(util.JoinStr("data_bag-", db.org.Name), db.Name)
+		ds.Delete(db.org.DataKey("data_bag"), db.Name)
 	}
 	indexer.DeleteCollection(db.Name)
 	return nil
@@ -171,7 +171,7 @@ func GetList(org *organization.Organization) []string {
 		dbList = getListSQL()
 	} else {
 		ds := datastore.New()
-		dbList = ds.GetList(util.JoinStr("data_bag-", org.Name))
+		dbList = ds.GetList(org.DataKey("data_bag"))
 	}
 	return dbList
 }

@@ -64,7 +64,7 @@ func New(org *organization.Organization, name string) (*Node, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get(util.JoinStr("node-", org.Name), name)
+		_, found = ds.Get(org.DataKey("node"), name)
 	}
 	if found {
 		err := util.Errorf("Node %s already exists", name)
@@ -124,7 +124,7 @@ func Get(org *organization.Organization, nodeName string) (*Node, util.Gerror) {
 	} else {
 		ds := datastore.New()
 		var n interface{}
-		n, found = ds.Get(util.JoinStr("node-", org.Name), nodeName)
+		n, found = ds.Get(org.DataKey("node"), nodeName)
 		if n != nil {
 			node = n.(*Node)
 			node.org = org
@@ -244,7 +244,7 @@ func (n *Node) Save() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Set(util.JoinStr("node-", org.Name), n.Name, n)
+		ds.Set(n.org.DataKey("node"), n.Name, n)
 	}
 	/* TODO Later: excellent candidate for a goroutine */
 	indexer.IndexObj(n)
@@ -259,7 +259,7 @@ func (n *Node) Delete() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Delete(util.JoinStr("node-", org.Name), n.Name)
+		ds.Delete(n.org.DataKey("node"), n.Name)
 		// TODO: This may need a different config flag?
 		if config.Config.UseSerf {
 			n.deleteStatuses()
@@ -276,7 +276,7 @@ func GetList(org *organization.Organization) []string {
 		nodeList = getListSQL()
 	} else {
 		ds := datastore.New()
-		nodeList = ds.GetList(util.JoinStr("node-", org.Name))
+		nodeList = ds.GetList(org.DataKey("node"))
 	}
 	return nodeList
 }

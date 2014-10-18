@@ -111,7 +111,7 @@ func Get(org *organization.Organization, chksum string) (*FileStore, error) {
 	} else {
 		ds := datastore.New()
 		var f interface{}
-		f, found = ds.Get(util.JoinStr("filestore-", org.Name), chksum)
+		f, found = ds.Get(org.DataKey("filestore"), chksum)
 		if f != nil {
 			filestore = f.(*FileStore)
 			filestore.org = org
@@ -168,7 +168,7 @@ func (f *FileStore) Save() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Set(util.JoinStr("filestore-", f.org.Name), f.Chksum, f)
+		ds.Set(f.org.DataKey("filestore"), f.Chksum, f)
 	}
 	if config.Config.LocalFstoreDir != "" {
 		fp, err := os.Create(path.Join(config.Config.LocalFstoreDir, f.org.Name, f.Chksum))
@@ -194,7 +194,7 @@ func (f *FileStore) Delete() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Delete(util.JoinStr("filestore-", f.org.Name), f.Chksum)
+		ds.Delete(f.org.DataKey("filestore"), f.Chksum)
 	}
 
 	if config.Config.LocalFstoreDir != "" {
@@ -213,7 +213,7 @@ func GetList(org *organization.Organization) []string {
 		fileList = getListSQL()
 	} else {
 		ds := datastore.New()
-		fileList = ds.GetList(util.JoinStr("filestore-", org.Name))
+		fileList = ds.GetList(org.DataKey("filestore"))
 	}
 	return fileList
 }

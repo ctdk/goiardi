@@ -126,7 +126,7 @@ func New(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get(util.JoinStr("cookbook-", org.Name), name)
+		_, found = ds.Get(org.DataKey("cookbook"), name)
 	}
 	if found {
 		err := util.Errorf("Cookbook %s already exists", name)
@@ -194,7 +194,7 @@ func Get(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 	} else {
 		ds := datastore.New()
 		var c interface{}
-		c, found = ds.Get(util.JoinStr("cookbook-", org.Name), name)
+		c, found = ds.Get(org.DataKey("cookbook"), name)
 		if c != nil {
 			cookbook = c.(*Cookbook)
 			cookbook.org = org
@@ -223,7 +223,7 @@ func (c *Cookbook) Save() error {
 		err = c.saveCookbookPostgreSQL()
 	} else {
 		ds := datastore.New()
-		ds.Set(util.JoinStr("cookbook-", org.Name), c.Name, c)
+		ds.Set(c.org.DataKey("cookbook"), c.Name, c)
 	}
 	if err != nil {
 		return err
@@ -238,7 +238,7 @@ func (c *Cookbook) Delete() error {
 		err = c.deleteCookbookSQL()
 	} else {
 		ds := datastore.New()
-		ds.Delete(util.JoinStr("cookbook-", org.Name), c.Name)
+		ds.Delete(c.org.DataKey("cookbook"), c.Name)
 	}
 	if err != nil {
 		return err
@@ -252,7 +252,7 @@ func GetList(org *organization.Organization) []string {
 		return getCookbookListSQL(org)
 	}
 	ds := datastore.New()
-	cbList := ds.GetList(util.JoinStr("cookbook-", org.Name))
+	cbList := ds.GetList(org.DataKey("cookbook"))
 	return cbList
 }
 
@@ -343,7 +343,7 @@ func CookbookRecipes(org *organization.Organization) ([]string, util.Gerror) {
 	// TODO: getting a number of how many cookbooks are on the server would
 	// be handy and probably make this faster
 	ds := datastore.New()
-	rlen := ds.GetListLen(util.JoinStr("cookbooks-", org.Name))
+	rlen := ds.GetListLen(org.DataKey("cookbook"))
 	rlist := make([]string, 0, rlen)
 	for _, cb := range AllCookbooks(org) {
 		/* Damn it, this sends back an array of

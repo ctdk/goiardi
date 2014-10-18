@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/util"
 	"reflect"
@@ -45,11 +46,12 @@ type LogInfo struct {
 	ObjectName   string      `json:"object_name"`
 	ExtendedInfo string      `json:"extended_info"`
 	ID           int         `json:"id"`
+	org *organization.Organization
 }
 
 // LogEvent writes an event of the action type, performed by the given actor,
 // against the given object.
-func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
+func LogEvent(org *organization.Organization, doer actor.Actor, obj util.GoiardiObj, action string) error {
 	if !config.Config.LogEvents {
 		logger.Debugf("Not logging this event")
 		return nil
@@ -79,12 +81,14 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 		return err
 	}
 	le.ActorInfo = actorInfo
+	le.org = org
 	if config.Config.SerfEventAnnounce {
 		qle := make(map[string]interface{}, 4)
 		qle["time"] = le.Time
 		qle["action"] = le.Action
 		qle["object_type"] = le.ObjectType
 		qle["object_name"] = le.ObjectName
+		qle["organization"] = le.org.Name
 		go serfin.SendEvent("log-event", qle)
 	}
 
@@ -95,7 +99,7 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 }
 
 // Import a log info event from an export dump.
-func Import(logData map[string]interface{}) error {
+func Import(org *organization.Organization, logData map[string]interface{}) error {
 	le := new(LogInfo)
 	le.Action = logData["action"].(string)
 	le.ActorType = logData["actor_type"].(string)
@@ -109,6 +113,7 @@ func Import(logData map[string]interface{}) error {
 		return nil
 	}
 	le.Time = t
+	le.org = org
 
 	if config.UsingDB() {
 		return le.importEventSQL()
@@ -118,16 +123,16 @@ func Import(logData map[string]interface{}) error {
 
 func (le *LogInfo) writeEventInMem() error {
 	ds := datastore.New()
-	return ds.SetLogInfo(le)
+	return ds.SetLogInfo(le.org.Name, le)
 }
 
 func (le *LogInfo) importEventInMem() error {
 	ds := datastore.New()
-	return ds.SetLogInfo(le, le.ID)
+	return ds.SetLogInfo(le.org.Name, le, le.ID)
 }
 
 // Get a particular event by its id.
-func Get(id int) (*LogInfo, error) {
+func Get(org *organization.Organization, id int) (*LogInfo, error) {
 	var le *LogInfo
 
 	if config.UsingDB() {
@@ -141,7 +146,7 @@ func Get(id int) (*LogInfo, error) {
 		}
 	} else {
 		ds := datastore.New()
-		c, err := ds.GetLogInfo(id)
+		c, err := ds.GetLogInfo(org.Name,id)
 		if err != nil {
 			return nil, err
 		}
@@ -159,24 +164,24 @@ func (le *LogInfo) Delete() error {
 		return le.deleteSQL()
 	}
 	ds := datastore.New()
-	ds.DeleteLogInfo(le.ID)
+	ds.DeleteLogInfo(le.org.Name, le.ID)
 	return nil
 }
 
 // PurgeLogInfos removes all logged events before the given id.
-func PurgeLogInfos(id int) (int64, error) {
+func PurgeLogInfos(org *organization.Organization, id int) (int64, error) {
 	if config.UsingDB() {
 		return purgeSQL(id)
 	}
 	ds := datastore.New()
-	return ds.PurgeLogInfoBefore(id)
+	return ds.PurgeLogInfoBefore(org.Name, id)
 }
 
 // GetLogInfos gets a slice of the logged events. May be called with an offset
 // and limit, (in that order) but that is not required. The offset can be
 // specified without a limit, but a limit requires an offset (which can be 0).
 // The map of search params may be nil, but something must be present.
-func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, error) {
+func GetLogInfos(org *organization.Organization, searchParams map[string]string, limits ...int) ([]*LogInfo, error) {
 	// optional params
 	var from, until time.Time
 	if f, ok := searchParams["from"]; ok {
@@ -223,9 +228,10 @@ func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, err
 	}
 
 	ds := datastore.New()
-	arr := ds.GetLogInfoList()
+	arr := ds.GetLogInfoList(org.Name)
 	lis := make([]*LogInfo, len(arr))
 	var keys []int
+	keys := make([]int, len(arr))
 	for k := range arr {
 		keys = append(keys, k)
 	}
@@ -266,7 +272,7 @@ func (le *LogInfo) checkTimeRange(from, until time.Time) bool {
 // AllLogInfos returns a list of all logged events in the database. Provides a
 // wrapper around GetLogInfos() for consistency with the other object types for
 // exporting data.
-func AllLogInfos() []*LogInfo {
-	l, _ := GetLogInfos(nil)
+func AllLogInfos(org *organization.Organization) []*LogInfo {
+	l, _ := GetLogInfos(org, nil)
 	return l
 }

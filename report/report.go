@@ -25,6 +25,7 @@ import (
 	"github.com/codeskyblue/go-uuid"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"strconv"
@@ -48,7 +49,9 @@ type Report struct {
 	Resources      []interface{}          `json:"resources"`
 	Data           map[string]interface{} `json:"data"` // I think this is right
 	NodeName       string                 `json:"nodeName"`
+	// might be able to remove this
 	organizationID int
+	org *organization.Organization
 }
 
 type privReport struct {
@@ -65,7 +68,7 @@ type privReport struct {
 }
 
 // New creates a new report.
-func New(runID string, nodeName string) (*Report, util.Gerror) {
+func New(org *organization.Organization, runID string, nodeName string) (*Report, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var err error
@@ -77,7 +80,7 @@ func New(runID string, nodeName string) (*Report, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("report", runID)
+		_, found = ds.Get(org.DataKey("report"), runID)
 	}
 	if found {
 		err := util.Errorf("Report already exists")
@@ -93,12 +96,13 @@ func New(runID string, nodeName string) (*Report, util.Gerror) {
 		RunID:    runID,
 		NodeName: nodeName,
 		Status:   "started",
+		org: org,
 	}
 	return report, nil
 }
 
 // Get a report.
-func Get(runID string) (*Report, util.Gerror) {
+func Get(org *organization.Organization, runID string) (*Report, util.Gerror) {
 	var report *Report
 	var found bool
 	if config.UsingDB() {
@@ -118,9 +122,10 @@ func Get(runID string) (*Report, util.Gerror) {
 	} else {
 		ds := datastore.New()
 		var r interface{}
-		r, found = ds.Get("report", runID)
+		r, found = ds.Get(org.DataKey("report"), runID)
 		if r != nil {
 			report = r.(*Report)
+			report.org = org
 		}
 	}
 	if !found {
@@ -139,7 +144,7 @@ func (r *Report) Save() error {
 		return r.savePostgreSQL()
 	} else {
 		ds := datastore.New()
-		ds.Set("report", r.RunID, r)
+		ds.Set(r.org.DataKey("report"), r.RunID, r)
 	}
 	return nil
 }
@@ -150,12 +155,12 @@ func (r *Report) Delete() error {
 		return r.deleteSQL()
 	}
 	ds := datastore.New()
-	ds.Delete("report", r.RunID)
+	ds.Delete(r.org.DataKey("report"), r.RunID)
 	return nil
 }
 
 // NewFromJSON creates a new report from the given uploaded JSON.
-func NewFromJSON(nodeName string, jsonReport map[string]interface{}) (*Report, util.Gerror) {
+func NewFromJSON(org *organization.Organization, nodeName string, jsonReport map[string]interface{}) (*Report, util.Gerror) {
 	rid, ok := jsonReport["run_id"].(string)
 	if !ok {
 		err := util.Errorf("invalid run id")
@@ -183,7 +188,7 @@ func NewFromJSON(nodeName string, jsonReport map[string]interface{}) (*Report, u
 		return nil, err
 	}
 
-	report, err := New(rid, nodeName)
+	report, err := New(org, rid, nodeName)
 	if err != nil {
 		return nil, err
 	}
@@ -268,28 +273,28 @@ func (r *Report) UpdateFromJSON(jsonReport map[string]interface{}) util.Gerror {
 }
 
 // GetList returns a list of UUIDs of reports on the system.
-func GetList() []string {
+func GetList(org *organization.Organization) []string {
 	var reportList []string
 	if config.UsingDB() {
 		reportList = getListSQL()
 	} else {
 		ds := datastore.New()
-		reportList = ds.GetList("report")
+		reportList = ds.GetList(org.DataKey("report"))
 	}
 	return reportList
 }
 
 // GetReportList returns a list of reports on the system in the given time range
 // and with the given status, which may be "" for any status.
-func GetReportList(from, until time.Time, rows int, status string) ([]*Report, error) {
+func GetReportList(org *organization.Organization, from, until time.Time, rows int, status string) ([]*Report, error) {
 	if config.UsingDB() {
 		return getReportListSQL(from, until, rows, status)
 	}
 	var reports []*Report
-	reportList := GetList()
+	reportList := GetList(org)
 	i := 0
 	for _, r := range reportList {
-		rp, _ := Get(r)
+		rp, _ := Get(org, r)
 		if rp != nil && rp.checkTimeRange(from, until) && (status == "" || (status != "" && rp.Status == status)) {
 			reports = append(reports, rp)
 			i++
@@ -307,7 +312,7 @@ func (r *Report) checkTimeRange(from, until time.Time) bool {
 
 // GetNodeList returns a list of reports from the given node in the time range
 // and status given. Status may be "" for all statuses.
-func GetNodeList(nodeName string, from, until time.Time, rows int, status string) ([]*Report, error) {
+func GetNodeList(org *organization.Organization, nodeName string, from, until time.Time, rows int, status string) ([]*Report, error) {
 	if config.UsingDB() {
 		return getNodeListSQL(nodeName, from, until, rows, status)
 	}
@@ -315,7 +320,7 @@ func GetNodeList(nodeName string, from, until time.Time, rows int, status string
 	// not doing it in a better manner for now. If reporting
 	// performance becomes a concern, SQL mode is probably a better
 	// choice
-	reports, _ := GetReportList(from, until, rows, status)
+	reports, _ := GetReportList(org, from, until, rows, status)
 	var nodeReportList []*Report
 	for _, r := range reports {
 		if nodeName == r.NodeName && (status == "" || (status != "" && r.Status == status)) {
@@ -352,14 +357,15 @@ func (r *Report) GobDecode(b []byte) error {
 }
 
 // AllReports returns all run reports currently on the server for export.
-func AllReports() []*Report {
+func AllReports(org *organization.Organization) []*Report {
 	if config.UsingDB() {
 		return getReportsSQL()
 	}
-	var reports []*Report
-	reportList := GetList()
+	//var reports []*Report
+	reportList := GetList(org)
+	reports := make([]*Report, 0, len(reportList))
 	for _, r := range reportList {
-		rp, _ := Get(r)
+		rp, _ := Get(org, r)
 		if rp != nil {
 			reports = append(reports, rp)
 		}

@@ -31,6 +31,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/util"
 	"github.com/pmylund/go-cache"
 	"io/ioutil"
 	"log"
@@ -195,11 +196,11 @@ func (ds *DataStore) GetListLen(keyType string) int {
 }
 
 // SetNodeStatus updates a node's status using the in-memory data store.
-func (ds *DataStore) SetNodeStatus(nodeName string, obj interface{}, nsID ...int) error {
+func (ds *DataStore) SetNodeStatus(nodeName string, orgName string, obj interface{}, nsID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	nsKey := ds.makeKey("nodestatus", "nodestatuses")
-	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
+	nsKey := ds.makeKey(util.JoinStr("nodestatus-", orgName), "nodestatuses")
+	nsListKey := ds.makeKey(util.JoinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
 		a = make(map[int]interface{})
@@ -234,11 +235,11 @@ func (ds *DataStore) SetNodeStatus(nodeName string, obj interface{}, nsID ...int
 
 // AllNodeStatuses returns a list of all statuses known for the given node from
 // the in-memory data store.
-func (ds *DataStore) AllNodeStatuses(nodeName string) ([]interface{}, error) {
+func (ds *DataStore) AllNodeStatuses(nodeName string, orgName string) ([]interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	nsKey := ds.makeKey("nodestatus", "nodestatuses")
-	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
+	nsKey := ds.makeKey(util.JoinStr("nodestatus-", orgName), "nodestatuses")
+	nsListKey := ds.makeKey(util.JoinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
 		err := fmt.Errorf("No statuses in the datastore")
@@ -268,11 +269,11 @@ func (ds *DataStore) AllNodeStatuses(nodeName string) ([]interface{}, error) {
 
 // LatestNodeStatus returns the latest status for a node from the in-memory
 // data store.
-func (ds *DataStore) LatestNodeStatus(nodeName string) (interface{}, error) {
+func (ds *DataStore) LatestNodeStatus(nodeName string, orgName string) (interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	nsKey := ds.makeKey("nodestatus", "nodestatuses")
-	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
+	nsKey := ds.makeKey(util.JoinStr("nodestatus-", orgName), "nodestatuses")
+	nsListKey := ds.makeKey(util.JoinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
 		err := fmt.Errorf("No statuses in the datastore")
@@ -308,11 +309,11 @@ func (ds *DataStore) LatestNodeStatus(nodeName string) (interface{}, error) {
 
 // DeleteNodeStatus deletes all status reports for a node from the in-memory 
 // data store.
-func (ds *DataStore) DeleteNodeStatus(nodeName string) error {
+func (ds *DataStore) DeleteNodeStatus(nodeName string, orgName string) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	nsKey := ds.makeKey("nodestatus", "nodestatuses")
-	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
+	nsKey := ds.makeKey(util.JoinStr("nodestatus-", orgName), "nodestatuses")
+	nsListKey := ds.makeKey(util.JoinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
 		err := fmt.Errorf("No statuses in the datastore")
@@ -334,8 +335,8 @@ func (ds *DataStore) DeleteNodeStatus(nodeName string) error {
 	return nil
 }
 
-func (ds *DataStore) getLogInfoMap() map[int]interface{} {
-	dsKey := ds.makeKey("loginfo", "loginfos")
+func (ds *DataStore) getLogInfoMap(orgName string) map[int]interface{} {
+	dsKey := ds.makeKey(util.JoinStr("loginfo-", orgName), "loginfos")
 	var a interface{}
 	if config.Config.UseUnsafeMemStore {
 		a, _ = ds.dsc.Get(dsKey)
@@ -356,8 +357,8 @@ func (ds *DataStore) getLogInfoMap() map[int]interface{} {
 	return arr
 }
 
-func (ds *DataStore) setLogInfoMap(liMap map[int]interface{}) {
-	dsKey := ds.makeKey("loginfo", "loginfos")
+func (ds *DataStore) setLogInfoMap(orgName string, liMap map[int]interface{}) {
+	dsKey := ds.makeKey(util.JoinStr("loginfo-", orgName), "loginfos")
 	if config.Config.UseUnsafeMemStore {
 		ds.dsc.Set(dsKey, liMap, -1)
 	} else {
@@ -371,7 +372,7 @@ func (ds *DataStore) setLogInfoMap(liMap map[int]interface{}) {
 
 // SetLogInfo sets a loginfo in the data store. Unlike most of these objects,
 // log infos are stored and retrieved by id, since they have no useful names.
-func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
+func (ds *DataStore) SetLogInfo(orgName string, obj interface{}, logID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	arr := ds.getLogInfoMap()
@@ -387,7 +388,7 @@ func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
 }
 
 // DeleteLogInfo deletes a logged event from the data store.
-func (ds *DataStore) DeleteLogInfo(id int) error {
+func (ds *DataStore) DeleteLogInfo(orgName string, id int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	arr := ds.getLogInfoMap()
@@ -398,7 +399,7 @@ func (ds *DataStore) DeleteLogInfo(id int) error {
 
 // PurgeLogInfoBefore purges all the logged events with an id less than the one
 // given from the data store.
-func (ds *DataStore) PurgeLogInfoBefore(id int) (int64, error) {
+func (ds *DataStore) PurgeLogInfoBefore(orgName string, id int) (int64, error) {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	arr := ds.getLogInfoMap()
@@ -428,7 +429,7 @@ func getNextID(lis map[int]interface{}) int {
 }
 
 // GetLogInfo gets a loginfo by id.
-func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
+func (ds *DataStore) GetLogInfo(orgName string, id int) (interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
 	arr := ds.getLogInfoMap()
@@ -441,7 +442,7 @@ func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 }
 
 // GetLogInfoList gets all the log infos currently stored.
-func (ds *DataStore) GetLogInfoList() map[int]interface{} {
+func (ds *DataStore) GetLogInfoList(orgName string) map[int]interface{} {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
 	arr := ds.getLogInfoMap()

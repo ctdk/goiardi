@@ -99,7 +99,7 @@ func New(org *organization.Organization, clientname string) (*Client, util.Gerro
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get(util.JoinStr("client-", org.Name), clientname)
+		_, found = ds.Get(org.DataKey("client"), clientname)
 	}
 	if found {
 		err = util.Errorf("Client already exists")
@@ -144,7 +144,7 @@ func Get(org *organization.Organization, clientname string) (*Client, util.Gerro
 		}
 	} else {
 		ds := datastore.New()
-		c, found := ds.Get(util.JoinStr("client-", org.Name), clientname)
+		c, found := ds.Get(org.DataKey("client"), clientname)
 		if !found {
 			gerr := util.Errorf("Client %s not found", clientname)
 			gerr.SetStatus(http.StatusNotFound)
@@ -176,7 +176,7 @@ func (c *Client) Save() error {
 			return err
 		}
 		ds := datastore.New()
-		ds.Set(util.JoinStr("client-", org.Name), c.Name, c)
+		ds.Set(c.org.DataKey("client"), c.Name, c)
 	}
 	indexer.IndexObj(c)
 	return nil
@@ -199,7 +199,7 @@ func (c *Client) Delete() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Delete(util.JoinStr("client-", org.Name), c.Name)
+		ds.Delete(c.org.DataKey("client"), c.Name)
 	}
 	indexer.DeleteItemFromCollection("client", c.Name)
 	return nil
@@ -269,12 +269,12 @@ func (c *Client) Rename(newName string) util.Gerror {
 			return gerr
 		}
 		ds := datastore.New()
-		if _, found := ds.Get(util.JoinStr("client-", org.Name), newName); found {
+		if _, found := ds.Get(c.org.DataKey("client"), newName); found {
 			err := util.Errorf("Client %s already exists, cannot rename %s", newName, c.Name)
 			err.SetStatus(http.StatusConflict)
 			return err
 		}
-		ds.Delete(util.JoinStr("client-", org.Name), c.Name)
+		ds.Delete(c.org.DataKey("client"), c.Name)
 	}
 	c.Name = newName
 	return nil
@@ -404,7 +404,7 @@ func GetList(org *organization.Organization) []string {
 		clientList = getListSQL()
 	} else {
 		ds := datastore.New()
-		clientList = ds.GetList(util.JoinStr("client-", org.Name))
+		clientList = ds.GetList(org.DataKey("client"))
 	}
 	return clientList
 }
