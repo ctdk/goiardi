@@ -31,11 +31,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 	pathArray := splitPath(r.URL.Path)
 	pathArrayLen := len(pathArray)
 
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return
-	}
+	
 
 	// If pathArrayLen is greater than 2, this gets handed off to another
 	// handler.
@@ -48,12 +44,14 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		// check for basic rights to the organization in question, before any
-		// beefier checks further down.
-		err = org.CheckActor(opUser)
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
+		opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+		if oerr != nil {
+			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+			return
 		}
+		// check for basic rights to the organization in question,
+		// before any beefier checks further down.
+		// TODO: do that.
 
 		switch op {
 		case "authenticate_user":
@@ -121,10 +119,8 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 	// Otherwise, it's org work.
 	var orgResponse map[string]interface{}
 
-	if !opUser.IsAdmin() {
-		jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-		return
-	}
+	// Have to do the actor checking and perm stuff a few places here,
+	// because we can't assume we'll always have an organization.
 
 	switch pathArrayLen {
 	case 2:
@@ -137,6 +133,15 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
+			opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+			if oerr != nil {
+				jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+				return
+			}
+			if !opUser.IsAdmin() {
+				jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+				return
+			}
 			orgResponse = org.ToJSON()
 		case "PUT":
 		default:
@@ -144,6 +149,15 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case 1:
+		opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
+		if oerr != nil {
+			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+			return
+		}
+		if !opUser.IsAdmin() {
+			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			return
+		}
 		switch r.Method {
 		case "GET":
 			orgList := organization.GetList()
