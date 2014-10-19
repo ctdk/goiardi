@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
@@ -172,6 +173,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
+			environment.MakeDefaultEnvironment(org)
 			orgResponse = org.ToJSON()
 		default:
 			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)

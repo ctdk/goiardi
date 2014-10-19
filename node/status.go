@@ -149,20 +149,23 @@ func (ns *NodeStatus) ToJSON() map[string]string {
 }
 
 // UnseenNodes returns all nodes that have not sent status reports for a while.
-func UnseenNodes(org *organization.Organization) ([]*Node, error) {
+func UnseenNodes() ([]*Node, error) {
 	if config.UsingDB() {
 		return unseenNodesSQL()
 	}
 	var downNodes []*Node
-	nodes := AllNodes(org)
-	t := time.Now().Add(-10 * time.Minute)
-	for _, n := range nodes {
-		ns, _ := n.LatestStatus()
-		if ns == nil || n.isDown {
-			continue
-		}
-		if ns.UpdatedAt.Before(t) {
-			downNodes = append(downNodes, n)
+	orgs := organization.AllOrganizations()
+	for _, org := range orgs {
+		nodes := AllNodes(org)
+		t := time.Now().Add(-10 * time.Minute)
+		for _, n := range nodes {
+			ns, _ := n.LatestStatus()
+			if ns == nil || n.isDown {
+				continue
+			}
+			if ns.UpdatedAt.Before(t) {
+				downNodes = append(downNodes, n)
+			}
 		}
 	}
 	return downNodes, nil

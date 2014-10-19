@@ -249,7 +249,17 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		/* Check that the user in question with the web request exists.
 		 * If not, fail. */
-		if _, uherr := actor.GetReqUser(userID); uherr != nil {
+		pathArray := strings.Split(r.URL.Path[1:], "/")
+		var org *organization.Organization
+		if pathArray[0] == "organization" {
+			var err error
+			org, err = organization.Get(pathArray[1])
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+		if _, uherr := actor.GetReqUser(org, userID); uherr != nil {
 			w.Header().Set("Content-Type", "application/json")
 			logger.Warningf("Attempting to use invalid user %s through X-Ops-Request-Source = web", userID)
 			jsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
@@ -305,8 +315,8 @@ func cleanPath(p string) string {
 
 // TODO: this has to change for organizations.
 func createDefaultActors() {
-	// TEMPORARY - make a default org
-	if cworg, _ := organization.Get("default"); cworg == nil {
+	cworg, _ := organization.Get("default")
+	if cworg == nil {
 		if org, oerr := organization.New("default", "default org"); oerr != nil {
 			logger.Criticalf(oerr.Error())
 			os.Exit(1)
@@ -316,10 +326,11 @@ func createDefaultActors() {
 				logger.Criticalf(err.Error())
 				os.Exit(1)
 			}
+			cworg = org
 		}
 	}
-	if cwebui, _ := client.Get("chef-webui"); cwebui == nil {
-		if webui, nerr := client.New("chef-webui"); nerr != nil {
+	if cwebui, _ := client.Get(cworg, "chef-webui"); cwebui == nil {
+		if webui, nerr := client.New(cworg, "chef-webui"); nerr != nil {
 			logger.Criticalf(nerr.Error())
 			os.Exit(1)
 		} else {
@@ -344,8 +355,8 @@ func createDefaultActors() {
 		}
 	}
 
-	if cvalid, _ := client.Get("chef-validator"); cvalid == nil {
-		if validator, verr := client.New("chef-validator"); verr != nil {
+	if cvalid, _ := client.Get(cworg, "chef-validator"); cvalid == nil {
+		if validator, verr := client.New(cworg, "chef-validator"); verr != nil {
 			logger.Criticalf(verr.Error())
 			os.Exit(1)
 		} else {
@@ -397,7 +408,7 @@ func createDefaultActors() {
 		}
 	}
 
-	environment.MakeDefaultEnvironment()
+	environment.MakeDefaultEnvironment(cworg)
 
 	return
 }
@@ -529,13 +540,20 @@ func setLogEventPurgeTicker() {
 		ticker := time.NewTicker(time.Second * time.Duration(60))
 		go func() {
 			for _ = range ticker.C {
-				les, _ := loginfo.GetLogInfos(nil, 0, 1)
-				if len(les) != 0 {
-					p, err := loginfo.PurgeLogInfos(les[0].ID - config.Config.LogEventKeep)
-					if err != nil {
-						logger.Errorf(err.Error())
+				orgs := organization.AllOrganizations()
+				var purged int64
+				for _, org := range orgs {
+					les, _ := loginfo.GetLogInfos(org, nil, 0, 1)
+					if len(les) != 0 {
+						p, err := loginfo.PurgeLogInfos(org, les[0].ID - config.Config.LogEventKeep)
+						if err != nil {
+							logger.Errorf(err.Error())
+						}
+						purged += p
 					}
-					logger.Debugf("Purged %d events automatically", p)
+				}
+				if purged != 0 {
+					logger.Debugf("Purged %d events automatically", purged)
 				}
 			}
 		}()
@@ -564,14 +582,19 @@ func startEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 				logger.Errorf(err.Error())
 				continue
 			}
-			n, _ := node.Get(jsonPayload["node"])
+			org, err := organization.Get(jsonPayload["organization"])
+			if err != nil {
+				logger.Errorf(err.Error())
+				continue
+			}
+			n, _ := node.Get(org, jsonPayload["node"])
 			if n == nil {
 				logger.Errorf("No node %s", jsonPayload["node"])
 				continue
 			}
-			err = n.UpdateStatus(jsonPayload["status"])
-			if err != nil {
-				logger.Errorf(err.Error())
+			nerr := n.UpdateStatus(jsonPayload["status"])
+			if nerr != nil {
+				logger.Errorf(nerr.Error())
 				continue
 			}
 			r := map[string]string{"response": "ok"}
