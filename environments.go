@@ -34,7 +34,6 @@ import (
 )
 
 func environmentHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	accErr := checkAccept(w, r, "application/json")
 	if accErr != nil {
@@ -42,7 +41,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 		return
 	}
 
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -74,7 +73,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
-			envList := environment.GetList()
+			envList := environment.GetList(org)
 			for _, env := range envList {
 				envResponse[env] = util.CustomURL(fmt.Sprintf("/environments/%s", env))
 			}
@@ -92,14 +91,14 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 				jsonErrorReport(w, r, "Environment name missing", http.StatusBadRequest)
 				return
 			}
-			chefEnv, _ := environment.Get(envData["name"].(string))
+			chefEnv, _ := environment.Get(org, envData["name"].(string))
 			if chefEnv != nil {
 				httperr := fmt.Errorf("Environment already exists")
 				jsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
 				return
 			}
 			var eerr util.Gerror
-			chefEnv, eerr = environment.NewFromJSON(envData)
+			chefEnv, eerr = environment.NewFromJSON(org, envData)
 			if eerr != nil {
 				jsonErrorReport(w, r, eerr.Error(), eerr.Status())
 				return
@@ -108,7 +107,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 				jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 				return
 			}
-			if lerr := loginfo.LogEvent(opUser, chefEnv, "create"); lerr != nil {
+			if lerr := loginfo.LogEvent(org, opUser, chefEnv, "create"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -123,7 +122,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 		 * object, so we do the json encoding in this block and return
 		 * out. */
 		envName := pathArray[1]
-		env, err := environment.Get(envName)
+		env, err := environment.Get(org, envName)
 		delEnv := false /* Set this to delete the environment after
 		 * sending the json. */
 		if err != nil {
@@ -177,19 +176,19 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 				return
 			}
 			if envName != envData["name"].(string) {
-				env, err = environment.Get(envData["name"].(string))
+				env, err = environment.Get(org, envData["name"].(string))
 				if err == nil {
 					jsonErrorReport(w, r, "Environment already exists", http.StatusConflict)
 					return
 				}
 				var eerr util.Gerror
-				env, eerr = environment.NewFromJSON(envData)
+				env, eerr = environment.NewFromJSON(org, envData)
 				if eerr != nil {
 					jsonErrorReport(w, r, eerr.Error(), eerr.Status())
 					return
 				}
 				w.WriteHeader(http.StatusCreated)
-				oldenv, olderr := environment.Get(envName)
+				oldenv, olderr := environment.Get(org, envName)
 				if olderr == nil {
 					oldenv.Delete()
 				}
@@ -206,7 +205,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
-			if lerr := loginfo.LogEvent(opUser, env, "modify"); lerr != nil {
+			if lerr := loginfo.LogEvent(org, opUser, env, "modify"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -225,7 +224,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if lerr := loginfo.LogEvent(opUser, env, "delete"); lerr != nil {
+			if lerr := loginfo.LogEvent(org, opUser, env, "delete"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -245,7 +244,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 			return
 		}
 
-		env, err := environment.Get(envName)
+		env, err := environment.Get(org, envName)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
@@ -273,7 +272,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 				jsonErrorReport(w, r, "POSTed JSON badly formed.", http.StatusMethodNotAllowed)
 				return
 			}
-			deps, err := cookbook.DependsCookbooks(cbVer["run_list"].([]string), env.CookbookVersions)
+			deps, err := cookbook.DependsCookbooks(org, cbVer["run_list"].([]string), env.CookbookVersions)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusPreconditionFailed)
 				return
@@ -287,7 +286,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 		case "cookbooks":
 			envResponse = env.AllCookbookHash(numResults)
 		case "nodes":
-			nodeList, err := node.GetFromEnv(envName)
+			nodeList, err := node.GetFromEnv(org, envName)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
@@ -327,7 +326,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
-		env, err := environment.Get(envName)
+		env, err := environment.Get(org, envName)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
@@ -338,7 +337,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 		 * same, but it makes clients and chef-pedant somewhat unhappy
 		 * to not have this way available. */
 		if op == "roles" {
-			role, err := role.Get(opName)
+			role, err := role.Get(org, opName)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
@@ -351,7 +350,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 			}
 			envResponse["run_list"] = runList
 		} else if op == "cookbooks" {
-			cb, err := cookbook.Get(opName)
+			cb, err := cookbook.Get(org, opName)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
