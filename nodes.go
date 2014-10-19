@@ -30,13 +30,12 @@ import (
 )
 
 func nodeHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	w.Header().Set("Content-Type", "application/json")
 
 	pathArray := splitPath(r.URL.Path)[2:]
 	nodeName := pathArray[1]
 
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -49,7 +48,7 @@ func nodeHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
-		chefNode, nerr := node.Get(nodeName)
+		chefNode, nerr := node.Get(org, nodeName)
 		if nerr != nil {
 			jsonErrorReport(w, r, nerr.Error(), http.StatusNotFound)
 			return
@@ -65,7 +64,7 @@ func nodeHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if lerr := loginfo.LogEvent(opUser, chefNode, "delete"); lerr != nil {
+			if lerr := loginfo.LogEvent(org, opUser, chefNode, "delete"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -80,7 +79,7 @@ func nodeHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
 		}
-		chefNode, kerr := node.Get(nodeName)
+		chefNode, kerr := node.Get(org, nodeName)
 		if kerr != nil {
 			jsonErrorReport(w, r, kerr.Error(), http.StatusNotFound)
 			return
@@ -113,7 +112,7 @@ func nodeHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if lerr := loginfo.LogEvent(opUser, chefNode, "modify"); lerr != nil {
+		if lerr := loginfo.LogEvent(org, opUser, chefNode, "modify"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
