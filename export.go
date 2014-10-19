@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
@@ -46,14 +47,14 @@ type ExportData struct {
 	CreatedTime  time.Time
 	// It's a map of interfaces because the object structs may change
 	// between releases.
-	Data map[string][]interface{}
+	Data interface{}
 }
 
 // Major version number of the export file format.
-const ExportMajorVersion = 1
+const ExportMajorVersion = 2
 
 // Minor version number of the export file format.
-const ExportMinorVersion = 1
+const ExportMinorVersion = 0
 
 // Export all data to a json file. This can help with upgrading goiardi if save
 // file compatibitity is broken between releases, or with transferring goiardi
@@ -61,23 +62,31 @@ const ExportMinorVersion = 1
 
 func exportAll(fileName string) error {
 	exportedData := &ExportData{MajorVersion: ExportMajorVersion, MinorVersion: ExportMinorVersion, CreatedTime: time.Now()}
-	exportedData.Data = make(map[string][]interface{})
-	// ... and march through everything.
-	exportedData.Data["client"] = client.ExportAllClients()
-	exportedData.Data["cookbook"] = exportTransformSlice(cookbook.AllCookbooks())
-	exportedData.Data["databag"] = exportTransformSlice(databag.AllDataBags())
-	exportedData.Data["environment"] = exportTransformSlice(environment.AllEnvironments())
-	exportedData.Data["filestore"] = exportTransformSlice(filestore.AllFilestores())
-	exportedData.Data["loginfo"] = exportTransformSlice(loginfo.AllLogInfos())
-	exportedData.Data["node"] = exportTransformSlice(node.AllNodes())
-	exportedData.Data["node_status"] = exportTransformSlice(node.AllNodeStatuses())
-	exportedData.Data["report"] = exportTransformSlice(report.AllReports())
-	exportedData.Data["role"] = exportTransformSlice(role.AllRoles())
-	exportedData.Data["sandbox"] = exportTransformSlice(sandbox.AllSandboxes())
-	exportedData.Data["shovey"] = exportTransformSlice(shovey.AllShoveys())
-	exportedData.Data["shovey_run"] = exportTransformSlice(shovey.AllShoveyRuns())
-	exportedData.Data["shovey_run_stream"] = exportTransformSlice(shovey.AllShoveyRunStreams())
-	exportedData.Data["user"] = user.ExportAllUsers()
+	orgs := organization.AllOrganizations()
+	AllData := make(map[string]interface{})
+	AllData["org_objects"] = make(map[string]map[string]interface{})
+	for _, org := range orgs {
+		data := make(map[string]interface{})
+		// ... and march through everything.
+		data["client"] = client.ExportAllClients(org)
+		data["cookbook"] = exportTransformSlice(cookbook.AllCookbooks(org))
+		data["databag"] = exportTransformSlice(databag.AllDataBags(org))
+		data["environment"] = exportTransformSlice(environment.AllEnvironments(org))
+		data["filestore"] = exportTransformSlice(filestore.AllFilestores(org.Name))
+		data["loginfo"] = exportTransformSlice(loginfo.AllLogInfos(org))
+		data["node"] = exportTransformSlice(node.AllNodes(org))
+		data["node_status"] = exportTransformSlice(node.AllNodeStatuses(org))
+		data["report"] = exportTransformSlice(report.AllReports(org))
+		data["role"] = exportTransformSlice(role.AllRoles(org))
+		data["sandbox"] = exportTransformSlice(sandbox.AllSandboxes(org))
+		data["shovey"] = exportTransformSlice(shovey.AllShoveys(org))
+		data["shovey_run"] = exportTransformSlice(shovey.AllShoveyRuns(org))
+		data["shovey_run_stream"] = exportTransformSlice(shovey.AllShoveyRunStreams(org))
+		AllData["org_objects"].(map[string]map[string]interface{})[org.Name] = data
+	}
+	AllData["organization"] = orgs
+	AllData["user"] = user.ExportAllUsers()
+	
 
 	fp, err := os.Create(fileName)
 	if err != nil {
