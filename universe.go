@@ -18,20 +18,25 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/organization"
 	"net/http"
 )
 
 func universeHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	w.Header().Set("Content-Type", "application/json")
+	_, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
 	if r.Method != "GET" {
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 		return
 	}
 
-	universe := cookbook.Universe()
+	universe := cookbook.Universe(org)
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&universe); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
