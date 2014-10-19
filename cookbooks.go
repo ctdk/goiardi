@@ -144,7 +144,7 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
-			cb, err := cookbook.Get(cookbookName)
+			cb, err := cookbook.Get(org, cookbookName)
 			if err != nil {
 				if err.Status() == http.StatusNotFound {
 					msg := fmt.Sprintf("Cannot find a cookbook named %s with version %s", cookbookName, cookbookVersion)
@@ -223,9 +223,9 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 			 * specific version of the cookbook exists. If
 			 * so, update it, otherwise, create it and set
 			 * the latest version as needed. */
-			cb, err := cookbook.Get(cookbookName)
+			cb, err := cookbook.Get(org, cookbookName)
 			if err != nil {
-				cb, err = cookbook.New(cookbookName)
+				cb, err = cookbook.New(org, cookbookName)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
