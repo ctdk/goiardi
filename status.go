@@ -27,9 +27,8 @@ import (
 )
 
 func statusHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	w.Header().Set("Content-Type", "application/json")
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -61,7 +60,7 @@ func statusHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 				jsonErrorReport(w, r, "Invalid object to get status for", http.StatusBadRequest)
 				return
 			}
-			nodes := node.AllNodes()
+			nodes := node.AllNodes(org)
 			sr := make([]map[string]string, len(nodes))
 			for i, n := range nodes {
 				ns, err := n.LatestStatus()
@@ -85,7 +84,7 @@ func statusHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 			}
 			nodeName := pathArray[2]
 			op := pathArray[3]
-			n, gerr := node.Get(nodeName)
+			n, gerr := node.Get(org, nodeName)
 			if gerr != nil {
 				jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 				return
