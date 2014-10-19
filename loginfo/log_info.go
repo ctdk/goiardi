@@ -230,8 +230,7 @@ func GetLogInfos(org *organization.Organization, searchParams map[string]string,
 	ds := datastore.New()
 	arr := ds.GetLogInfoList(org.Name)
 	lis := make([]*LogInfo, len(arr))
-	var keys []int
-	keys := make([]int, len(arr))
+	keys := make([]int, 0, len(arr))
 	for k := range arr {
 		keys = append(keys, k)
 	}

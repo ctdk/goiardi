@@ -19,35 +19,45 @@
 package loginfo
 
 import (
+	"encoding/gob"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"testing"
 	"time"
 )
 
+var org *organization.Organization
+
 func TestLogEvent(t *testing.T) {
+	gob.Register(new(organization.Organization))
+	gob.Register(make(map[int]interface{}))
+	gob.Register(new(LogInfo))
+	gob.Register(new(client.Client))
+	org, _ = organization.New("default", "boo")
+	org.Save()
 	config.Config.LogEvents = true
-	doer, _ := client.New("doer")
-	obj, _ := client.New("obj")
-	err := LogEvent(doer, obj, "create")
+	doer, _ := client.New(org, "doer")
+	obj, _ := client.New(org, "obj")
+	err := LogEvent(org, doer, obj, "create")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 	ds := datastore.New()
-	arr := ds.GetLogInfoList()
+	arr := ds.GetLogInfoList(org.Name)
 	if len(arr) != 1 {
 		t.Errorf("Too many (or not enough) log events: %d found", len(arr))
 	}
-	arr2, _ := GetLogInfos(nil, 0, 1)
+	arr2, _ := GetLogInfos(org, nil, 0, 1)
 	if len(arr2) != 1 {
 		t.Errorf("Something went wrong with variadic args with GetLogInfoList")
 	}
-	arr3, _ := GetLogInfos(nil)
+	arr3, _ := GetLogInfos(org, nil)
 	if len(arr3) != 1 {
 		t.Errorf("Something went wrong with variadic args with no arguments with GetLogInfoList")
 	}
-	arr4, _ := GetLogInfos(nil, 0)
+	arr4, _ := GetLogInfos(org, nil, 0)
 	if len(arr4) != 1 {
 		t.Errorf("Something went wrong with variadic args with one argument with GetLogInfoList")
 	}
@@ -55,7 +65,7 @@ func TestLogEvent(t *testing.T) {
 	if le.Action != "create" {
 		t.Errorf("Wrong action")
 	}
-	if le.Actor != doer {
+	if le.Actor.GetName() != doer.Name {
 		t.Errorf("wrong doer")
 	}
 	if le.ActorType != "client" {
@@ -71,32 +81,32 @@ func TestLogEvent(t *testing.T) {
 	if le.ExtendedInfo == "" {
 		t.Errorf("extended info did not get logged")
 	}
-	ds.DeleteLogInfo(1)
-	arr5 := ds.GetLogInfoList()
+	ds.DeleteLogInfo(org.Name, 1)
+	arr5 := ds.GetLogInfoList(org.Name)
 	if len(arr5) != 0 {
 		t.Errorf("Doesn't look like the logged event got deleted")
 	}
 	for i := 0; i < 10; i++ {
-		LogEvent(doer, obj, "modify")
+		LogEvent(org, doer, obj, "modify")
 	}
-	arr6 := ds.GetLogInfoList()
+	arr6 := ds.GetLogInfoList(org.Name)
 	if len(arr6) != 10 {
 		t.Errorf("Something went wrong with creating 10 events")
 	}
-	ds.PurgeLogInfoBefore(5)
-	arr7 := ds.GetLogInfoList()
+	ds.PurgeLogInfoBefore(org.Name, 5)
+	arr7 := ds.GetLogInfoList(org.Name)
 	if len(arr7) != 5 {
 		t.Errorf("Should have been 5 events after purging, got %d", len(arr7))
 	}
-	ds.PurgeLogInfoBefore(10)
-	doer2, _ := client.New("doer2")
+	ds.PurgeLogInfoBefore(org.Name, 10)
+	doer2, _ := client.New(org, "doer2")
 	for i := 0; i < 10; i++ {
-		LogEvent(doer, obj, "modify")
-		LogEvent(doer2, obj, "create")
+		LogEvent(org, doer, obj, "modify")
+		LogEvent(org, doer2, obj, "create")
 	}
 	searchParams := make(map[string]string)
 	searchParams["doer"] = doer2.Name
-	searching, err := GetLogInfos(searchParams, 0)
+	searching, err := GetLogInfos(org, searchParams, 0)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
