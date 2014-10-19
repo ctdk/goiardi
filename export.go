@@ -64,9 +64,9 @@ func exportAll(fileName string) error {
 	exportedData := &ExportData{MajorVersion: ExportMajorVersion, MinorVersion: ExportMinorVersion, CreatedTime: time.Now()}
 	orgs := organization.AllOrganizations()
 	AllData := make(map[string]interface{})
-	AllData["org_objects"] = make(map[string]map[string]interface{})
+	AllData["org_objects"] = make(map[string]map[string][]interface{})
 	for _, org := range orgs {
-		data := make(map[string]interface{})
+		data := make(map[string][]interface{})
 		// ... and march through everything.
 		data["client"] = client.ExportAllClients(org)
 		data["cookbook"] = exportTransformSlice(cookbook.AllCookbooks(org))
@@ -82,11 +82,11 @@ func exportAll(fileName string) error {
 		data["shovey"] = exportTransformSlice(shovey.AllShoveys(org))
 		data["shovey_run"] = exportTransformSlice(shovey.AllShoveyRuns(org))
 		data["shovey_run_stream"] = exportTransformSlice(shovey.AllShoveyRunStreams(org))
-		AllData["org_objects"].(map[string]map[string]interface{})[org.Name] = data
+		AllData["org_objects"].(map[string]map[string][]interface{})[org.Name] = data
 	}
-	AllData["organization"] = orgs
+	AllData["organization"] = exportTransformSlice(orgs)
 	AllData["user"] = user.ExportAllUsers()
-	
+	exportedData.Data = AllData
 
 	fp, err := os.Create(fileName)
 	if err != nil {
@@ -173,6 +173,11 @@ func exportTransformSlice(data interface{}) []interface{} {
 			exp[i] = v
 		}
 	case []*shovey.ShoveyRunStream:
+		exp = make([]interface{}, len(data))
+		for i, v := range data {
+			exp[i] = v
+		}
+	case []*organization.Organization:
 		exp = make([]interface{}, len(data))
 		for i, v := range data {
 			exp[i] = v

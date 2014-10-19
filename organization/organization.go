@@ -203,3 +203,7 @@ func (o *Organization) GobDecode(b []byte) error {
 
 	return nil
 }
+
+func Import(orgData map[string]interface{}) (*Organization, error) {
+	return nil, nil
+}
