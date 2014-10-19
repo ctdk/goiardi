@@ -29,6 +29,7 @@ type testObj struct {
 	URLType string                 `json:"url_type"`
 	Normal  map[string]interface{} `json:"normal"`
 	RunList []string               `json:"run_list"`
+	OName string 		       `json:"org_name"`
 }
 
 func (to *testObj) DocID() string {
@@ -46,6 +47,9 @@ func (to *testObj) Flatten() []string {
 }
 
 func (to *testObj) OrgName() string {
+	if to.OName != "" {
+		return to.OName
+	}
 	return "default"
 }
 
@@ -101,6 +105,16 @@ func TestSearchObjLoad(t *testing.T) {
 	_, err := SearchIndex("default", "client", "name:foo", false)
 	if err != nil {
 		t.Errorf("Failed to search index for test: %s", err)
+	}
+}
+
+func TestNewOrg(t *testing.T) {
+	obj := &testObj{Name: "boo", URLType: "client", OName: "bleep"}
+	CreateOrgDex("bleep")
+	IndexObj(obj)
+	_, err := SearchIndex("bleep", "client", "*:*", false)
+	if err != nil {
+		t.Errorf("searching a new org index failed: %s", err.Error())
 	}
 }
 
