@@ -45,7 +45,7 @@ func searchHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 	pathArray := splitPath(r.URL.Path)[2:]
 	pathArrayLen := len(pathArray)
 
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -101,7 +101,7 @@ func searchHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
-			searchEndpoints := search.GetEndpoints()
+			searchEndpoints := search.GetEndpoints(org)
 			for _, s := range searchEndpoints {
 				searchResponse[s] = util.CustomURL(fmt.Sprintf("/search/%s", s))
 			}
@@ -130,7 +130,7 @@ func searchHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 			}
 
 			idx := pathArray[1]
-			rObjs, err := search.Search(idx, paramQuery)
+			rObjs, err := search.Search(org, idx, paramQuery)
 
 			if err != nil {
 				statusCode := http.StatusBadRequest
@@ -208,10 +208,9 @@ func searchHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 }
 
 func reindexHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	reindexResponse := make(map[string]interface{})
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -241,41 +240,44 @@ func reindexAll() {
 	// objects to reindex and when it gets done, they'll
 	// just be added naturally
 	indexer.ClearIndex()
-
-	for _, v := range client.AllClients() {
-		reindexObjs = append(reindexObjs, v)
-	}
-	for _, v := range node.AllNodes() {
-		reindexObjs = append(reindexObjs, v)
-	}
-	for _, v := range role.AllRoles() {
-		reindexObjs = append(reindexObjs, v)
-	}
-	for _, v := range environment.AllEnvironments() {
-		reindexObjs = append(reindexObjs, v)
-	}
-	defaultEnv, _ := environment.Get("_default")
-	reindexObjs = append(reindexObjs, defaultEnv)
-	// data bags have to be done separately
-	dbags := databag.GetList()
-	for _, db := range dbags {
-		dbag, err := databag.Get(db)
-		if err != nil {
-			continue
+	orgs := organization.AllOrganizations()
+	for _, org := range orgs {
+		indexer.CreateOrgDex(org.Name)
+		for _, v := range client.AllClients(org) {
+			reindexObjs = append(reindexObjs, v)
 		}
-		dbis := make([]indexer.Indexable, dbag.NumDBItems())
-		i := 0
-		allDBItems, derr := dbag.AllDBItems()
-		if derr != nil {
-			logger.Errorf(derr.Error())
-			continue
+		for _, v := range node.AllNodes(org) {
+			reindexObjs = append(reindexObjs, v)
 		}
-		for _, k := range allDBItems {
-			n := k
-			dbis[i] = n
-			i++
+		for _, v := range role.AllRoles(org) {
+			reindexObjs = append(reindexObjs, v)
 		}
-		reindexObjs = append(reindexObjs, dbis...)
+		for _, v := range environment.AllEnvironments(org) {
+			reindexObjs = append(reindexObjs, v)
+		}
+		defaultEnv, _ := environment.Get(org, "_default")
+		reindexObjs = append(reindexObjs, defaultEnv)
+		// data bags have to be done separately
+		dbags := databag.GetList(org)
+		for _, db := range dbags {
+			dbag, err := databag.Get(org, db)
+			if err != nil {
+				continue
+			}
+			dbis := make([]indexer.Indexable, dbag.NumDBItems())
+			i := 0
+			allDBItems, derr := dbag.AllDBItems()
+			if derr != nil {
+				logger.Errorf(derr.Error())
+				continue
+			}
+			for _, k := range allDBItems {
+				n := k
+				dbis[i] = n
+				i++
+			}
+			reindexObjs = append(reindexObjs, dbis...)
+		}
 	}
 	indexer.ReIndex(reindexObjs)
 	return

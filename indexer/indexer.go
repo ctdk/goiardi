@@ -644,7 +644,7 @@ func ClearIndex() {
 }
 
 // ReIndex rebuilds the search index from scratch
-func ReIndex(orgName string, objects []Indexable) error {
+func ReIndex(objects []Indexable) error {
 	for _, o := range objects {
 		indexMap.saveIndex(o)
 	}
