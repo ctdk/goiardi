@@ -31,9 +31,8 @@ import (
 
 // The whole list
 func eventListHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	w.Header().Set("Content-Type", "application/json")
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -118,9 +117,9 @@ func eventListHandler(org *organization.Organization, w http.ResponseWriter, r *
 		var leList []*loginfo.LogInfo
 		var err error
 		if limitFound {
-			leList, err = loginfo.GetLogInfos(searchParams, offset, limit)
+			leList, err = loginfo.GetLogInfos(org, searchParams, offset, limit)
 		} else {
-			leList, err = loginfo.GetLogInfos(searchParams, offset)
+			leList, err = loginfo.GetLogInfos(org, searchParams, offset)
 		}
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
@@ -143,7 +142,7 @@ func eventListHandler(org *organization.Organization, w http.ResponseWriter, r *
 			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
 		}
-		purged, err := loginfo.PurgeLogInfos(purgeFrom)
+		purged, err := loginfo.PurgeLogInfos(org, purgeFrom)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 		}
@@ -164,7 +163,7 @@ func eventListHandler(org *organization.Organization, w http.ResponseWriter, r *
 func eventHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
 	_ = org
 	w.Header().Set("Content-Type", "application/json")
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -182,7 +181,7 @@ func eventHandler(org *organization.Organization, w http.ResponseWriter, r *http
 			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
 		}
-		le, err := loginfo.Get(eventID)
+		le, err := loginfo.Get(org, eventID)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
@@ -197,7 +196,7 @@ func eventHandler(org *organization.Organization, w http.ResponseWriter, r *http
 			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
 		}
-		le, err := loginfo.Get(eventID)
+		le, err := loginfo.Get(org, eventID)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
