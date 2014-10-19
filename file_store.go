@@ -28,7 +28,6 @@ import (
 )
 
 func fileStoreHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	/* We *don't* always set the the content-type to application/json here,
 	 * for obvious reasons. Still do for the PUT/POST though. */
 	pathArray := splitPath(r.URL.Path)[2:]
