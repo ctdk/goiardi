@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
@@ -44,18 +45,22 @@ type Actor interface {
 
 // GetReqUser gets the actor making the request. If use-auth is not on, always
 // returns the admin user.
-func GetReqUser(name string) (Actor, util.Gerror) {
+func GetReqUser(org *organization.Organization, name string) (Actor, util.Gerror) {
 	/* If UseAuth is turned off, use the automatically created admin user */
 	if !config.Config.UseAuth {
 		name = "admin"
 	}
 	var c Actor
 	var err error
-	c, err = client.Get(name)
-	if err != nil {
+	if org != nil {
+		c, err = client.Get(org, name)
+	}
+	if err != nil || org == nil {
 		/* Theoretically it should be hard to reach this point, since
 		 * if the signed request was accepted the user ought to exist.
 		 * Still, best to be cautious. */
+		// TODO: check that the user in question has rights to this
+		// organization
 		u, cerr := user.Get(name)
 		if cerr != nil {
 			gerr := util.Errorf("Neither a client nor a user named '%s' could be found. In addition, the following errors were reported: %s -- %s", name, err.Error(), cerr.Error())

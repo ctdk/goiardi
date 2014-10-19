@@ -21,16 +21,23 @@ import (
 	"encoding/gob"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"testing"
 )
 
+var org *organization.Organization
+
 func TestActorClient(t *testing.T) {
+	gob.Register(new(organization.Organization))
+	org, _ = organization.New("default", "boo")
+	org.Save()
+
 	config.Config.UseAuth = true
-	c, _ := client.New("fooclient")
+	c, _ := client.New(org, "fooclient")
 	gob.Register(c)
 	c.Save()
-	c1, err := GetReqUser("fooclient")
+	c1, err := GetReqUser(org, "fooclient")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -38,7 +45,7 @@ func TestActorClient(t *testing.T) {
 	if y == false {
 		t.Errorf("self not equal to self")
 	}
-	c2, _ := client.New("foo2client")
+	c2, _ := client.New(org, "foo2client")
 	y = c1.IsSelf(c2)
 	if y != false {
 		t.Errorf("client %s was equal to client %s, but should not have been", c1.GetName(), c2.Name)
@@ -65,7 +72,7 @@ func TestActorUser(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 	u.Save()
-	u1, err := GetReqUser("foo1user")
+	u1, err := GetReqUser(org, "foo1user")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -79,7 +86,7 @@ func TestActorUser(t *testing.T) {
 		t.Errorf("user %s was equal to user %s, but should not have been", u1.GetName(), u2.Username)
 	}
 
-	c, _ := client.New("foo1client")
+	c, _ := client.New(org, "foo1client")
 	c.Save()
 
 	y = u1.IsSelf(c)

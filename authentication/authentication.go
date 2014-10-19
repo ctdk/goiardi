@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/chefcrypto"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"io"
 	"io/ioutil"
@@ -42,7 +43,16 @@ import (
 // CheckHeader checks the signed headers sent by the client against the expecte
 // result assembled from the request headers to verify their authorization.
 func CheckHeader(userID string, r *http.Request) util.Gerror {
-	user, err := actor.GetReqUser(userID)
+	pathArray := strings.Split(r.URL.Path[1:], "/")
+	var org *organization.Organization
+	if pathArray[0] == "organization" {
+		var err error
+		org, err = organization.Get(pathArray[1])
+		if err != nil {
+			return util.CastErr(err)
+		}
+	}
+	user, err := actor.GetReqUser(org, userID)
 	if err != nil {
 		gerr := util.Errorf("Failed to authenticate as '%s'. Ensure that your node_name and client key are correct.", userID)
 		gerr.SetStatus(http.StatusUnauthorized)
