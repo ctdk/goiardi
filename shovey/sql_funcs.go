@@ -479,7 +479,7 @@ func (s *Shovey) importSaveSQL() error {
 }
 
 func (srs *ShoveyRunStream) importSaveSQL() error {
-	s, gerr := Get(srs.ShoveyUUID)
+	s, gerr := Get(srs.org, srs.ShoveyUUID)
 	if gerr != nil {
 		return gerr
 	}

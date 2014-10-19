@@ -228,7 +228,7 @@ func (sr *ShoveyRun) save() util.Gerror {
 		return sr.saveSQL()
 	}
 	ds := datastore.New()
-	ds.Set(s.org.DataKey("shovey_run"), sr.ShoveyUUID+sr.NodeName, sr)
+	ds.Set(sr.org.DataKey("shovey_run"), sr.ShoveyUUID+sr.NodeName, sr)
 	return nil
 }
 
@@ -240,7 +240,7 @@ func (s *Shovey) GetRun(nodeName string) (*ShoveyRun, util.Gerror) {
 	}
 	var shoveyRun *ShoveyRun
 	ds := datastore.New()
-	sr, found := ds.Get(org.DataKey("shovey_run"), s.RunID+nodeName)
+	sr, found := ds.Get(s.org.DataKey("shovey_run"), s.RunID+nodeName)
 	if !found {
 		err := util.Errorf("run %s for node %s not found", s.RunID, nodeName)
 		err.SetStatus(http.StatusNotFound)
@@ -384,7 +384,7 @@ func (s *Shovey) startJobs() Qerror {
 		return err
 	}
 	// query node statuses to see if enough are up
-	upNodes, nerr := node.GetNodesByStatus(s.NodeNames, "up")
+	upNodes, nerr := node.GetNodesByStatus(s.org, s.NodeNames, "up")
 	if nerr != nil {
 		return CastErr(nerr)
 	}
@@ -555,7 +555,7 @@ func AllShoveys(org *organization.Organization) ([]*Shovey) {
 	if config.UsingDB() {
 		return allShoveysSQL()
 	} else {
-		shoveList := GetList()
+		shoveList := GetList(org)
 		shoveys = make([]*Shovey, 0, len(shoveList))
 		for _, s := range shoveList {
 			sh, err := Get(org, s)
@@ -668,7 +668,7 @@ func (sr *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunSt
 	for i := seq; ; i++ {
 		logger.Debugf("Getting %s", fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, i))
 		s, found := ds.Get(sr.org.DataKey("shovey_run_stream"), fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, i))
-		s.org = sr.org
+		s.(*ShoveyRunStream).org = sr.org
 		if !found {
 			break
 		}
@@ -845,12 +845,12 @@ func ImportShoveyRunStream(org *organization.Organization, srStreamJSON map[stri
 	return srs.importSave()
 }
 
-func (s *Shovey) importSave(org *organization.Organization) error {
+func (s *Shovey) importSave() error {
 	if config.UsingDB() {
 		return s.importSaveSQL()
 	}
 	ds := datastore.New()
-	ds.Set(org.DataKey("shovey"), s.RunID, s)
+	ds.Set(s.org.DataKey("shovey"), s.RunID, s)
 	return nil
 }
 
