@@ -29,7 +29,6 @@ import (
 )
 
 func reportHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	w.Header().Set("Content-Type", "application/json")
 
 	protocolVersion := r.Header.Get("X-Ops-Reporting-Protocol-Version")
@@ -39,7 +38,7 @@ func reportHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 		return
 	}
 
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -135,7 +134,7 @@ func reportHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 		op := pathArray[1]
 		if op == "nodes" && pathArrayLen == 4 {
 			nodeName := pathArray[2]
-			runs, nerr := report.GetNodeList(nodeName, from, until, rows, status)
+			runs, nerr := report.GetNodeList(org, nodeName, from, until, rows, status)
 			if nerr != nil {
 				jsonErrorReport(w, r, nerr.Error(), http.StatusInternalServerError)
 				return
@@ -144,14 +143,14 @@ func reportHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 		} else if op == "org" {
 			if pathArrayLen == 4 {
 				runID := pathArray[3]
-				run, err := report.Get(runID)
+				run, err := report.Get(org, runID)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
 				reportResponse = formatRunShow(run)
 			} else {
-				runs, rerr := report.GetReportList(from, until, rows, status)
+				runs, rerr := report.GetReportList(org, from, until, rows, status)
 				if rerr != nil {
 					jsonErrorReport(w, r, rerr.Error(), http.StatusInternalServerError)
 					return
@@ -179,7 +178,7 @@ func reportHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 		}
 		nodeName := pathArray[2]
 		if pathArrayLen == 4 {
-			rep, err := report.NewFromJSON(nodeName, jsonReport)
+			rep, err := report.NewFromJSON(org, nodeName, jsonReport)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
@@ -193,7 +192,7 @@ func reportHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 			reportResponse["run_detail"] = rep
 		} else {
 			runID := pathArray[4]
-			rep, err := report.Get(runID)
+			rep, err := report.Get(org, runID)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
