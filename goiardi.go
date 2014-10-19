@@ -329,6 +329,18 @@ func createDefaultActors() {
 			cworg = org
 		}
 	}
+	if ulorg, _ := organization.Get("user-log"); ulorg == nil {
+		if org, oerr := organization.New("user-log", "special org for logging user events"); oerr != nil {
+			logger.Criticalf(oerr.Error())
+			os.Exit(1)
+		} else {
+			err := org.Save()
+			if err != nil {
+				logger.Criticalf(err.Error())
+				os.Exit(1)
+			}
+		}
+	}
 	if cwebui, _ := client.Get(cworg, "chef-webui"); cwebui == nil {
 		if webui, nerr := client.New(cworg, "chef-webui"); nerr != nil {
 			logger.Criticalf(nerr.Error())

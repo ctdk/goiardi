@@ -503,6 +503,12 @@ func (u *User) URLType() string {
 	return "users"
 }
 
+// OrgName satisfies the GoiardiObj interface, but at the moment isn't really
+// a thing for users.
+func (u *User) OrgName() string {
+	return "not-an-organization"
+}
+
 func (u *User) export() *privUser {
 	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt}
 }

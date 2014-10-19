@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
@@ -30,7 +31,7 @@ import (
 )
 
 func orgUserHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
+	logger.Infof("Called user handler from /organizations, path was %s", r.URL.Path)
 	userHandler(w, r)
 }
 
@@ -43,9 +44,14 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		userName = path[3]
 	}
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+	org, uerr := organization.Get("user-log")
+	if uerr != nil {
+		jsonErrorReport(w, r, uerr.Error(), uerr.Status())
 		return
 	}
 
@@ -66,7 +72,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 
 		/* Log the delete event *before* deleting the user, in
 		 * case the user is deleting itself. */
-		if lerr := loginfo.LogEvent(opUser, chefUser, "delete"); lerr != nil {
+		if lerr := loginfo.LogEvent(org, opUser, chefUser, "delete"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -201,7 +207,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, serr.Error(), serr.Status())
 			return
 		}
-		if lerr := loginfo.LogEvent(opUser, chefUser, "modify"); lerr != nil {
+		if lerr := loginfo.LogEvent(org, opUser, chefUser, "modify"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -217,23 +223,30 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func orgUserListHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org // do something with this soon, yo
+	logger.Infof("Called user list handler from /organizations, path was %s", r.URL.Path)
 	userListHandler(w, r)
 }
 func userListHandler(w http.ResponseWriter, r *http.Request) {
 	userResponse := make(map[string]string)
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-
+	// For now, use a special organization for user activity. If it turns
+	// out that later we end up having user activity under /organizations,
+	// this will need to be a little more balanced.
+	org, uerr := organization.Get("user-log")
+	if uerr != nil {
+		jsonErrorReport(w, r, uerr.Error(), uerr.Status())
+		return
+	}
 	switch r.Method {
 	case "GET":
 		userList := user.GetList()
 		for _, k := range userList {
 			/* Make sure it's a client and not a user. */
-			itemURL := fmt.Sprintf("/users/%s", k)
+			itemURL := util.JoinStr("/users", k)
 			userResponse[k] = util.CustomURL(itemURL)
 		}
 	case "POST":
@@ -304,11 +317,11 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 		userResponse["public_key"] = chefUser.PublicKey()
 
 		chefUser.Save()
-		if lerr := loginfo.LogEvent(opUser, chefUser, "create"); lerr != nil {
+		if lerr := loginfo.LogEvent(org, opUser, chefUser, "create"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
-		userResponse["uri"] = util.ObjURL(chefUser)
+		userResponse["uri"] = util.CustomURL(util.JoinStr("/users/", chefUser.Name))
 		w.WriteHeader(http.StatusCreated)
 	default:
 		jsonErrorReport(w, r, "Method not allowed for clients or users", http.StatusMethodNotAllowed)
