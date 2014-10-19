@@ -198,11 +198,11 @@ func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 	chksumStats := make(map[string]map[string]interface{})
 	for _, chk := range s.Checksums {
 		chksumStats[chk] = make(map[string]interface{})
-		k, _ := filestore.Get(chk)
+		k, _ := filestore.Get(s.org.Name, chk)
 		if k != nil {
 			chksumStats[chk]["needs_upload"] = false
 		} else {
-			itemURL := util.JoinStr("/organization/", org.Name, "/file_store/", chk)
+			itemURL := util.JoinStr("/organization/", s.org.Name, "/file_store/", chk)
 			chksumStats[chk]["url"] = util.CustomURL(itemURL)
 			chksumStats[chk]["needs_upload"] = true
 		}
@@ -214,7 +214,7 @@ func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 // IsComplete returns true if the sandbox is complete.
 func (s *Sandbox) IsComplete() error {
 	for _, chk := range s.Checksums {
-		k, _ := filestore.Get(s.org, chk)
+		k, _ := filestore.Get(s.org.Name, chk)
 		if k == nil {
 			err := fmt.Errorf("Checksum %s not uploaded yet, %s not complete, cannot commit yet.", chk, s.ID)
 			return err
