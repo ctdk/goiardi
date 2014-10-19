@@ -35,7 +35,7 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 	pathArray := splitPath(r.URL.Path)[2:]
 	cookbookResponse := make(map[string]interface{})
 
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -174,7 +174,7 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-				if lerr := loginfo.LogEvent(opUser, cbv, "delete"); lerr != nil {
+				if lerr := loginfo.LogEvent(org, opUser, cbv, "delete"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -242,7 +242,7 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 					jsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := loginfo.LogEvent(opUser, cb, "create"); lerr != nil {
+				if lerr := loginfo.LogEvent(org, opUser, cb, "create"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -284,7 +284,7 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 					jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 					return
 				}
-				if lerr := loginfo.LogEvent(opUser, cbv, "create"); lerr != nil {
+				if lerr := loginfo.LogEvent(org, opUser, cbv, "create"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -300,7 +300,7 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 					jsonErrorReport(w, r, gerr.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := loginfo.LogEvent(opUser, cbv, "modify"); lerr != nil {
+				if lerr := loginfo.LogEvent(org, opUser, cbv, "modify"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
