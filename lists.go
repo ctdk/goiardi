@@ -36,15 +36,14 @@ func listHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 
 	pathArray := splitPath(r.URL.Path)
 	op := pathArray[2]
-	_ = org
 	var listData map[string]string
 	switch op {
 	case "nodes":
-		listData = nodeHandling(w, r)
+		listData = nodeHandling(org, w, r)
 	case "clients":
-		listData = clientHandling(w, r)
+		listData = clientHandling(org, w, r)
 	case "roles":
-		listData = roleHandling(w, r)
+		listData = roleHandling(org, w, r)
 	default:
 		listData = make(map[string]string)
 		listData["huh"] = "not valid"
@@ -57,10 +56,10 @@ func listHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 	}
 }
 
-func nodeHandling(w http.ResponseWriter, r *http.Request) map[string]string {
+func nodeHandling(org *organization.Organization, w http.ResponseWriter, r *http.Request) map[string]string {
 	/* We're dealing with nodes, then. */
 	nodeResponse := make(map[string]string)
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return nil
@@ -71,9 +70,9 @@ func nodeHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil
 		}
-		nodeList := node.GetList()
+		nodeList := node.GetList(org)
 		for _, k := range nodeList {
-			itemURL := fmt.Sprintf("/nodes/%s", k)
+			itemURL := util.JoinStr("/organizations/", org.Name, "/nodes/", k)
 			nodeResponse[k] = util.CustomURL(itemURL)
 		}
 	case "POST":
@@ -91,14 +90,14 @@ func nodeHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			jsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
 			return nil
 		}
-		chefNode, _ := node.Get(nodeName)
+		chefNode, _ := node.Get(org, nodeName)
 		if chefNode != nil {
 			httperr := fmt.Errorf("Node already exists")
 			jsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
 			return nil
 		}
 		var nerr util.Gerror
-		chefNode, nerr = node.NewFromJSON(nodeData)
+		chefNode, nerr = node.NewFromJSON(org, nodeData)
 		if nerr != nil {
 			jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 			return nil
@@ -113,7 +112,7 @@ func nodeHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return nil
 		}
-		if lerr := loginfo.LogEvent(opUser, chefNode, "create"); lerr != nil {
+		if lerr := loginfo.LogEvent(org, opUser, chefNode, "create"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return nil
 		}
@@ -126,9 +125,9 @@ func nodeHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 	return nodeResponse
 }
 
-func clientHandling(w http.ResponseWriter, r *http.Request) map[string]string {
+func clientHandling(org *organization.Organization, w http.ResponseWriter, r *http.Request) map[string]string {
 	clientResponse := make(map[string]string)
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return nil
@@ -136,10 +135,10 @@ func clientHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 
 	switch r.Method {
 	case "GET":
-		clientList := client.GetList()
+		clientList := client.GetList(org)
 		for _, k := range clientList {
 			/* Make sure it's a client and not a user. */
-			itemURL := fmt.Sprintf("/clients/%s", k)
+			itemURL := util.JoinStr("/organizations/", org.Name, "/clients/", k)
 			clientResponse[k] = util.CustomURL(itemURL)
 		}
 	case "POST":
@@ -173,7 +172,7 @@ func clientHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			return nil
 		}
 
-		chefClient, err := client.NewFromJSON(clientData)
+		chefClient, err := client.NewFromJSON(org, clientData)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return nil
@@ -210,7 +209,7 @@ func clientHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 		clientResponse["public_key"] = chefClient.PublicKey()
 
 		chefClient.Save()
-		if lerr := loginfo.LogEvent(opUser, chefClient, "create"); lerr != nil {
+		if lerr := loginfo.LogEvent(org, opUser, chefClient, "create"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return nil
 		}
@@ -223,9 +222,9 @@ func clientHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 	return clientResponse
 }
 
-func roleHandling(w http.ResponseWriter, r *http.Request) map[string]string {
+func roleHandling(org *organization.Organization, w http.ResponseWriter, r *http.Request) map[string]string {
 	roleResponse := make(map[string]string)
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return nil
@@ -236,9 +235,9 @@ func roleHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil
 		}
-		roleList := role.GetList()
+		roleList := role.GetList(org)
 		for _, k := range roleList {
-			itemURL := fmt.Sprintf("/roles/%s", k)
+			itemURL := util.JoinStr("/organizations/", org.Name, "/roles/", k)
 			roleResponse[k] = util.CustomURL(itemURL)
 		}
 	case "POST":
@@ -255,14 +254,14 @@ func roleHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			jsonErrorReport(w, r, "Role name missing", http.StatusBadRequest)
 			return nil
 		}
-		chefRole, _ := role.Get(roleData["name"].(string))
+		chefRole, _ := role.Get(org, roleData["name"].(string))
 		if chefRole != nil {
 			httperr := fmt.Errorf("Role already exists")
 			jsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
 			return nil
 		}
 		var nerr util.Gerror
-		chefRole, nerr = role.NewFromJSON(roleData)
+		chefRole, nerr = role.NewFromJSON(org, roleData)
 		if nerr != nil {
 			jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 			return nil
@@ -272,7 +271,7 @@ func roleHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return nil
 		}
-		if lerr := loginfo.LogEvent(opUser, chefRole, "create"); lerr != nil {
+		if lerr := loginfo.LogEvent(org, opUser, chefRole, "create"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return nil
 		}
