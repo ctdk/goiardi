@@ -30,10 +30,9 @@ import (
 )
 
 func roleHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	w.Header().Set("Content-Type", "application/json")
 
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -46,7 +45,7 @@ func roleHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 	pathArray := splitPath(r.URL.Path)[2:]
 	roleName := pathArray[1]
 
-	chefRole, err := role.Get(roleName)
+	chefRole, err := role.Get(org, roleName)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 		return
@@ -71,7 +70,7 @@ func roleHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := loginfo.LogEvent(opUser, chefRole, "delete"); lerr != nil {
+				if lerr := loginfo.LogEvent(org, opUser, chefRole, "delete"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -112,7 +111,7 @@ func roleHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if lerr := loginfo.LogEvent(opUser, chefRole, "modify"); lerr != nil {
+			if lerr := loginfo.LogEvent(org, opUser, chefRole, "modify"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -127,7 +126,7 @@ func roleHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 		var environmentName string
 		if len(pathArray) == 4 {
 			environmentName = pathArray[3]
-			if _, err := environment.Get(environmentName); err != nil {
+			if _, err := environment.Get(org, environmentName); err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
