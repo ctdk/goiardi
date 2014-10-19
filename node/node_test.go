@@ -20,14 +20,20 @@ package node
 import (
 	"encoding/gob"
 	"testing"
+	"github.com/ctdk/goiardi/organization"
 )
 
+var org *organization.Organization
+
 func TestActionAtADistance(t *testing.T) {
-	n, _ := New("foo2")
+	gob.Register(new(organization.Organization))
+	org, _ = organization.New("default", "boo")
+	org.Save()
+	n, _ := New(org, "foo2")
 	gob.Register(n)
 	n.Normal["foo"] = "bar"
 	n.Save()
-	n2, _ := Get("foo2")
+	n2, _ := Get(org, "foo2")
 	if n.Name != n2.Name {
 		t.Errorf("Node names should have been the same, but weren't, got %s and %s", n.Name, n2.Name)
 	}
@@ -39,14 +45,14 @@ func TestActionAtADistance(t *testing.T) {
 		t.Errorf("Normal attribute 'foo' should not have been equal between the two copies of the node, but were.")
 	}
 	n2.Save()
-	n3, _ := Get("foo2")
+	n3, _ := Get(org, "foo2")
 	if n3.Normal["foo"] != n2.Normal["foo"] {
 		t.Errorf("Normal attribute 'foo' should have been equal between the two copies of the node after saving a second time, but weren't.")
 	}
 }
 
 func TestNodeStatus(t *testing.T) {
-	n, _ := New("foo3")
+	n, _ := New(org, "foo3")
 	n.Save()
 	z := new(NodeStatus)
 	gob.Register(z)
