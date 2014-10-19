@@ -40,7 +40,7 @@ type DataBag struct {
 	Name         string
 	DataBagItems map[string]*DataBagItem
 	id           int32
-	org *organization.Organization
+	org          *organization.Organization
 }
 
 // DataBagItem is an individual item within a data bag.
@@ -53,7 +53,7 @@ type DataBagItem struct {
 	id          int32
 	dataBagID   int32
 	origName    string
-	org *organization.Organization
+	org         *organization.Organization
 }
 
 /* Data bag functions and methods */
@@ -89,7 +89,7 @@ func New(org *organization.Organization, name string) (*DataBag, util.Gerror) {
 	dataBag := &DataBag{
 		Name:         name,
 		DataBagItems: dbiMap,
-		org: org,
+		org:          org,
 	}
 	indexer.CreateNewCollection(org.Name, name)
 	return dataBag, nil
@@ -263,7 +263,7 @@ func (db *DataBag) NewDBItem(rawDbagItem map[string]interface{}) (*DataBagItem, 
 			JSONClass:   "Chef::DataBagItem",
 			DataBagName: db.Name,
 			RawData:     rawDbagItem,
-			org: db.org,
+			org:         db.org,
 		}
 		db.DataBagItems[dbiID] = dbagItem
 	}

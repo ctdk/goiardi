@@ -48,7 +48,7 @@ type Cookbook struct {
 	latest      *CookbookVersion
 	numVersions *int
 	id          int32
-	org *organization.Organization
+	org         *organization.Organization
 }
 
 /* We... want the JSON tags for this. */
@@ -74,7 +74,7 @@ type CookbookVersion struct {
 	Metadata     map[string]interface{}   `json:"metadata"`
 	id           int32
 	cookbookID   int32
-	org *organization.Organization
+	org          *organization.Organization
 }
 
 /* Cookbook methods and functions */
@@ -135,7 +135,7 @@ func New(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 	cookbook := &Cookbook{
 		Name:     name,
 		Versions: make(map[string]*CookbookVersion),
-		org: org,
+		org:      org,
 	}
 	return cookbook, nil
 }
@@ -709,7 +709,7 @@ func (c *Cookbook) NewVersion(cbVersion string, cbvData map[string]interface{}) 
 		JSONClass:    "Chef::CookbookVersion",
 		IsFrozen:     false,
 		cookbookID:   c.id, // should be ok even with in-mem
-		org: c.org,
+		org:          c.org,
 	}
 	err := cbv.UpdateVersion(cbvData, "")
 	if err != nil {

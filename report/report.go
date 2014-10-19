@@ -40,18 +40,18 @@ const ReportTimeFormat = "2006-01-02 15:04:05 -0700"
 // resources changed, what recipes were in the run list, and whether the run was
 // successful or not.
 type Report struct {
-	RunID          string                 `json:"run_id"`
-	StartTime      time.Time              `json:"start_time"`
-	EndTime        time.Time              `json:"end_time"`
-	TotalResCount  int                    `json:"total_res_count"`
-	Status         string                 `json:"status"`
-	RunList        string                 `json:"run_list"`
-	Resources      []interface{}          `json:"resources"`
-	Data           map[string]interface{} `json:"data"` // I think this is right
-	NodeName       string                 `json:"nodeName"`
+	RunID         string                 `json:"run_id"`
+	StartTime     time.Time              `json:"start_time"`
+	EndTime       time.Time              `json:"end_time"`
+	TotalResCount int                    `json:"total_res_count"`
+	Status        string                 `json:"status"`
+	RunList       string                 `json:"run_list"`
+	Resources     []interface{}          `json:"resources"`
+	Data          map[string]interface{} `json:"data"` // I think this is right
+	NodeName      string                 `json:"nodeName"`
 	// might be able to remove this
 	organizationID int
-	org *organization.Organization
+	org            *organization.Organization
 }
 
 type privReport struct {
@@ -96,7 +96,7 @@ func New(org *organization.Organization, runID string, nodeName string) (*Report
 		RunID:    runID,
 		NodeName: nodeName,
 		Status:   "started",
-		org: org,
+		org:      org,
 	}
 	return report, nil
 }

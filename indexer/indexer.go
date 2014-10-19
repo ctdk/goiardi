@@ -639,7 +639,7 @@ func ClearIndex() {
 	i := new(Index)
 	i.makeDefaultCollections("default")
 	indexMap = i
-	
+
 	return
 }
 

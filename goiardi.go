@@ -38,13 +38,13 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
-	"github.com/ctdk/goiardi/organization"
 	serfclient "github.com/hashicorp/serf/client"
 	"net/http"
 	"os"
@@ -188,9 +188,9 @@ func main() {
 
 	listenAddr := config.ListenAddr()
 	var err error
-	srv := &http.Server{ Addr: listenAddr, Handler: &interceptHandler{} }
+	srv := &http.Server{Addr: listenAddr, Handler: &interceptHandler{}}
 	if config.Config.UseSSL {
-		srv.TLSConfig = &tls.Config{ MinVersion: tls.VersionTLS10 }
+		srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS10}
 		err = srv.ListenAndServeTLS(config.Config.SSLCert, config.Config.SSLKey)
 	} else {
 		err = srv.ListenAndServe()

@@ -41,7 +41,7 @@ type Node struct {
 	Default         map[string]interface{} `json:"default"`
 	Override        map[string]interface{} `json:"override"`
 	isDown          bool
-	org 		*organization.Organization
+	org             *organization.Organization
 }
 
 // New makes a new node.
@@ -83,7 +83,7 @@ func New(org *organization.Organization, name string) (*Node, util.Gerror) {
 		Normal:          map[string]interface{}{},
 		Default:         map[string]interface{}{},
 		Override:        map[string]interface{}{},
-		org: 		 org,
+		org:             org,
 	}
 	return node, nil
 }

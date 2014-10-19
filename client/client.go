@@ -54,7 +54,7 @@ type Client struct {
 	pubKey      string
 	Admin       bool   `json:"admin"`
 	Certificate string `json:"certificate"`
-	org *organization.Organization
+	org         *organization.Organization
 }
 
 // for gob encoding. Needed the json tags for flattening, but that's handled
@@ -119,7 +119,7 @@ func New(org *organization.Organization, clientname string) (*Client, util.Gerro
 		pubKey:      "",
 		Admin:       false,
 		Certificate: "",
-		org: org,
+		org:         org,
 	}
 	return client, nil
 }

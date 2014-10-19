@@ -113,9 +113,9 @@ func (n *Node) AllStatuses() ([]*NodeStatus, error) {
 	return ns, nil
 }
 
-// AllNodeStatuses returns all node status reports from the organization, from 
+// AllNodeStatuses returns all node status reports from the organization, from
 // all nodes.
-func AllNodeStatuses(org *organization.Organization) ([]*NodeStatus) {
+func AllNodeStatuses(org *organization.Organization) []*NodeStatus {
 	var allStatus []*NodeStatus
 	nodes := AllNodes(org)
 	for _, n := range nodes {
@@ -126,7 +126,7 @@ func AllNodeStatuses(org *organization.Organization) ([]*NodeStatus) {
 		}
 		allStatus = append(allStatus, ns...)
 	}
-	
+
 	return allStatus
 }
 

@@ -29,7 +29,7 @@ type testObj struct {
 	URLType string                 `json:"url_type"`
 	Normal  map[string]interface{} `json:"normal"`
 	RunList []string               `json:"run_list"`
-	OName string 		       `json:"org_name"`
+	OName   string                 `json:"org_name"`
 }
 
 func (to *testObj) DocID() string {

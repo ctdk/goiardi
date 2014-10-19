@@ -23,8 +23,8 @@ import (
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/node"
-	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/role"
 	"testing"
 	//"time"
 )

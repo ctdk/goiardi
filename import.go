@@ -316,8 +316,6 @@ func importAll(fileName string) error {
 			}
 		}
 
-		
-
 	} else {
 		err := fmt.Errorf("goiardi export data version %d.%d is not supported by this version of goiardi", exportedData.MajorVersion, exportedData.MinorVersion)
 		return err

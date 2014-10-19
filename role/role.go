@@ -43,7 +43,7 @@ type Role struct {
 	Description string                 `json:"description"`
 	Default     map[string]interface{} `json:"default_attributes"`
 	Override    map[string]interface{} `json:"override_attributes"`
-	org *organization.Organization
+	org         *organization.Organization
 }
 
 // New creates a new role.
@@ -79,7 +79,7 @@ func New(org *organization.Organization, name string) (*Role, util.Gerror) {
 		EnvRunLists: map[string][]string{},
 		Default:     map[string]interface{}{},
 		Override:    map[string]interface{}{},
-		org: org,
+		org:         org,
 	}
 
 	return role, nil

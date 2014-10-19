@@ -46,7 +46,7 @@ type LogInfo struct {
 	ObjectName   string      `json:"object_name"`
 	ExtendedInfo string      `json:"extended_info"`
 	ID           int         `json:"id"`
-	org *organization.Organization
+	org          *organization.Organization
 }
 
 // LogEvent writes an event of the action type, performed by the given actor,
@@ -146,7 +146,7 @@ func Get(org *organization.Organization, id int) (*LogInfo, error) {
 		}
 	} else {
 		ds := datastore.New()
-		c, err := ds.GetLogInfo(org.Name,id)
+		c, err := ds.GetLogInfo(org.Name, id)
 		if err != nil {
 			return nil, err
 		}

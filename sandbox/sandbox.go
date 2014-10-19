@@ -45,7 +45,7 @@ type Sandbox struct {
 	CreationTime time.Time
 	Completed    bool
 	Checksums    []string
-	org *organization.Organization
+	org          *organization.Organization
 }
 
 /* We actually generate the sandboxID ourselves, so we don't pass that in. */
@@ -97,7 +97,7 @@ func New(org *organization.Organization, checksumHash map[string]interface{}) (*
 		CreationTime: time.Now(),
 		Completed:    false,
 		Checksums:    checksums,
-		org: org,
+		org:          org,
 	}
 	return sbox, nil
 }

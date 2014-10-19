@@ -349,7 +349,7 @@ func allShoveyIDsSQL() ([]string, util.Gerror) {
 	return shoveyList, nil
 }
 
-func allShoveysSQL() ([]*Shovey) {
+func allShoveysSQL() []*Shovey {
 	shoveys := make([]*Shovey, 0)
 	var sqlStatement string
 	if config.Config.UseMySQL {

@@ -44,7 +44,7 @@ type ChefEnvironment struct {
 	Default          map[string]interface{} `json:"default_attributes"`
 	Override         map[string]interface{} `json:"override_attributes"`
 	CookbookVersions map[string]string      `json:"cookbook_versions"`
-	org *organization.Organization
+	org              *organization.Organization
 }
 
 // New creates a new environment, returning an error if the environment already
@@ -81,7 +81,7 @@ func New(org *organization.Organization, name string) (*ChefEnvironment, util.Ge
 		Default:          map[string]interface{}{},
 		Override:         map[string]interface{}{},
 		CookbookVersions: map[string]string{},
-		org: org,
+		org:              org,
 	}
 	return env, nil
 }
@@ -281,7 +281,7 @@ func defaultEnvironment(org *organization.Organization) *ChefEnvironment {
 		Default:          map[string]interface{}{},
 		Override:         map[string]interface{}{},
 		CookbookVersions: map[string]string{},
-		org: org,
+		org:              org,
 	}
 }
 

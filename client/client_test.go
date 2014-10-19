@@ -21,8 +21,8 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"testing"
 	"github.com/ctdk/goiardi/organization"
+	"testing"
 )
 
 var org *organization.Organization

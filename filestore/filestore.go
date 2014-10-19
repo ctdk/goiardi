@@ -46,8 +46,8 @@ import (
 // actual name for the file used, but it is identified by the file's checksum.
 // The file's data is stored as a pointer to an array of bytes.
 type FileStore struct {
-	Chksum string
-	Data   *[]byte
+	Chksum  string
+	Data    *[]byte
 	orgName string
 }
 
@@ -85,8 +85,8 @@ func New(orgName string, chksum string, data io.ReadCloser, dataLength int64) (*
 		return nil, chkErr
 	}
 	filestore := &FileStore{
-		Chksum: chksum,
-		Data:   &fileData,
+		Chksum:  chksum,
+		Data:    &fileData,
 		orgName: orgName,
 	}
 	return filestore, nil

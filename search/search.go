@@ -36,7 +36,7 @@ type SolrQuery struct {
 	queryChain Queryable
 	idxName    string
 	docs       map[string]*indexer.IdxDoc
-	org *organization.Organization
+	org        *organization.Organization
 }
 
 // Search parses the given query string and search the given index for any

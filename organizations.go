@@ -41,7 +41,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 	if pathArrayLen > 2 {
 		op := pathArray[2]
 		orgName := pathArray[1]
-		
+
 		org, err := organization.Get(orgName)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
@@ -55,64 +55,64 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch op {
-			case "authenticate_user":
-				jsonErrorReport(w, r, "so we do use this", http.StatusBadRequest)
-			case "clients", "nodes", "roles":
-				if pathArrayLen == 3 {
-					listHandler(org, w, r)
-				} else {
-					switch op {
-					case "clients":
-						clientHandler(org, w, r)
-					case "nodes":
-						nodeHandler(org, w, r)
-					case "roles":
-						roleHandler(org, w, r)
-					}
+		case "authenticate_user":
+			jsonErrorReport(w, r, "so we do use this", http.StatusBadRequest)
+		case "clients", "nodes", "roles":
+			if pathArrayLen == 3 {
+				listHandler(org, w, r)
+			} else {
+				switch op {
+				case "clients":
+					clientHandler(org, w, r)
+				case "nodes":
+					nodeHandler(org, w, r)
+				case "roles":
+					roleHandler(org, w, r)
 				}
-			case "cookbooks":
-				cookbookHandler(org, w, r)
-			case "data":
-				dataHandler(org, w, r)
-			case "environments":
-				environmentHandler(org, w, r)
-			case "principals":
-				principalHandler(org, w, r)
-			case "sandboxes":
-				sandboxHandler(org, w, r)
-			case "search":
-				if pathArray[3] == "reindex" {
-					reindexHandler(org, w, r)
-				} else {
-					searchHandler(org, w, r)
-				}
-			case "file_store":
-				fileStoreHandler(org, w, r)
-			case "events":
-				if pathArrayLen == 3 {
-					eventListHandler(org, w, r)
-				} else {
-					eventHandler(org, w, r)
-				}
-			case "reports":
-				reportHandler(org, w, r)
-			case "universe":
-				universeHandler(org, w, r)
-			case "shovey":
-				shoveyHandler(org, w, r)
-			case "status":
-				statusHandler(org, w, r)
-			case "users":
-				// Users may live both under and outside of
-				// organizations... Maybe. Docs so far are not
-				// very clear. Do this in the meantime.
-				if pathArrayLen == 3 {
-					orgUserListHandler(org, w, r)
-				} else {
-					orgUserHandler(org, w, r)
-				}
-			default:
-				jsonErrorReport(w, r, "Unknown endpoint", http.StatusNotFound)
+			}
+		case "cookbooks":
+			cookbookHandler(org, w, r)
+		case "data":
+			dataHandler(org, w, r)
+		case "environments":
+			environmentHandler(org, w, r)
+		case "principals":
+			principalHandler(org, w, r)
+		case "sandboxes":
+			sandboxHandler(org, w, r)
+		case "search":
+			if pathArray[3] == "reindex" {
+				reindexHandler(org, w, r)
+			} else {
+				searchHandler(org, w, r)
+			}
+		case "file_store":
+			fileStoreHandler(org, w, r)
+		case "events":
+			if pathArrayLen == 3 {
+				eventListHandler(org, w, r)
+			} else {
+				eventHandler(org, w, r)
+			}
+		case "reports":
+			reportHandler(org, w, r)
+		case "universe":
+			universeHandler(org, w, r)
+		case "shovey":
+			shoveyHandler(org, w, r)
+		case "status":
+			statusHandler(org, w, r)
+		case "users":
+			// Users may live both under and outside of
+			// organizations... Maybe. Docs so far are not
+			// very clear. Do this in the meantime.
+			if pathArrayLen == 3 {
+				orgUserListHandler(org, w, r)
+			} else {
+				orgUserHandler(org, w, r)
+			}
+		default:
+			jsonErrorReport(w, r, "Unknown endpoint", http.StatusNotFound)
 		}
 		return
 

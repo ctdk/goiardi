@@ -26,24 +26,24 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
-	"path"
 	"os"
+	"path"
 )
 
 type Organization struct {
-	Name string `json:"name"`
+	Name     string `json:"name"`
 	FullName string `json:"full_name"`
-	GUID string `json:"guid"`
-	uuID uuid.UUID
-	id int
+	GUID     string `json:"guid"`
+	uuID     uuid.UUID
+	id       int
 }
 
 type privOrganization struct {
-	Name *string
+	Name     *string
 	FullName *string
-	GUID *string
-	UUID *uuid.UUID
-	ID *int
+	GUID     *string
+	UUID     *uuid.UUID
+	ID       *int
 }
 
 func New(name, fullName string) (*Organization, util.Gerror) {
@@ -73,13 +73,13 @@ func New(name, fullName string) (*Organization, util.Gerror) {
 	// create the filestore dir
 	if config.Config.LocalFstoreDir != "" {
 		p := path.Join(config.Config.LocalFstoreDir, name)
-		err := os.Mkdir(p, os.ModeDir | 0700)
+		err := os.Mkdir(p, os.ModeDir|0700)
 		if err != nil && !os.IsExist(err) {
 			return nil, util.CastErr(err)
 		}
 	}
 
-	o := &Organization{ Name: name, FullName: fullName, GUID: guid, uuID: uuID }
+	o := &Organization{Name: name, FullName: fullName, GUID: guid, uuID: uuID}
 	err := o.Save()
 	if err != nil {
 		return nil, err
@@ -110,8 +110,8 @@ func Get(orgName string) (*Organization, util.Gerror) {
 }
 
 func (o *Organization) Save() util.Gerror {
-	if config.UsingDB(){
-		
+	if config.UsingDB() {
+
 	}
 	ds := datastore.New()
 	ds.Set("organization", o.Name, o)
@@ -179,7 +179,7 @@ func AllOrganizations() []*Organization {
 }
 
 func (o *Organization) export() *privOrganization {
-	return &privOrganization{ Name: &o.Name, FullName: &o.FullName, GUID: &o.GUID, UUID: &o.uuID, ID: &o.id }
+	return &privOrganization{Name: &o.Name, FullName: &o.FullName, GUID: &o.GUID, UUID: &o.uuID, ID: &o.id}
 }
 
 func (o *Organization) GobEncode() ([]byte, error) {

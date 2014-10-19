@@ -54,7 +54,7 @@ type Shovey struct {
 	Status    string        `json:"status"`
 	Timeout   time.Duration `json:"timeout"`
 	Quorum    string        `json:"quorum"`
-	org *organization.Organization
+	org       *organization.Organization
 }
 
 // ShoveyRun represents a node's shovey run.
@@ -67,7 +67,7 @@ type ShoveyRun struct {
 	EndTime    time.Time `json:"end_time"`
 	Error      string    `json:"error"`
 	ExitStatus uint8     `json:"exit_status"`
-	org *organization.Organization
+	org        *organization.Organization
 }
 
 // ShoveyRunStream holds a chunk of output from a shovey run.
@@ -79,7 +79,7 @@ type ShoveyRunStream struct {
 	Output     string
 	IsLast     bool
 	CreatedAt  time.Time
-	org *organization.Organization
+	org        *organization.Organization
 }
 
 // BySeq is a type used to sort ShoveyRunStreams.
@@ -550,7 +550,7 @@ func GetList(org *organization.Organization) []string {
 }
 
 // AllShoveys returns all shovey objects on the server
-func AllShoveys(org *organization.Organization) ([]*Shovey) {
+func AllShoveys(org *organization.Organization) []*Shovey {
 	var shoveys []*Shovey
 	if config.UsingDB() {
 		return allShoveysSQL()
@@ -569,12 +569,12 @@ func AllShoveys(org *organization.Organization) ([]*Shovey) {
 	return shoveys
 }
 
-func AllShoveyRuns(org *organization.Organization) ([]*ShoveyRun) {
+func AllShoveyRuns(org *organization.Organization) []*ShoveyRun {
 	var shoveyRuns []*ShoveyRun
 	shoveys := AllShoveys(org)
 	for _, s := range shoveys {
 		runs, err := s.GetNodeRuns()
-		s := make([]*ShoveyRun, 0, len(shoveyRuns) + len(runs))
+		s := make([]*ShoveyRun, 0, len(shoveyRuns)+len(runs))
 		copy(s, shoveyRuns)
 		shoveyRuns = s
 		if err != nil {
@@ -586,14 +586,14 @@ func AllShoveyRuns(org *organization.Organization) ([]*ShoveyRun) {
 	return shoveyRuns
 }
 
-func AllShoveyRunStreams(org *organization.Organization) ([]*ShoveyRunStream) {
+func AllShoveyRunStreams(org *organization.Organization) []*ShoveyRunStream {
 	var streams []*ShoveyRunStream
 	shoveyRuns := AllShoveyRuns(org)
-	outputTypes := []string{ "stdout", "stderr" }
+	outputTypes := []string{"stdout", "stderr"}
 	for _, sr := range shoveyRuns {
 		for _, t := range outputTypes {
 			srs, err := sr.GetStreamOutput(t, 0)
-			s := make([]*ShoveyRunStream, 0, len(streams) + len(srs))
+			s := make([]*ShoveyRunStream, 0, len(streams)+len(srs))
 			copy(s, streams)
 			streams = s
 			if err != nil {
@@ -798,7 +798,7 @@ func ImportShovey(org *organization.Organization, shoveyJSON map[string]interfac
 	status := shoveyJSON["status"].(string)
 	timeout := time.Duration(shoveyJSON["timeout"].(float64))
 	quorum := shoveyJSON["quorum"].(string)
-	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, CreatedAt: createdAt, UpdatedAt: updatedAt, Status: status, Timeout: timeout, Quorum: quorum, org: org }
+	s := &Shovey{RunID: runID, NodeNames: nodeNames, Command: command, CreatedAt: createdAt, UpdatedAt: updatedAt, Status: status, Timeout: timeout, Quorum: quorum, org: org}
 	return s.importSave()
 }
 
@@ -822,12 +822,12 @@ func ImportShoveyRun(org *organization.Organization, sRunJSON map[string]interfa
 	}
 	errMsg := sRunJSON["error"].(string)
 	exitStatus := uint8(sRunJSON["exit_status"].(float64))
-	sr := &ShoveyRun{ ShoveyUUID: shoveyUUID, NodeName: nodeName, Status: status, AckTime: ackTime, EndTime: endTime, Error: errMsg, ExitStatus: exitStatus, org: org }
+	sr := &ShoveyRun{ShoveyUUID: shoveyUUID, NodeName: nodeName, Status: status, AckTime: ackTime, EndTime: endTime, Error: errMsg, ExitStatus: exitStatus, org: org}
 	// This can use the normal save function
 	return sr.save()
 }
 
-// ImportShoveyRunStream is used to import shovey jobs from the exported JSON 
+// ImportShoveyRunStream is used to import shovey jobs from the exported JSON
 // dump.
 func ImportShoveyRunStream(org *organization.Organization, srStreamJSON map[string]interface{}) error {
 	shoveyUUID := srStreamJSON["ShoveyUUID"].(string)
@@ -841,7 +841,7 @@ func ImportShoveyRunStream(org *organization.Organization, srStreamJSON map[stri
 	if err != nil {
 		return err
 	}
-	srs := &ShoveyRunStream{ ShoveyUUID: shoveyUUID, NodeName: nodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: createdAt, org: org }
+	srs := &ShoveyRunStream{ShoveyUUID: shoveyUUID, NodeName: nodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: createdAt, org: org}
 	return srs.importSave()
 }
 

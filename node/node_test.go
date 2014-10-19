@@ -19,8 +19,8 @@ package node
 
 import (
 	"encoding/gob"
-	"testing"
 	"github.com/ctdk/goiardi/organization"
+	"testing"
 )
 
 var org *organization.Organization
