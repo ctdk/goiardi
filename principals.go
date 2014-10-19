@@ -26,7 +26,6 @@ import (
 )
 
 func principalHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	pathArray := splitPath(r.URL.Path)
 	if len(pathArray) != 4 {
@@ -36,7 +35,7 @@ func principalHandler(org *organization.Organization, w http.ResponseWriter, r *
 	principalName := pathArray[3]
 	switch r.Method {
 	case "GET":
-		chefActor, err := actor.GetReqUser(principalName)
+		chefActor, err := actor.GetReqUser(org, principalName)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
