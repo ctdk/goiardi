@@ -33,7 +33,7 @@ func clientHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 	w.Header().Set("Content-Type", "application/json")
 	path := splitPath(r.URL.Path)[2:]
 	clientName := path[1]
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -41,7 +41,7 @@ func clientHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 
 	switch r.Method {
 	case "DELETE":
-		chefClient, gerr := client.Get(clientName)
+		chefClient, gerr := client.Get(org, clientName)
 		if gerr != nil {
 			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 			return
@@ -56,7 +56,7 @@ func clientHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 
 		/* Log the delete event before deleting the client, in
 		 * case the client is deleting itself. */
-		if lerr := loginfo.LogEvent(opUser, chefClient, "delete"); lerr != nil {
+		if lerr := loginfo.LogEvent(org, opUser, chefClient, "delete"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -72,7 +72,7 @@ func clientHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 			return
 		}
 	case "GET":
-		chefClient, gerr := client.Get(clientName)
+		chefClient, gerr := client.Get(org, clientName)
 
 		if gerr != nil {
 			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
@@ -100,7 +100,7 @@ func clientHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
 		}
-		chefClient, err := client.Get(clientName)
+		chefClient, err := client.Get(org, clientName)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
@@ -146,7 +146,7 @@ func clientHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 		 * already exist. */
 		jsonClient := chefClient.ToJSON()
 		if clientName != jsonName {
-			if lerr := loginfo.LogEvent(opUser, chefClient, "modify"); lerr != nil {
+			if lerr := loginfo.LogEvent(org, opUser, chefClient, "modify"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -200,7 +200,7 @@ func clientHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 			}
 		}
 		chefClient.Save()
-		if lerr := loginfo.LogEvent(opUser, chefClient, "modify"); lerr != nil {
+		if lerr := loginfo.LogEvent(org, opUser, chefClient, "modify"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
