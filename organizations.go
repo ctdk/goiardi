@@ -44,11 +44,6 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
-		if oerr != nil {
-			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-			return
-		}
 		// check for basic rights to the organization in question,
 		// before any beefier checks further down.
 		// TODO: do that.
