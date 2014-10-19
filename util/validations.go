@@ -136,7 +136,7 @@ func ValidateAttributes(key string, attrs interface{}) (map[string]interface{}, 
 	}
 }
 
-func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]interface{}, Gerror) {
+func ValidateCookbookDivision(orgName string, dname string, div interface{}) ([]map[string]interface{}, Gerror) {
 	switch div := div.(type) {
 	case []interface{}:
 		var d []map[string]interface{}
@@ -152,7 +152,7 @@ func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]inter
 				 * in sandbox */
 				chksum, cherr := ValidateAsString(v["checksum"])
 				if cherr == nil {
-					if _, ferr := filestore.Get(chksum); ferr != nil {
+					if _, ferr := filestore.Get(orgName, chksum); ferr != nil {
 						var merr Gerror
 						/* This is nuts. */
 						if dname == "recipes" {

@@ -31,7 +31,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/util"
 	"github.com/pmylund/go-cache"
 	"io/ioutil"
 	"log"
@@ -199,8 +198,8 @@ func (ds *DataStore) GetListLen(keyType string) int {
 func (ds *DataStore) SetNodeStatus(nodeName string, orgName string, obj interface{}, nsID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	nsKey := ds.makeKey(util.JoinStr("nodestatus-", orgName), "nodestatuses")
-	nsListKey := ds.makeKey(util.JoinStr("nodestatuslist-", orgName), "nodestatuslists")
+	nsKey := ds.makeKey(joinStr("nodestatus-", orgName), "nodestatuses")
+	nsListKey := ds.makeKey(joinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
 		a = make(map[int]interface{})
@@ -238,8 +237,8 @@ func (ds *DataStore) SetNodeStatus(nodeName string, orgName string, obj interfac
 func (ds *DataStore) AllNodeStatuses(nodeName string, orgName string) ([]interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	nsKey := ds.makeKey(util.JoinStr("nodestatus-", orgName), "nodestatuses")
-	nsListKey := ds.makeKey(util.JoinStr("nodestatuslist-", orgName), "nodestatuslists")
+	nsKey := ds.makeKey(joinStr("nodestatus-", orgName), "nodestatuses")
+	nsListKey := ds.makeKey(joinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
 		err := fmt.Errorf("No statuses in the datastore")
@@ -272,8 +271,8 @@ func (ds *DataStore) AllNodeStatuses(nodeName string, orgName string) ([]interfa
 func (ds *DataStore) LatestNodeStatus(nodeName string, orgName string) (interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	nsKey := ds.makeKey(util.JoinStr("nodestatus-", orgName), "nodestatuses")
-	nsListKey := ds.makeKey(util.JoinStr("nodestatuslist-", orgName), "nodestatuslists")
+	nsKey := ds.makeKey(joinStr("nodestatus-", orgName), "nodestatuses")
+	nsListKey := ds.makeKey(joinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
 		err := fmt.Errorf("No statuses in the datastore")
@@ -312,8 +311,8 @@ func (ds *DataStore) LatestNodeStatus(nodeName string, orgName string) (interfac
 func (ds *DataStore) DeleteNodeStatus(nodeName string, orgName string) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	nsKey := ds.makeKey(util.JoinStr("nodestatus-", orgName), "nodestatuses")
-	nsListKey := ds.makeKey(util.JoinStr("nodestatuslist-", orgName), "nodestatuslists")
+	nsKey := ds.makeKey(joinStr("nodestatus-", orgName), "nodestatuses")
+	nsListKey := ds.makeKey(joinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
 		err := fmt.Errorf("No statuses in the datastore")
@@ -336,7 +335,7 @@ func (ds *DataStore) DeleteNodeStatus(nodeName string, orgName string) error {
 }
 
 func (ds *DataStore) getLogInfoMap(orgName string) map[int]interface{} {
-	dsKey := ds.makeKey(util.JoinStr("loginfo-", orgName), "loginfos")
+	dsKey := ds.makeKey(joinStr("loginfo-", orgName), "loginfos")
 	var a interface{}
 	if config.Config.UseUnsafeMemStore {
 		a, _ = ds.dsc.Get(dsKey)
@@ -358,7 +357,7 @@ func (ds *DataStore) getLogInfoMap(orgName string) map[int]interface{} {
 }
 
 func (ds *DataStore) setLogInfoMap(orgName string, liMap map[int]interface{}) {
-	dsKey := ds.makeKey(util.JoinStr("loginfo-", orgName), "loginfos")
+	dsKey := ds.makeKey(joinStr("loginfo-", orgName), "loginfos")
 	if config.Config.UseUnsafeMemStore {
 		ds.dsc.Set(dsKey, liMap, -1)
 	} else {
@@ -375,7 +374,7 @@ func (ds *DataStore) setLogInfoMap(orgName string, liMap map[int]interface{}) {
 func (ds *DataStore) SetLogInfo(orgName string, obj interface{}, logID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	arr := ds.getLogInfoMap()
+	arr := ds.getLogInfoMap(orgName)
 	var nextID int
 	if logID != nil {
 		nextID = logID[0]
@@ -383,7 +382,7 @@ func (ds *DataStore) SetLogInfo(orgName string, obj interface{}, logID ...int) e
 		nextID = getNextID(arr)
 	}
 	arr[nextID] = obj
-	ds.setLogInfoMap(arr)
+	ds.setLogInfoMap(orgName, arr)
 	return nil
 }
 
@@ -391,9 +390,9 @@ func (ds *DataStore) SetLogInfo(orgName string, obj interface{}, logID ...int) e
 func (ds *DataStore) DeleteLogInfo(orgName string, id int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	arr := ds.getLogInfoMap()
+	arr := ds.getLogInfoMap(orgName)
 	delete(arr, id)
-	ds.setLogInfoMap(arr)
+	ds.setLogInfoMap(orgName, arr)
 	return nil
 }
 
@@ -402,7 +401,7 @@ func (ds *DataStore) DeleteLogInfo(orgName string, id int) error {
 func (ds *DataStore) PurgeLogInfoBefore(orgName string, id int) (int64, error) {
 	ds.m.Lock()
 	defer ds.m.Unlock()
-	arr := ds.getLogInfoMap()
+	arr := ds.getLogInfoMap(orgName)
 	newLogs := make(map[int]interface{})
 	var purged int64
 	for k, v := range arr {
@@ -412,7 +411,7 @@ func (ds *DataStore) PurgeLogInfoBefore(orgName string, id int) (int64, error) {
 			purged++
 		}
 	}
-	ds.setLogInfoMap(newLogs)
+	ds.setLogInfoMap(orgName, newLogs)
 	return purged, nil
 }
 
@@ -432,7 +431,7 @@ func getNextID(lis map[int]interface{}) int {
 func (ds *DataStore) GetLogInfo(orgName string, id int) (interface{}, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	arr := ds.getLogInfoMap()
+	arr := ds.getLogInfoMap(orgName)
 	item := arr[id]
 	if item == nil {
 		err := fmt.Errorf("Log info with id %d not found", id)
@@ -445,7 +444,7 @@ func (ds *DataStore) GetLogInfo(orgName string, id int) (interface{}, error) {
 func (ds *DataStore) GetLogInfoList(orgName string) map[int]interface{} {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
-	arr := ds.getLogInfoMap()
+	arr := ds.getLogInfoMap(orgName)
 	return arr
 }
 
@@ -601,4 +600,8 @@ func WalkMapForNil(r interface{}) interface{} {
 	default:
 		return r
 	}
+}
+
+func joinStr(str ...string) string {
+	return strings.Join(str, "")
 }

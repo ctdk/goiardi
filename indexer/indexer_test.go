@@ -45,6 +45,10 @@ func (to *testObj) Flatten() []string {
 	return indexified
 }
 
+func (to *testObj) OrgName() string {
+	return "default"
+}
+
 func TestIndexObj(t *testing.T) {
 	obj := &testObj{Name: "foo", URLType: "bar"}
 	IndexObj(obj)
@@ -82,7 +86,7 @@ func TestLoad(t *testing.T) {
 func TestSearchObj(t *testing.T) {
 	obj := &testObj{Name: "foo", URLType: "client"}
 	IndexObj(obj)
-	_, err := SearchIndex("client", "name:foo", false)
+	_, err := SearchIndex("default", "client", "name:foo", false)
 	if err != nil {
 		t.Errorf("Failed to search index for test: %s", err)
 	}
@@ -94,7 +98,7 @@ func TestSearchObjLoad(t *testing.T) {
 	tmpfile := fmt.Sprintf("%s/idx2.bin", idxTmpDir)
 	SaveIndex(tmpfile)
 	LoadIndex(tmpfile)
-	_, err := SearchIndex("client", "name:foo", false)
+	_, err := SearchIndex("default", "client", "name:foo", false)
 	if err != nil {
 		t.Errorf("Failed to search index for test: %s", err)
 	}
