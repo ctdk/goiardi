@@ -36,13 +36,17 @@ func (to *testObj) URLType() string {
 	return to.TestURLType
 }
 
+func (to *testObj) OrgName() string {
+	return "default"
+}
+
 // The strange URLs are because the config doesn't get parsed here, so it ends
 // up using the really-really default settings.
 
 func TestObjURL(t *testing.T) {
 	obj := &testObj{Name: "foo", TestURLType: "bar"}
 	url := ObjURL(obj)
-	expectedURL := "http://:0/bar/foo"
+	expectedURL := "http://:0/organizations/default/bar/foo"
 	if url != expectedURL {
 		t.Errorf("expected %s, got %s", expectedURL, url)
 	}
@@ -51,7 +55,7 @@ func TestObjURL(t *testing.T) {
 func TestCustomObjURL(t *testing.T) {
 	obj := &testObj{Name: "foo", TestURLType: "bar"}
 	url := CustomObjURL(obj, "/baz")
-	expectedURL := "http://:0/bar/foo/baz"
+	expectedURL := "http://:0/organizations/default/bar/foo/baz"
 	if url != expectedURL {
 		t.Errorf("expected %s, got %s", expectedURL, url)
 	}
