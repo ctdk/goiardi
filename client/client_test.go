@@ -22,10 +22,16 @@ import (
 	"encoding/gob"
 	"fmt"
 	"testing"
+	"github.com/ctdk/goiardi/organization"
 )
 
+var org *organization.Organization
+
 func TestGobEncodeDecode(t *testing.T) {
-	c, _ := New("foo")
+	gob.Register(new(organization.Organization))
+	org, _ = organization.New("default", "boo")
+	org.Save()
+	c, _ := New(org, "foo")
 	saved := new(bytes.Buffer)
 	var err error
 	enc := gob.NewEncoder(saved)
@@ -50,15 +56,18 @@ func TestGobEncodeDecode(t *testing.T) {
 }
 
 func TestActionAtADistance(t *testing.T) {
-	c, _ := New("foo2")
+	c, _ := New(org, "foo2")
 	gob.Register(c)
 	c.Save()
-	c2, _ := Get("foo2")
+	c2, _ := Get(org, "foo2")
 	if c.Name != c2.Name {
 		t.Errorf("Client names should have been the same, but weren't, got %s and %s", c.Name, c2.Name)
 	}
 	c2.Validator = true
 	if c.Validator == c2.Validator {
 		t.Errorf("Changing the value of validator on one client improperly changed it on the other")
+	}
+	if c2.org.Name != org.Name {
+		t.Errorf("Org names did not match! Expected %s, got %s", c2.org.Name, org.Name)
 	}
 }
