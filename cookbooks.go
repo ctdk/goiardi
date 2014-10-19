@@ -30,7 +30,6 @@ import (
 )
 
 func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	pathArray := splitPath(r.URL.Path)[2:]
 	cookbookResponse := make(map[string]interface{})

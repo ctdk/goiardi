@@ -30,13 +30,12 @@ import (
 )
 
 func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	w.Header().Set("Content-Type", "application/json")
 
 	pathArray := splitPath(r.URL.Path)[2:]
 
 	dbResponse := make(map[string]interface{})
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -51,9 +50,9 @@ func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 				return
 			}
 			/* The list */
-			dbList := databag.GetList()
+			dbList := databag.GetList(org)
 			for _, k := range dbList {
-				dbResponse[k] = util.CustomURL(fmt.Sprintf("/data/%s", k))
+				dbResponse[k] = util.CustomURL(util.JoinStr("/organizations/", org.Name, "/data/", k))
 			}
 		case "POST":
 			if !opUser.IsAdmin() {
@@ -76,13 +75,13 @@ func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 				jsonErrorReport(w, r, "Field 'name' missing", http.StatusBadRequest)
 				return
 			}
-			chefDbag, _ := databag.Get(dbData["name"].(string))
+			chefDbag, _ := databag.Get(org, dbData["name"].(string))
 			if chefDbag != nil {
 				httperr := fmt.Errorf("Data bag %s already exists.", dbData["name"].(string))
 				jsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
 				return
 			}
-			chefDbag, nerr := databag.New(dbData["name"].(string))
+			chefDbag, nerr := databag.New(org, dbData["name"].(string))
 			if nerr != nil {
 				jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 				return
@@ -92,7 +91,7 @@ func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 				jsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
 				return
 			}
-			if lerr := loginfo.LogEvent(opUser, chefDbag, "create"); lerr != nil {
+			if lerr := loginfo.LogEvent(org, opUser, chefDbag, "create"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -126,7 +125,7 @@ func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
-		chefDbag, err := databag.Get(dbName)
+		chefDbag, err := databag.Get(org, dbName)
 		if err != nil {
 			var errMsg string
 			status := err.Status()
@@ -170,7 +169,7 @@ func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := loginfo.LogEvent(opUser, chefDbag, "delete"); lerr != nil {
+				if lerr := loginfo.LogEvent(org, opUser, chefDbag, "delete"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -181,7 +180,7 @@ func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 					jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 					return
 				}
-				if lerr := loginfo.LogEvent(opUser, dbitem, "create"); lerr != nil {
+				if lerr := loginfo.LogEvent(org, opUser, dbitem, "create"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -244,7 +243,7 @@ func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := loginfo.LogEvent(opUser, dbi, "delete"); lerr != nil {
+				if lerr := loginfo.LogEvent(org, opUser, dbi, "delete"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -268,7 +267,7 @@ func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				if lerr := loginfo.LogEvent(opUser, dbitem, "modify"); lerr != nil {
+				if lerr := loginfo.LogEvent(org, opUser, dbitem, "modify"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
