@@ -44,16 +44,10 @@ type Indexable interface {
 	OrgName() string
 }
 
-// Orgdex holds a map of search indexes, organized by organization.
-type Orgdex struct {
-	m sync.RWMutex
-	indexes map[string]*Index
-}
-
 // Index holds a map of document collections.
 type Index struct {
 	m      sync.RWMutex
-	idxmap map[string]*IdxCollection
+	idxmap map[string]map[string]*IdxCollection
 }
 
 // IdxCollection holds a map of documents.
@@ -75,68 +69,83 @@ type IdxDoc struct {
 
 // CreateNewCollection creates an index for data bags when they are created,
 // rather than when the first data bag item is uploaded
-func CreateNewCollection(idxName string) {
+func CreateNewCollection(orgName string, idxName string) {
 	indexMap.m.Lock()
 	defer indexMap.m.Unlock()
-	indexMap.createCollection(idxName)
+	indexMap.createCollection(orgName, idxName)
 }
 
 // DeleteCollection deletes a collection from the index. Useful only for data
 // bags.
-func DeleteCollection(idxName string) error {
+func DeleteCollection(orgName string, idxName string) error {
 	/* Don't try and delete built-in indexes */
 	if idxName == "node" || idxName == "client" || idxName == "environment" || idxName == "role" {
 		err := fmt.Errorf("%s is a default search index, cannot be deleted.", idxName)
 		return err
 	}
-	indexMap.deleteCollection(idxName)
+	indexMap.deleteCollection(orgName, idxName)
 	return nil
 }
 
 // DeleteItemFromCollection deletes an item from a collection
-func DeleteItemFromCollection(idxName string, doc string) error {
-	err := indexMap.deleteItem(idxName, doc)
+func DeleteItemFromCollection(orgName string, idxName string, doc string) error {
+	err := indexMap.deleteItem(orgname, idxName, doc)
 	return err
 }
 
-func (i *Index) createCollection(idxName string) {
-	if _, ok := i.idxmap[idxName]; !ok {
-		i.idxmap[idxName] = new(IdxCollection)
-		i.idxmap[idxName].docs = make(map[string]*IdxDoc)
+func (i *Index) checkOrCreateOrgDex(orgName) {
+	if _, ok := i.idxmap[orgName]; !ok {
+		i.idxmap[orgName] = make(map[string]*IdxCollection)
 	}
 }
 
-func (i *Index) deleteCollection(idxName string) {
+func (i *Index) createCollection(orgName, idxName string) {
+	checkOrCreateOrgDex(orgName)
+	if _, ok := i.idxmap[orgName][idxName]; !ok {
+		i.idxmap[orgName][idxName] = new(IdxCollection)
+		i.idxmap[orgName][idxName].docs = make(map[string]*IdxDoc)
+	}
+}
+
+func (i *Index) deleteCollection(orgName, idxName string) {
 	i.m.Lock()
 	defer i.m.Unlock()
-	delete(i.idxmap, idxName)
+	checkOrCreateOrgDex(orgName)
+	delete(i.idxmap[orgName][orgName], idxName)
 }
 
 func (i *Index) saveIndex(object Indexable) {
 	/* Have to check to see if data bag indexes exist */
 	i.m.Lock()
 	defer i.m.Unlock()
-	if _, found := i.idxmap[object.Index()]; !found {
-		i.createCollection(object.Index())
+	checkOrCreateOrgDex(object.OrgName()]
+	if _, found := i.idxmap[object.OrgName()][object.Index()]; !found {
+		i.createCollection(object.OrgName(), object.Index())
 	}
-	i.idxmap[object.Index()].addDoc(object)
+	i.idxmap[object.OrgName()][object.Index()].addDoc(object)
 }
 
-func (i *Index) deleteItem(idxName string, doc string) error {
+func (i *Index) deleteItem(orgName, idxName string, doc string) error {
 	i.m.Lock()
 	defer i.m.Unlock()
-	if _, found := i.idxmap[idxName]; !found {
+	checkOrCreateOrgDex(orgName)
+	if _, found := i.idxmap[orgName][idxName]; !found {
 		err := fmt.Errorf("Index collection %s not found", idxName)
 		return err
 	}
-	i.idxmap[idxName].delDoc(doc)
+	i.idxmap[orgName][idxName].delDoc(doc)
 	return nil
 }
 
-func (i *Index) search(idx string, term string, notop bool) (map[string]*IdxDoc, error) {
+func (i *Index) search(orgName string, idx string, term string, notop bool) (map[string]*IdxDoc, error) {
+	i.m.Lock()
+	checkOrCreateOrgDex(orgName)
+	i.m.Unlock()
+
 	i.m.RLock()
 	defer i.m.RUnlock()
-	idc, found := i.idxmap[idx]
+
+	idc, found := i.idxmap[orgName][idx]
 	if !found {
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
 		return nil, err
@@ -149,10 +158,15 @@ func (i *Index) search(idx string, term string, notop bool) (map[string]*IdxDoc,
 	return results, err
 }
 
-func (i *Index) searchText(idx string, term string, notop bool) (map[string]*IdxDoc, error) {
+func (i *Index) searchText(orgName string, idx string, term string, notop bool) (map[string]*IdxDoc, error) {
+	i.m.Lock()
+	checkOrCreateOrgDex(orgName)
+	i.m.Unlock()
+
 	i.m.RLock()
 	defer i.m.RUnlock()
-	idc, found := i.idxmap[idx]
+
+	idc, found := i.idxmap[orgName][idx]
 	if !found {
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
 		return nil, err
@@ -161,10 +175,15 @@ func (i *Index) searchText(idx string, term string, notop bool) (map[string]*Idx
 	return results, err
 }
 
-func (i *Index) searchRange(idx string, field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error) {
+func (i *Index) searchRange(orgName string, idx string, field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error) {
+	i.m.Lock()
+	checkOrCreateOrgDex(orgName)
+	i.m.Unlock()
+
 	i.m.RLock()
 	defer i.m.RUnlock()
-	idc, found := i.idxmap[idx]
+
+	idc, found := i.idxmap[orgName][idx]
 	if !found {
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
 		return nil, err
@@ -173,13 +192,17 @@ func (i *Index) searchRange(idx string, field string, start string, end string, 
 	return results, err
 }
 
-func (i *Index) endpoints() []string {
+func (i *Index) endpoints(orgName string) []string {
+	i.m.Lock()
+	checkOrCreateOrgDex(orgName)
+	i.m.Unlock()
+
 	i.m.RLock()
 	defer i.m.RUnlock()
 
-	endpoints := make([]string, len(i.idxmap))
+	endpoints := make([]string, len(i.idxmap[orgName]))
 	n := 0
-	for k := range i.idxmap {
+	for k := range i.idxmap[orgName] {
 		endpoints[n] = k
 		n++
 	}
@@ -418,18 +441,18 @@ var indexMap = initializeIndex()
 func initializeIndex() *Index {
 	/* We always want these indices at least. */
 	im := new(Index)
-	im.makeDefaultCollections()
+	im.makeDefaultCollections("default")
 
 	return im
 }
 
-func (i *Index) makeDefaultCollections() {
+func (i *Index) makeDefaultCollections(orgName string) {
 	defaults := [...]string{"client", "environment", "node", "role"}
 	i.m.Lock()
 	defer i.m.Unlock()
-	i.idxmap = make(map[string]*IdxCollection)
+	i.idxmap = make(map[string]map[string]*IdxCollection)
 	for _, d := range defaults {
-		i.createCollection(d)
+		i.createCollection(orgName, d)
 	}
 }
 
@@ -440,26 +463,26 @@ func IndexObj(object Indexable) {
 
 // SearchIndex searches for a string in the given index. Returns a slice of
 // names of matching objects, or an error on failure.
-func SearchIndex(idxName string, term string, notop bool) (map[string]*IdxDoc, error) {
+func SearchIndex(orgName, idxName string, term string, notop bool) (map[string]*IdxDoc, error) {
 	res, err := indexMap.search(idxName, term, notop)
 	return res, err
 }
 
 // SearchText performs a full-ish text search of the index.
-func SearchText(idxName string, term string, notop bool) (map[string]*IdxDoc, error) {
+func SearchText(orgName, idxName string, term string, notop bool) (map[string]*IdxDoc, error) {
 	res, err := indexMap.searchText(idxName, term, notop)
 	return res, err
 }
 
 // SearchRange performs a range search on the given index.
-func SearchRange(idxName string, field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error) {
+func SearchRange(orgName, idxName string, field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error) {
 	res, err := indexMap.searchRange(idxName, field, start, end, inclusive)
 	return res, err
 }
 
 // Endpoints returns a list of currently indexed endpoints.
-func Endpoints() []string {
-	endpoints := indexMap.endpoints()
+func Endpoints(orgName string) []string {
+	endpoints := indexMap.endpoints(orgName)
 	return endpoints
 }
 
@@ -592,14 +615,20 @@ func (i *Index) load(idxFile string) error {
 
 // ClearIndex of all collections and documents
 func ClearIndex() {
-	indexMap.makeDefaultCollections()
+	iOld := i
+	iOld.m.Lock()
+	defer iOld.m.Unlock()
+	i := new(Index)
+	i.makeDefaultCollections("default")
+	indexMap = i
+	
 	return
 }
 
 // ReIndex rebuilds the search index from scratch
-func ReIndex(objects []Indexable) error {
+func ReIndex(orgName string, objects []Indexable) error {
 	for _, o := range objects {
-		indexMap.saveIndex(o)
+		indexMap.saveIndex(orgName, o)
 	}
 	// We really ought to be able to return from an error, but at the moment
 	// there aren't any ways it does so in the index save bits.

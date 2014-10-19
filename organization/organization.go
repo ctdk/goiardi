@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"path"
@@ -125,6 +126,9 @@ func (o *Organization) Save() util.Gerror {
 }
 
 func (o *Organization) Delete() util.Gerror {
+	if o.Name == "default" {
+		return util.Errorf("Cannot delete 'default' organization")
+	}
 	if config.UsingDB() {
 
 	}
