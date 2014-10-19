@@ -28,11 +28,10 @@ import (
 )
 
 func sandboxHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
 	w.Header().Set("Content-Type", "application/json")
 	pathArray := splitPath(r.URL.Path)[2:]
 	sboxResponse := make(map[string]interface{})
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -68,7 +67,7 @@ func sandboxHandler(org *organization.Organization, w http.ResponseWriter, r *ht
 				}
 			}
 		}
-		sbox, err := sandbox.New(sboxHash)
+		sbox, err := sandbox.New(org, sboxHash)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 			return
@@ -107,7 +106,7 @@ func sandboxHandler(org *organization.Organization, w http.ResponseWriter, r *ht
 			return
 		}
 
-		sbox, err := sandbox.Get(sandboxID)
+		sbox, err := sandbox.Get(org, sandboxID)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
