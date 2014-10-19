@@ -62,7 +62,7 @@ func Search(org *organization.Organization, idx string, q string) ([]indexer.Ind
 		return nil, err
 	}
 	results := solrQ.results()
-	objs := getResults(idx, results)
+	objs := getResults(org, idx, results)
 	return objs, nil
 }
 
@@ -81,7 +81,7 @@ func (sq *SolrQuery) execute() (map[string]*indexer.IdxDoc, error) {
 			}
 			s = nend
 			d := make(map[string]*indexer.IdxDoc)
-			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d, org: org}
+			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d, org: sq.org}
 			r, err = nsq.execute()
 		default:
 			r, err = s.SearchIndex(sq.org.Name, sq.idxName)
@@ -155,41 +155,41 @@ func (sq *SolrQuery) results() []string {
 // GetEndpoints gets a list from the indexer of all the endpoints available to
 // search, namely the defaults (node, role, client, environment) and any data
 // bags.
-func GetEndpoints() []string {
-	endpoints := indexer.Endpoints()
+func GetEndpoints(org *organization.Organization) []string {
+	endpoints := indexer.Endpoints(org.Name)
 	return endpoints
 }
 
-func getResults(variety string, toGet []string) []indexer.Indexable {
-	var results []indexer.Indexable
+func getResults(org *organization.Organization, variety string, toGet []string) []indexer.Indexable {
+	results := make([]indexer.Indexable, 0, len(toGet))
 	switch variety {
 	case "node":
 		for _, n := range toGet {
-			if node, _ := node.Get(n); node != nil {
+			if node, _ := node.Get(org, n); node != nil {
 				results = append(results, node)
 			}
 		}
 	case "role":
 		for _, r := range toGet {
-			if role, _ := role.Get(r); role != nil {
+			if role, _ := role.Get(org, r); role != nil {
 				results = append(results, role)
 			}
 		}
 	case "client":
 		for _, c := range toGet {
-			if client, _ := client.Get(c); client != nil {
+			if client, _ := client.Get(org, c); client != nil {
 				results = append(results, client)
 			}
 		}
 	case "environment":
 		for _, e := range toGet {
-			if environment, _ := environment.Get(e); environment != nil {
+			if environment, _ := environment.Get(org, e); environment != nil {
 				results = append(results, environment)
 			}
 		}
 	default: // It's a data bag
 		/* These may require further processing later. */
-		dbag, _ := databag.Get(variety)
+		dbag, _ := databag.Get(org, variety)
 		if dbag != nil {
 			for _, k := range toGet {
 				dbi, err := dbag.GetDBItem(k)

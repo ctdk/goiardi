@@ -247,7 +247,7 @@ func (r *Role) Delete() error {
 		ds := datastore.New()
 		ds.Delete(r.org.DataKey("role"), r.Name)
 	}
-	indexer.DeleteItemFromCollection("role", r.Name)
+	indexer.DeleteItemFromCollection(r.org.Name, "role", r.Name)
 	return nil
 }
 

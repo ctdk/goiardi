@@ -136,7 +136,7 @@ func (n *Node) deleteStatuses() error {
 		return err
 	}
 	ds := datastore.New()
-	return ds.DeleteNodeStatus(n.Name, n.org)
+	return ds.DeleteNodeStatus(n.Name, n.org.Name)
 }
 
 // ToJSON formats a node status report for export to JSON.
@@ -169,9 +169,9 @@ func UnseenNodes(org *organization.Organization) ([]*Node, error) {
 }
 
 // GetNodesByStatus returns the nodes that currently have the given status.
-func GetNodesByStatus(nodeNames []string, status string) ([]*Node, error) {
+func GetNodesByStatus(org *organization.Organization, nodeNames []string, status string) ([]*Node, error) {
 	if config.UsingDB() {
-		return getNodesByStatusSQL(org *organization.Organization, nodeNames, status)
+		return getNodesByStatusSQL(nodeNames, status)
 	}
 	var statNodes []*Node
 	nodes := make([]*Node, 0, len(nodeNames))

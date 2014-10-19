@@ -21,7 +21,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/codeskyblue/go-uuid"
-	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
@@ -74,9 +73,9 @@ func New(name, fullName string) (*Organization, util.Gerror) {
 	// create the filestore dir
 	if config.Config.LocalFstoreDir != "" {
 		p := path.Join(config.Config.LocalFstoreDir, name)
-		err := os.Mkdir(p)
+		err := os.Mkdir(p, os.ModeDir | 0700)
 		if err != nil && !os.IsExist(err) {
-			return nil, err
+			return nil, util.CastErr(err)
 		}
 	}
 
@@ -108,13 +107,6 @@ func Get(orgName string) (*Organization, util.Gerror) {
 		return nil, err
 	}
 	return org, nil
-}
-
-
-// This may be better moved out somewhere else.
-func (o *Organization) CheckActor(opUser actor.Actor) util.Gerror {
-
-	return nil
 }
 
 func (o *Organization) Save() util.Gerror {
@@ -150,8 +142,8 @@ func (o *Organization) ToJSON() map[string]interface{} {
 	return orgJSON
 }
 
-func (o *Organization) DataKey(type string) string {
-	return util.JoinStr(type, "-", o.Name)
+func (o *Organization) DataKey(typeKey string) string {
+	return util.JoinStr(typeKey, "-", o.Name)
 }
 
 /* Hmm. Orgs themselves don't have much that needs updating, but it'll get more

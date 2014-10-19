@@ -56,7 +56,7 @@ func New(org *organization.Organization, name string) (*Node, util.Gerror) {
 	if config.UsingDB() {
 		// will need redone if orgs ever get implemented
 		var err error
-		found, err = checkForNodeSQL(datastore.Dbh, org, name)
+		found, err = checkForNodeSQL(datastore.Dbh, name)
 		if err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -265,7 +265,7 @@ func (n *Node) Delete() error {
 			n.deleteStatuses()
 		}
 	}
-	indexer.DeleteItemFromCollection("node", n.Name)
+	indexer.DeleteItemFromCollection(n.org.Name, "node", n.Name)
 	return nil
 }
 
@@ -289,7 +289,7 @@ func GetFromEnv(org *organization.Organization, envName string) ([]*Node, error)
 	var envNodes []*Node
 	nodeList := GetList(org)
 	for _, n := range nodeList {
-		chefNode, _ := Get(n)
+		chefNode, _ := Get(org, n)
 		if chefNode == nil {
 			continue
 		}
@@ -338,9 +338,9 @@ func (n *Node) Flatten() []string {
 func AllNodes(org *organization.Organization) []*Node {
 	var nodes []*Node
 	if config.UsingDB() {
-		nodes = allNodesSQL(org)
+		nodes = allNodesSQL()
 	} else {
-		nodeList := GetList(org.Name)
+		nodeList := GetList(org)
 		nodes = make([]*Node, 0, len(nodeList))
 		for _, n := range nodeList {
 			no, err := Get(org, n)

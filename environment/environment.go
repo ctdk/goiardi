@@ -81,7 +81,7 @@ func New(org *organization.Organization, name string) (*ChefEnvironment, util.Ge
 		Default:          map[string]interface{}{},
 		Override:         map[string]interface{}{},
 		CookbookVersions: map[string]string{},
-		org *organization.Organization,
+		org: org,
 	}
 	return env, nil
 }
@@ -213,7 +213,7 @@ ValidElem:
 // Get an environment.
 func Get(org *organization.Organization, envName string) (*ChefEnvironment, util.Gerror) {
 	if envName == "_default" {
-		return defaultEnvironment(), nil
+		return defaultEnvironment(org), nil
 	}
 	var env *ChefEnvironment
 	var found bool
@@ -326,7 +326,7 @@ func (e *ChefEnvironment) Delete() error {
 		ds := datastore.New()
 		ds.Delete(e.org.DataKey("env"), e.Name)
 	}
-	indexer.DeleteItemFromCollection("environment", e.Name)
+	indexer.DeleteItemFromCollection(e.org.Name, "environment", e.Name)
 	return nil
 }
 

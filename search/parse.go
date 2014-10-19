@@ -22,7 +22,6 @@
 package search
 
 import (
-	"fmt"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 )
@@ -163,7 +162,7 @@ func (q *BasicQuery) SearchIndex(orgName string, idxName string) (map[string]*in
 		res, err := indexer.SearchText(orgName, idxName, string(q.term.term), notop)
 		return res, err
 	}
-	searchTerm := util.JoinStr(q.field, ":", q.term.term)
+	searchTerm := util.JoinStr(string(q.field), ":", string(q.term.term))
 	res, err := indexer.SearchIndex(orgName, idxName, searchTerm, notop)
 
 	return res, err
@@ -324,7 +323,7 @@ func (q *GroupedQuery) SearchIndex(orgName string, idxName string) (map[string]*
 		if v.mod == OpUnaryNot || v.mod == OpUnaryPro {
 			notop = true
 		}
-		searchTerm := util.JoinStr(q.field, ":", v.term)
+		searchTerm := util.JoinStr(string(q.field), ":", string(v.term))
 		r, err := indexer.SearchIndex(orgName, idxName, searchTerm, notop)
 		if err != nil {
 			return nil, err

@@ -118,7 +118,7 @@ func New(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 	}
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForCookbookSQL(datastore.Dbh, org, name)
+		found, cerr = checkForCookbookSQL(datastore.Dbh, name)
 		if cerr != nil {
 			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
@@ -135,7 +135,7 @@ func New(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 	cookbook := &Cookbook{
 		Name:     name,
 		Versions: make(map[string]*CookbookVersion),
-		org: org
+		org: org,
 	}
 	return cookbook, nil
 }
@@ -154,7 +154,7 @@ func (c *Cookbook) NumVersions() int {
 // AllCookbooks returns all the cookbooks that have been uploaded to this server.
 func AllCookbooks(org *organization.Organization) (cookbooks []*Cookbook) {
 	if config.UsingDB() {
-		cookbooks = allCookbooksSQL(org)
+		cookbooks = allCookbooksSQL()
 		for _, c := range cookbooks {
 			// populate the versions hash
 			c.sortedVersions()
@@ -179,7 +179,7 @@ func Get(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var err error
-		cookbook, err = getCookbookSQL(org, name)
+		cookbook, err = getCookbookSQL(name)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -249,7 +249,7 @@ func (c *Cookbook) Delete() error {
 // GetList gets a list of all cookbooks on this server.
 func GetList(org *organization.Organization) []string {
 	if config.UsingDB() {
-		return getCookbookListSQL(org)
+		return getCookbookListSQL()
 	}
 	ds := datastore.New()
 	cbList := ds.GetList(org.DataKey("cookbook"))
@@ -306,7 +306,7 @@ func (c *Cookbook) LatestVersion() *CookbookVersion {
 // information like URL, available versions, etc.
 func CookbookLister(org *organization.Organization, numResults interface{}) map[string]interface{} {
 	if config.UsingDB() {
-		return cookbookListerSQL(org, numResults)
+		return cookbookListerSQL(numResults)
 	}
 	cr := make(map[string]interface{})
 	for _, cb := range AllCookbooks(org) {
@@ -338,7 +338,7 @@ func CookbookLatest(org *organization.Organization) map[string]interface{} {
 // version of each cookbook.
 func CookbookRecipes(org *organization.Organization) ([]string, util.Gerror) {
 	if config.UsingDB() {
-		return cookbookRecipesSQL(org)
+		return cookbookRecipesSQL()
 	}
 	// TODO: getting a number of how many cookbooks are on the server would
 	// be handy and probably make this faster
@@ -668,7 +668,7 @@ func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion {
 // supermarket/berks /universe endpoint.
 func Universe(org *organization.Organization) map[string]map[string]interface{} {
 	if config.UsingDB() {
-		return universeSQL(org)
+		return universeSQL()
 	}
 	universe := make(map[string]map[string]interface{})
 
@@ -709,7 +709,7 @@ func (c *Cookbook) NewVersion(cbVersion string, cbvData map[string]interface{}) 
 		JSONClass:    "Chef::CookbookVersion",
 		IsFrozen:     false,
 		cookbookID:   c.id, // should be ok even with in-mem
-		org: c.org
+		org: c.org,
 	}
 	err := cbv.UpdateVersion(cbvData, "")
 	if err != nil {
@@ -839,7 +839,7 @@ func (c *Cookbook) deleteHashes(fhashes []string) {
 		}
 	}
 	/* And delete whatever file hashes we still have */
-	filestore.DeleteHashes(fhashes)
+	filestore.DeleteHashes(c.org.Name, fhashes)
 }
 
 // DeleteVersion deletes a particular version of a cookbook.
@@ -947,7 +947,7 @@ ValidElem:
 
 	divs := []string{"definitions", "libraries", "attributes", "recipes", "providers", "resources", "templates", "root_files", "files"}
 	for _, d := range divs {
-		cbvData[d], verr = util.ValidateCookbookDivision(d, cbvData[d])
+		cbvData[d], verr = util.ValidateCookbookDivision(cbv.org.Name, d, cbvData[d])
 		if verr != nil {
 			return verr
 		}

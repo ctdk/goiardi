@@ -91,7 +91,7 @@ func New(org *organization.Organization, clientname string) (*Client, util.Gerro
 	var err util.Gerror
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForClientSQL(datastore.Dbh, org, clientname)
+		found, cerr = checkForClientSQL(datastore.Dbh, clientname)
 		if cerr != nil {
 			err := util.Errorf(err.Error())
 			err.SetStatus(http.StatusInternalServerError)
@@ -201,7 +201,7 @@ func (c *Client) Delete() error {
 		ds := datastore.New()
 		ds.Delete(c.org.DataKey("client"), c.Name)
 	}
-	indexer.DeleteItemFromCollection("client", c.Name)
+	indexer.DeleteItemFromCollection(c.org.Name, "client", c.Name)
 	return nil
 }
 
@@ -225,7 +225,7 @@ func (c *Client) isLastAdmin() bool {
 		if config.UsingDB() {
 			numAdmins = numAdminsSQL()
 		} else {
-			clist := GetList()
+			clist := GetList(c.org)
 			for _, cc := range clist {
 				c1, _ := Get(c.org, cc)
 				if c1 != nil && c1.Admin {
@@ -585,7 +585,7 @@ func (c *Client) GobDecode(b []byte) error {
 func AllClients(org *organization.Organization) []*Client {
 	var clients []*Client
 	if config.UsingDB() {
-		clients = allClientsSQL(org)
+		clients = allClientsSQL()
 	} else {
 		clientList := GetList(org)
 		clients = make([]*Client, 0, len(clientList))

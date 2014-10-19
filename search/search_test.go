@@ -24,8 +24,9 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
+	"github.com/ctdk/goiardi/organization"
 	"testing"
-	"time"
+	//"time"
 )
 
 // Most search testing can be handled fine with chef-pedant, but that's no
@@ -52,6 +53,23 @@ var dbag2 *databag.DataBag
 var dbag3 *databag.DataBag
 var dbag4 *databag.DataBag
 
+var orgName = "default"
+var org *organization.Organization
+
+func orgInit() int {
+	gob.Register(new(organization.Organization))
+	var err error
+	org, err = organization.New("default", "defaultyboo")
+	if err != nil {
+		panic(err)
+	}
+	err = org.Save()
+	if err != nil {
+		panic(err)
+	}
+	return 1
+}
+
 func makeSearchItems() int {
 	/* Gotta populate the search index */
 	nodes := make([]*node.Node, 4)
@@ -66,15 +84,15 @@ func makeSearchItems() int {
 	gob.Register(new(databag.DataBag))
 
 	for i := 0; i < 4; i++ {
-		nodes[i], _ = node.New(fmt.Sprintf("node%d", i))
+		nodes[i], _ = node.New(org, fmt.Sprintf("node%d", i))
 		nodes[i].Save()
-		roles[i], _ = role.New(fmt.Sprintf("role%d", i))
+		roles[i], _ = role.New(org, fmt.Sprintf("role%d", i))
 		roles[i].Save()
-		envs[i], _ = environment.New(fmt.Sprintf("env%d", i))
+		envs[i], _ = environment.New(org, fmt.Sprintf("env%d", i))
 		envs[i].Save()
-		clients[i], _ = client.New(fmt.Sprintf("client%d", i))
+		clients[i], _ = client.New(org, fmt.Sprintf("client%d", i))
 		clients[i].Save()
-		dbags[i], _ = databag.New(fmt.Sprintf("databag%d", i))
+		dbags[i], _ = databag.New(org, fmt.Sprintf("databag%d", i))
 		dbags[i].Save()
 		dbi := make(map[string]interface{})
 		dbi["id"] = fmt.Sprintf("dbi%d", i)
@@ -107,6 +125,7 @@ func makeSearchItems() int {
 	return 1
 }
 
+var zz = orgInit()
 var v = makeSearchItems()
 
 func TestFoo(t *testing.T) {
@@ -118,72 +137,102 @@ func TestFoo(t *testing.T) {
  */
 
 func TestSearchNode(t *testing.T) {
-	n, _ := Search("node", "name:node1")
+	n, _ := Search(org, "node", "name:node1")
 	if n[0].(*node.Node).Name != "node1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchNodeAll(t *testing.T) {
-	n, _ := Search("node", "*:*")
+	n, _ := Search(org, "node", "*:*")
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
 func TestSearchRole(t *testing.T) {
-	r, _ := Search("role", "name:role1")
+	r, _ := Search(org, "role", "name:role1")
 	if r[0].(*role.Role).Name != "role1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchRoleAll(t *testing.T) {
-	n, _ := Search("role", "*:*")
+	n, _ := Search(org, "role", "*:*")
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
 func TestSearchEnv(t *testing.T) {
-	e, _ := Search("environment", "name:env1")
+	e, _ := Search(org, "environment", "name:env1")
 	if e[0].(*environment.ChefEnvironment).Name != "env1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchEnvAll(t *testing.T) {
-	n, _ := Search("environment", "*:*")
+	n, _ := Search(org, "environment", "*:*")
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
 func TestSearchClient(t *testing.T) {
-	c, _ := Search("client", "name:client1")
+	c, _ := Search(org, "client", "name:client1")
 	if c[0].(*client.Client).Name != "client1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchClientAll(t *testing.T) {
-	n, _ := Search("client", "*:*")
+	n, _ := Search(org, "client", "*:*")
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
 func TestSearchDbag(t *testing.T) {
-	d, _ := Search("databag1", "foo:dbag_item_1")
+	d, _ := Search(org, "databag1", "foo:dbag_item_1")
 	if len(d) == 0 {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchDbagAll(t *testing.T) {
-	d, _ := Search("databag1", "*:*")
+	d, _ := Search(org, "databag1", "*:*")
 	if len(d) != 1 {
 		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(d))
+	}
+}
+
+func TestSecondOrg(t *testing.T) {
+	sorgName := "boo"
+	sorg, err := organization.New(sorgName, "booboo")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	err = sorg.Save()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	snode, _ := node.New(sorg, "snode1")
+	snode.Save()
+	n, _ := Search(sorg, "node", "*:*")
+	if len(n) != 1 {
+		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(n))
+	}
+	n, _ = Search(sorg, "node", "name:snode1")
+	if len(n) != 1 {
+		t.Errorf("Incorrect number of items returned with search by name, expected 1, got %d", len(n))
+	}
+	n, _ = Search(org, "node", "name:snode1")
+	if len(n) != 0 {
+		t.Errorf("searching the main test org for snode1 unexpectedly returned a result")
+	}
+	n, _ = Search(sorg, "node", "name:node1")
+	if len(n) != 0 {
+		t.Errorf("searching the second test org for node1 unexpectedly returned a result")
 	}
 }
 
@@ -191,15 +240,15 @@ func TestSearchDbagAll(t *testing.T) {
 /*
 func TestEmbiggenSearch(t *testing.T) {
 	for i := 4; i < 35000; i++ {
-		n, _ := node.New(fmt.Sprintf("node%d", i))
+		n, _ := node.New(org, fmt.Sprintf("node%d", i))
 		n.Save()
-		r, _ := role.New(fmt.Sprintf("role%d", i))
+		r, _ := role.New(org, fmt.Sprintf("role%d", i))
 		r.Save()
-		e, _ := environment.New(fmt.Sprintf("env%d", i))
+		e, _ := environment.New(org, fmt.Sprintf("env%d", i))
 		e.Save()
-		c, _ := client.New(fmt.Sprintf("client%d", i))
+		c, _ := client.New(org, fmt.Sprintf("client%d", i))
 		c.Save()
-		d, _ := databag.New(fmt.Sprintf("databag%d", i))
+		d, _ := databag.New(org, fmt.Sprintf("databag%d", i))
 		d.Save()
 		dbi := make(map[string]interface{})
 		dbi["id"] = fmt.Sprintf("dbi%d", i)
@@ -207,15 +256,15 @@ func TestEmbiggenSearch(t *testing.T) {
 		d.NewDBItem(dbi)
 	}
 	time.Sleep(1 * time.Second)
-	n, _ := Search("client", "*:*")
+	n, _ := Search(orgName, "client", "*:*")
 	if len(n) != 35000 {
 		t.Errorf("Incorrect number of items returned, expected 500, got %d", len(n))
 	}
-	c, _ := Search("node", "*:*")
+	c, _ := Search(orgName, "node", "*:*")
 	if len(c) != 35000 {
 		t.Errorf("Incorrect number of nodes returned, expected 500, got %d", len(n))
 	}
-	e, _ := Search("environment", "name:env11666")
+	e, _ := Search(orgName, "environment", "name:env11666")
 	if e[0].(*environment.ChefEnvironment).Name != "env11666" {
 		t.Errorf("nothing returned from search")
 	}

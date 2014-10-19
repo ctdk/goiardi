@@ -89,8 +89,9 @@ func New(org *organization.Organization, name string) (*DataBag, util.Gerror) {
 	dataBag := &DataBag{
 		Name:         name,
 		DataBagItems: dbiMap,
+		org: org,
 	}
-	indexer.CreateNewCollection(name)
+	indexer.CreateNewCollection(org.Name, name)
 	return dataBag, nil
 }
 
@@ -160,7 +161,7 @@ func (db *DataBag) Delete() error {
 		}
 		ds.Delete(db.org.DataKey("data_bag"), db.Name)
 	}
-	indexer.DeleteCollection(db.Name)
+	indexer.DeleteCollection(db.org.Name, db.Name)
 	return nil
 }
 
@@ -320,7 +321,7 @@ func (db *DataBag) DeleteDBItem(dbItemName string) error {
 	if err != nil {
 		return err
 	}
-	indexer.DeleteItemFromCollection(db.Name, dbItemName)
+	indexer.DeleteItemFromCollection(db.org.Name, db.Name, dbItemName)
 	return nil
 }
 
