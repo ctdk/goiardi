@@ -204,6 +204,11 @@ func (o *Organization) GobDecode(b []byte) error {
 	return nil
 }
 
+// TODO: fill these in
+
+func ExportAllOrgs() []map[string]interface{} {
+	return nil
+}
 func Import(orgData map[string]interface{}) (*Organization, error) {
 	return nil, nil
 }

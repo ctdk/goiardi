@@ -84,7 +84,7 @@ func exportAll(fileName string) error {
 		data["shovey_run_stream"] = exportTransformSlice(shovey.AllShoveyRunStreams(org))
 		AllData["org_objects"].(map[string]map[string][]interface{})[org.Name] = data
 	}
-	AllData["organization"] = exportTransformSlice(orgs)
+	AllData["organization"] = organization.ExportAllOrgs()
 	AllData["user"] = user.ExportAllUsers()
 	exportedData.Data = AllData
 
