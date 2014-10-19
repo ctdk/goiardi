@@ -84,7 +84,7 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 
 	if pathArrayLen == 1 || (pathArrayLen == 2 && pathArray[1] == "") {
 		/* list all cookbooks */
-		cookbookResponse = cookbook.CookbookLister(numResults)
+		cookbookResponse = cookbook.CookbookLister(org, numResults)
 	} else if pathArrayLen == 2 {
 		/* info about a cookbook and all its versions */
 		cookbookName := pathArray[1]
@@ -92,9 +92,9 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 		 * list of the latest versions of all the cookbooks, and _recipe
 		 * gets the recipes of the latest cookbooks. */
 		if cookbookName == "_latest" {
-			cookbookResponse = cookbook.CookbookLatest()
+			cookbookResponse = cookbook.CookbookLatest(org)
 		} else if cookbookName == "_recipes" {
-			rlist, nerr := cookbook.CookbookRecipes()
+			rlist, nerr := cookbook.CookbookRecipes(org)
 			if nerr != nil {
 				jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 				return
@@ -105,7 +105,7 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 			}
 			return
 		} else {
-			cb, err := cookbook.Get(cookbookName)
+			cb, err := cookbook.Get(org, cookbookName)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
@@ -128,11 +128,6 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 		cookbookName := pathArray[1]
 		var cookbookVersion string
 		var vererr util.Gerror
-		opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
-		if oerr != nil {
-			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-			return
-		}
 		if r.Method == "GET" && pathArray[2] == "_latest" { // might be other special vers
 			cookbookVersion = pathArray[2]
 		} else {
