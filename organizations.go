@@ -35,8 +35,6 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	pathArrayLen := len(pathArray)
 
-	
-
 	// If pathArrayLen is greater than 2, this gets handed off to another
 	// handler.
 	// TODO: need to be able to regen org validator keys, which is a 3 part
@@ -125,9 +123,42 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch pathArrayLen {
 	case 3:
+		orgName := pathArray[1]
 		op := pathArray[3]
+		org, err := organization.Get(orgName)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+		if oerr != nil {
+			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+			return
+		}
+		if !opUser.IsAdmin() {
+			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			return
+		}
 		switch op {
 		case "_validator_key":
+			if r.Method == "POST" {
+				valname := util.JoinStr(org.Name, "-validator")
+				val, err := client.Get(org, valname)
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				pem, perr := val.GenerateKeys()
+				if perr != nil {
+					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				orgResponse = make(map[string]interface{})
+				orgResponse["private_key"] = pem
+			} else {
+				jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+				return
+			}
 		case "association_requests":
 
 		default:
