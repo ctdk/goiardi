@@ -246,7 +246,7 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 		userList := user.GetList()
 		for _, k := range userList {
 			/* Make sure it's a client and not a user. */
-			itemURL := util.JoinStr("/users", k)
+			itemURL := util.JoinStr("/users/", k)
 			userResponse[k] = util.CustomURL(itemURL)
 		}
 	case "POST":
@@ -273,7 +273,12 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 		}
-		userName, sterr := util.ValidateAsString(userData["name"])
+		var nameFromJSON interface{}
+		var ok bool
+		if nameFromJSON, ok = userData["name"]; !ok {
+			nameFromJSON, _ = userData["username"]
+		}
+		userName, sterr := util.ValidateAsString(nameFromJSON)
 		if sterr != nil || userName == "" {
 			err := fmt.Errorf("Field 'name' missing")
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)

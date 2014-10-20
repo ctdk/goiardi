@@ -218,7 +218,12 @@ func (u *User) Rename(newName string) util.Gerror {
 
 // NewFromJSON builds a new user from a JSON object.
 func NewFromJSON(jsonUser map[string]interface{}) (*User, util.Gerror) {
-	userName, nerr := util.ValidateAsString(jsonUser["name"])
+	var nameFromJSON interface{}
+	var ok bool
+	if nameFromJSON, ok = jsonUser["name"]; !ok {
+		nameFromJSON, ok = jsonUser["username"]
+	}
+	userName, nerr := util.ValidateAsString(nameFromJSON)
 	if nerr != nil {
 		return nil, nerr
 	}
@@ -242,7 +247,12 @@ func NewFromJSON(jsonUser map[string]interface{}) (*User, util.Gerror) {
 // UpdateFromJSON updates a user from a JSON object, carrying out a bunch of
 // validations inside.
 func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
-	userName, nerr := util.ValidateAsString(jsonUser["name"])
+	var nameFromJSON interface{}
+	var ok bool
+	if nameFromJSON, ok = jsonUser["name"]; !ok {
+		nameFromJSON, ok = jsonUser["username"]
+	}
+	userName, nerr := util.ValidateAsString(nameFromJSON)
 	if nerr != nil {
 		return nerr
 	}
@@ -253,7 +263,8 @@ func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
 
 	/* Validations. */
 	/* Invalid top level elements */
-	validElements := []string{"username", "name", "org_name", "public_key", "private_key", "admin", "password", "email", "salt"}
+	// TODO: save the new chef 12 attrs
+	validElements := []string{"username", "name", "org_name", "public_key", "private_key", "admin", "password", "email", "salt", "email", "first_name", "last_name", "display_name" }
 ValidElem:
 	for k := range jsonUser {
 		for _, i := range validElements {

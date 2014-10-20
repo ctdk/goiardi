@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
@@ -29,13 +30,18 @@ import (
 func orgHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	pathArray := splitPath(r.URL.Path)
+	if pathArray[len(pathArray) - 1] == "" {
+		pathArray = pathArray[:len(pathArray) - 1]
+	}
 	pathArrayLen := len(pathArray)
 
 	
 
 	// If pathArrayLen is greater than 2, this gets handed off to another
 	// handler.
-	if pathArrayLen > 2 {
+	// TODO: need to be able to regen org validator keys, which is a 3 part
+	// url
+	if pathArrayLen > 2 && (pathArray[2] != "_validator_key" && pathArray[2] != "association_requests") {
 		op := pathArray[2]
 		orgName := pathArray[1]
 
@@ -118,11 +124,21 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 	// because we can't assume we'll always have an organization.
 
 	switch pathArrayLen {
+	case 3:
+		op := pathArray[3]
+		switch op {
+		case "_validator_key":
+		case "association_requests":
+
+		default:
+			jsonErrorReport(w, r, "Unknown organization endpoint, rather unlikely to reach", http.StatusBadRequest)
+			return
+		}
 	case 2:
 		orgName := pathArray[1]
 
 		switch r.Method {
-		case "GET":
+		case "GET", "DELETE":
 			org, err := organization.Get(orgName)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
@@ -138,7 +154,16 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			orgResponse = org.ToJSON()
+			if r.Method == "DELETE" {
+				err := org.Delete()
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+			}
 		case "PUT":
+			jsonErrorReport(w, r, "not implemented", http.StatusNotImplemented)
+			return
 		default:
 			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return
@@ -182,8 +207,15 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
+			validator, pem, err := makeValidator(org)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
 			environment.MakeDefaultEnvironment(org)
 			orgResponse = org.ToJSON()
+			orgResponse["private_key"] = pem
+			orgResponse["clientname"] = validator.Name
 		default:
 			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return
@@ -193,4 +225,22 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 	if err := enc.Encode(&orgResponse); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func makeValidator(org *organization.Organization) (*client.Client, string, util.Gerror) {
+	valname := util.JoinStr(org.Name, "-validator")
+	val, err := client.New(org, valname)
+	if err != nil {
+		return nil, "", err
+	}
+	val.Validator = true
+	pem, perr := val.GenerateKeys()
+	if perr != nil {
+		return nil, "", util.CastErr(perr)
+	}
+	perr = val.Save()
+	if perr != nil {
+		return nil, "", util.CastErr(perr)
+	}
+	return val, pem, nil
 }
