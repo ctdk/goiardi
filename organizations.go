@@ -216,6 +216,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			orgResponse = org.ToJSON()
 			orgResponse["private_key"] = pem
 			orgResponse["clientname"] = validator.Name
+			w.WriteHeader(http.StatusCreated)
 		default:
 			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return
