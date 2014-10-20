@@ -202,7 +202,7 @@ func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 		if k != nil {
 			chksumStats[chk]["needs_upload"] = false
 		} else {
-			itemURL := util.JoinStr("/organization/", s.org.Name, "/file_store/", chk)
+			itemURL := util.JoinStr("/organizations/", s.org.Name, "/file_store/", chk)
 			chksumStats[chk]["url"] = util.CustomURL(itemURL)
 			chksumStats[chk]["needs_upload"] = true
 		}
