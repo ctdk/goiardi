@@ -329,20 +329,8 @@ func createDefaultActors() {
 			cworg = org
 		}
 	}
-	if ulorg, _ := organization.Get("user-log"); ulorg == nil {
-		if org, oerr := organization.New("user-log", "special org for logging user events"); oerr != nil {
-			logger.Criticalf(oerr.Error())
-			os.Exit(1)
-		} else {
-			err := org.Save()
-			if err != nil {
-				logger.Criticalf(err.Error())
-				os.Exit(1)
-			}
-		}
-	}
-	if cwebui, _ := client.Get(cworg, "chef-webui"); cwebui == nil {
-		if webui, nerr := client.New(cworg, "chef-webui"); nerr != nil {
+	if cwebui, _ := client.Get(cworg, "default-webui"); cwebui == nil {
+		if webui, nerr := client.New(cworg, "default-webui"); nerr != nil {
 			logger.Criticalf(nerr.Error())
 			os.Exit(1)
 		} else {
@@ -367,8 +355,8 @@ func createDefaultActors() {
 		}
 	}
 
-	if cvalid, _ := client.Get(cworg, "chef-validator"); cvalid == nil {
-		if validator, verr := client.New(cworg, "chef-validator"); verr != nil {
+	if cvalid, _ := client.Get(cworg, "default-validator"); cvalid == nil {
+		if validator, verr := client.New(cworg, "default-validator"); verr != nil {
 			logger.Criticalf(verr.Error())
 			os.Exit(1)
 		} else {
@@ -392,8 +380,9 @@ func createDefaultActors() {
 		}
 	}
 
-	if uadmin, _ := user.Get("admin"); uadmin == nil {
-		if admin, aerr := user.New("admin"); aerr != nil {
+	// the admin user is called 'pivotal' now with chef12 for some reason.
+	if uadmin, _ := user.Get("pivotal"); uadmin == nil {
+		if admin, aerr := user.New("pivotal"); aerr != nil {
 			logger.Criticalf(aerr.Error())
 			os.Exit(1)
 		} else {
