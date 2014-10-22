@@ -90,8 +90,12 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			switch r.Method {
 				case "GET":
-
+					// returns a list of associations with
+					// this org. TODO: It should actually
+					// do that.
 				case "POST":
+					// creates the association. TODO: make
+					// it do so
 					arData, jerr := parseObjJSON(r.Body)
 					if jerr != nil {
 						jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
