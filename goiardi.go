@@ -170,7 +170,7 @@ func main() {
 	// organization routes
 	s := muxer.PathPrefix("/organizations/{org}/").Subrouter()
 	// get the org tool routes out of the way, out of order
-	s.HandleFunc("/association_request", orgToolHandler)
+	s.HandleFunc("/association_requests/{id}", orgToolHandler)
 	s.HandleFunc("/association_requests", orgToolHandler)
 	s.HandleFunc("/_validator_key", orgToolHandler)
 	s.HandleFunc("/clients", listHandler)

@@ -26,18 +26,19 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
+	"regexp"
 )
 
 func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 	pathArray := splitPath(r.URL.Path)
-	orgName := pathArray[2]
+	orgName := vars["org"]
 
 	// Otherwise, it's org work.
 	var orgResponse map[string]interface{}
 
-	op := vars["tool"]
+	op := pathArray[2]
 	org, err := organization.Get(orgName)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
@@ -73,7 +74,36 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "association_requests":
+		orgResponse = make(map[string]interface{})
+		if len(pathArray) == 4 {
+			id := vars["id"]
+			re := regexp.MustCompile(util.JoinStr("(.+)-", orgName))
+			userChk := re.FindStringSubmatch(id)
+			if userChk == nil {
+				util.JSONErrorReport(w, r, util.JoinStr("Invalid ID ", id, ". Must be of the form username-", orgName) , http.StatusNotFound)
+				return
+			}
+			// Looks like this is supposed to be a delete.
+			// TODO: make it do what it should when that bit is in
+			orgResponse["id"] = id
+			orgResponse["username"] = userChk[1]
+		} else {
+			switch r.Method {
+				case "GET":
 
+				case "POST":
+					arData, jerr := parseObjJSON(r.Body)
+					if jerr != nil {
+						jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+						return
+					}
+					w.WriteHeader(http.StatusCreated)
+					orgResponse["uri"] = util.CustomURL(util.JoinStr(r.URL.Path, "/", arData["user"].(string), "-", orgName))
+				default:
+					jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+					return
+			}
+		}
 	default:
 		jsonErrorReport(w, r, "Unknown organization endpoint, rather unlikely to reach", http.StatusBadRequest)
 		return
