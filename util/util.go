@@ -23,7 +23,9 @@ Package util contains various utility functions that are useful across all of go
 package util
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
 	"net/http"
 	"reflect"
@@ -330,4 +332,17 @@ func stringify(source interface{}) string {
 // pop up.
 func JoinStr(str ...string) string {
 	return strings.Join(str, "")
+}
+
+// JSONErrorReport spits out the given error and HTTP status code formatted as
+// JSON for the client's benefit before completing the errored out request.
+func JSONErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
+	logger.Infof(errorStr)
+	jsonError := map[string][]string{"error": []string{errorStr}}
+	w.WriteHeader(status)
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&jsonError); err != nil {
+		logger.Errorf(err.Error())
+	}
+	return
 }

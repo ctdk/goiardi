@@ -24,234 +24,165 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
-func orgHandler(w http.ResponseWriter, r *http.Request) {
+func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
 	pathArray := splitPath(r.URL.Path)
-	if pathArray[len(pathArray) - 1] == "" {
-		pathArray = pathArray[:len(pathArray) - 1]
-	}
-	pathArrayLen := len(pathArray)
+	orgName := pathArray[2]
 
-	// If pathArrayLen is greater than 2, this gets handed off to another
-	// handler.
-	// TODO: need to be able to regen org validator keys, which is a 3 part
-	// url
-	if pathArrayLen > 2 && (pathArray[2] != "_validator_key" && pathArray[2] != "association_requests") {
-		op := pathArray[2]
-		orgName := pathArray[1]
-
-		org, err := organization.Get(orgName)
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
-		}
-		// check for basic rights to the organization in question,
-		// before any beefier checks further down.
-		// TODO: do that.
-
-		switch op {
-		case "authenticate_user":
-			jsonErrorReport(w, r, "so we do use this", http.StatusBadRequest)
-		case "clients", "nodes", "roles":
-			if pathArrayLen == 3 {
-				listHandler(org, w, r)
-			} else {
-				switch op {
-				case "clients":
-					clientHandler(org, w, r)
-				case "nodes":
-					nodeHandler(org, w, r)
-				case "roles":
-					roleHandler(org, w, r)
-				}
-			}
-		case "cookbooks":
-			cookbookHandler(org, w, r)
-		case "data":
-			dataHandler(org, w, r)
-		case "environments":
-			environmentHandler(org, w, r)
-		case "principals":
-			principalHandler(org, w, r)
-		case "sandboxes":
-			sandboxHandler(org, w, r)
-		case "search":
-			if pathArray[3] == "reindex" {
-				reindexHandler(org, w, r)
-			} else {
-				searchHandler(org, w, r)
-			}
-		case "file_store":
-			fileStoreHandler(org, w, r)
-		case "events":
-			if pathArrayLen == 3 {
-				eventListHandler(org, w, r)
-			} else {
-				eventHandler(org, w, r)
-			}
-		case "reports":
-			reportHandler(org, w, r)
-		case "universe":
-			universeHandler(org, w, r)
-		case "shovey":
-			shoveyHandler(org, w, r)
-		case "status":
-			statusHandler(org, w, r)
-		case "users":
-			// Users may live both under and outside of
-			// organizations... Maybe. Docs so far are not
-			// very clear. Do this in the meantime.
-			if pathArrayLen == 3 {
-				orgUserListHandler(org, w, r)
-			} else {
-				orgUserHandler(org, w, r)
-			}
-		default:
-			jsonErrorReport(w, r, "Unknown endpoint", http.StatusNotFound)
-		}
-		return
-
-	}
 	// Otherwise, it's org work.
 	var orgResponse map[string]interface{}
 
-	// Have to do the actor checking and perm stuff a few places here,
-	// because we can't assume we'll always have an organization.
+	op := vars["tool"]
+	org, err := organization.Get(orgName)
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+	if !opUser.IsAdmin() {
+		jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+		return
+	}
+	switch op {
+	case "_validator_key":
+		if r.Method == "POST" {
+			valname := util.JoinStr(org.Name, "-validator")
+			val, err := client.Get(org, valname)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			pem, perr := val.GenerateKeys()
+			if perr != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			orgResponse = make(map[string]interface{})
+			orgResponse["private_key"] = pem
+		} else {
+			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+			return
+		}
+	case "association_requests":
 
-	switch pathArrayLen {
-	case 3:
-		orgName := pathArray[1]
-		op := pathArray[3]
-		org, err := organization.Get(orgName)
+	default:
+		jsonErrorReport(w, r, "Unknown organization endpoint, rather unlikely to reach", http.StatusBadRequest)
+		return
+	}
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&orgResponse); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func orgMainHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	orgName := vars["org"]
+	org, err := organization.Get(orgName)
+	var orgResponse map[string]interface{}
+
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+	if !opUser.IsAdmin() {
+		jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+		return
+	}
+
+	switch r.Method {
+	case "GET", "DELETE":
+		orgResponse = org.ToJSON()
+		if r.Method == "DELETE" {
+			err := org.Delete()
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+		}
+	case "PUT":
+		jsonErrorReport(w, r, "not implemented", http.StatusNotImplemented)
+		return
+	default:
+		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+		return
+	}
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&orgResponse); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func orgHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var orgResponse map[string]interface{}
+
+	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+	if !opUser.IsAdmin() {
+		jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+		return
+	}
+	switch r.Method {
+	case "GET":
+		orgList := organization.GetList()
+		orgResponse = make(map[string]interface{})
+		for _, o := range orgList {
+			itemURL := fmt.Sprintf("/organizations/%s", o)
+			orgResponse[o] = util.CustomURL(itemURL)
+		}
+	case "POST":
+		orgData, jerr := parseObjJSON(r.Body)
+		if jerr != nil {
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			return
+		}
+		orgName, verr := util.ValidateAsString(orgData["name"])
+		if verr != nil {
+			jsonErrorReport(w, r, "field name missing or invalid", http.StatusBadRequest)
+			return
+		}
+		orgFullName, verr := util.ValidateAsString(orgData["full_name"])
+		if verr != nil {
+			jsonErrorReport(w, r, "field full name missing or invalid", http.StatusBadRequest)
+			return
+		}
+		org, err := organization.New(orgName, orgFullName)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
-		if oerr != nil {
-			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		validator, pem, err := makeValidator(org)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		if !opUser.IsAdmin() {
-			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-			return
-		}
-		switch op {
-		case "_validator_key":
-			if r.Method == "POST" {
-				valname := util.JoinStr(org.Name, "-validator")
-				val, err := client.Get(org, valname)
-				if err != nil {
-					jsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
-				pem, perr := val.GenerateKeys()
-				if perr != nil {
-					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				orgResponse = make(map[string]interface{})
-				orgResponse["private_key"] = pem
-			} else {
-				jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
-				return
-			}
-		case "association_requests":
-
-		default:
-			jsonErrorReport(w, r, "Unknown organization endpoint, rather unlikely to reach", http.StatusBadRequest)
-			return
-		}
-	case 2:
-		orgName := pathArray[1]
-
-		switch r.Method {
-		case "GET", "DELETE":
-			org, err := organization.Get(orgName)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-			opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
-			if oerr != nil {
-				jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-				return
-			}
-			if !opUser.IsAdmin() {
-				jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-				return
-			}
-			orgResponse = org.ToJSON()
-			if r.Method == "DELETE" {
-				err := org.Delete()
-				if err != nil {
-					jsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
-			}
-		case "PUT":
-			jsonErrorReport(w, r, "not implemented", http.StatusNotImplemented)
-			return
-		default:
-			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
-			return
-		}
-	case 1:
-		opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
-		if oerr != nil {
-			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-			return
-		}
-		if !opUser.IsAdmin() {
-			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-			return
-		}
-		switch r.Method {
-		case "GET":
-			orgList := organization.GetList()
-			orgResponse = make(map[string]interface{})
-			for _, o := range orgList {
-				itemURL := fmt.Sprintf("/organizations/%s", o)
-				orgResponse[o] = util.CustomURL(itemURL)
-			}
-		case "POST":
-			orgData, jerr := parseObjJSON(r.Body)
-			if jerr != nil {
-				jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-				return
-			}
-			orgName, verr := util.ValidateAsString(orgData["name"])
-			if verr != nil {
-				jsonErrorReport(w, r, "field name missing or invalid", http.StatusBadRequest)
-				return
-			}
-			orgFullName, verr := util.ValidateAsString(orgData["full_name"])
-			if verr != nil {
-				jsonErrorReport(w, r, "field full name missing or invalid", http.StatusBadRequest)
-				return
-			}
-			org, err := organization.New(orgName, orgFullName)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-			validator, pem, err := makeValidator(org)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-			environment.MakeDefaultEnvironment(org)
-			orgResponse = org.ToJSON()
-			orgResponse["private_key"] = pem
-			orgResponse["clientname"] = validator.Name
-			w.WriteHeader(http.StatusCreated)
-		default:
-			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
-			return
-		}
+		environment.MakeDefaultEnvironment(org)
+		orgResponse = org.ToJSON()
+		orgResponse["private_key"] = pem
+		orgResponse["clientname"] = validator.Name
+		w.WriteHeader(http.StatusCreated)
+	default:
+		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+		return
 	}
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&orgResponse); err != nil {

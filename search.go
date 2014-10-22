@@ -32,18 +32,26 @@ import (
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/search"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
 	"strconv"
 )
 
-func searchHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func searchHandler(w http.ResponseWriter, r *http.Request) {
 	/* ... and we need search to run the environment tests, so here we
 	 * go. */
 	w.Header().Set("Content-Type", "application/json")
 	searchResponse := make(map[string]interface{})
 	pathArray := splitPath(r.URL.Path)[2:]
 	pathArrayLen := len(pathArray)
+
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
 
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
@@ -103,7 +111,7 @@ func searchHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 			}
 			searchEndpoints := search.GetEndpoints(org)
 			for _, s := range searchEndpoints {
-				searchResponse[s] = util.CustomURL(fmt.Sprintf("/search/%s", s))
+				searchResponse[s] = util.CustomURL(util.JoinStr("/organizations/", org.Name, "/search/", s))
 			}
 		default:
 			jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
@@ -129,7 +137,7 @@ func searchHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 				}
 			}
 
-			idx := pathArray[1]
+			idx := vars["index"]
 			rObjs, err := search.Search(org, idx, paramQuery)
 
 			if err != nil {
@@ -172,7 +180,7 @@ func searchHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 					tmpRes := make(map[string]interface{})
 					switch ro := rObjs[x].(type) {
 					case *databag.DataBagItem:
-						dbiURL := fmt.Sprintf("/data/%s/%s", ro.DataBagName, ro.RawData["id"].(string))
+						dbiURL := util.JoinStr("/organizations/", org.Name, "/data/", ro.DataBagName, "/", ro.RawData["id"].(string))
 						tmpRes["url"] = util.CustomURL(dbiURL)
 					default:
 						tmpRes["url"] = util.ObjURL(rObjs[x].(util.GoiardiObj))
@@ -207,9 +215,15 @@ func searchHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 	}
 }
 
-func reindexHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func reindexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	reindexResponse := make(map[string]interface{})
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())

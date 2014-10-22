@@ -82,13 +82,18 @@ func LogEvent(org *organization.Organization, doer actor.Actor, obj util.Goiardi
 	}
 	le.ActorInfo = actorInfo
 	le.org = org
+	var orgName string
+	if org != nil {
+		orgName = org.Name
+	}
+
 	if config.Config.SerfEventAnnounce {
 		qle := make(map[string]interface{}, 4)
 		qle["time"] = le.Time
 		qle["action"] = le.Action
 		qle["object_type"] = le.ObjectType
 		qle["object_name"] = le.ObjectName
-		qle["organization"] = le.org.Name
+		qle["organization"] = orgName
 		go serfin.SendEvent("log-event", qle)
 	}
 
@@ -153,6 +158,7 @@ func Get(org *organization.Organization, id int) (*LogInfo, error) {
 		if c != nil {
 			le = c.(*LogInfo)
 			le.ID = id
+			le.org = org
 		}
 	}
 	return le, nil
@@ -274,4 +280,11 @@ func (le *LogInfo) checkTimeRange(from, until time.Time) bool {
 func AllLogInfos(org *organization.Organization) []*LogInfo {
 	l, _ := GetLogInfos(org, nil)
 	return l
+}
+
+func getOrgName(org *organization.Organization) string {
+	if org != nil {
+		return org.Name
+	}
+	return ""
 }

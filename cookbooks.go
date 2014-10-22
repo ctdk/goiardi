@@ -26,13 +26,21 @@ import (
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
-func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	pathArray := splitPath(r.URL.Path)[2:]
 	cookbookResponse := make(map[string]interface{})
+
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
 
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
@@ -86,7 +94,7 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 		cookbookResponse = cookbook.CookbookLister(org, numResults)
 	} else if pathArrayLen == 2 {
 		/* info about a cookbook and all its versions */
-		cookbookName := pathArray[1]
+		cookbookName := vars["name"]
 		/* Undocumented behavior - a cookbook name of _latest gets a
 		 * list of the latest versions of all the cookbooks, and _recipe
 		 * gets the recipes of the latest cookbooks. */
@@ -124,15 +132,16 @@ func cookbookHandler(org *organization.Organization, w http.ResponseWriter, r *h
 	} else if pathArrayLen == 3 {
 		/* get information about or manipulate a specific cookbook
 		 * version */
-		cookbookName := pathArray[1]
+		cookbookName := vars["name"]
 		var cookbookVersion string
 		var vererr util.Gerror
-		if r.Method == "GET" && pathArray[2] == "_latest" { // might be other special vers
-			cookbookVersion = pathArray[2]
+		vbase := vars["version"]
+		if r.Method == "GET" && vbase == "_latest" { // might be other special vers
+			cookbookVersion = vbase
 		} else {
-			cookbookVersion, vererr = util.ValidateAsVersion(pathArray[2])
+			cookbookVersion, vererr = util.ValidateAsVersion(vbase)
 			if vererr != nil {
-				vererr := util.Errorf("Invalid cookbook version '%s'.", pathArray[2])
+				vererr := util.Errorf("Invalid cookbook version '%s'.", vbase)
 				jsonErrorReport(w, r, vererr.Error(), vererr.Status())
 				return
 			}

@@ -25,13 +25,20 @@ import (
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
-func clientHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func clientHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	path := splitPath(r.URL.Path)[2:]
-	clientName := path[1]
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+
+	clientName := vars["name"]
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())

@@ -26,22 +26,30 @@ import (
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
-func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func dataHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
 	pathArray := splitPath(r.URL.Path)[2:]
+	pathArrayLen := len(pathArray)
 
-	dbResponse := make(map[string]interface{})
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
+	dbResponse := make(map[string]interface{})
 
-	if len(pathArray) == 1 {
+	if pathArrayLen == 1 {
 		/* Either a list of data bags, or a POST to create a new one */
 		switch r.Method {
 		case "GET":
@@ -105,14 +113,14 @@ func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 			return
 		}
 	} else {
-		dbName := pathArray[1]
+		dbName := vars["name"]
 
 		/* chef-pedant is unhappy about not reporting the HTTP status
 		 * as 404 by fetching the data bag before we see if the method
 		 * is allowed, so do a quick check for that here. */
-		if (len(pathArray) == 2 && r.Method == "PUT") || (len(pathArray) == 3 && r.Method == "POST") {
+		if (pathArrayLen == 2 && r.Method == "PUT") || (pathArrayLen == 3 && r.Method == "POST") {
 			var allowed string
-			if len(pathArray) == 2 {
+			if pathArrayLen == 2 {
 				allowed = "GET, POST, DELETE"
 			} else {
 				allowed = "GET, PUT, DELETE"
@@ -133,12 +141,12 @@ func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 				/* Posts get a special snowflake message */
 				errMsg = fmt.Sprintf("No data bag '%s' could be found. Please create this data bag before adding items to it.", dbName)
 			} else {
-				if len(pathArray) == 3 {
+				if pathArrayLen == 3 {
 					/* This is nuts. */
 					if r.Method == "DELETE" {
-						errMsg = fmt.Sprintf("Cannot load data bag %s item %s", dbName, pathArray[2])
+						errMsg = fmt.Sprintf("Cannot load data bag %s item %s", dbName, vars["item"])
 					} else {
-						errMsg = fmt.Sprintf("Cannot load data bag item %s for data bag %s", pathArray[2], dbName)
+						errMsg = fmt.Sprintf("Cannot load data bag item %s for data bag %s", vars["item"], dbName)
 					}
 				} else {
 					errMsg = err.Error()
@@ -147,12 +155,11 @@ func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 			jsonErrorReport(w, r, errMsg, status)
 			return
 		}
-		if len(pathArray) == 2 {
+		if pathArrayLen == 2 {
 			/* getting list of data bag items and creating data bag
 			 * items. */
 			switch r.Method {
 			case "GET":
-
 				for _, k := range chefDbag.ListDBItems() {
 					dbResponse[k] = util.CustomObjURL(chefDbag, k)
 				}
@@ -207,7 +214,7 @@ func dataHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 			}
 		} else {
 			/* getting, editing, and deleting existing data bag items. */
-			dbItemName := pathArray[2]
+			dbItemName := vars["item"]
 			if _, err := chefDbag.GetDBItem(dbItemName); err != nil {
 				var httperr string
 				if r.Method != "DELETE" {

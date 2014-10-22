@@ -61,7 +61,7 @@ func importAll(fileName string) error {
 		if err != nil {
 			return err
 		}
-		orgs = []*organization.Organization{ org }
+		orgs = []*organization.Organization{org}
 	}
 	//if exportedData.MajorVersion == 1 && (exportedData.MinorVersion == 0 || exportedData.MinorVersion == 1) {
 	if exportedData.MajorVersion <= 2 {
@@ -122,8 +122,6 @@ func importAll(fileName string) error {
 					return gerr
 				}
 			}
-
-			
 
 			// load filestore
 			logger.Infof("Loading filestore")

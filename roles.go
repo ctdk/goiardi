@@ -26,11 +26,19 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
-func roleHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func roleHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
 
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
@@ -43,7 +51,7 @@ func roleHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 	 * split up the whole path to get those values. */
 
 	pathArray := splitPath(r.URL.Path)[2:]
-	roleName := pathArray[1]
+	roleName := vars["name"]
 
 	chefRole, err := role.Get(org, roleName)
 	if err != nil {
@@ -125,7 +133,7 @@ func roleHandler(org *organization.Organization, w http.ResponseWriter, r *http.
 	} else {
 		var environmentName string
 		if len(pathArray) == 4 {
-			environmentName = pathArray[3]
+			environmentName = vars["env_name"]
 			if _, err := environment.Get(org, environmentName); err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return

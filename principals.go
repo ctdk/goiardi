@@ -22,17 +22,25 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
-func principalHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func principalHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	pathArray := splitPath(r.URL.Path)
-	if len(pathArray) != 4 {
+
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	principalName := vars["name"]
+	if principalName == "" {
 		jsonErrorReport(w, r, "no principal name given", http.StatusBadRequest)
 		return
 	}
-	principalName := pathArray[3]
+
 	switch r.Method {
 	case "GET":
 		chefActor, err := actor.GetReqUser(org, principalName)

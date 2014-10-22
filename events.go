@@ -25,13 +25,20 @@ import (
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
 )
 
 // The whole list
-func eventListHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func eventListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
@@ -160,16 +167,20 @@ func eventListHandler(org *organization.Organization, w http.ResponseWriter, r *
 }
 
 // Individual log events
-func eventHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	_ = org
+func eventHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	pathArray := splitPath(r.URL.Path)[2:]
-	eventID, aerr := strconv.Atoi(pathArray[1])
+	eventID, aerr := strconv.Atoi(vars["id"])
 	if aerr != nil {
 		jsonErrorReport(w, r, aerr.Error(), http.StatusBadRequest)
 		return

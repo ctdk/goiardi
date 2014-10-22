@@ -18,16 +18,22 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
-func statusHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func statusHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
@@ -38,8 +44,9 @@ func statusHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 		return
 	}
 	pathArray := splitPath(r.URL.Path)[2:]
+	pathArrayLen := len(pathArray)
 
-	if len(pathArray) < 3 {
+	if pathArrayLen < 3 {
 		jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 		return
 	}
@@ -49,10 +56,10 @@ func statusHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 	switch r.Method {
 	case "GET":
 		/* pathArray[1] will tell us what operation we're doing */
-		switch pathArray[1] {
+		switch vars["specif"] {
 		// /status/all/nodes
 		case "all":
-			if len(pathArray) != 3 {
+			if pathArrayLen != 3 {
 				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
 			}
@@ -72,18 +79,18 @@ func statusHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 					continue
 				}
 				sr[i] = ns.ToJSON()
-				nsurl := fmt.Sprintf("/status/node/%s/latest", n.Name)
+				nsurl := util.JoinStr("/organizations/", org.Name, "/status/node/", n.Name, "/latest")
 				sr[i]["url"] = util.CustomURL(nsurl)
 			}
 			statusResponse = sr
 		// /status/node/<nodeName>/(all|latest)
 		case "node":
-			if len(pathArray) != 4 {
+			if pathArrayLen != 4 {
 				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
 			}
-			nodeName := pathArray[2]
-			op := pathArray[3]
+			nodeName := vars["node_name"]
+			op := vars["op"]
 			n, gerr := node.Get(org, nodeName)
 			if gerr != nil {
 				jsonErrorReport(w, r, gerr.Error(), gerr.Status())

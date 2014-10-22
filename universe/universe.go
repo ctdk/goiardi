@@ -14,31 +14,43 @@
  * limitations under the License.
  */
 
-package main
+// Package universe handles the /universe berkshelf API endpoint for goiardi.
+package universe
 
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
-func universeHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+// UniverseHandler dispatches requests for the /universe endpoint for goiardi.
+// It has been moved into a separate module so it can run as a standalone
+// Chef Server plugin with a simple wrapper. That's the plan, anyway.
+func UniverseHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		util.JSONErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
 	_, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		util.JSONErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 	if r.Method != "GET" {
-		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+		util.JSONErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 		return
 	}
 
 	universe := cookbook.Universe(org)
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&universe); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		util.JSONErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }

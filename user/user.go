@@ -264,7 +264,7 @@ func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
 	/* Validations. */
 	/* Invalid top level elements */
 	// TODO: save the new chef 12 attrs
-	validElements := []string{"username", "name", "org_name", "public_key", "private_key", "admin", "password", "email", "salt", "email", "first_name", "last_name", "display_name" }
+	validElements := []string{"username", "name", "org_name", "public_key", "private_key", "admin", "password", "email", "salt", "email", "first_name", "last_name", "display_name"}
 ValidElem:
 	for k := range jsonUser {
 		for _, i := range validElements {

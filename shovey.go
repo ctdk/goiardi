@@ -25,14 +25,23 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
 )
 
 // TODO: shovey events ought to be logged
 
-func shoveyHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
@@ -65,12 +74,12 @@ func shoveyHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 		case "GET":
 			switch pathArrayLen {
 			case 4:
-				shove, err := shovey.Get(org, pathArray[2])
+				shove, err := shovey.Get(org, vars["job_id"])
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-				sj, err := shove.GetRun(pathArray[3])
+				sj, err := shove.GetRun(vars["node_name"])
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
@@ -81,7 +90,7 @@ func shoveyHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 					return
 				}
 			case 3:
-				shove, err := shovey.Get(org, pathArray[2])
+				shove, err := shovey.Get(org, vars["job_id"])
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
@@ -158,7 +167,7 @@ func shoveyHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 		case "PUT":
 			switch pathArrayLen {
 			case 3:
-				if pathArray[2] != "cancel" {
+				if vars["job_id"] != "cancel" {
 					jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 					return
 				}
@@ -210,9 +219,9 @@ func shoveyHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 					jsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
 					return
 				}
-				nodeName := pathArray[3]
+				nodeName := vars["node_name"]
 				logger.Debugf("sjData: %v", sjData)
-				shove, err := shovey.Get(org, pathArray[2])
+				shove, err := shovey.Get(org, vars["job_id"])
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
@@ -273,12 +282,12 @@ func shoveyHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 			} else {
 				outType = "stdout"
 			}
-			shove, err := shovey.Get(org, pathArray[2])
+			shove, err := shovey.Get(org, vars["job_id"])
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
-			sj, err := shove.GetRun(pathArray[3])
+			sj, err := shove.GetRun(vars["node_name"])
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
@@ -309,12 +318,12 @@ func shoveyHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 				jsonErrorReport(w, r, serr.Error(), http.StatusBadRequest)
 				return
 			}
-			shove, err := shovey.Get(org, pathArray[2])
+			shove, err := shovey.Get(org, vars["job_id"])
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
-			sj, err := shove.GetRun(pathArray[3])
+			sj, err := shove.GetRun(vars["node_name"])
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return

@@ -44,7 +44,9 @@ import (
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/shovey"
+	"github.com/ctdk/goiardi/universe"
 	"github.com/ctdk/goiardi/user"
+	"github.com/gorilla/mux"
 	serfclient "github.com/hashicorp/serf/client"
 	"net/http"
 	"os"
@@ -55,7 +57,9 @@ import (
 	"time"
 )
 
-type interceptHandler struct{} // Doesn't need to do anything, just sit there.
+type interceptHandler struct {
+	router *mux.Router
+}
 
 func main() {
 	config.ParseConfigOptions()
@@ -150,45 +154,81 @@ func main() {
 	createDefaultActors()
 	handleSignals()
 
+	muxer := mux.NewRouter()
+	muxer.NotFoundHandler = http.HandlerFunc(notFoundHandler)
+	// may need to set mux.StrictSlash(true)
+
 	/* Register the various handlers, found in their own source files. */
-	// Under /organizations? Maybe, maybe not.
-	http.HandleFunc("/authenticate_user", authenticateUserHandler)
-	//http.HandleFunc("/clients", listHandler)
-	//http.HandleFunc("/clients/", clientHandler)
-	//http.HandleFunc("/cookbooks", cookbookHandler)
-	//http.HandleFunc("/cookbooks/", cookbookHandler)
-	//http.HandleFunc("/data", dataHandler)
-	//http.HandleFunc("/data/", dataHandler)
-	//http.HandleFunc("/environments", environmentHandler)
-	//http.HandleFunc("/environments/", environmentHandler)
-	//http.HandleFunc("/nodes", listHandler)
-	//http.HandleFunc("/nodes/", nodeHandler)
-	//http.HandleFunc("/principals/", principalHandler)
-	//http.HandleFunc("/roles", listHandler)
-	//http.HandleFunc("/roles/", roleHandler)
-	//http.HandleFunc("/sandboxes", sandboxHandler)
-	//http.HandleFunc("/sandboxes/", sandboxHandler)
-	//http.HandleFunc("/search", searchHandler)
-	//http.HandleFunc("/search/", searchHandler)
-	//http.HandleFunc("/search/reindex", reindexHandler)
-	http.HandleFunc("/users", userListHandler)
-	http.HandleFunc("/users/", userHandler)
-	//http.HandleFunc("/file_store/", fileStoreHandler)
-	//http.HandleFunc("/events", eventListHandler)
-	//http.HandleFunc("/events/", eventHandler)
-	//http.HandleFunc("/reports/", reportHandler)
-	//http.HandleFunc("/universe", universeHandler)
-	//http.HandleFunc("/shovey/", shoveyHandler)
-	// http.HandleFunc("/status/", statusHandler)
-	http.HandleFunc("/organizations", orgHandler)
-	http.HandleFunc("/organizations/", orgHandler)
+	muxer.HandleFunc("/organizations", orgHandler)
+	muxer.HandleFunc("/organizations/{org}", orgMainHandler)
+	//muxer.HandleFunc("/organizations/{org}/{op:[assocation_request|association_requests|_validator_key]}", orgToolHandler)
+	// This does not seem to be under organizations at all, so far, but
+	// on the other hand chef-zero seems to provide for it being there.
+	muxer.HandleFunc("/authenticate_user", authenticateUserHandler)
+	muxer.HandleFunc("/users", userListHandler)
+	muxer.HandleFunc("/users/{name}", userHandler)
+	// organization routes
+	s := muxer.PathPrefix("/organizations/{org}/").Subrouter()
+	// get the org tool routes out of the way, out of order
+	s.HandleFunc("/association_request", orgToolHandler)
+	s.HandleFunc("/association_requests", orgToolHandler)
+	s.HandleFunc("/_validator_key", orgToolHandler)
+	s.HandleFunc("/clients", listHandler)
+	s.HandleFunc("/clients/{name}", clientHandler)
+	s.HandleFunc("/cookbooks", cookbookHandler)
+	s.HandleFunc("/cookbooks/{name}", cookbookHandler)
+	s.HandleFunc("/cookbooks/{name}/{version}", cookbookHandler)
+	s.HandleFunc("/data", dataHandler)
+	s.HandleFunc("/data/{name}", dataHandler)
+	s.HandleFunc("/data/{name}/{item}", dataHandler)
+	s.HandleFunc("/environments", environmentHandler)
+	s.HandleFunc("/environments/{name}", environmentHandler)
+	es := s.PathPrefix("/environments/{name}/").Subrouter()
+	es.HandleFunc("/cookbooks", environmentHandler)
+	es.HandleFunc("/cookbooks/{op_name}", environmentHandler)
+	es.HandleFunc("/cookbook_versions", environmentHandler)
+	es.HandleFunc("/nodes", environmentHandler)
+	es.HandleFunc("/recipes", environmentHandler)
+	es.HandleFunc("/roles/{op_name}", environmentHandler)
+	s.HandleFunc("/events", eventListHandler)
+	s.HandleFunc("/events/{id}", eventHandler)
+	s.HandleFunc("/file_store/{chksum}", fileStoreHandler)
+	s.HandleFunc("/nodes", listHandler)
+	s.HandleFunc("/nodes/{name}", nodeHandler)
+	s.HandleFunc("/principals/{name}", principalHandler)
+	s.HandleFunc("/reports/", reportHandler)
+	s.HandleFunc("/reports/{foo}", reportHandler)
+	s.HandleFunc("/reports/nodes/{node_name}/runs", reportHandler)
+	s.HandleFunc("/reports/nodes/{node_name}/runs/{run_id}", reportHandler)
+	s.HandleFunc("/reports/org/runs", reportHandler)
+	s.HandleFunc("/reports/org/runs/{run_id}", reportHandler)
+	s.HandleFunc("/roles", listHandler)
+	s.HandleFunc("/roles/{name}", roleHandler)
+	s.HandleFunc("/roles/{name}/environments", roleHandler)
+	s.HandleFunc("/roles/{name}/environments/{env_name}", roleHandler)
+	s.HandleFunc("/sandboxes", sandboxHandler)
+	s.HandleFunc("/sandboxes/{id}", sandboxHandler)
+	s.Path("/search/reindex").HandlerFunc(reindexHandler)
+	s.HandleFunc("/search", searchHandler)
+	s.HandleFunc("/search/{index}", searchHandler)
+	s.HandleFunc("/shovey/jobs", shoveyHandler)
+	s.HandleFunc("/shovey/jobs/{job_id}", shoveyHandler)
+	s.HandleFunc("/shovey/jobs/{job_id}/{node_name}", shoveyHandler)
+	s.HandleFunc("/shovey/stream/{job_id}/{node_name}", shoveyHandler)
+	s.HandleFunc("/status/{specif}/nodes", statusHandler)
+	s.HandleFunc("/status/{specif}/{node_name}/{op}", statusHandler)
+	s.HandleFunc("/users", userListHandler)
+	s.HandleFunc("/users/{name}", userHandler)
+	s.HandleFunc("/universe", universe.UniverseHandler)
 
 	/* TODO: figure out how to handle the root & not found pages */
-	http.HandleFunc("/", rootHandler)
+	muxer.HandleFunc("/", rootHandler)
+
+	h := &interceptHandler{router: muxer}
 
 	listenAddr := config.ListenAddr()
 	var err error
-	srv := &http.Server{Addr: listenAddr, Handler: &interceptHandler{}}
+	srv := &http.Server{Addr: listenAddr, Handler: h}
 	if config.Config.UseSSL {
 		srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS10}
 		err = srv.ListenAndServeTLS(config.Config.SSLCert, config.Config.SSLKey)
@@ -206,13 +246,18 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func notFoundHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	jsonErrorReport(w, r, "not found", http.StatusNotFound)
+	return
+}
+
 func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* knife sometimes sends URL paths that start with //. Redirecting
 	 * worked for GETs, but since it was breaking POSTs and screwing with
 	 * GETs with query params, we just clean up the path and move on. */
 
 	/* log the URL */
-	// TODO: set this to verbosity level 4 or so
 	logger.Debugf("Serving %s -- %s", r.URL.Path, r.Method)
 
 	if r.Method != "CONNECT" {
@@ -293,7 +338,12 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Body = reader
 	}
 
-	http.DefaultServeMux.ServeHTTP(w, r)
+	//http.DefaultServeMux.ServeHTTP(w, r)
+	// Now instead of using the default ServeHTTP, we use the gorilla mux
+	// one. We aren't able to use it directly, however, because the chef
+	// clients and knife get unhappy unless we're able to do the above work
+	// before serving the reuquests.
+	h.router.ServeHTTP(w, r)
 }
 
 func cleanPath(p string) string {
@@ -546,7 +596,7 @@ func setLogEventPurgeTicker() {
 				for _, org := range orgs {
 					les, _ := loginfo.GetLogInfos(org, nil, 0, 1)
 					if len(les) != 0 {
-						p, err := loginfo.PurgeLogInfos(org, les[0].ID - config.Config.LogEventKeep)
+						p, err := loginfo.PurgeLogInfos(org, les[0].ID-config.Config.LogEventKeep)
 						if err != nil {
 							logger.Errorf(err.Error())
 						}

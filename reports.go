@@ -23,12 +23,13 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-func reportHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func reportHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	protocolVersion := r.Header.Get("X-Ops-Reporting-Protocol-Version")
@@ -38,14 +39,18 @@ func reportHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 		return
 	}
 
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-
-	// TODO: some params for time ranges exist and need to be handled
-	// properly
 
 	pathArray := splitPath(r.URL.Path)[2:]
 	pathArrayLen := len(pathArray)
@@ -55,6 +60,10 @@ func reportHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 	case "GET":
 		// Making an informed guess that admin rights are needed
 		// to see the node run reports
+		if !opUser.IsAdmin() {
+			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+			return
+		}
 		var rows int
 		var from, until time.Time
 		var status string
@@ -123,17 +132,13 @@ func reportHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 			return
 		}
 
-		if !opUser.IsAdmin() {
-			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-			return
-		}
 		if pathArrayLen < 3 || pathArrayLen > 4 {
 			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 			return
 		}
 		op := pathArray[1]
 		if op == "nodes" && pathArrayLen == 4 {
-			nodeName := pathArray[2]
+			nodeName := vars["node_name"]
 			runs, nerr := report.GetNodeList(org, nodeName, from, until, rows, status)
 			if nerr != nil {
 				jsonErrorReport(w, r, nerr.Error(), http.StatusInternalServerError)
@@ -142,7 +147,7 @@ func reportHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 			reportResponse["run_history"] = runs
 		} else if op == "org" {
 			if pathArrayLen == 4 {
-				runID := pathArray[3]
+				runID := vars["run_id"]
 				run, err := report.Get(org, runID)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
@@ -176,7 +181,7 @@ func reportHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 			return
 		}
-		nodeName := pathArray[2]
+		nodeName := vars["node_name"]
 		if pathArrayLen == 4 {
 			rep, err := report.NewFromJSON(org, nodeName, jsonReport)
 			if err != nil {
@@ -191,7 +196,7 @@ func reportHandler(org *organization.Organization, w http.ResponseWriter, r *htt
 			}
 			reportResponse["run_detail"] = rep
 		} else {
-			runID := pathArray[4]
+			runID := vars["run_id"]
 			rep, err := report.Get(org, runID)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())

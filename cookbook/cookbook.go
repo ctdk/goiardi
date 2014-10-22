@@ -1027,7 +1027,7 @@ func convertToCookbookDiv(div interface{}) []map[string]interface{} {
 func (cbv *CookbookVersion) fileHashes() []string {
 	/* Hmm. Weird as it seems, we seem to want length to be zero here so
 	 * we can happily append. Otherwise we'll end up with a nil element. */
-	fhashes := make([]string, 0)
+	fhashes := make([]string, 0, len(cbv.Definitions)+len(cbv.Libraries)+len(cbv.Attributes)+len(cbv.Recipes)+len(cbv.Providers)+len(cbv.Resources)+len(cbv.Templates)+len(cbv.Templates)+len(cbv.RootFiles)+len(cbv.Files))
 	fhashes = append(fhashes, getAttrHashes(cbv.Definitions)...)
 	fhashes = append(fhashes, getAttrHashes(cbv.Libraries)...)
 	fhashes = append(fhashes, getAttrHashes(cbv.Attributes)...)
@@ -1069,34 +1069,34 @@ func (cbv *CookbookVersion) ToJSON(method string) map[string]interface{} {
 	/* Seriously, though, why *not* send the URL for the resources back
 	 * with PUT, but *DO* send it with everything else? */
 	if cbv.Providers != nil && len(cbv.Providers) != 0 {
-		toJSON["providers"] = methodize(method, cbv.Providers)
+		toJSON["providers"] = methodize(cbv.org, method, cbv.Providers)
 	}
 	if cbv.Definitions != nil && len(cbv.Definitions) != 0 {
-		toJSON["definitions"] = methodize(method, cbv.Definitions)
+		toJSON["definitions"] = methodize(cbv.org, method, cbv.Definitions)
 	}
 	if cbv.Libraries != nil && len(cbv.Libraries) != 0 {
-		toJSON["libraries"] = methodize(method, cbv.Libraries)
+		toJSON["libraries"] = methodize(cbv.org, method, cbv.Libraries)
 	}
 	if cbv.Attributes != nil && len(cbv.Attributes) != 0 {
-		toJSON["attributes"] = methodize(method, cbv.Attributes)
+		toJSON["attributes"] = methodize(cbv.org, method, cbv.Attributes)
 	}
 	if cbv.Resources != nil && len(cbv.Resources) != 0 {
-		toJSON["resources"] = methodize(method, cbv.Resources)
+		toJSON["resources"] = methodize(cbv.org, method, cbv.Resources)
 	}
 	if cbv.Templates != nil && len(cbv.Templates) != 0 {
-		toJSON["templates"] = methodize(method, cbv.Templates)
+		toJSON["templates"] = methodize(cbv.org, method, cbv.Templates)
 	}
 	if cbv.RootFiles != nil && len(cbv.RootFiles) != 0 {
-		toJSON["root_files"] = methodize(method, cbv.RootFiles)
+		toJSON["root_files"] = methodize(cbv.org, method, cbv.RootFiles)
 	}
 	if cbv.Files != nil && len(cbv.Files) != 0 {
-		toJSON["files"] = methodize(method, cbv.Files)
+		toJSON["files"] = methodize(cbv.org, method, cbv.Files)
 	}
 
 	return toJSON
 }
 
-func methodize(method string, cbThing []map[string]interface{}) []map[string]interface{} {
+func methodize(org *organization.Organization, method string, cbThing []map[string]interface{}) []map[string]interface{} {
 	retHash := make([]map[string]interface{}, len(cbThing))
 	baseURL := config.ServerBaseURL()
 	r := regexp.MustCompile(`/file_store/`)
@@ -1108,7 +1108,7 @@ func methodize(method string, cbThing []map[string]interface{}) []map[string]int
 				continue
 			}
 			if k == "url" && r.MatchString(`/file_store/`) {
-				retHash[i][k] = baseURL + "/file_store/" + chkSum
+				retHash[i][k] = util.JoinStr(baseURL, "/organizations/", org.Name, "/file_store/", chkSum)
 			} else {
 				retHash[i][k] = j
 			}

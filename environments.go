@@ -29,15 +29,23 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 	"strings"
 )
 
-func environmentHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func environmentHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	accErr := checkAccept(w, r, "application/json")
 	if accErr != nil {
 		jsonErrorReport(w, r, accErr.Error(), http.StatusNotAcceptable)
+		return
+	}
+
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
 
@@ -121,7 +129,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 		/* All of the 2 element operations return the environment
 		 * object, so we do the json encoding in this block and return
 		 * out. */
-		envName := pathArray[1]
+		envName := vars["name"]
 		env, err := environment.Get(org, envName)
 		delEnv := false /* Set this to delete the environment after
 		 * sending the json. */
@@ -231,7 +239,7 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 		}
 		return
 	} else if pathArrayLen == 3 {
-		envName := pathArray[1]
+		envName := vars["name"]
 		op := pathArray[2]
 
 		if op == "cookbook_versions" && r.Method != "POST" || op != "cookbook_versions" && r.Method != "GET" {
@@ -312,11 +320,11 @@ func environmentHandler(org *organization.Organization, w http.ResponseWriter, r
 
 		}
 	} else if pathArrayLen == 4 {
-		envName := pathArray[1]
+		envName := vars["name"]
 		/* op is either "cookbooks" or "roles", and opName is the name
 		 * of the object op refers to. */
 		op := pathArray[2]
-		opName := pathArray[3]
+		opName := vars["op_name"]
 
 		if r.Method != "GET" {
 			jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)

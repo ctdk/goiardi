@@ -24,13 +24,21 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
-func sandboxHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	pathArray := splitPath(r.URL.Path)[2:]
+	pathArrayLen := len(pathArray)
 	sboxResponse := make(map[string]interface{})
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
@@ -39,7 +47,7 @@ func sandboxHandler(org *organization.Organization, w http.ResponseWriter, r *ht
 
 	switch r.Method {
 	case "POST":
-		if len(pathArray) != 1 {
+		if pathArrayLen != 1 {
 			jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 			return
 		}
@@ -84,7 +92,7 @@ func sandboxHandler(org *organization.Organization, w http.ResponseWriter, r *ht
 		sboxResponse["checksums"] = sbox.UploadChkList()
 		w.WriteHeader(http.StatusCreated)
 	case "PUT":
-		if len(pathArray) != 2 {
+		if pathArrayLen != 2 {
 			jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 			return
 		}
@@ -93,7 +101,7 @@ func sandboxHandler(org *organization.Organization, w http.ResponseWriter, r *ht
 			return
 		}
 
-		sandboxID := pathArray[1]
+		sandboxID := vars["id"]
 
 		jsonReq, jerr := parseObjJSON(r.Body)
 		if jerr != nil {

@@ -21,37 +21,33 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
-func orgUserHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	logger.Infof("Called user handler from /organizations, path was %s", r.URL.Path)
-	userHandler(w, r)
-}
-
 func userHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	path := splitPath(r.URL.Path)
-	var userName string
-	if path[0] == "users" {
-		userName = path[1]
-	} else {
-		userName = path[3]
+	vars := mux.Vars(r)
+	userName := vars["name"]
+
+	var org *organization.Organization
+	if orgName, ok := vars["org"]; ok {
+		var orgerr util.Gerror
+		org, orgerr = organization.Get(orgName)
+		if orgerr != nil {
+			jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+			return
+		}
 	}
+
 	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return
-	}
-	org, uerr := organization.Get("user-log")
-	if uerr != nil {
-		jsonErrorReport(w, r, uerr.Error(), uerr.Status())
 		return
 	}
 
@@ -222,10 +218,6 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func orgUserListHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
-	logger.Infof("Called user list handler from /organizations, path was %s", r.URL.Path)
-	userListHandler(w, r)
-}
 func userListHandler(w http.ResponseWriter, r *http.Request) {
 	userResponse := make(map[string]string)
 	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
@@ -233,14 +225,17 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	// For now, use a special organization for user activity. If it turns
-	// out that later we end up having user activity under /organizations,
-	// this will need to be a little more balanced.
-	org, uerr := organization.Get("user-log")
-	if uerr != nil {
-		jsonErrorReport(w, r, uerr.Error(), uerr.Status())
-		return
+	vars := mux.Vars(r)
+	var org *organization.Organization
+	if orgName, ok := vars["org"]; ok {
+		var orgerr util.Gerror
+		org, orgerr = organization.Get(orgName)
+		if orgerr != nil {
+			jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+			return
+		}
 	}
+
 	switch r.Method {
 	case "GET":
 		userList := user.GetList()

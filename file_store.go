@@ -24,14 +24,20 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
-func fileStoreHandler(org *organization.Organization, w http.ResponseWriter, r *http.Request) {
+func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 	/* We *don't* always set the the content-type to application/json here,
 	 * for obvious reasons. Still do for the PUT/POST though. */
-	pathArray := splitPath(r.URL.Path)[2:]
-	chksum := pathArray[1]
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	chksum := vars["chksum"]
 
 	/* Eventually, both local storage (in-memory or on disk, depending) or
 	 * uploading to s3 or a similar cloud storage provider needs to be
