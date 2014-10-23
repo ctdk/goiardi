@@ -15,3 +15,12 @@
  */
 
 package group
+
+import (
+	"github.com/ctdk/goiardi/organization"
+)
+
+type Group struct {
+	Name string
+	org *organization.Organization
+}

@@ -29,6 +29,7 @@ import (
 	"regexp"
 )
 
+// might also be best split up
 func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)

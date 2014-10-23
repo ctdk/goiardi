@@ -15,3 +15,12 @@
  */
 
 package container
+
+import (
+	"github.com/ctdk/goiardi/organization"
+)
+
+type Container struct {
+	Name string
+	org *organization.Organization
+}

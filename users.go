@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
@@ -331,4 +332,63 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 	if err := enc.Encode(&userResponse); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func userAssocHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	//userName := vars["name"]
+
+	var org *organization.Organization
+	if orgName, ok := vars["org"]; ok {
+		var orgerr util.Gerror
+		org, orgerr = organization.Get(orgName)
+		if orgerr != nil {
+			jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+			return
+		}
+	}
+	_ = org
+}
+
+func userAssocCountHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	//userName := vars["name"]
+
+	logger.Debugf("called count handler")
+	var org *organization.Organization
+	if orgName, ok := vars["org"]; ok {
+		var orgerr util.Gerror
+		org, orgerr = organization.Get(orgName)
+		if orgerr != nil {
+			jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+			return
+		}
+	}
+	_ = org
+}
+
+func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	//userName := vars["name"]
+
+	logger.Debugf("called id handler")
+	var org *organization.Organization
+	if orgName, ok := vars["org"]; ok {
+		var orgerr util.Gerror
+		org, orgerr = organization.Get(orgName)
+		if orgerr != nil {
+			jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+			return
+		}
+	}
+
+	/* opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}*/
+	_ = org
 }

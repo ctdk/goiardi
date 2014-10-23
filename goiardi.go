@@ -219,6 +219,9 @@ func main() {
 	s.HandleFunc("/status/{specif}/{node_name}/{op}", statusHandler)
 	s.HandleFunc("/users", userListHandler)
 	s.HandleFunc("/users/{name}", userHandler)
+	s.HandleFunc("/users/{name}/association_requests", userAssocHandler)
+	s.HandleFunc("/users/{name}/association_requests/count", userAssocCountHandler)
+	s.HandleFunc("/users/{name}/association_requests/{id}", userAssocIDHandler)
 	s.HandleFunc("/universe", universe.UniverseHandler)
 
 	/* TODO: figure out how to handle the root & not found pages */
