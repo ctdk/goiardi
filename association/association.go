@@ -17,6 +17,7 @@
 package association
 
 import (
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
@@ -33,17 +34,68 @@ func (a *Association) Key() {
 }
 
 func Set(user *user.User, org *organization.Organization) (*association.Association, util.Gerror) {
+	if config.Config.UsingDB(){
 
+	}
+	assoc := &Association{ user, org }
+	ds := datastore.New()
+	_, found := ds.Get("association", assoc.Key())
+	if found {
+		err := util.Errorf("assocation %s already exists", assoc.Key())
+		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
+	ds.Set("association", assoc.Key())
+	ds.SetAssociation(org.Name, "users", user)
+	ds.SetAssociation(user.name, "organizations", org)
+	return assoc, nil
 }
 
-func Get(key string) (*association.Association, util.Gerror) {
+func Get(key string) (*Association, util.Gerror) {
+	var assoc *Assocation
+	var err error
+	if config.Config.UsingDB() {
 
+	} else {
+		ds := datastore.New()
+		a, found := ds.Get("association", key)
+		if !found {
+			gerr := util.Errorf("Assocation %s not found", key)
+			gerr.SetStatus(http.StatusNotFound)
+			return nil, gerr
+		}
+		if a != nil {
+			assoc = a.(*Assoc)
+		}
+	}
+	return assoc, nil
+}
+
+func (a *Association) Delete() util.Gerror {
+	if config.Config.UsingDB() {
+
+	}
+	ds := datastore.New()
+	ds.Delete("association", a.Key())
+	ds.DelAssociation(a.Org.Name, "organization")
+	ds.DelAssociation(a.User.name, "user")
+	return nil
 }
 
 func Orgs(user *user.User) ([]*organization.Organization, util.Gerror) {
+	if config.Config.UsingDB() {
 
+	}
+	ds := datastore.New()
+	orgs := ds.GetAssociations(user.Name, "organizations")
+	return orgs, nil
 }
 
 func Users(org *organization.Organization) ([]*user.Users, util.Gerror) {
+	if config.Config.UsingDB() {
 
+	}
+	ds := datastore.New()
+	users := ds.GetAssociations(org.Name, "users")
+	return users, nil
 }

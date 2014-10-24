@@ -605,3 +605,73 @@ func WalkMapForNil(r interface{}) interface{} {
 func joinStr(str ...string) string {
 	return strings.Join(str, "")
 }
+
+func (ds *DataStore) SetAssocation(name string, variant string, obj interface{}) {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	a := ds.getAssocMap(name, variant)
+	a[name] = obj
+	ds.setAssocMap(name, variant, a)
+	return
+}
+
+func (ds *DataStore) GetAssociations(name string, variant string) []interface{} {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	a := ds.getAssocMap(name, variant)
+	var l []interface{}
+	if len(a) > 0 {
+		l := make([]interface{}, len(l))
+		n := 0
+		for _, v := range a {
+			l[n] = v
+			n++
+		}
+	}
+	return l
+}
+
+func (ds *DataStore) DelAssocation(name string, variant string) {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	a := ds.getAssocMap(name, variant)
+	delete(a, name)
+	ds.setAssocMap(name, variant, a)
+	return
+}
+
+func (ds *DataStore) getAssocMap(name string, variant string) map[string]interface{} {
+	dsKey := ds.makeKey(joinStr("assocmap-", variant), name)
+	var a interface{}
+	if config.Config.UseUnsafeMemStore {
+		a, _ = ds.dsc.Get(dsKey)
+	} else {
+		aEnc, _ := ds.dsc.Get(dsKey)
+		if aEnc != nil {
+			var err error
+			a, err = decodeSafeVal(aEnc)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		}
+	}
+	if a == nil {
+		a = make(map[string]interface{})
+	}
+	assoc := a.(map[string]interface{})
+	return assoc
+
+}
+
+func (ds *DataStore) setAssocMap(name string, variant string, associations map[string]interface{}) {
+	dsKey := ds.makeKey(joinStr("assocmap-", variant), name)
+	if config.Config.UseUnsafeMemStore {
+		ds.dsc.Set(dsKey, associations, -1)
+	} else {
+		valBytes, err := encodeSafeVal(associations)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		ds.dsc.Set(dsKey, valBytes, -1)
+	}
+}
