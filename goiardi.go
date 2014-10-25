@@ -197,6 +197,8 @@ func main() {
 	s.HandleFunc("/events", eventListHandler)
 	s.HandleFunc("/events/{id}", eventHandler)
 	s.HandleFunc("/file_store/{chksum}", fileStoreHandler)
+	s.HandleFunc("/groups", groupListHandler)
+	s.HandleFunc("/groups/{group_name}", groupHandler)
 	s.HandleFunc("/nodes", listHandler)
 	s.HandleFunc("/nodes/{name}", nodeHandler)
 	s.HandleFunc("/principals/{name}", principalHandler)
