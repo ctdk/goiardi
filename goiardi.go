@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/associationreq"
 	"github.com/ctdk/goiardi/authentication"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
@@ -564,6 +565,7 @@ func gobRegister() {
 	gob.Register(msi)
 	o := new(organization.Organization)
 	gob.Register(o)
+	gob.Register(new(associationreq.AssociationReq))
 }
 
 func setSaveTicker() {
