@@ -60,7 +60,7 @@ func Get(key string) (*AssociationReq, util.Gerror) {
 		ds := datastore.New()
 		a, found := ds.Get("association", key)
 		if !found {
-			gerr := util.Errorf("Assocation %s not found", key)
+			gerr := util.Errorf("Association %s not found", key)
 			gerr.SetStatus(http.StatusNotFound)
 			return nil, gerr
 		}
@@ -71,7 +71,7 @@ func Get(key string) (*AssociationReq, util.Gerror) {
 	return assoc, nil
 }
 
-func (a *Assocation) Accept() util.Gerror {
+func (a *AssociationReq) Accept() util.Gerror {
 	if config.UsingDB() {
 
 	}
@@ -79,7 +79,7 @@ func (a *Assocation) Accept() util.Gerror {
 	return a.Delete()
 }
 
-func (a *Assocation) Reject util.Gerror {
+func (a *AssociationReq) Reject() util.Gerror {
 	return a.Delete()
 }
 
@@ -189,7 +189,7 @@ func DelAllOrgAssocReqs(org *organization.Organization) util.Gerror {
 	return nil
 }
 
-func GetAllOrgsAssociationReqs(user *user.User) ([]*Assocation, util.Gerror) {
+func GetAllOrgsAssociationReqs(user *user.User) ([]*AssociationReq, util.Gerror) {
 	if config.UsingDB() {
 
 	}
@@ -204,12 +204,12 @@ func GetAllOrgsAssociationReqs(user *user.User) ([]*Assocation, util.Gerror) {
 		if err != nil {
 			return nil, err
 		}
-		assoc[i] = o
+		assoc[i] = a
 	}
 	return assoc, nil
 }
 
-func GetAllUsersAssociationReqs(org *organization.Organization) ([]*Assocation, util.Gerror) {
+func GetAllUsersAssociationReqs(org *organization.Organization) ([]*AssociationReq, util.Gerror) {
 	if config.UsingDB() {
 
 	}
@@ -224,7 +224,7 @@ func GetAllUsersAssociationReqs(org *organization.Organization) ([]*Assocation, 
 		if err != nil {
 			return nil, err
 		}
-		assoc[i] = o
+		assoc[i] = a
 	}
 	return assoc, nil
 }

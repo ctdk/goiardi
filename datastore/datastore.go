@@ -606,7 +606,7 @@ func joinStr(str ...string) string {
 	return strings.Join(str, "")
 }
 
-func (ds *DataStore) SetAssociation(name string, variant string, key string, obj interface{}) {
+func (ds *DataStore) SetAssociationReq(name string, variant string, key string, obj interface{}) {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	a := ds.getAssocMap(name, variant)
@@ -615,7 +615,7 @@ func (ds *DataStore) SetAssociation(name string, variant string, key string, obj
 	return
 }
 
-func (ds *DataStore) GetAssociations(name string, variant string) []interface{} {
+func (ds *DataStore) GetAssociationReqs(name string, variant string) []interface{} {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	a := ds.getAssocMap(name, variant)
@@ -631,7 +631,7 @@ func (ds *DataStore) GetAssociations(name string, variant string) []interface{} 
 	return l
 }
 
-func (ds *DataStore) DelAssociation(name string, variant string, key string) {
+func (ds *DataStore) DelAssociationReq(name string, variant string, key string) {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	a := ds.getAssocMap(name, variant)
@@ -640,7 +640,7 @@ func (ds *DataStore) DelAssociation(name string, variant string, key string) {
 	return
 }
 
-func (ds *DataStore) DelAllAssociations(name string, variant string) {
+func (ds *DataStore) DelAllAssociationReqs(name string, variant string) {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	dsKey := ds.makeKey(joinStr("assocmap-", variant), name)

@@ -30,6 +30,7 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
+	"regexp"
 )
 
 func userHandler(w http.ResponseWriter, r *http.Request) {
@@ -365,6 +366,7 @@ func userAssocHandler(w http.ResponseWriter, r *http.Request) {
 		ar := make(map[string]string)
 		ar["id"] = a.Key()
 		ar["orgname"] = a.Org.Name
+		response[i] = ar
 	}
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
@@ -431,7 +433,7 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	id := vars["id"]
-	re := regexp.MustCompile(util.JoinStr(userName, "-(.+)"))
+	re := regexp.MustCompile(util.JoinStr(user.Name, "-(.+)"))
 	o := re.FindStringSubmatch(id)
 	if o == nil {
 		jsonErrorReport(w, r, util.JoinStr("Association request ", id, " is invalid. Must be ", userName, "-orgname."), http.StatusBadRequest)
@@ -472,7 +474,7 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 			return
 	}
 	response := make(map[string]map[string]interface{})
-	response["organization"] = map[string]interface{}{ "name" => org }
+	response["organization"] = map[string]interface{}{ "name": org }
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)

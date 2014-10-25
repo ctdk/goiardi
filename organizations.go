@@ -20,9 +20,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/associationreq"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -102,8 +104,23 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 						jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 						return
 					}
+					userName, ok := arData["user"].(string)
+					if !ok {
+						jsonErrorReport(w, r, "user name missing or invalid", http.StatusBadRequest)
+						return
+					}
+					user, err := user.Get(userName)
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
+					assoc, err := associationreq.Set(user, org)
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
 					w.WriteHeader(http.StatusCreated)
-					orgResponse["uri"] = util.CustomURL(util.JoinStr(r.URL.Path, "/", arData["user"].(string), "-", orgName))
+					orgResponse["uri"] = util.CustomURL(util.JoinStr(r.URL.Path, "/", assoc.Key()))
 				default:
 					jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 					return

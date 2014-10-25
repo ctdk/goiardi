@@ -168,6 +168,9 @@ func main() {
 	muxer.HandleFunc("/authenticate_user", authenticateUserHandler)
 	muxer.HandleFunc("/users", userListHandler)
 	muxer.HandleFunc("/users/{name}", userHandler)
+	muxer.HandleFunc("/users/{name}/association_requests", userAssocHandler)
+	muxer.HandleFunc("/users/{name}/association_requests/count", userAssocCountHandler)
+	muxer.HandleFunc("/users/{name}/association_requests/{id}", userAssocIDHandler)
 	// organization routes
 	s := muxer.PathPrefix("/organizations/{org}/").Subrouter()
 	// get the org tool routes out of the way, out of order
@@ -218,11 +221,8 @@ func main() {
 	s.HandleFunc("/shovey/stream/{job_id}/{node_name}", shoveyHandler)
 	s.HandleFunc("/status/{specif}/nodes", statusHandler)
 	s.HandleFunc("/status/{specif}/{node_name}/{op}", statusHandler)
-	s.HandleFunc("/users", userListHandler)
+	s.HandleFunc("/users", userOrgListHandler)
 	s.HandleFunc("/users/{name}", userHandler)
-	s.HandleFunc("/users/{name}/association_requests", userAssocHandler)
-	s.HandleFunc("/users/{name}/association_requests/count", userAssocCountHandler)
-	s.HandleFunc("/users/{name}/association_requests/{id}", userAssocIDHandler)
 	s.HandleFunc("/universe", universe.UniverseHandler)
 
 	/* TODO: figure out how to handle the root & not found pages */
@@ -252,7 +252,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	jsonErrorReport(w, r, "not found", http.StatusNotFound)
+	jsonErrorReport(w, r, "not found 12345", http.StatusNotFound)
 	return
 }
 
