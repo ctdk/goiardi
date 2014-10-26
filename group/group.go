@@ -21,6 +21,13 @@ import (
 	"github.com/ctdk/goiardi/actor"
 )
 
+var DefaultGroups []string{
+	"admins",
+	"billing-admins",
+	"clients",
+	"users",
+}
+
 type Group struct {
 	Name string
 	Org *organization.Organization

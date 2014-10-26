@@ -21,6 +21,14 @@ import (
 	"github.com/ctdk/goiardi/group"
 )
 
+var DefaultACLs []string{
+	"create",
+	"read",
+	"update",
+	"delete",
+	"grant",
+}
+
 type ACLOwner interface{
 
 }
@@ -35,3 +43,5 @@ type ACL struct {
 	ACLitems map[string]*ACLitem
 	Owner ACLOwner
 }
+
+

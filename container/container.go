@@ -20,7 +20,20 @@ import (
 	"github.com/ctdk/goiardi/organization"
 )
 
+var DefaultContainers []string{
+	"clients",
+	"containers",
+	"cookbooks",
+	"data",
+	"environments",
+	"groups",
+	"nodes",
+	"roles",
+	"sandboxes",
+}
+
 type Container struct {
 	Name string
 	Org *organization.Organization
 }
+
