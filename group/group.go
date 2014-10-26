@@ -18,9 +18,12 @@ package group
 
 import (
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/actor"
 )
 
 type Group struct {
 	Name string
-	org *organization.Organization
+	Org *organization.Organization
+	Actors []actor.Actor
+	Groups []*Group
 }

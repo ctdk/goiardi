@@ -22,5 +22,5 @@ import (
 
 type Container struct {
 	Name string
-	org *organization.Organization
+	Org *organization.Organization
 }

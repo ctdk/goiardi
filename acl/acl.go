@@ -15,3 +15,23 @@
  */
 
 package acl
+
+import (
+	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/group"
+)
+
+type ACLOwner interface{
+
+}
+
+type ACLitem struct {
+	Perm string
+	Actors []actor.Actor
+	Groups []*group.Group
+}
+
+type ACL struct {
+	ACLitems map[string]*ACLitem
+	Owner ACLOwner
+}
