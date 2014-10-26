@@ -182,7 +182,7 @@ func main() {
 	s.HandleFunc("/clients/{name}/_acl", clientACLHandler)
 	// may be broken up more later
 	s.HandleFunc("/containers/{name}", containerHandler)
-	s.HandleFunc("/containers/{thing}/_acl", containerACLHandler)
+	s.HandleFunc("/containers/{name}/_acl", containerACLHandler)
 	s.HandleFunc("/cookbooks", cookbookHandler)
 	s.HandleFunc("/cookbooks/{name}", cookbookHandler)
 	s.HandleFunc("/cookbooks/{name}/{version}", cookbookHandler)
