@@ -44,4 +44,8 @@ type ACL struct {
 	Owner ACLOwner
 }
 
+func defaultACL(kind string) *ACL {
+	switch kind {
 
+	}
+}

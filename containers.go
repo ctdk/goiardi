@@ -40,7 +40,10 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = org
 
+	container_name := vars["name"]
+
 	response := make(map[string]interface{})
+	response["containername"] = container_name
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
