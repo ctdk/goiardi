@@ -14,25 +14,39 @@
  * limitations under the License.
  */
 
-package container
+package group
 
 import (
+	"encoding/gob"
 	"github.com/ctdk/goiardi/organization"
+	"testing"
 )
 
-var DefaultContainers = [9]string{
-	"clients",
-	"containers",
-	"cookbooks",
-	"data",
-	"environments",
-	"groups",
-	"nodes",
-	"roles",
-	"sandboxes",
-}
+// More group tests will be coming, as
 
-type Container struct {
-	Name string
-	Org  *organization.Organization
+func TestGroupCreation(t *testing.T) {
+	gob.Register(new(organization.Organization))
+	gob.Register(new(Group))
+	org, _ := organization.New("florp", "mlorph normph")
+	g, err := New(org, "us0rs")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if g == nil {
+		t.Errorf("group us0rs was unexpectedly nil")
+	}
+	err = g.Save()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	g2, err := Get(org, "us0rs")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if g2 == nil {
+		t.Errorf("refetching group didn't work")
+	}
+	if g2.Name != g.Name {
+		t.Errorf("group names didn't match, expected %s, got %s", g.Name, g2.Name)
+	}
 }

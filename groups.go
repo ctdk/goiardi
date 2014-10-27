@@ -40,8 +40,8 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 	//groupName := vars["group_id"]
 
 	response := make(map[string]interface{})
-	response["actors"] = []string{ "moo" }
-	response["groups"] = []string{ "moo" }
+	response["actors"] = []string{"moo"}
+	response["groups"] = []string{"moo"}
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
@@ -60,7 +60,6 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = org
-
 
 	response := make(map[string]interface{})
 

@@ -83,7 +83,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 			re := regexp.MustCompile(util.JoinStr("(.+)-", orgName))
 			userChk := re.FindStringSubmatch(id)
 			if userChk == nil {
-				util.JSONErrorReport(w, r, util.JoinStr("Invalid ID ", id, ". Must be of the form username-", orgName) , http.StatusNotFound)
+				util.JSONErrorReport(w, r, util.JoinStr("Invalid ID ", id, ". Must be of the form username-", orgName), http.StatusNotFound)
 				return
 			}
 			// Looks like this is supposed to be a delete.
@@ -92,38 +92,38 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 			orgResponse["username"] = userChk[1]
 		} else {
 			switch r.Method {
-				case "GET":
-					// returns a list of associations with
-					// this org. TODO: It should actually
-					// do that.
-				case "POST":
-					// creates the association. TODO: make
-					// it do so
-					arData, jerr := parseObjJSON(r.Body)
-					if jerr != nil {
-						jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-						return
-					}
-					userName, ok := arData["user"].(string)
-					if !ok {
-						jsonErrorReport(w, r, "user name missing or invalid", http.StatusBadRequest)
-						return
-					}
-					user, err := user.Get(userName)
-					if err != nil {
-						jsonErrorReport(w, r, err.Error(), err.Status())
-						return
-					}
-					assoc, err := associationreq.Set(user, org)
-					if err != nil {
-						jsonErrorReport(w, r, err.Error(), err.Status())
-						return
-					}
-					w.WriteHeader(http.StatusCreated)
-					orgResponse["uri"] = util.CustomURL(util.JoinStr(r.URL.Path, "/", assoc.Key()))
-				default:
-					jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+			case "GET":
+				// returns a list of associations with
+				// this org. TODO: It should actually
+				// do that.
+			case "POST":
+				// creates the association. TODO: make
+				// it do so
+				arData, jerr := parseObjJSON(r.Body)
+				if jerr != nil {
+					jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 					return
+				}
+				userName, ok := arData["user"].(string)
+				if !ok {
+					jsonErrorReport(w, r, "user name missing or invalid", http.StatusBadRequest)
+					return
+				}
+				user, err := user.Get(userName)
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				assoc, err := associationreq.Set(user, org)
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				w.WriteHeader(http.StatusCreated)
+				orgResponse["uri"] = util.CustomURL(util.JoinStr(r.URL.Path, "/", assoc.Key()))
+			default:
+				jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+				return
 			}
 		}
 	default:

@@ -27,7 +27,7 @@ import (
 
 type AssociationReq struct {
 	User *user.User
-	Org *organization.Organization
+	Org  *organization.Organization
 }
 
 func (a *AssociationReq) Key() string {
@@ -35,10 +35,10 @@ func (a *AssociationReq) Key() string {
 }
 
 func Set(user *user.User, org *organization.Organization) (*AssociationReq, util.Gerror) {
-	if config.UsingDB(){
+	if config.UsingDB() {
 
 	}
-	assoc := &AssociationReq{ user, org }
+	assoc := &AssociationReq{user, org}
 	ds := datastore.New()
 	_, found := ds.Get("association", assoc.Key())
 	if found {
@@ -108,7 +108,7 @@ func Orgs(user *user.User) ([]*organization.Organization, util.Gerror) {
 }
 
 func OrgsAssociationReqCount(user *user.User) (int, util.Gerror) {
-	if config.UsingDB(){
+	if config.UsingDB() {
 
 	}
 	orgs, err := Orgs(user)
@@ -120,7 +120,7 @@ func OrgsAssociationReqCount(user *user.User) (int, util.Gerror) {
 }
 
 func UsersAssociationReqCount(org *organization.Organization) (int, util.Gerror) {
-	if config.UsingDB(){
+	if config.UsingDB() {
 
 	}
 	users, err := Users(org)

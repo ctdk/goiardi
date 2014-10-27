@@ -359,7 +359,7 @@ func userAssocHandler(w http.ResponseWriter, r *http.Request) {
 	assoc, err := associationreq.GetAllOrgsAssociationReqs(user)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
-		return 
+		return
 	}
 	response := make([]map[string]string, len(assoc))
 	for i, a := range assoc {
@@ -400,7 +400,7 @@ func userAssocCountHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
-	response := map[string]interface{}{ "value": count }
+	response := map[string]interface{}{"value": count}
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -431,7 +431,7 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
-	
+
 	id := vars["id"]
 	re := regexp.MustCompile(util.JoinStr(user.Name, "-(.+)"))
 	o := re.FindStringSubmatch(id)
@@ -457,24 +457,24 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch res {
-		case "accept":
-			err = assoc.Accept()
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-		case "reject":
-			err = assoc.Reject()
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-		default:
-			jsonErrorReport(w, r, "response parameter was missing or set to the wrong value (must be accept or reject)", http.StatusBadRequest)
+	case "accept":
+		err = assoc.Accept()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
+		}
+	case "reject":
+		err = assoc.Reject()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+	default:
+		jsonErrorReport(w, r, "response parameter was missing or set to the wrong value (must be accept or reject)", http.StatusBadRequest)
+		return
 	}
 	response := make(map[string]map[string]interface{})
-	response["organization"] = map[string]interface{}{ "name": org }
+	response["organization"] = map[string]interface{}{"name": org}
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)

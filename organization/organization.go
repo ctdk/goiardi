@@ -61,6 +61,7 @@ func New(name, fullName string) (*Organization, util.Gerror) {
 		return nil, err
 	}
 	guid := fmt.Sprintf("%32x", []byte(uuID))
+	// NOTE: This may require more thorough validation down the line
 	if _, sterr := util.ValidateAsString(name); sterr != nil {
 		gerr := util.Errorf("organization name invalid or missing")
 		return nil, gerr

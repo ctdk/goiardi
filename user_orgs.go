@@ -22,8 +22,8 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/user"
 	//"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -50,7 +50,7 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 	response := make([]map[string]map[string]string, len(userList))
 	for i, u := range userList {
 		ur := make(map[string]map[string]string)
-		ur["user"] = map[string]string{ "username": u }
+		ur["user"] = map[string]string{"username": u}
 		response[i] = ur
 	}
 	enc := json.NewEncoder(w)
