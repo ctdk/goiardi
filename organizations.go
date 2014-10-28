@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/associationreq"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/environment"
+	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
@@ -228,6 +229,11 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		environment.MakeDefaultEnvironment(org)
+		gerr := group.MakeDefaultGroups(org)
+		if gerr != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
 		orgResponse = org.ToJSON()
 		orgResponse["private_key"] = pem
 		orgResponse["clientname"] = validator.Name

@@ -18,8 +18,10 @@ package acl
 
 import (
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/util"
 )
 
 var DefaultACLs = [5]string{
@@ -42,6 +44,7 @@ type ACLitem struct {
 type ACL struct {
 	ACLitems map[string]*ACLitem
 	Owner    ACLOwner
+	isModified bool
 }
 
 func defaultACL(org *organization.Organization, kind string, subkind string) *ACL {
@@ -135,10 +138,22 @@ func defaultACL(org *organization.Organization, kind string, subkind string) *AC
 	return acl
 }
 
-func addGroup(org *organization.Organization, aclItem map[string]*ACLitem, name string) error {
+func addGroup(org *organization.Organization, aclItem map[string]*ACLitem, name string) util.Gerror {
 	g, err := group.Get(org, name)
 	if err != nil {
 		return err
 	}
 	aclItem = append(aclItem, g)
+}
+
+func Get(org *organization.Organization, kind string) (*ACL, util.Gerror) {
+
+}
+
+func (a *ACL) Save() util.Gerror {
+
+}
+
+func (a *ACL) ToJSON() map[string]interface{} {
+
 }

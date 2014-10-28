@@ -36,6 +36,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/filestore"
+	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
@@ -574,6 +575,7 @@ func gobRegister() {
 	o := new(organization.Organization)
 	gob.Register(o)
 	gob.Register(new(associationreq.AssociationReq))
+	gob.Register(new(group.Group))
 }
 
 func setSaveTicker() {

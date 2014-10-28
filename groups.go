@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	//"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
 	//"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -35,13 +36,15 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	_ = org
 
-	//groupName := vars["group_id"]
+	groupName := vars["group_name"]
+	g, gerr := group.Get(org, groupName)
+	if gerr != nil {
+		jsonErrorReport(w, r, gerr.Error(), gerr.Status())
+		return
+	}
 
-	response := make(map[string]interface{})
-	response["actors"] = []string{"moo"}
-	response["groups"] = []string{"moo"}
+	response := g.ToJSON()
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {

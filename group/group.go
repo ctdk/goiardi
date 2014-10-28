@@ -95,6 +95,30 @@ func (g *Group) Delete() util.Gerror {
 	return nil
 }
 
+func (g *Group) ToJSON() map[string]interface{} {
+	gJSON := make(map[string]interface{})
+	gJSON["name"] = g.Name
+	gJSON["groupname"] = g.Name
+	gJSON["orgname"] = g.Org.Name
+	gJSON["actors"] = make([]string, len(g.Actors))
+	gJSON["users"] = make([]string, 0, len(g.Actors))
+	gJSON["clients"] = make([]string, 0, len(g.Actors))
+	for i, a := range g.Actors {
+		gJSON["actors"].([]string)[i] = a.GetName()
+		if a.IsClient() {
+			gJSON["clients"] = append(gJSON["clients"].([]string), a.GetName())
+		} else {
+			gJSON["users"] = append(gJSON["users"].([]string), a.GetName())
+		}
+	}
+	gJSON["groups"] = make([]string, len(g.Groups))
+	for i, g := range g.Groups {
+		gJSON["groups"].([]string)[i] = g.Name
+	}
+
+	return gJSON
+}
+
 func GetList(org *organization.Organization) []string {
 	if config.UsingDB() {
 
