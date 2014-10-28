@@ -50,3 +50,38 @@ func TestGroupCreation(t *testing.T) {
 		t.Errorf("group names didn't match, expected %s, got %s", g.Name, g2.Name)
 	}
 }
+
+func TestDefaultGroups(t *testing.T) {
+	org, _ := organization.New("florp2", "mlorph normph")
+	org.Save()
+	MakeDefaultGroups(org)
+	g, err := Get(org, "users")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if g == nil {
+		t.Errorf("failed to get created default group users")
+	}
+	g, err = Get(org, "admins")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if g == nil {
+		t.Errorf("failed to get created default group admins")
+	}
+	g, err = Get(org, "billing-admins")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if g == nil {
+		t.Errorf("failed to get created default group billing-admins")
+	}
+	g, err = Get(org, "clients")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if g == nil {
+		t.Errorf("failed to get created default group clients")
+	}
+
+}

@@ -115,3 +115,19 @@ func (g *Group) URLType() string {
 func (g *Group) OrgName() string {
 	return g.Org.Name
 }
+
+// should this actually return the groups?
+
+func MakeDefaultGroups(org *organization.Organization) util.Gerror {
+	for _, n := range DefaultGroups {
+		g, err := New(org, n)
+		if err != nil {
+			return err
+		}
+		err = g.Save()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
