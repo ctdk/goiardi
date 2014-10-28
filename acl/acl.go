@@ -19,6 +19,7 @@ package acl
 import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/group"
+	"github.com/ctdk/goiardi/organization"
 )
 
 var DefaultACLs = [5]string{
@@ -43,7 +44,7 @@ type ACL struct {
 	Owner    ACLOwner
 }
 
-func defaultACL(kind string, subkind string) *ACL {
+func defaultACL(org *organization.Organization, kind string, subkind string) *ACL {
 	acl := make(ACL)
 	// almost always we'd want these default acls
 	acl.ACLitems = make(map[string]*ACLitem)
@@ -54,13 +55,66 @@ func defaultACL(kind string, subkind string) *ACL {
 	case "containers":
 		switch subkind {
 		case "$$root$$", "containers", "groups":
+			addGroup(org, acl.ACLitems["create"], "admins")
+			addGroup(org, acl.ACLitems["read"], "admins")
+			addGroup(org, acl.ACLitems["read"], "users")
+			addGroup(org, acl.ACLitems["update"], "admins")
+			addGroup(org, acl.ACLitems["delete"], "admins")
+			addGroup(org, acl.ACLitems["grant"], "admins")	
 		case "cookbooks", "environments", "roles":
+			addGroup(org, acl.ACLitems["create"], "admins")
+			addGroup(org, acl.ACLitems["create"], "users")
+			addGroup(org, acl.ACLitems["read"], "admins")
+			addGroup(org, acl.ACLitems["read"], "users")
+			addGroup(org, acl.ACLitems["read"], "clients")
+			addGroup(org, acl.ACLitems["update"], "admins")
+			addGroup(org, acl.ACLitems["update"], "users")
+			addGroup(org, acl.ACLitems["delete"], "admins")
+			addGroup(org, acl.ACLitems["delete"], "users")
+			addGroup(org, acl.ACLitems["grant"], "admins")
 		// bit confusing here: chef-zero says cookbooks have both the
 		// above and below defaults. Using the above for now.
 		case "data":
+			addGroup(org, acl.ACLitems["create"], "admins")
+			addGroup(org, acl.ACLitems["create"], "users")
+			addGroup(org, acl.ACLitems["create"], "clients")
+			addGroup(org, acl.ACLitems["read"], "admins")
+			addGroup(org, acl.ACLitems["read"], "users")
+			addGroup(org, acl.ACLitems["read"], "clients")
+			addGroup(org, acl.ACLitems["update"], "admins")
+			addGroup(org, acl.ACLitems["update"], "users")
+			addGroup(org, acl.ACLitems["update"], "clients")
+			addGroup(org, acl.ACLitems["delete"], "admins")
+			addGroup(org, acl.ACLitems["delete"], "users")
+			addGroup(org, acl.ACLitems["delete"], "clients")
+			addGroup(org, acl.ACLitems["grant"], "admins")
 		case "nodes":
+			addGroup(org, acl.ACLitems["create"], "admins")
+			addGroup(org, acl.ACLitems["create"], "users")
+			addGroup(org, acl.ACLitems["create"], "clients")
+			addGroup(org, acl.ACLitems["read"], "admins")
+			addGroup(org, acl.ACLitems["read"], "users")
+			addGroup(org, acl.ACLitems["read"], "clients")
+			addGroup(org, acl.ACLitems["update"], "admins")
+			addGroup(org, acl.ACLitems["update"], "users")
+			addGroup(org, acl.ACLitems["delete"], "admins")
+			addGroup(org, acl.ACLitems["delete"], "users")
+			addGroup(org, acl.ACLitems["grant"], "admins")
 		case "clients":
+			addGroup(org, acl.ACLitems["create"], "admins")
+			addGroup(org, acl.ACLitems["read"], "admins")
+			addGroup(org, acl.ACLitems["read"], "users")
+			addGroup(org, acl.ACLitems["update"], "admins")
+			addGroup(org, acl.ACLitems["delete"], "admins")
+			addGroup(org, acl.ACLitems["delete"], "users")
+			addGroup(org, acl.ACLitems["grant"], "admins")
 		case "sandboxes":
+			addGroup(org, acl.ACLitems["create"], "admins")
+			addGroup(org, acl.ACLitems["create"], "users")
+			addGroup(org, acl.ACLitems["read"], "admins")
+			addGroup(org, acl.ACLitems["update"], "admins")
+			addGroup(org, acl.ACLitems["delete"], "admins")
+			addGroup(org, acl.ACLitems["grant"], "admins")
 		default:
 			// blank out the previous work
 			acl = new(ACL)
@@ -68,10 +122,23 @@ func defaultACL(kind string, subkind string) *ACL {
 	case "groups":
 		switch subkind {
 		case "admins", "clients", "users":
+			for _, perm := range DefaultACLs {
+				addGroup(org, acl.ACLitems[perm], "admins")
+			}
 		case "billing-admins":
+			addGroup(org, acl.ACLitems["read"], "billing-admins")
+			addGroup(org, acl.ACLitems["update"], "billing-admins")
 		default:
 			acl = new(ACL)
 		}
 	}
 	return acl
+}
+
+func addGroup(org *organization.Organization, aclItem map[string]*ACLitem, name string) error {
+	g, err := group.Get(org, name)
+	if err != nil {
+		return err
+	}
+	aclItem = append(aclItem, g)
 }
