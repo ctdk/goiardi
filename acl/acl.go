@@ -19,6 +19,7 @@ package acl
 import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
@@ -42,13 +43,19 @@ type ACLitem struct {
 }
 
 type ACL struct {
+	Kind string
+	Subkind string
 	ACLitems map[string]*ACLitem
 	Owner    ACLOwner
+	Org *organization.Organization
 	isModified bool
 }
 
-func defaultACL(org *organization.Organization, kind string, subkind string) *ACL {
-	acl := make(ACL)
+func defaultACL(org *organization.Organization, kind string, subkind string) (*ACL, util.Gerror) {
+	acl := new(ACL)
+	acl.Kind = kind
+	acl.Subkind = subkind
+	acl.Org = org
 	// almost always we'd want these default acls
 	acl.ACLitems = make(map[string]*ACLitem)
 	for _, a := range DefaultACLs {
@@ -119,41 +126,75 @@ func defaultACL(org *organization.Organization, kind string, subkind string) *AC
 			addGroup(org, acl.ACLitems["delete"], "admins")
 			addGroup(org, acl.ACLitems["grant"], "admins")
 		default:
-			// blank out the previous work
-			acl = new(ACL)
+			acl.ACLitems = nil
 		}
 	case "groups":
 		switch subkind {
 		case "admins", "clients", "users":
 			for _, perm := range DefaultACLs {
-				addGroup(org, acl.ACLitems[perm], "admins")
+				ggerr := addGroup(org, acl.ACLitems[perm], "admins")
+				if ggerr != nil {
+					return nil, ggerr
+				}
 			}
 		case "billing-admins":
 			addGroup(org, acl.ACLitems["read"], "billing-admins")
 			addGroup(org, acl.ACLitems["update"], "billing-admins")
 		default:
-			acl = new(ACL)
+			acl.ACLitems = nil
 		}
+	default:
+		e := util.Errorf("Ok got to default with kind %s, subkind %s", kind, subkind)
+		return nil, e
 	}
-	return acl
+	return acl, nil
 }
 
-func addGroup(org *organization.Organization, aclItem map[string]*ACLitem, name string) util.Gerror {
+func addGroup(org *organization.Organization, aclItem *ACLitem, name string) util.Gerror {
 	g, err := group.Get(org, name)
 	if err != nil {
 		return err
 	}
-	aclItem = append(aclItem, g)
+	aclItem.Groups = append(aclItem.Groups, g)
+	return nil
 }
 
-func Get(org *organization.Organization, kind string) (*ACL, util.Gerror) {
+func Get(org *organization.Organization, kind string, subkind string) (*ACL, util.Gerror) {
+	if config.UsingDB() {
 
+	}
+	ds := datastore.New()
+	a, found := ds.Get(org.DataKey("acl"), util.JoinStr(kind, "-", subkind))
+	if !found {
+		return defaultACL(org, kind, subkind)
+	}
+	return a.(*ACL), nil
 }
 
 func (a *ACL) Save() util.Gerror {
+	if config.UsingDB() {
 
+	}
+	if a.isModified {
+		ds := datastore.New()
+		ds.Set(a.Org.DataKey("acl"), util.JoinStr(a.Subkind, "-", a.Kind), a)
+	}
+	return nil
 }
 
 func (a *ACL) ToJSON() map[string]interface{} {
-
+	aclJSON := make(map[string]interface{})
+	for k, v := range a.ACLitems {
+		r := make(map[string][]string, 2)
+		r["actors"] = make([]string, len(v.Actors))
+		r["groups"] = make([]string, len(v.Groups))
+		for i, act := range v.Actors {
+			r["actors"][i] = act.GetName()
+		}
+		for i, gr := range v.Groups {
+			r["groups"][i] = gr.Name
+		}
+		aclJSON[k] = r
+	}
+	return aclJSON
 }

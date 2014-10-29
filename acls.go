@@ -18,6 +18,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/ctdk/goiardi/acl"
 	//"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/organization"
 	//"github.com/ctdk/goiardi/util"
@@ -97,9 +98,14 @@ func groupACLHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	_ = org
-
-	response := make(map[string]interface{})
+	kind := "groups"
+	subkind := vars["group_name"]
+	a, rerr := acl.Get(org, kind, subkind)
+	if rerr != nil {
+		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		return
+	}
+	response := a.ToJSON()
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
