@@ -38,9 +38,15 @@ func orgACLHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	_ = org
 
-	response := make(map[string]interface{})
+	kind := "containers"
+	subkind := "$$root$$"
+	a, rerr := acl.Get(org, kind, subkind)
+	if rerr != nil {
+		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		return
+	}
+	response := a.ToJSON()
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
@@ -58,9 +64,14 @@ func containerACLHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	_ = org
-
-	response := make(map[string]interface{})
+	kind := "containers"
+	subkind := vars["name"]
+	a, rerr := acl.Get(org, kind, subkind)
+	if rerr != nil {
+		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		return
+	}
+	response := a.ToJSON()
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
@@ -78,9 +89,14 @@ func clientACLHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	_ = org
-
-	response := make(map[string]interface{})
+	kind := "containers"
+	subkind := vars["name"]
+	a, rerr := acl.Get(org, kind, subkind)
+	if rerr != nil {
+		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		return
+	}
+	response := a.ToJSON()
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {

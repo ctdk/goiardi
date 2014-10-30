@@ -22,6 +22,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/associationreq"
 	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/container"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
@@ -226,6 +227,11 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 		validator, pem, err := makeValidator(org)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		cerr := container.MakeDefaultContainers(org)
+		if cerr != nil {
+			jsonErrorReport(w, r, cerr.Error(), cerr.Status())
 			return
 		}
 		environment.MakeDefaultEnvironment(org)

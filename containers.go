@@ -18,9 +18,10 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/ctdk/goiardi/container"
 	//"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/organization"
-	//"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -40,10 +41,40 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = org
 
-	container_name := vars["name"]
+	containerName := vars["name"]
+
+	con, cerr := container.Get(org, containerName)
+	if cerr != nil {
+		jsonErrorReport(w, r, cerr.Error(), cerr.Status())
+		return
+	}
 
 	response := make(map[string]interface{})
-	response["containername"] = container_name
+	response["containername"] = con.Name
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&response); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func containerListHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+
+	cList := container.GetList(org)
+	response := make(map[string]interface{})
+	for _, c := range cList {
+		conURL := util.JoinStr("/organizations/", org.Name, "/containers/", c)
+		response[c] = util.CustomURL(conURL)
+	}
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {

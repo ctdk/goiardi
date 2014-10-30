@@ -128,6 +128,22 @@ func GetList(org *organization.Organization) []string {
 	return groupList
 }
 
+func AllGroups(org *organization.Organization) []*Group {
+	if config.UsingDB() {
+
+	}
+	groupList := GetList(org)
+	groups := make([]*Group, 0, len(groupList))
+	for _, n := range groupList {
+		g, err := Get(org, n)
+		if err != nil {
+			continue
+		}
+		groups = append(groups, g)
+	}
+	return groups
+}
+
 func (g *Group) GetName() string {
 	return g.Name
 }

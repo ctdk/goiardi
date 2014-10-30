@@ -22,6 +22,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 )
 
@@ -33,7 +34,12 @@ var DefaultACLs = [5]string{
 	"grant",
 }
 
+var DefaultUser = "pivotal" // should this be configurable?
+
 type ACLOwner interface {
+	GetName() string
+	ContainerKind() string
+	ContainerType() string
 }
 
 type ACLitem struct {
@@ -61,8 +67,20 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 	for _, a := range DefaultACLs {
 		acl.ACLitems[a] = &ACLitem{Perm: a}
 	}
+	defUser, err := user.Get(DefaultUser)
+	if err != nil {
+		return nil, err
+	}
 	switch kind {
 	case "containers":
+		// by default, all of these seem to have the same default
+		// user
+		for _, perm := range DefaultACLs {
+			ggerr := acl.AddActor(perm, defUser)
+			if ggerr != nil {
+				return nil, ggerr
+			}
+		}
 		switch subkind {
 		case "$$root$$", "containers", "groups":
 			addGroup(org, acl.ACLitems["create"], "admins")
@@ -136,10 +154,20 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 				if ggerr != nil {
 					return nil, ggerr
 				}
+				ggerr = acl.AddActor(perm, defUser)
+				if ggerr != nil {
+					return nil, ggerr
+				}
 			}
 		case "billing-admins":
 			addGroup(org, acl.ACLitems["read"], "billing-admins")
 			addGroup(org, acl.ACLitems["update"], "billing-admins")
+			for _, perm := range DefaultACLs {
+				ggerr := acl.AddActor(perm, defUser)
+				if ggerr != nil {
+					return nil, ggerr
+				}
+			}
 		default:
 			acl.ACLitems = nil
 		}
@@ -177,6 +205,15 @@ func (a *ACL) AddGroup(perm string, g *group.Group) util.Gerror {
 		return err
 	}
 	a.ACLitems[perm].Groups = append(a.ACLitems[perm].Groups, g)
+	return nil
+}
+
+func (a *ACL) AddActor(perm string, act actor.Actor) util.Gerror {
+	if !checkValidPerm(perm){
+		err := util.Errorf("invalid perm %s", perm)
+		return err
+	}
+	a.ACLitems[perm].Actors = append(a.ACLitems[perm].Actors, act)
 	return nil
 }
 

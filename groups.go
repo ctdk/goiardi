@@ -21,7 +21,7 @@ import (
 	//"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
-	//"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -62,9 +62,12 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	_ = org
 
+	groups := group.AllGroups(org)
 	response := make(map[string]interface{})
+	for _, g := range groups {
+		response[g.Name] = util.ObjURL(g)
+	}
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {

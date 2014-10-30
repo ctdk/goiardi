@@ -26,11 +26,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/associationreq"
 	"github.com/ctdk/goiardi/authentication"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/container"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/datastore"
@@ -182,6 +184,7 @@ func main() {
 	s.HandleFunc("/clients/{name}", clientHandler)
 	s.HandleFunc("/clients/{name}/_acl", clientACLHandler)
 	// may be broken up more later
+	s.HandleFunc("/containers", containerListHandler)
 	s.HandleFunc("/containers/{name}", containerHandler)
 	s.HandleFunc("/containers/{name}/_acl", containerACLHandler)
 	s.HandleFunc("/cookbooks", cookbookHandler)
@@ -576,6 +579,9 @@ func gobRegister() {
 	gob.Register(o)
 	gob.Register(new(associationreq.AssociationReq))
 	gob.Register(new(group.Group))
+	gob.Register(new(container.Container))
+	gob.Register(new(acl.ACL))
+	gob.Register(new(acl.ACLitem))
 }
 
 func setSaveTicker() {

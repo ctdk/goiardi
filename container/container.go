@@ -17,7 +17,11 @@
 package container
 
 import (
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/util"
+	"net/http"
 )
 
 var DefaultContainers = [9]string{
@@ -32,7 +36,98 @@ var DefaultContainers = [9]string{
 	"sandboxes",
 }
 
+// there has GOT to be more to this
 type Container struct {
 	Name string
 	Org  *organization.Organization
+}
+
+func New(org *organization.Organization, name string) (*Container, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get(org.DataKey("container"), name)
+	}
+	if found {
+		err := util.Errorf("Container %s in organization %s already exists", name, org.Name)
+		return nil, err
+	}
+	c := &Container{
+		Name: name,
+		Org: org,
+	}
+	return c, nil
+}
+
+func Get(org *organization.Organization, name string) (*Container, util.Gerror) {
+	if config.UsingDB() {
+
+	}
+	ds := datastore.New()
+	c, found := ds.Get(org.DataKey("container"), name)
+	var container *Container
+	if c != nil {
+		container = c.(*Container)
+	}
+	if !found {
+		err := util.Errorf("container '%s' not found in organization %s", name, org.Name)
+		err.SetStatus(http.StatusNotFound)
+		return nil, err
+	}
+	return container, nil
+}
+
+func (c *Container) Save() util.Gerror {
+	if config.UsingDB() {
+
+	}
+	ds := datastore.New()
+	ds.Set(c.Org.DataKey("container"), c.Name, c)
+	return nil
+}
+
+func (c *Container) Delete() util.Gerror {
+	if config.UsingDB() {
+
+	}
+	ds := datastore.New()
+	ds.Delete(c.Org.DataKey("container"), c.Name)
+	return nil
+}
+
+func GetList(org *organization.Organization) []string {
+	if config.UsingDB() {
+
+	}
+	ds := datastore.New()
+	conList := ds.GetList(org.DataKey("container"))
+	return conList
+}
+
+func (c *Container) GetName() string {
+	return c.Name
+}
+
+func (c *Container) URLType() string {
+	return "containers"
+}
+
+func (c *Container) OrgName() string {
+	return c.Org.Name
+}
+
+func MakeDefaultContainers(org *organization.Organization) util.Gerror {
+	for _, n := range DefaultContainers {
+		c, err := New(org, n)
+		if err != nil {
+			return err
+		}
+		err = c.Save()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
