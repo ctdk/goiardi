@@ -171,6 +171,15 @@ func Get(org *organization.Organization, kind string, subkind string) (*ACL, uti
 	return a.(*ACL), nil
 }
 
+func (a *ACL) AddGroup(perm string, g *group.Group) util.Gerror {
+	if !checkValidPerm(perm){
+		err := util.Errorf("invalid perm %s", perm)
+		return err
+	}
+	a.ACLitems[perm].Groups = append(a.ACLitems[perm].Groups, g)
+	return nil
+}
+
 func (a *ACL) Save() util.Gerror {
 	if config.UsingDB() {
 
@@ -197,4 +206,13 @@ func (a *ACL) ToJSON() map[string]interface{} {
 		aclJSON[k] = r
 	}
 	return aclJSON
+}
+
+func checkValidPerm(perm string) bool {
+	for _, p := range DefaultACLs {
+		if p == perm {
+			return true
+		}
+	}
+	return false
 }
