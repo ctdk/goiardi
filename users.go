@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/associationreq"
+	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
@@ -356,7 +356,7 @@ func userAssocHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
-	assoc, err := associationreq.GetAllOrgsAssociationReqs(user)
+	assoc, err := association.GetAllOrgsAssociationReqs(user)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
@@ -395,7 +395,7 @@ func userAssocCountHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
-	count, err := associationreq.OrgsAssociationReqCount(user)
+	count, err := association.OrgsAssociationReqCount(user)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
@@ -445,7 +445,7 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 		return
 	}
-	assoc, err := associationreq.Get(id)
+	assoc, err := association.GetReq(id)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return

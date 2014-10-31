@@ -95,6 +95,14 @@ func (g *Group) Delete() util.Gerror {
 	return nil
 }
 
+func (g *Group) AddActor(a actor.Actor) util.Gerror {
+
+}
+
+func (g *Group) AddGroup(ag *Group) util.Gerror {
+
+}
+
 func (g *Group) ToJSON() map[string]interface{} {
 	gJSON := make(map[string]interface{})
 	gJSON["name"] = g.Name

@@ -28,7 +28,7 @@ import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/associationreq"
+	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/authentication"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
@@ -577,7 +577,8 @@ func gobRegister() {
 	gob.Register(msi)
 	o := new(organization.Organization)
 	gob.Register(o)
-	gob.Register(new(associationreq.AssociationReq))
+	gob.Register(new(association.AssociationReq))
+	gob.Register(new(association.Association))
 	gob.Register(new(group.Group))
 	gob.Register(new(container.Container))
 	gob.Register(new(acl.ACL))

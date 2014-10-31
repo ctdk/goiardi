@@ -14,16 +14,22 @@
  * limitations under the License.
  */
 
-package associationreq
+package association
 
 import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
+
+type Association struct {
+	User *user.User
+	Org  *organization.Organization
+}
 
 type AssociationReq struct {
 	User *user.User
@@ -76,6 +82,14 @@ func (a *AssociationReq) Accept() util.Gerror {
 
 	}
 	// group stuff happens here, once that all gets figured out
+	g, err := group.Get(org, "users")
+	if err != nil {
+		return err
+	}
+	err = g.AddActor(g.User)
+	if err != nil {
+		return err
+	}
 	return a.Delete()
 }
 

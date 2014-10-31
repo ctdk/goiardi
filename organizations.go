@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/associationreq"
+	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/container"
 	"github.com/ctdk/goiardi/environment"
@@ -89,7 +89,17 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			// Looks like this is supposed to be a delete.
-			// TODO: make it do what it should when that bit is in
+			ar, err := association.GetReq(id)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			err = ar.Delete()
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+
 			orgResponse["id"] = id
 			orgResponse["username"] = userChk[1]
 		} else {
@@ -116,7 +126,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-				assoc, err := associationreq.Set(user, org)
+				assoc, err := association.SetReq(user, org)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
