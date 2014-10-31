@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/acl"
+	"github.com/ctdk/goiardi/client"
 	//"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/organization"
 	//"github.com/ctdk/goiardi/util"
@@ -89,9 +90,12 @@ func clientACLHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	kind := "containers"
-	subkind := vars["name"]
-	a, rerr := acl.Get(org, kind, subkind)
+	cl, clerr := client.Get(org, vars["name"])
+	if clerr != nil {
+		jsonErrorReport(w, r, clerr.Error(), clerr.Status())
+		return
+	}
+	a, rerr := acl.GetItemACL(org, cl)
 	if rerr != nil {
 		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
 		return

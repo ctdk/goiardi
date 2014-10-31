@@ -432,6 +432,14 @@ func (c *Client) URLType() string {
 	return urlType
 }
 
+func (c *Client) ContainerType() string {
+	return c.URLType()
+}
+
+func (c *Client) ContainerKind() string {
+	return "containers"
+}
+
 // OrgName returns the organization this client belongs to.
 func (c *Client) OrgName() string {
 	return c.org.Name

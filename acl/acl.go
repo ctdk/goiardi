@@ -199,6 +199,26 @@ func Get(org *organization.Organization, kind string, subkind string) (*ACL, uti
 	return a.(*ACL), nil
 }
 
+func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerror) {
+	if config.UsingDB() {
+
+	}
+	ds := datastore.New()
+	var defacl *ACL
+	a, found := ds.Get(org.DataKey("acl-item"), util.JoinStr(item.ContainerKind(), "-", item.ContainerType(), "-", item.GetName()))
+	if !found {
+		var err util.Gerror
+		defacl, err = defaultACL(org, item.ContainerKind(), item.ContainerType())
+		if err != nil {
+			return nil, err
+		}
+		defacl.Owner = item
+	} else {
+		defacl = a.(*ACL)
+	}
+	return defacl, nil
+}
+
 func (a *ACL) AddGroup(perm string, g *group.Group) util.Gerror {
 	if !checkValidPerm(perm){
 		err := util.Errorf("invalid perm %s", perm)
