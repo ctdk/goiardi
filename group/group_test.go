@@ -19,6 +19,7 @@ package group
 import (
 	"encoding/gob"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/user"
 	"testing"
 )
 
@@ -84,4 +85,49 @@ func TestDefaultGroups(t *testing.T) {
 		t.Errorf("failed to get created default group clients")
 	}
 
+}
+
+func TestAddDelActors(t *testing.T) {
+	gob.Register(new(user.User))
+	org, _ := organization.New("florp3", "mlorph normph")
+	org.Save()
+	MakeDefaultGroups(org)
+	g, _ := Get(org, "users")
+	a, _ := user.New("flerkin")
+	err := g.AddActor(a)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if f, _ := g.checkForActor(a.GetName()); !f {
+		t.Errorf("actor %s not found in group after being added", a.GetName())
+	}
+	err = g.DelActor(a)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if f, _ := g.checkForActor(a.GetName()); f {
+		t.Errorf("actor %s was found in group after being removed", a.GetName())
+	}
+}
+
+func TestAdDelGroups(t *testing.T) {
+	org, _ := organization.New("florp4", "mlorph normph")
+	org.Save()
+	MakeDefaultGroups(org)
+	g, _ := Get(org, "admins")
+	a, _ := New(org, "mlerkle")
+	err := g.AddGroup(a)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if f, _ := g.checkForGroup(a.Name); !f {
+		t.Errorf("group %s not found in group after being added", a.Name)
+	}
+	err = g.DelGroup(a)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if f, _ := g.checkForActor(a.Name); f {
+		t.Errorf("group %s was found in group after being removed", a.Name)
+	}
 }

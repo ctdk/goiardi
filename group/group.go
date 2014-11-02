@@ -78,6 +78,12 @@ func Get(org *organization.Organization, name string) (*Group, util.Gerror) {
 // TODO: functions to safely add/remove actors and groups to/from the group
 
 func (g *Group) Save() util.Gerror {
+	g.m.RLock()
+	defer g.m.RUnlock()
+	return g.save()
+}
+
+func (g *Group) save() util.Gerror {
 	if config.UsingDB() {
 
 	}
@@ -87,6 +93,8 @@ func (g *Group) Save() util.Gerror {
 }
 
 func (g *Group) Delete() util.Gerror {
+	g.m.RLock()
+	defer g.m.RUnlock()
 	if config.UsingDB() {
 
 	}
@@ -96,14 +104,48 @@ func (g *Group) Delete() util.Gerror {
 }
 
 func (g *Group) AddActor(a actor.Actor) util.Gerror {
-
+	if found, _ := g.checkForActor(a.GetName()); !found {
+		g.m.Lock()
+		defer g.m.Unlock()
+		g.Actors = append(g.Actors, a)
+		err := g.save()
+		return err
+	}
+	return util.Errorf("actor %s already in group", a.GetName())
 }
 
-func (g *Group) AddGroup(ag *Group) util.Gerror {
-
+func (g *Group) DelActor(a actor.Actor) util.Gerror {
+	if found, pos := g.checkForActor(a.GetName()); found {
+		g.Actors[pos] = nil
+		g.Actors = append(g.Actors[:pos], g.Actors[pos+1:]...)
+		return g.save()
+	}
+	return util.Errorf("actor %s not in group", a.GetName())
 }
+
+func (g *Group) AddGroup(a *Group) util.Gerror {
+	if found, _ := g.checkForGroup(a.Name); !found {
+		g.m.Lock()
+		defer g.m.Unlock()
+		g.Groups = append(g.Groups, a)
+		err := g.save()
+		return err
+	}
+	return util.Errorf("group %s already in group", a.GetName())
+}
+
+func (g *Group) DelGroup(a *Group) util.Gerror {
+	if found, pos := g.checkForGroup(a.Name); found {
+		g.Groups[pos] = nil
+		g.Groups = append(g.Groups[:pos], g.Groups[pos+1:]...)
+		return g.save()
+	}
+	return util.Errorf("group %s not in group", a.GetName())
+} 
 
 func (g *Group) ToJSON() map[string]interface{} {
+	g.m.RLock()
+	defer g.m.RUnlock()
 	gJSON := make(map[string]interface{})
 	gJSON["name"] = g.Name
 	gJSON["groupname"] = g.Name
@@ -178,4 +220,22 @@ func MakeDefaultGroups(org *organization.Organization) util.Gerror {
 		}
 	}
 	return nil
+}
+
+func (g *Group) checkForActor(name string) (bool, int) {
+	for i, a := range g.Actors {
+		if a.GetName() == name {
+			return true, i
+		}
+	}
+	return false, 0
+}
+
+func (g *Group) checkForGroup(name string) (bool, int) {
+	for i, gr := range g.Groups {
+		if gr.GetName() == name {
+			return true, i
+		}
+	}
+	return false, 0
 }
