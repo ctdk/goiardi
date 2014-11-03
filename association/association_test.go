@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package associationreq
+package association
 
 import (
 	"encoding/gob"
@@ -35,11 +35,11 @@ func TestAssociationCreation(t *testing.T) {
 	u.Save()
 	o, _ := organization.New("org", "org-porg")
 	o.Save()
-	assoc, err := Set(u, o)
+	assoc, err := SetReq(u, o)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	a2, err := Get(assoc.Key())
+	a2, err := GetReq(assoc.Key())
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -55,7 +55,7 @@ func TestAssociationDeletion(t *testing.T) {
 	u.Save()
 	o, _ := organization.New("org2", "org-porg")
 	o.Save()
-	assoc, err := Set(u, o)
+	assoc, err := SetReq(u, o)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -79,7 +79,7 @@ func TestOrgListing(t *testing.T) {
 			t.Errorf(e.Error())
 		}
 		o.Save()
-		_, err := Set(u, o)
+		_, err := SetReq(u, o)
 		if err != nil {
 			t.Errorf(err.Error())
 		}
@@ -102,7 +102,7 @@ func TestUserListing(t *testing.T) {
 		u, _ := user.New(name)
 		u.SetPasswd(pass)
 		u.Save()
-		_, err := Set(u, o)
+		_, err := SetReq(u, o)
 		if err != nil {
 			t.Errorf(err.Error())
 		}

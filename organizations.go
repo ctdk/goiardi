@@ -250,6 +250,16 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
+		clientGroup, err := group.Get(org, "clients")
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		err = clientGroup.AddActor(validator)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
 		orgResponse = org.ToJSON()
 		orgResponse["private_key"] = pem
 		orgResponse["clientname"] = validator.Name

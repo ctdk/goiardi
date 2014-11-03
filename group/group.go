@@ -21,12 +21,15 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"sync"
 )
 
 var DefaultGroups = [4]string{"admins", "billing-admins", "clients", "users"}
+var DefaultUser = "pivotal" // should be moved out to config, I think. Same with
+			// acl
 
 type Group struct {
 	Name   string
@@ -209,6 +212,10 @@ func (g *Group) OrgName() string {
 // should this actually return the groups?
 
 func MakeDefaultGroups(org *organization.Organization) util.Gerror {
+	defUser, err := user.Get(DefaultUser)
+	if err != nil {
+		return err
+	}
 	for _, n := range DefaultGroups {
 		g, err := New(org, n)
 		if err != nil {
@@ -217,6 +224,12 @@ func MakeDefaultGroups(org *organization.Organization) util.Gerror {
 		err = g.Save()
 		if err != nil {
 			return err
+		}
+		if n != "clients" && n != "billing-admins" {
+			err = g.AddActor(defUser)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

@@ -18,12 +18,14 @@ package main
 
 import (
 	"encoding/json"
-	//"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
+	"log"
 )
 
 func groupHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,10 +40,79 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	groupName := vars["group_name"]
+	log.Printf("group name: %s", groupName)
+	log.Printf("Method: %v", r.Method)
 	g, gerr := group.Get(org, groupName)
 	if gerr != nil {
 		jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 		return
+	}
+
+	// hmm
+	if r.Method == "PUT" {
+		gData, err := parseObjJSON(r.Body)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			return
+		}
+		log.Printf("Json: %v", gData)
+		if gName, ok := gData["groupname"].(string); !ok {
+			jsonErrorReport(w, r, "no groupname provided", http.StatusBadRequest)
+			return
+		} else {
+			if gName != groupName {
+				errmsg := util.JoinStr("names do not match: ", gName, " ", groupName)
+				jsonErrorReport(w, r, errmsg, http.StatusBadRequest)
+				return
+			}
+		}
+		log.Printf("groups is: %T", gData["groups"])
+		log.Printf("actors is: %T", gData["actors"])
+		log.Printf("users is: %T", gData["actors"].(map[string]interface{})["users"])
+		if grs, ok := gData["groups"].([]interface{}); ok {
+			for _, gn := range grs {
+				addGr, err := group.Get(org, gn.(string))
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				err = g.AddGroup(addGr)
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+			}
+		}
+		if acts, ok := gData["actors"].(map[string]interface{}); ok {
+			if us, uok := acts["users"].([]interface{}); uok {
+				for _, un := range us {
+					u, err := user.Get(un.(string))
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
+					err = g.AddActor(u)
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
+				}
+			}
+			if cs, cok := acts["clients"].([]interface{}); cok {
+				for _, cn := range cs {
+					c, err := client.Get(org, cn.(string))
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
+					err = g.AddActor(c)
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
+				}
+			}
+		}
 	}
 
 	response := g.ToJSON()

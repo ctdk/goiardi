@@ -40,7 +40,7 @@ func (a *AssociationReq) Key() string {
 	return util.JoinStr(a.User.Name, "-", a.Org.Name)
 }
 
-func Set(user *user.User, org *organization.Organization) (*AssociationReq, util.Gerror) {
+func SetReq(user *user.User, org *organization.Organization) (*AssociationReq, util.Gerror) {
 	if config.UsingDB() {
 
 	}
@@ -58,7 +58,7 @@ func Set(user *user.User, org *organization.Organization) (*AssociationReq, util
 	return assoc, nil
 }
 
-func Get(key string) (*AssociationReq, util.Gerror) {
+func GetReq(key string) (*AssociationReq, util.Gerror) {
 	var assoc *AssociationReq
 	if config.UsingDB() {
 
@@ -82,11 +82,11 @@ func (a *AssociationReq) Accept() util.Gerror {
 
 	}
 	// group stuff happens here, once that all gets figured out
-	g, err := group.Get(org, "users")
+	g, err := group.Get(a.Org, "users")
 	if err != nil {
 		return err
 	}
-	err = g.AddActor(g.User)
+	err = g.AddActor(a.User)
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func DelAllUserAssocReqs(user *user.User) util.Gerror {
 	}
 	for _, o := range orgs {
 		key := util.JoinStr(user.Name, "-", o.Name)
-		a, err := Get(key)
+		a, err := GetReq(key)
 		if err != nil {
 			return err
 		}
@@ -191,7 +191,7 @@ func DelAllOrgAssocReqs(org *organization.Organization) util.Gerror {
 	}
 	for _, u := range users {
 		key := util.JoinStr(u.Name, "-", org.Name)
-		a, err := Get(key)
+		a, err := GetReq(key)
 		if err != nil {
 			return err
 		}
@@ -214,7 +214,7 @@ func GetAllOrgsAssociationReqs(user *user.User) ([]*AssociationReq, util.Gerror)
 	assoc := make([]*AssociationReq, len(orgs))
 	for i, o := range orgs {
 		key := util.JoinStr(user.Name, "-", o.Name)
-		a, err := Get(key)
+		a, err := GetReq(key)
 		if err != nil {
 			return nil, err
 		}
@@ -234,7 +234,7 @@ func GetAllUsersAssociationReqs(org *organization.Organization) ([]*AssociationR
 	assoc := make([]*AssociationReq, len(users))
 	for i, u := range users {
 		key := util.JoinStr(u.Name, "-", org.Name)
-		a, err := Get(key)
+		a, err := GetReq(key)
 		if err != nil {
 			return nil, err
 		}
