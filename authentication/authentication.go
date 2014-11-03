@@ -45,7 +45,7 @@ import (
 func CheckHeader(userID string, r *http.Request) util.Gerror {
 	pathArray := strings.Split(r.URL.Path[1:], "/")
 	var org *organization.Organization
-	if pathArray[0] == "organization" {
+	if pathArray[0] == "organizations" && len(pathArray) > 1 {
 		var err error
 		org, err = organization.Get(pathArray[1])
 		if err != nil {
