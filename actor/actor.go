@@ -63,7 +63,11 @@ func GetReqUser(org *organization.Organization, name string) (Actor, util.Gerror
 		// organization
 		u, cerr := user.Get(name)
 		if cerr != nil {
-			gerr := util.Errorf("Neither a client nor a user named '%s' could be found. In addition, the following errors were reported: %s -- %s", name, err.Error(), cerr.Error())
+			var errmsg string
+			if err != nil {
+				errmsg = err.Error()
+			}
+			gerr := util.Errorf("Neither a client nor a user named '%s' could be found. In addition, the following errors were reported: %s -- %s", name, errmsg, cerr.Error())
 			gerr.SetStatus(http.StatusUnauthorized)
 			return nil, gerr
 		}
