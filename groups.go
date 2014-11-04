@@ -49,7 +49,16 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// hmm
-	if r.Method == "PUT" {
+	switch r.Method {
+	case "GET":
+		; // we're cool
+	case "DELETE":
+		err := g.Delete()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+	case "PUT":
 		gData, err := parseObjJSON(r.Body)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
@@ -113,6 +122,9 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+	default:
+		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+		return
 	}
 
 	response := g.ToJSON()
@@ -134,10 +146,28 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groups := group.AllGroups(org)
-	response := make(map[string]interface{})
-	for _, g := range groups {
-		response[g.Name] = util.ObjURL(g)
+	var response map[string]interface{}
+	switch r.Method {
+	case "GET":
+		groups := group.AllGroups(org)
+		response = make(map[string]interface{})
+		for _, g := range groups {
+			response[g.Name] = util.ObjURL(g)
+		}
+	case "POST":
+		gData, jerr := parseObjJSON(r.Body)
+		if jerr != nil {
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			return
+		}
+		log.Printf("group data: %v", gData)
+		jsonErrorReport(w, r, "Not working yet!", http.StatusNotImplemented)
+		return
+
+		//w.WriteHeader(http.StatusCreated)
+	default:
+		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+		return
 	}
 
 	enc := json.NewEncoder(w)
