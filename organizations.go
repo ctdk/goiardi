@@ -31,6 +31,7 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
+	"log"
 )
 
 // might also be best split up
@@ -180,8 +181,39 @@ func orgMainHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	case "PUT":
-		jsonErrorReport(w, r, "not implemented", http.StatusNotImplemented)
-		return
+		orgData, jerr := parseObjJSON(r.Body)
+		log.Printf("orgData is: %v", orgData)
+		if jerr != nil {
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			return
+		}
+		name, verr := util.ValidateAsString(orgData["name"])
+		if verr != nil {
+			jsonErrorReport(w, r, "field name missing or invalid", http.StatusBadRequest)
+			return
+		}
+		fullName, verr := util.ValidateAsString(orgData["full_name"])
+		if verr != nil {
+			jsonErrorReport(w, r, "field full name missing or invalid", http.StatusBadRequest)
+			return
+		}
+		if name != org.Name {
+			jsonErrorReport(w, r, "Field 'name' invalid", http.StatusBadRequest)
+			return
+		}
+		org.FullName = fullName
+		err := org.Save()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		orgResponse = org.ToJSON()
+		// Crazy update-only thing - if it sends an 'org_type' field,
+		// even though erchef (and by extension goiardi) don't use it,
+		// the tooling seems to expect it to come back. Uh, ok.
+		if _, ok := orgData["org_type"]; ok {
+			orgResponse["org_type"] = orgData["org_type"]
+		}
 	default:
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 		return
@@ -263,6 +295,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 		orgResponse = org.ToJSON()
 		orgResponse["private_key"] = pem
 		orgResponse["clientname"] = validator.Name
+		orgResponse["uri"] = util.CustomURL(util.JoinStr("/organizations/", org.Name))
 		w.WriteHeader(http.StatusCreated)
 	default:
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
