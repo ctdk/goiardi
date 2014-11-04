@@ -31,7 +31,6 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
-	"log"
 )
 
 // might also be best split up
@@ -182,7 +181,6 @@ func orgMainHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	case "PUT":
 		orgData, jerr := parseObjJSON(r.Body)
-		log.Printf("orgData is: %v", orgData)
 		if jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return

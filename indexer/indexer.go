@@ -459,6 +459,7 @@ var indexMap = initializeIndex()
 func initializeIndex() *Index {
 	/* We always want these indices at least. */
 	im := new(Index)
+	im.idxmap = make(map[string]map[string]*IdxCollection)
 	im.makeDefaultCollections("default")
 
 	return im
@@ -468,7 +469,6 @@ func (i *Index) makeDefaultCollections(orgName string) {
 	defaults := [...]string{"client", "environment", "node", "role"}
 	i.m.Lock()
 	defer i.m.Unlock()
-	i.idxmap = make(map[string]map[string]*IdxCollection)
 	for _, d := range defaults {
 		i.createCollection(orgName, d)
 	}
