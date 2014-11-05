@@ -56,7 +56,7 @@ func New(org *organization.Organization, name string) (*Container, util.Gerror) 
 	}
 	c := &Container{
 		Name: name,
-		Org: org,
+		Org:  org,
 	}
 	return c, nil
 }

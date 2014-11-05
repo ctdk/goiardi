@@ -19,13 +19,13 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/client"
-	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
-	"net/http"
 	"log"
+	"net/http"
 )
 
 func groupHandler(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +51,7 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 	// hmm
 	switch r.Method {
 	case "GET":
-		; // we're cool
+		// we're cool
 	case "DELETE":
 		err := g.Delete()
 		if err != nil {
@@ -146,7 +146,7 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		case nil:
-			;
+
 		default:
 			jsonErrorReport(w, r, "invalid actors for group", http.StatusBadRequest)
 			return

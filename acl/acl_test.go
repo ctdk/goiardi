@@ -18,9 +18,9 @@ package acl
 
 import (
 	"encoding/gob"
-	"testing"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
+	"testing"
 )
 
 func TestDefaultACLs(t *testing.T) {
@@ -35,7 +35,7 @@ func TestDefaultACLs(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 	if a.ACLitems["create"].Groups[0].Name != "admins" {
-		t.Errorf("group in create group wrong, expected 'admins', got '%s'",  a.ACLitems["create"].Groups[0].Name)
+		t.Errorf("group in create group wrong, expected 'admins', got '%s'", a.ACLitems["create"].Groups[0].Name)
 	}
 }
 

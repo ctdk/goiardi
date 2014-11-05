@@ -29,7 +29,7 @@ import (
 
 var DefaultGroups = [4]string{"admins", "billing-admins", "clients", "users"}
 var DefaultUser = "pivotal" // should be moved out to config, I think. Same with
-			// acl
+// acl
 
 type Group struct {
 	Name   string
@@ -159,7 +159,7 @@ func (g *Group) AddActor(a actor.Actor) util.Gerror {
 		g.m.Lock()
 		defer g.m.Unlock()
 		g.Actors = append(g.Actors, a)
-	} 
+	}
 	return nil
 }
 
@@ -194,7 +194,7 @@ func (g *Group) DelGroup(a *Group) util.Gerror {
 		return util.Errorf("group %s not in group", a.GetName())
 	}
 	return nil
-} 
+}
 
 func (g *Group) ToJSON() map[string]interface{} {
 	g.m.RLock()
@@ -271,7 +271,7 @@ func MakeDefaultGroups(org *organization.Organization) util.Gerror {
 		if err != nil {
 			return err
 		}
-		
+
 		if n != "clients" && n != "billing-admins" {
 			err = g.AddActor(defUser)
 			if err != nil {

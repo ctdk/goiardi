@@ -49,11 +49,11 @@ type ACLitem struct {
 }
 
 type ACL struct {
-	Kind string
-	Subkind string
-	ACLitems map[string]*ACLitem
-	Owner    ACLOwner
-	Org *organization.Organization
+	Kind       string
+	Subkind    string
+	ACLitems   map[string]*ACLitem
+	Owner      ACLOwner
+	Org        *organization.Organization
 	isModified bool
 }
 
@@ -88,7 +88,7 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 			addGroup(org, acl.ACLitems["read"], "users")
 			addGroup(org, acl.ACLitems["update"], "admins")
 			addGroup(org, acl.ACLitems["delete"], "admins")
-			addGroup(org, acl.ACLitems["grant"], "admins")	
+			addGroup(org, acl.ACLitems["grant"], "admins")
 		case "cookbooks", "environments", "roles":
 			addGroup(org, acl.ACLitems["create"], "admins")
 			addGroup(org, acl.ACLitems["create"], "users")
@@ -220,7 +220,7 @@ func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerro
 }
 
 func (a *ACL) AddGroup(perm string, g *group.Group) util.Gerror {
-	if !checkValidPerm(perm){
+	if !checkValidPerm(perm) {
 		err := util.Errorf("invalid perm %s", perm)
 		return err
 	}
@@ -229,7 +229,7 @@ func (a *ACL) AddGroup(perm string, g *group.Group) util.Gerror {
 }
 
 func (a *ACL) AddActor(perm string, act actor.Actor) util.Gerror {
-	if !checkValidPerm(perm){
+	if !checkValidPerm(perm) {
 		err := util.Errorf("invalid perm %s", perm)
 		return err
 	}

@@ -88,10 +88,10 @@ func (a *AssociationReq) Accept() util.Gerror {
 	if err != nil {
 		return err
 	}
-	 err = g.AddActor(a.User)
+	err = g.AddActor(a.User)
 	if err != nil {
 		return err
-	} 
+	}
 	// apparently we create a USAG, but what are they like?
 	// use BS hex value until we have some idea what's supposed to be there
 	usagName := fmt.Sprintf("%x", []byte(a.User.Name))

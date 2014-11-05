@@ -29,9 +29,9 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
+	"log"
 	"net/http"
 	"regexp"
-	"log"
 )
 
 // might also be best split up
@@ -126,7 +126,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 					oR[i] = m
 				}
 				orgResponse = oR
-				
+
 			case "POST":
 				// creates the association. TODO: make
 				// it do so
