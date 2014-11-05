@@ -46,10 +46,10 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 	pathArray := strings.Split(r.URL.Path[1:], "/")
 	var org *organization.Organization
 	if pathArray[0] == "organizations" && len(pathArray) > 1 {
-		var err error
+		var err util.Gerror
 		org, err = organization.Get(pathArray[1])
 		if err != nil {
-			return util.CastErr(err)
+			return err
 		}
 	}
 	user, err := actor.GetReqUser(org, userID)

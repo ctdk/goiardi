@@ -49,7 +49,7 @@ func SetReq(user *user.User, org *organization.Organization) (*AssociationReq, u
 	ds := datastore.New()
 	_, found := ds.Get("association", assoc.Key())
 	if found {
-		err := util.Errorf("assocation %s already exists", assoc.Key())
+		err := util.Errorf("The invite already exists.")
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func GetReq(key string) (*AssociationReq, util.Gerror) {
 		ds := datastore.New()
 		a, found := ds.Get("association", key)
 		if !found {
-			gerr := util.Errorf("Association %s not found", key)
+			gerr := util.Errorf("Cannot find association request: %s", key)
 			gerr.SetStatus(http.StatusNotFound)
 			return nil, gerr
 		}
@@ -83,14 +83,15 @@ func (a *AssociationReq) Accept() util.Gerror {
 
 	}
 	// group stuff happens here, once that all gets figured out
+	// This one I think *does* happen. I think.
 	g, err := group.Get(a.Org, "users")
 	if err != nil {
 		return err
 	}
-	/* err = g.AddActor(a.User)
+	 err = g.AddActor(a.User)
 	if err != nil {
 		return err
-	} */
+	} 
 	// apparently we create a USAG, but what are they like?
 	// use BS hex value until we have some idea what's supposed to be there
 	usagName := fmt.Sprintf("%x", []byte(a.User.Name))
@@ -99,6 +100,10 @@ func (a *AssociationReq) Accept() util.Gerror {
 		return nil
 	}
 	err = g.AddGroup(usag)
+	if err != nil {
+		return err
+	}
+	err = g.Save()
 	if err != nil {
 		return err
 	}

@@ -21,7 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/util"
 	"io"
 	"net/http"
 	"strings"
@@ -86,13 +86,12 @@ func splitPath(path string) []string {
 }
 
 func jsonErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
-	logger.Infof(errorStr)
-	jsonError := map[string][]string{"error": []string{errorStr}}
-	w.WriteHeader(status)
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&jsonError); err != nil {
-		logger.Errorf(err.Error())
-	}
+	util.JSONErrorReport(w, r, errorStr, status)
+	return
+}
+
+func jsonErrorNonArrayReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
+	util.JSONErrorNonArrayReport(w, r, errorStr, status)
 	return
 }
 

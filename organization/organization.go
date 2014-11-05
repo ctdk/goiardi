@@ -103,7 +103,7 @@ func Get(orgName string) (*Organization, util.Gerror) {
 		}
 	}
 	if !found {
-		err := util.Errorf("Organization %s not found", orgName)
+		err := util.Errorf("organization '%s' does not exist.", orgName)
 		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}

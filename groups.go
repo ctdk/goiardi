@@ -65,39 +65,34 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("Json: %v", gData)
-		if gName, ok := gData["groupname"].(string); !ok {
-			jsonErrorReport(w, r, "no groupname provided", http.StatusBadRequest)
-			return
-		} else {
+		if gName, ok := gData["groupname"].(string); ok {
 			if gName != groupName {
-				errmsg := util.JoinStr("names do not match: ", gName, " ", groupName)
-				jsonErrorReport(w, r, errmsg, http.StatusBadRequest)
-				return
-			}
-		}
-		log.Printf("groups is: %T", gData["groups"])
-		log.Printf("actors is: %T", gData["actors"])
-		log.Printf("users is: %T", gData["actors"].(map[string]interface{})["users"])
-		if grs, ok := gData["groups"].([]interface{}); ok {
-			for _, gn := range grs {
-				addGr, err := group.Get(org, gn.(string))
+				err := g.Rename(gName)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-				err = g.AddGroup(addGr)
-				if err != nil {
-					jsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
+				w.WriteHeader(http.StatusCreated)
 			}
 		}
-		if acts, ok := gData["actors"].(map[string]interface{}); ok {
+		statChk := func(s int) int {
+			if s == http.StatusNotFound {
+				return http.StatusBadRequest
+			}
+			return s
+		}
+		switch acts := gData["actors"].(type) {
+		case map[string]interface{}:
 			if us, uok := acts["users"].([]interface{}); uok {
 				for _, un := range us {
-					u, err := user.Get(un.(string))
+					unv, err := util.ValidateAsString(un)
 					if err != nil {
 						jsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
+					u, err := user.Get(unv)
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), statChk(err.Status()))
 						return
 					}
 					err = g.AddActor(u)
@@ -109,9 +104,14 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if cs, cok := acts["clients"].([]interface{}); cok {
 				for _, cn := range cs {
-					c, err := client.Get(org, cn.(string))
+					cnv, err := util.ValidateAsString(cn)
 					if err != nil {
 						jsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
+					c, err := client.Get(org, cnv)
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), statChk(err.Status()))
 						return
 					}
 					err = g.AddActor(c)
@@ -121,6 +121,35 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
+			if grs, ok := acts["groups"].([]interface{}); ok {
+				for _, gn := range grs {
+					gnv, err := util.ValidateAsString(gn)
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
+					addGr, err := group.Get(org, gnv)
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), statChk(err.Status()))
+						return
+					}
+					err = g.AddGroup(addGr)
+					if err != nil {
+						jsonErrorReport(w, r, err.Error(), err.Status())
+						return
+					}
+				}
+			}
+			err := g.Save()
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+		case nil:
+			;
+		default:
+			jsonErrorReport(w, r, "invalid actors for group", http.StatusBadRequest)
+			return
 		}
 	default:
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
@@ -161,10 +190,35 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("group data: %v", gData)
-		jsonErrorReport(w, r, "Not working yet!", http.StatusNotImplemented)
-		return
+		//jsonErrorReport(w, r, "Not working yet!", http.StatusNotImplemented)
 
-		//w.WriteHeader(http.StatusCreated)
+		var gBase interface{}
+		if h, ok := gData["id"]; ok && h != "" {
+			gBase = h
+		} else if h, ok := gData["groupname"]; ok && h != "" {
+			gBase = h
+		}
+		gName, err := util.ValidateAsString(gBase)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+		}
+		if !util.ValidateName(gName) {
+			jsonErrorReport(w, r, "invalid group name", http.StatusBadRequest)
+			return
+		}
+		g, err := group.New(org, gName)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		err = g.Save()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		response = make(map[string]interface{})
+		response["uri"] = util.ObjURL(g)
+		w.WriteHeader(http.StatusCreated)
 	default:
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 		return

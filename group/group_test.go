@@ -28,6 +28,7 @@ import (
 func TestGroupCreation(t *testing.T) {
 	gob.Register(new(organization.Organization))
 	gob.Register(new(Group))
+	gob.Register(new(user.User))
 	org, _ := organization.New("florp", "mlorph normph")
 	g, err := New(org, "us0rs")
 	if err != nil {
@@ -55,7 +56,13 @@ func TestGroupCreation(t *testing.T) {
 func TestDefaultGroups(t *testing.T) {
 	org, _ := organization.New("florp2", "mlorph normph")
 	org.Save()
-	MakeDefaultGroups(org)
+	u, _ := user.New("pivotal")
+	u.Save()
+	err := MakeDefaultGroups(org)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
 	g, err := Get(org, "users")
 	if err != nil {
 		t.Errorf(err.Error())

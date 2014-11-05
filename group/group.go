@@ -41,6 +41,14 @@ type Group struct {
 
 func New(org *organization.Organization, name string) (*Group, util.Gerror) {
 	// will need to validate group name, presumably
+	if name == "" {
+		err := util.Errorf("Field 'name' missing")
+		return nil, err
+	}
+	if !util.ValidateUserName(name) {
+		err := util.Errorf("Field 'id' invalid")
+		return nil, err
+	}
 
 	var found bool
 	if config.UsingDB() {
@@ -61,6 +69,10 @@ func New(org *organization.Organization, name string) (*Group, util.Gerror) {
 }
 
 func Get(org *organization.Organization, name string) (*Group, util.Gerror) {
+	if name == "" {
+		err := util.Errorf("Field 'name' missing")
+		return nil, err
+	}
 	if config.UsingDB() {
 
 	}
@@ -78,12 +90,40 @@ func Get(org *organization.Organization, name string) (*Group, util.Gerror) {
 	return group, nil
 }
 
-// TODO: functions to safely add/remove actors and groups to/from the group
-
 func (g *Group) Save() util.Gerror {
 	g.m.RLock()
 	defer g.m.RUnlock()
 	return g.save()
+}
+
+func (g *Group) Rename(newName string) util.Gerror {
+	if !util.ValidateUserName(newName) {
+		err := util.Errorf("Field 'id' invalid")
+		return err
+	}
+	if newName == "" {
+		err := util.Errorf("Field 'name' missing")
+		return err
+	}
+	g.m.Lock()
+	defer g.m.Unlock()
+	if config.UsingDB() {
+
+	} else {
+		ds := datastore.New()
+		if _, found := ds.Get(g.Org.DataKey("group"), newName); found {
+			err := util.Errorf("Group %s already exists, cannot rename", newName)
+			err.SetStatus(http.StatusConflict)
+			return err
+		}
+		ds.Delete(g.Org.DataKey("group"), g.Name)
+		g.Name = newName
+		err := g.save()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (g *Group) save() util.Gerror {
@@ -103,6 +143,14 @@ func (g *Group) Delete() util.Gerror {
 	}
 	ds := datastore.New()
 	ds.Delete(g.Org.DataKey("group"), g.Name)
+	ag := AllGroups(g.Org)
+	for _, cg := range ag {
+		j, _ := cg.checkForGroup(g.Name)
+		if j {
+			cg.DelGroup(g)
+			cg.Save()
+		}
+	}
 	return nil
 }
 
@@ -111,19 +159,20 @@ func (g *Group) AddActor(a actor.Actor) util.Gerror {
 		g.m.Lock()
 		defer g.m.Unlock()
 		g.Actors = append(g.Actors, a)
-		err := g.save()
-		return err
-	}
-	return util.Errorf("actor %s already in group", a.GetName())
+	} 
+	return nil
 }
 
 func (g *Group) DelActor(a actor.Actor) util.Gerror {
 	if found, pos := g.checkForActor(a.GetName()); found {
+		g.m.Lock()
+		defer g.m.Unlock()
 		g.Actors[pos] = nil
 		g.Actors = append(g.Actors[:pos], g.Actors[pos+1:]...)
-		return g.save()
+	} else {
+		return util.Errorf("actor %s not in group", a.GetName())
 	}
-	return util.Errorf("actor %s not in group", a.GetName())
+	return nil
 }
 
 func (g *Group) AddGroup(a *Group) util.Gerror {
@@ -131,19 +180,20 @@ func (g *Group) AddGroup(a *Group) util.Gerror {
 		g.m.Lock()
 		defer g.m.Unlock()
 		g.Groups = append(g.Groups, a)
-		err := g.save()
-		return err
 	}
-	return util.Errorf("group %s already in group", a.GetName())
+	return nil
 }
 
 func (g *Group) DelGroup(a *Group) util.Gerror {
 	if found, pos := g.checkForGroup(a.Name); found {
+		g.m.Lock()
+		defer g.m.Unlock()
 		g.Groups[pos] = nil
 		g.Groups = append(g.Groups[:pos], g.Groups[pos+1:]...)
-		return g.save()
+	} else {
+		return util.Errorf("group %s not in group", a.GetName())
 	}
-	return util.Errorf("group %s not in group", a.GetName())
+	return nil
 } 
 
 func (g *Group) ToJSON() map[string]interface{} {
@@ -221,15 +271,17 @@ func MakeDefaultGroups(org *organization.Organization) util.Gerror {
 		if err != nil {
 			return err
 		}
-		err = g.Save()
-		if err != nil {
-			return err
-		}
+		
 		if n != "clients" && n != "billing-admins" {
 			err = g.AddActor(defUser)
 			if err != nil {
 				return err
 			}
+		}
+
+		err = g.Save()
+		if err != nil {
+			return err
 		}
 	}
 	return nil

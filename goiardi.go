@@ -50,6 +50,7 @@ import (
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/universe"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	serfclient "github.com/hashicorp/serf/client"
 	"net/http"
@@ -312,11 +313,11 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		 * If not, fail. */
 		pathArray := strings.Split(r.URL.Path[1:], "/")
 		var org *organization.Organization
-		if pathArray[0] == "organization" {
-			var err error
+		if pathArray[0] == "organizations" {
+			var err util.Gerror
 			org, err = organization.Get(pathArray[1])
 			if err != nil {
-				jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
 		}

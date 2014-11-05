@@ -353,7 +353,7 @@ func userAssocHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := user.Get(userName)
 	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
+		jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
 		return
 	}
 	assoc, err := association.GetAllOrgsAssociationReqs(user)
@@ -392,7 +392,7 @@ func userAssocCountHandler(w http.ResponseWriter, r *http.Request) {
 	_ = opUser
 	user, err := user.Get(userName)
 	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
+		jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
 		return
 	}
 	count, err := association.OrgsAssociationReqCount(user)
@@ -447,13 +447,13 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	assoc, err := association.GetReq(id)
 	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
+		jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
 		return
 	}
 
 	res, ok := userData["response"].(string)
 	if !ok {
-		jsonErrorReport(w, r, "response parameter was missing or set to the wrong value (must be accept or reject)", http.StatusBadRequest)
+		jsonErrorReport(w, r, "Param response must be either 'accept' or 'reject'", http.StatusBadRequest)
 		return
 	}
 	switch res {
@@ -470,7 +470,7 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	default:
-		jsonErrorReport(w, r, "response parameter was missing or set to the wrong value (must be accept or reject)", http.StatusBadRequest)
+		jsonErrorReport(w, r, "Param response must be either 'accept' or 'reject'", http.StatusBadRequest)
 		return
 	}
 	response := make(map[string]map[string]interface{})

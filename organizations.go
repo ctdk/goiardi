@@ -31,6 +31,7 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
+	"log"
 )
 
 // might also be best split up
@@ -41,23 +42,25 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 	orgName := vars["org"]
 
 	// Otherwise, it's org work.
-	var orgResponse map[string]interface{}
+	var orgResponse interface{}
 
 	op := pathArray[2]
 	org, err := organization.Get(orgName)
 	if err != nil {
+		log.Printf("Huh? err is %v", err)
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	_ = opUser
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if !opUser.IsAdmin() {
-		jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-		return
-	}
+	//if !opUser.IsAdmin() {
+	//	jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+	//	return
+	//}
 	switch op {
 	case "_validator_key":
 		if r.Method == "POST" {
@@ -72,14 +75,14 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			orgResponse = make(map[string]interface{})
-			orgResponse["private_key"] = pem
+			oR := make(map[string]interface{})
+			oR["private_key"] = pem
+			orgResponse = oR
 		} else {
 			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return
 		}
 	case "association_requests":
-		orgResponse = make(map[string]interface{})
 		if len(pathArray) == 4 {
 			id := vars["id"]
 			re := regexp.MustCompile(util.JoinStr("(.+)-", orgName))
@@ -91,7 +94,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 			// Looks like this is supposed to be a delete.
 			ar, err := association.GetReq(id)
 			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
+				jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
 				return
 			}
 			err = ar.Delete()
@@ -100,14 +103,30 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			orgResponse["id"] = id
-			orgResponse["username"] = userChk[1]
+			oR := make(map[string]interface{})
+			oR["id"] = id
+			oR["username"] = userChk[1]
+			orgResponse = oR
 		} else {
 			switch r.Method {
 			case "GET":
 				// returns a list of associations with
 				// this org. TODO: It should actually
 				// do that.
+				userReqs, err := association.GetAllUsersAssociationReqs(org)
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				oR := make([]map[string]interface{}, len(userReqs))
+				for i, ua := range userReqs {
+					m := make(map[string]interface{})
+					m["id"] = ua.Key()
+					m["username"] = ua.User.Name
+					oR[i] = m
+				}
+				orgResponse = oR
+				
 			case "POST":
 				// creates the association. TODO: make
 				// it do so
@@ -128,11 +147,13 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				assoc, err := association.SetReq(user, org)
 				if err != nil {
-					jsonErrorReport(w, r, err.Error(), err.Status())
+					jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
 					return
 				}
 				w.WriteHeader(http.StatusCreated)
-				orgResponse["uri"] = util.CustomURL(util.JoinStr(r.URL.Path, "/", assoc.Key()))
+				oR := make(map[string]interface{})
+				oR["uri"] = util.CustomURL(util.JoinStr(r.URL.Path, "/", assoc.Key()))
+				orgResponse = oR
 			default:
 				jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 				return
@@ -277,7 +298,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 		environment.MakeDefaultEnvironment(org)
 		gerr := group.MakeDefaultGroups(org)
 		if gerr != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
+			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 			return
 		}
 		clientGroup, err := group.Get(org, "clients")
@@ -286,6 +307,11 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		err = clientGroup.AddActor(validator)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		err = clientGroup.Save()
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return

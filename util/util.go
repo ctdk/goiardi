@@ -339,6 +339,18 @@ func JoinStr(str ...string) string {
 func JSONErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
 	logger.Infof(errorStr)
 	jsonError := map[string][]string{"error": []string{errorStr}}
+	sendErrorReport(w, jsonError, status)
+	return
+}
+
+func JSONErrorNonArrayReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
+	logger.Infof(errorStr)
+	jsonError := map[string]string{"error": errorStr}
+	sendErrorReport(w, jsonError, status)
+	return
+}
+
+func sendErrorReport(w http.ResponseWriter, jsonError interface{}, status int) {
 	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&jsonError); err != nil {

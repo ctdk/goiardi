@@ -123,7 +123,12 @@ func Get(name string) (*User, util.Gerror) {
 		ds := datastore.New()
 		u, found := ds.Get("user", name)
 		if !found {
-			err := util.Errorf("User %s not found", name)
+			// not deleting this until I see if there are other
+			// tests that want this phrasing. The association tests
+			// want the other phrasing though
+			//err := util.Errorf("User %s not found", name)
+			err := util.Errorf("Could not find user %s", name)
+			err.SetStatus(http.StatusNotFound)
 			return nil, err
 		}
 		if u != nil {
@@ -210,7 +215,7 @@ func (u *User) Rename(newName string) util.Gerror {
 			err.SetStatus(http.StatusConflict)
 			return err
 		}
-		ds.Delete("client", u.Username)
+		ds.Delete("user", u.Username)
 	}
 	u.Username = newName
 	return nil
