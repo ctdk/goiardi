@@ -225,6 +225,7 @@ func (a *ACL) AddGroup(perm string, g *group.Group) util.Gerror {
 		return err
 	}
 	a.ACLitems[perm].Groups = append(a.ACLitems[perm].Groups, g)
+	a.isModified = true
 	return nil
 }
 
@@ -234,7 +235,63 @@ func (a *ACL) AddActor(perm string, act actor.Actor) util.Gerror {
 		return err
 	}
 	a.ACLitems[perm].Actors = append(a.ACLitems[perm].Actors, act)
+	a.isModified = true
 	return nil
+}
+
+func (a *ACL) EditFromJSON(perm string, data interface{}) util.Gerror {
+	switch data := data.(type) {
+	case map[string]interface{}:
+		if _, ok := data[perm]; !ok {
+			return util.Errorf("acl %s missing from JSON", perm)
+		}
+		switch aclEdit := data[perm].(type) {
+		case map[string]interface{}:
+			if actors, ok := aclEdit["actors"].([]interface{}); ok {
+				for _, act := range actors {
+					switch act := act.(type){
+					case string:
+						actr, err := actor.GetActor(a.Org, act)
+						if err != nil {
+							return err
+						}
+						err = a.AddActor(perm, actr)
+						if err != nil {
+							return err
+						}
+					default:
+						return util.Errorf("invalid type for actor in acl")
+					}
+				}
+			} else {
+				return util.Errorf("invalid acl %s data for actors", perm)
+			}
+			if groups, ok := aclEdit["groups"].([]interface{}); ok {
+				for _, gr := range groups {
+					switch gr := gr.(type) {
+					case string:
+						grp, err := group.Get(a.Org, gr)
+						if err != nil {
+							return err
+						}
+						err = a.AddGroup(perm, grp)
+						if err != nil {
+							return err
+						}
+					default:
+						return util.Errorf("invalid type for group in acl")
+					}
+				}
+			} else {
+				return util.Errorf("invalid acl %s data for groups", perm)
+			}
+		default:
+				return util.Errorf("invalid acl %s data", perm)
+		}
+	default:
+		return util.Errorf("invalid acl data")
+	}
+	return a.Save()
 }
 
 func (a *ACL) Save() util.Gerror {

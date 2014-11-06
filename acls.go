@@ -55,6 +55,47 @@ func orgACLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func orgACLEditHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	// always put?
+	if r.Method != "PUT" {
+		jsonErrorReport(w, r, "unrecognized method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	kind := "containers"
+	subkind := "$$root$$"
+	a, rerr := acl.Get(org, kind, subkind)
+	if rerr != nil {
+		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		return
+	}
+	perm := vars["perm"]
+	aclData, jerr := parseObjJSON(r.Body)
+	if jerr != nil {
+		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+		return
+	}
+	err := a.EditFromJSON(perm, aclData)
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+	response := a.ToJSON()
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&response); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	}
+}
+
 func containerACLHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)

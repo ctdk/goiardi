@@ -212,6 +212,7 @@ func main() {
 	s.HandleFunc("/nodes", listHandler)
 	s.HandleFunc("/nodes/{name}", nodeHandler)
 	s.HandleFunc("/organizations/_acl", orgACLHandler)
+	s.HandleFunc("/organizations/_acl/{perm}", orgACLEditHandler)
 	s.HandleFunc("/principals/{name}", principalHandler)
 	s.HandleFunc("/reports/", reportHandler)
 	s.HandleFunc("/reports/{foo}", reportHandler)

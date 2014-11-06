@@ -75,3 +75,9 @@ func GetReqUser(org *organization.Organization, name string) (Actor, util.Gerror
 	}
 	return c, nil
 }
+
+// Right now it just wraps GetReqUser, but one or the other may change
+// drastically in the future.
+func GetActor(org *organization.Organization, name string) (Actor, util.Gerror) {
+	return GetReqUser(org, name)
+}
