@@ -298,7 +298,7 @@ func (g *Group) checkForActor(name string) (bool, int) {
 
 func (g *Group) checkForGroup(name string) (bool, int) {
 	for i, gr := range g.Groups {
-		if gr.GetName() == name {
+		if gr.Name == name {
 			return true, i
 		}
 	}

@@ -72,3 +72,15 @@ func TestAddGroupToACL(t *testing.T) {
 		t.Errorf("ACLs did not match, expected '%s/%s', got '%s/s'", a.Kind, a.Subkind, a2.Kind, a2.Subkind)
 	}
 }
+
+func TestUserPermCheck(t *testing.T) {
+
+}
+
+func TestClientPermCheck(t *testing.T) {
+
+}
+
+func TestGroupPermCheck(t *testing.T) {
+
+}
