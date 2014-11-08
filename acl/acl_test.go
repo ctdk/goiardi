@@ -20,6 +20,7 @@ import (
 	"encoding/gob"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/user"
 	"testing"
 )
 
@@ -28,6 +29,10 @@ func TestDefaultACLs(t *testing.T) {
 	gob.Register(new(group.Group))
 	gob.Register(new(ACL))
 	gob.Register(new(ACLitem))
+	gob.Register(new(user.User))
+	u, _ := user.New("pivotal")
+	u.Admin = true
+	u.Save()
 	org, _ := organization.New("florp", "mlorph normph")
 	group.MakeDefaultGroups(org)
 	a, err := Get(org, "groups", "admins")
@@ -74,9 +79,32 @@ func TestAddGroupToACL(t *testing.T) {
 }
 
 func TestUserPermCheck(t *testing.T) {
-
+	org, _ := organization.New("florp3", "mlorph normph")
+	group.MakeDefaultGroups(org)
+	a, _ := Get(org, "groups", "admins")
+	u, _ := user.New("moohoo")
+	u.Save()
+	err := a.AddActor("create", u)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	f, err := a.CheckPerm("create", u)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if !f {
+		t.Errorf("Perm check didn't work!")
+	}
+	f, err = a.CheckPerm("update", u)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if f {
+		t.Errorf("Perm check succeeded when it should not have")
+	}
 }
 
+/*
 func TestClientPermCheck(t *testing.T) {
 
 }
@@ -84,3 +112,4 @@ func TestClientPermCheck(t *testing.T) {
 func TestGroupPermCheck(t *testing.T) {
 
 }
+*/

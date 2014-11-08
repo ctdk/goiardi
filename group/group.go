@@ -304,3 +304,26 @@ func (g *Group) checkForGroup(name string) (bool, int) {
 	}
 	return false, 0
 }
+
+func (g *Group) SeekActor(actr actor.Actor) (bool) {
+	grs := make(map[string]*Group)
+	var actChk func(gs *Group) bool
+	actChk = func(gs *Group) bool {
+		gs.m.RLock()
+		defer gs.m.RUnlock()
+		if f, _ := gs.checkForActor(actr.GetName()); f {
+			return f
+		}
+		for _, gr := range gs.Groups {
+			if _, ok := grs[gr.Name]; !ok {
+				grs[gr.Name] = gr
+				f := actChk(gr)
+				if f {
+					return f
+				}
+			}
+		}
+		return false
+	}
+	return actChk(g)
+}

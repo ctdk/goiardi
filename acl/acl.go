@@ -18,14 +18,14 @@ package acl
 
 import (
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/client"
+	//"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	"log"
+	//"log"
 )
 
 var DefaultACLs = [5]string{
@@ -324,22 +324,21 @@ func (a *ACL) ToJSON() map[string]interface{} {
 	return aclJSON
 }
 
-func (a *ACL) CheckPerm(perm string, doer interface{}) (bool, util.Gerror) {
+func (a *ACL) CheckPerm(perm string, doer actor.Actor) (bool, util.Gerror) {
 	acli, ok := a.ACLitems[perm]
 	if !ok {
 		return false, util.Errorf("invalid perm %s for %s-%s", perm, a.Kind, a.Subkind)
 	}
-	switch doer := doer.(type) {
-	case *group.Group:
-		f, _ := acli.checkForGroup(doer)
+	// first check for user perms in this ACL
+	if f, _ := acli.checkForActor(doer); f {
 		return f, nil
-	case actor.Actor, *user.User, *client.Client:
-		log.Printf("Actual type for CheckPerm is %T", doer)
-		f, _ := acli.checkForActor(doer)
-		return f, nil
-	default:
-		return false, util.Errorf("Invalid type %T", doer)
 	}
+	for _, g := range acli.Groups {
+		if f := g.SeekActor(doer); f {
+			return f, nil
+		}
+	}
+	return false, nil
 }
 
 func checkValidPerm(perm string) bool {
