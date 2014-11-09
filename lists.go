@@ -176,7 +176,7 @@ func clientHandling(org *organization.Organization, w http.ResponseWriter, r *ht
 
 		}
 		*/
-		clientACL, err := acl.Get(org, "container", "client")
+		clientACL, err := acl.Get(org, "containers", "clients")
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return nil
@@ -184,7 +184,9 @@ func clientHandling(org *organization.Organization, w http.ResponseWriter, r *ht
 		if f, err := clientACL.CheckPerm("create", opUser); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return nil
-		} else if !f {
+		} else if !f && !opUser.IsValidator() { 
+		// may need an org assoc check with the validator, although if
+		// the client was found in this org it must be OK.
 			jsonErrorReport(w, r, "You are not allowed to perform that action", http.StatusForbidden)
 			return nil
 		}
