@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/loginfo"
@@ -159,6 +160,7 @@ func clientHandling(org *organization.Organization, w http.ResponseWriter, r *ht
 			jsonErrorReport(w, r, averr.Error(), averr.Status())
 			return nil
 		}
+		/*
 		if !opUser.IsAdmin() && !opUser.IsValidator() {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil
@@ -172,6 +174,19 @@ func clientHandling(org *organization.Organization, w http.ResponseWriter, r *ht
 				return nil
 			}
 
+		}
+		*/
+		clientACL, err := acl.Get(org, "container", "client")
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return nil
+		} 
+		if f, err := clientACL.CheckPerm("create", opUser); err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return nil
+		} else if !f {
+			jsonErrorReport(w, r, "You are not allowed to perform that action", http.StatusForbidden)
+			return nil
 		}
 		clientName, sterr := util.ValidateAsString(clientData["name"])
 		if sterr != nil || clientName == "" {
