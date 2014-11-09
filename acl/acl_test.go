@@ -18,6 +18,7 @@ package acl
 
 import (
 	"encoding/gob"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
@@ -104,12 +105,85 @@ func TestUserPermCheck(t *testing.T) {
 	}
 }
 
-/*
 func TestClientPermCheck(t *testing.T) {
-
+	org, _ := organization.New("florp4", "mlorph normph")
+	group.MakeDefaultGroups(org)
+	a, _ := Get(org, "groups", "admins")
+	gob.Register(new(client.Client))
+	c, _ := client.New(org, "moom")
+	c.Save()
+	err := a.AddActor("create", c)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	f, err := a.CheckPerm("create", c)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if !f {
+		t.Errorf("Client perm check didn't work!")
+	}
+	f, err = a.CheckPerm("update", c)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if f {
+		t.Errorf("Client perm check succeeded when it should not have")
+	}
 }
 
 func TestGroupPermCheck(t *testing.T) {
-
+	org, _ := organization.New("florp5", "mlorph normph")
+	group.MakeDefaultGroups(org)
+	u, _ := user.New("moohoo2")
+	a, _ := Get(org, "groups", "admins")
+	g, _ := group.New(org, "mnerg")
+	g.AddActor(u)
+	err := a.AddGroup("create", g)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	f, err := a.CheckPerm("create", u)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if !f {
+		t.Errorf("Group perm check didn't work!")
+	}
+	f, err = a.CheckPerm("update", u)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if f {
+		t.Errorf("Group perm check succeeded when it should not have")
+	}
 }
-*/
+
+func TestMultiLevelGroupPermCheck(t *testing.T) {
+	org, _ := organization.New("florp6", "mlorph normph")
+	group.MakeDefaultGroups(org)
+	u, _ := user.New("moohoo3")
+	a, _ := Get(org, "groups", "admins")
+	g, _ := group.New(org, "mnergor")
+	g.AddActor(u)
+	g2, _ := group.New(org, "flermern")
+	g2.AddGroup(g)
+	err := a.AddGroup("create", g2)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	f, err := a.CheckPerm("create", u)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if !f {
+		t.Errorf("Group perm check didn't work!")
+	}
+	f, err = a.CheckPerm("update", u)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if f {
+		t.Errorf("Group perm check succeeded when it should not have")
+	}
+}
