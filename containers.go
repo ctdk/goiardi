@@ -51,6 +51,8 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := make(map[string]interface{})
 	response["containername"] = con.Name
+	response["containerpath"] = con.Name // might be something else
+					     // sometimes
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {

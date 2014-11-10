@@ -181,8 +181,8 @@ func main() {
 	s.HandleFunc("/association_requests/{id}", orgToolHandler)
 	s.HandleFunc("/association_requests", orgToolHandler)
 	s.HandleFunc("/_validator_key", orgToolHandler)
-	s.HandleFunc("/clients", listHandler)
-	s.HandleFunc("/clients/{name}", clientListHandler)
+	s.HandleFunc("/clients", clientListHandler)
+	s.HandleFunc("/clients/{name}", clientHandler)
 	s.HandleFunc("/clients/{name}/_acl", clientACLHandler)
 	// may be broken up more later
 	s.HandleFunc("/containers", containerListHandler)
