@@ -47,13 +47,13 @@ func SetReq(user *user.User, org *organization.Organization) (*AssociationReq, u
 	}
 	assoc := &AssociationReq{user, org}
 	ds := datastore.New()
-	_, found := ds.Get("association", assoc.Key())
+	_, found := ds.Get("associationreq", assoc.Key())
 	if found {
 		err := util.Errorf("The invite already exists.")
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
-	ds.Set("association", assoc.Key(), assoc)
+	ds.Set("associationreq", assoc.Key(), assoc)
 	ds.SetAssociationReq(org.Name, "users", user.Name, user)
 	ds.SetAssociationReq(user.Name, "organizations", org.Name, org)
 	return assoc, nil
@@ -65,7 +65,7 @@ func GetReq(key string) (*AssociationReq, util.Gerror) {
 
 	} else {
 		ds := datastore.New()
-		a, found := ds.Get("association", key)
+		a, found := ds.Get("associationreq", key)
 		if !found {
 			gerr := util.Errorf("Cannot find association request: %s", key)
 			gerr.SetStatus(http.StatusNotFound)
@@ -99,6 +99,10 @@ func (a *AssociationReq) Accept() util.Gerror {
 	if err != nil {
 		return nil
 	}
+	err = usag.Save()
+	if err != nil {
+		return nil
+	}
 	err = g.AddGroup(usag)
 	if err != nil {
 		return err
@@ -119,7 +123,7 @@ func (a *AssociationReq) Delete() util.Gerror {
 
 	}
 	ds := datastore.New()
-	ds.Delete("association", a.Key())
+	ds.Delete("associationreq", a.Key())
 	ds.DelAssociationReq(a.Org.Name, "users", a.User.Name)
 	ds.DelAssociationReq(a.User.Name, "organizations", a.Org.Name)
 	return nil
