@@ -21,9 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
@@ -49,8 +47,6 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 	switch op {
 	case "nodes":
 		listData = nodeHandling(org, w, r)
-	case "clients":
-		listData = clientHandling(org, w, r)
 	case "roles":
 		listData = roleHandling(org, w, r)
 	default:
@@ -132,119 +128,6 @@ func nodeHandling(org *organization.Organization, w http.ResponseWriter, r *http
 		return nil
 	}
 	return nodeResponse
-}
-
-func clientHandling(org *organization.Organization, w http.ResponseWriter, r *http.Request) map[string]string {
-	clientResponse := make(map[string]string)
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return nil
-	}
-
-	switch r.Method {
-	case "GET":
-		clientList := client.GetList(org)
-		for _, k := range clientList {
-			/* Make sure it's a client and not a user. */
-			itemURL := util.JoinStr("/organizations/", org.Name, "/clients/", k)
-			clientResponse[k] = util.CustomURL(itemURL)
-		}
-	case "POST":
-		clientData, jerr := parseObjJSON(r.Body)
-		if jerr != nil {
-			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-			return nil
-		}
-		if averr := util.CheckAdminPlusValidator(clientData); averr != nil {
-			jsonErrorReport(w, r, averr.Error(), averr.Status())
-			return nil
-		}
-		/*
-		if !opUser.IsAdmin() && !opUser.IsValidator() {
-			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-			return nil
-		} else if !opUser.IsAdmin() && opUser.IsValidator() {
-			if aerr := opUser.CheckPermEdit(clientData, "admin"); aerr != nil {
-				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
-				return nil
-			}
-			if verr := opUser.CheckPermEdit(clientData, "validator"); verr != nil {
-				jsonErrorReport(w, r, verr.Error(), verr.Status())
-				return nil
-			}
-
-		}
-		*/
-		clientACL, err := acl.Get(org, "containers", "clients")
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return nil
-		} 
-		if f, err := clientACL.CheckPerm("create", opUser); err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return nil
-		} else if !f && !opUser.IsValidator() { 
-		// may need an org assoc check with the validator, although if
-		// the client was found in this org it must be OK.
-			jsonErrorReport(w, r, "You are not allowed to perform that action", http.StatusForbidden)
-			return nil
-		}
-		clientName, sterr := util.ValidateAsString(clientData["name"])
-		if sterr != nil || clientName == "" {
-			err := fmt.Errorf("Field 'name' missing")
-			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
-			return nil
-		}
-
-		chefClient, err := client.NewFromJSON(org, clientData)
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return nil
-		}
-
-		if publicKey, pkok := clientData["public_key"]; !pkok {
-			var perr error
-			if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
-				jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
-				return nil
-			}
-		} else {
-			switch publicKey := publicKey.(type) {
-			case string:
-				if pkok, pkerr := client.ValidatePublicKey(publicKey); !pkok {
-					jsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
-					return nil
-				}
-				chefClient.SetPublicKey(publicKey)
-			case nil:
-
-				var perr error
-				if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
-					jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
-					return nil
-				}
-			default:
-				jsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
-				return nil
-			}
-		}
-		/* If we make it here, we want the public key in the
-		 * response. I think. */
-		clientResponse["public_key"] = chefClient.PublicKey()
-
-		chefClient.Save()
-		if lerr := loginfo.LogEvent(org, opUser, chefClient, "create"); lerr != nil {
-			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
-			return nil
-		}
-		clientResponse["uri"] = util.ObjURL(chefClient)
-		w.WriteHeader(http.StatusCreated)
-	default:
-		jsonErrorReport(w, r, "Method not allowed for clients or users", http.StatusMethodNotAllowed)
-		return nil
-	}
-	return clientResponse
 }
 
 func roleHandling(org *organization.Organization, w http.ResponseWriter, r *http.Request) map[string]string {
