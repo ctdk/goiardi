@@ -23,11 +23,13 @@ import (
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
+	"log"
 )
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
@@ -301,14 +303,27 @@ func clientListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		} 
+		log.Printf("saving user is: %+v", opUser)
 		if f, err := clientACL.CheckPerm("create", opUser); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
-		} else if !f && !opUser.IsValidator() { 
-		// may need an org assoc check with the validator, although if
-		// the client was found in this org it must be OK.
-			jsonErrorReport(w, r, "You are not allowed to perform that action", http.StatusForbidden)
-			return
+		} else if !f {
+			if opUser.IsValidator() { 
+				if aerr := opUser.CheckPermEdit(clientData, "admin"); aerr != nil {
+					jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+					return
+				}
+				if verr := opUser.CheckPermEdit(clientData, "validator"); verr != nil {
+					jsonErrorReport(w, r, verr.Error(), verr.Status())
+					return
+				}
+			} else {
+				// may need an org assoc check with the
+				// validator, although if the client was found
+				// in this org it must be OK.
+				jsonErrorReport(w, r, "You are not allowed to perform that action", http.StatusForbidden)
+				return
+			}
 		}
 		clientName, sterr := util.ValidateAsString(clientData["name"])
 		if sterr != nil || clientName == "" {
@@ -353,6 +368,35 @@ func clientListHandler(w http.ResponseWriter, r *http.Request) {
 		clientResponse["public_key"] = chefClient.PublicKey()
 
 		chefClient.Save()
+		if !chefClient.IsValidator() {
+			g, err := group.Get(org, "clients")
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			err = g.AddActor(chefClient)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			err = g.Save()
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+		}
+		if !opUser.IsValidator() {
+			err = clientACL.AddActor("all", opUser)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			err = clientACL.Save()
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+		}
 		if lerr := loginfo.LogEvent(org, opUser, chefClient, "create"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return 

@@ -25,7 +25,7 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	//"log"
+	"log"
 )
 
 var DefaultACLs = [5]string{
@@ -226,7 +226,13 @@ func (a *ACL) AddGroup(perm string, g *group.Group) util.Gerror {
 		err := util.Errorf("invalid perm %s", perm)
 		return err
 	}
-	a.ACLitems[perm].Groups = append(a.ACLitems[perm].Groups, g)
+	if perm == "all" {
+		for _, p := range DefaultACLs {
+			a.ACLitems[p].Groups = append(a.ACLitems[p].Groups, g)
+		}
+	} else {
+		a.ACLitems[perm].Groups = append(a.ACLitems[perm].Groups, g)
+	}
 	a.isModified = true
 	return nil
 }
@@ -236,7 +242,13 @@ func (a *ACL) AddActor(perm string, act actor.Actor) util.Gerror {
 		err := util.Errorf("invalid perm %s", perm)
 		return err
 	}
-	a.ACLitems[perm].Actors = append(a.ACLitems[perm].Actors, act)
+	if perm == "all" {
+		for _, p := range DefaultACLs {
+			a.ACLitems[p].Actors = append(a.ACLitems[p].Actors, act)
+		}
+	} else {
+		a.ACLitems[perm].Actors = append(a.ACLitems[perm].Actors, act)
+	}
 	a.isModified = true
 	return nil
 }
@@ -302,6 +314,7 @@ func (a *ACL) Save() util.Gerror {
 	}
 	if a.isModified {
 		ds := datastore.New()
+		a.isModified = false
 		ds.Set(a.Org.DataKey("acl"), util.JoinStr(a.Subkind, "-", a.Kind), a)
 	}
 	return nil
@@ -325,7 +338,9 @@ func (a *ACL) ToJSON() map[string]interface{} {
 }
 
 func (a *ACL) CheckPerm(perm string, doer actor.Actor) (bool, util.Gerror) {
+	log.Printf("The ACL: %+v", a)
 	acli, ok := a.ACLitems[perm]
+	log.Printf("The ACLitem: %+v", acli)
 	if !ok {
 		return false, util.Errorf("invalid perm %s for %s-%s", perm, a.Kind, a.Subkind)
 	}
@@ -347,11 +362,15 @@ func checkValidPerm(perm string) bool {
 			return true
 		}
 	}
+	if perm == "all" {
+		return true
+	}
 	return false
 }
 
 func (a *ACLitem) checkForActor(actr actor.Actor) (bool, int) {
 	for i, ac := range a.Actors {
+		log.Printf("ac %s :: actr %s", ac.GetName(), actr.GetName())
 		if ac.GetName() == actr.GetName() {
 			return true, i
 		}
