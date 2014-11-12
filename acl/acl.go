@@ -229,10 +229,14 @@ func (a *ACL) AddGroup(perm string, g *group.Group) util.Gerror {
 	}
 	if perm == "all" {
 		for _, p := range DefaultACLs {
-			a.ACLitems[p].Groups = append(a.ACLitems[p].Groups, g)
+			if f, _ := a.ACLitems[p].checkForGroup(g); !f {
+				a.ACLitems[p].Groups = append(a.ACLitems[p].Groups, g)
+			}
 		}
 	} else {
-		a.ACLitems[perm].Groups = append(a.ACLitems[perm].Groups, g)
+		if f, _ := a.ACLitems[perm].checkForGroup(g); !f {
+			a.ACLitems[perm].Groups = append(a.ACLitems[perm].Groups, g)
+		}
 	}
 	a.isModified = true
 	return nil
@@ -245,10 +249,14 @@ func (a *ACL) AddActor(perm string, act actor.Actor) util.Gerror {
 	}
 	if perm == "all" {
 		for _, p := range DefaultACLs {
-			a.ACLitems[p].Actors = append(a.ACLitems[p].Actors, act)
+			if f, _ := a.ACLitems[p].checkForActor(act); !f {
+				a.ACLitems[p].Actors = append(a.ACLitems[p].Actors, act)
+			}
 		}
 	} else {
-		a.ACLitems[perm].Actors = append(a.ACLitems[perm].Actors, act)
+		if f, _ := a.ACLitems[perm].checkForActor(act); !f {
+			a.ACLitems[perm].Actors = append(a.ACLitems[perm].Actors, act)
+		}
 	}
 	a.isModified = true
 	return nil
@@ -320,7 +328,7 @@ func (a *ACL) Save() util.Gerror {
 		var key string
 		if a.Owner != nil {
 			itemType = "acl-item"
-			util.JoinStr(a.Owner.ContainerKind(), "-", a.Owner.ContainerType(), "-", a.Owner.GetName())
+			key = util.JoinStr(a.Owner.ContainerKind(), "-", a.Owner.ContainerType(), "-", a.Owner.GetName())
 		} else {
 			itemType = "acl"
 			key = util.JoinStr(a.Subkind, "-", a.Kind)

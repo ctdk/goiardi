@@ -402,11 +402,6 @@ func clientListHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
-			err = cACL.AddActor("all", chefClient)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
 		}
 		log.Printf("acl is: %+v", cACL)
 		err = cACL.Save()
