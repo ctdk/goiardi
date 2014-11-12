@@ -368,6 +368,11 @@ func clientListHandler(w http.ResponseWriter, r *http.Request) {
 		clientResponse["public_key"] = chefClient.PublicKey()
 
 		chefClient.Save()
+		cACL, err := acl.GetItemACL(org, chefClient)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
 		if !chefClient.IsValidator() {
 			g, err := group.Get(org, "clients")
 			if err != nil {
@@ -384,18 +389,30 @@ func clientListHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
+			err = cACL.AddActor("all", chefClient)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
 		}
 		if !opUser.IsValidator() {
-			err = clientACL.AddActor("all", opUser)
+			log.Println("adding creator and self to client acl")
+			err = cACL.AddActor("all", opUser)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
-			err = clientACL.Save()
+			err = cACL.AddActor("all", chefClient)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
+		}
+		log.Printf("acl is: %+v", cACL)
+		err = cACL.Save()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
 		}
 		if lerr := loginfo.LogEvent(org, opUser, chefClient, "create"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)

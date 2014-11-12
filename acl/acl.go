@@ -209,6 +209,7 @@ func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerro
 	var defacl *ACL
 	a, found := ds.Get(org.DataKey("acl-item"), util.JoinStr(item.ContainerKind(), "-", item.ContainerType(), "-", item.GetName()))
 	if !found {
+		log.Printf("Did not find an ACL for client %s, using default", util.JoinStr(item.ContainerKind(), "-", item.ContainerType(), "-", item.GetName()))
 		var err util.Gerror
 		defacl, err = defaultACL(org, item.ContainerKind(), item.ContainerType())
 		if err != nil {
@@ -315,7 +316,17 @@ func (a *ACL) Save() util.Gerror {
 	if a.isModified {
 		ds := datastore.New()
 		a.isModified = false
-		ds.Set(a.Org.DataKey("acl"), util.JoinStr(a.Subkind, "-", a.Kind), a)
+		var itemType string
+		var key string
+		if a.Owner != nil {
+			itemType = "acl-item"
+			util.JoinStr(a.Owner.ContainerKind(), "-", a.Owner.ContainerType(), "-", a.Owner.GetName())
+		} else {
+			itemType = "acl"
+			key = util.JoinStr(a.Subkind, "-", a.Kind)
+		}
+		log.Printf("Saving ACL %s :: %s", itemType, key)
+		ds.Set(a.Org.DataKey(itemType), key, a)
 	}
 	return nil
 }
