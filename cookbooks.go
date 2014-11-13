@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/loginfo"
@@ -77,6 +78,20 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if pathArrayLen < 3 && opUser.IsValidator() {
 		jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+		return
+	}
+
+	// check container perms
+	containerACL, conerr := acl.Get(org, "containers", "cookbooks")
+	if conerr != nil {
+		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
 		return
 	}
 
@@ -168,10 +183,16 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if r.Method == "DELETE" {
-				if !opUser.IsAdmin() {
+				// do we need to track perms beyond the
+				// container ones?
+				if f, err := containerACL.CheckPerm("delete", opUser); err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				} else if !f {
 					jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 					return
 				}
+				
 				err := cb.DeleteVersion(cookbookVersion)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
@@ -217,10 +238,22 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		case "PUT":
-			if !opUser.IsAdmin() {
-				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+			// need to check both create and update
+			if f, err := containerACL.CheckPerm("create", opUser); err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			} else if !f {
+				jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 				return
 			}
+			if f, err := containerACL.CheckPerm("update", opUser); err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			} else if !f {
+				jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+				return
+			}
+
 			cbvData, jerr := parseObjJSON(r.Body)
 			if jerr != nil {
 				jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)

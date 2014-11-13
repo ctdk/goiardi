@@ -282,22 +282,6 @@ func clientListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, averr.Error(), averr.Status())
 			return
 		}
-		/*
-		if !opUser.IsAdmin() && !opUser.IsValidator() {
-			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-			return
-		} else if !opUser.IsAdmin() && opUser.IsValidator() {
-			if aerr := opUser.CheckPermEdit(clientData, "admin"); aerr != nil {
-				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
-				return
-			}
-			if verr := opUser.CheckPermEdit(clientData, "validator"); verr != nil {
-				jsonErrorReport(w, r, verr.Error(), verr.Status())
-				return
-			}
-
-		}
-		*/
 		clientACL, err := acl.Get(org, "containers", "clients")
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
