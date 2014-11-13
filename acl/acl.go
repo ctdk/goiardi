@@ -232,7 +232,10 @@ func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerro
 	if !found {
 		log.Printf("Did not find an ACL for client %s, using default", util.JoinStr(item.ContainerKind(), "-", item.ContainerType(), "-", item.GetName()))
 		var err util.Gerror
-		defacl, err = defaultACL(org, item.ContainerKind(), item.ContainerType())
+		//defacl, err = defaultACL(org, item.ContainerKind(), item.ContainerType())
+		// Experiment: inherit the parent container's ACL, rather than
+		// the default for this type.
+		defacl, err = Get(org, item.ContainerKind(), item.ContainerType())
 		if err != nil {
 			return nil, err
 		}
