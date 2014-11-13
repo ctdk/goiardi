@@ -263,9 +263,21 @@ func clientListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
+	containerACL, err := acl.Get(org, "containers", "clients")
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
 
 	switch r.Method {
 	case "GET":
+		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
 		clientList := client.GetList(org)
 		for _, k := range clientList {
 			/* Make sure it's a client and not a user. */
@@ -282,13 +294,8 @@ func clientListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, averr.Error(), averr.Status())
 			return
 		}
-		clientACL, err := acl.Get(org, "containers", "clients")
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
-		} 
 		log.Printf("saving user is: %+v", opUser)
-		if f, err := clientACL.CheckPerm("create", opUser); err != nil {
+		if f, err := containerACL.CheckPerm("create", opUser); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		} else if !f {
