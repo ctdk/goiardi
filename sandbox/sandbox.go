@@ -233,6 +233,14 @@ func (s *Sandbox) URLType() string {
 	return "sandboxes"
 }
 
+func (s *Sandbox) ContainerType() string {
+	return s.URLType()
+}
+
+func (s *Sandbox) ContainerKind() string {
+	return "containers"
+}
+
 // OrgName returns the organization this sandbox belongs to.
 func (s *Sandbox) OrgName() string {
 	return s.org.Name

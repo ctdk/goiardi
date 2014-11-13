@@ -145,6 +145,27 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 			addGroup(org, acl.ACLitems["update"], "admins")
 			addGroup(org, acl.ACLitems["delete"], "admins")
 			addGroup(org, acl.ACLitems["grant"], "admins")
+		case "log-infos":
+			addGroup(org, acl.ACLitems["create"], "admins")
+			addGroup(org, acl.ACLitems["create"], "users")
+			addGroup(org, acl.ACLitems["read"], "admins")
+			addGroup(org, acl.ACLitems["update"], "admins")
+			addGroup(org, acl.ACLitems["delete"], "admins")
+			addGroup(org, acl.ACLitems["grant"], "admins")
+		case "reports":
+			addGroup(org, acl.ACLitems["create"], "admins")
+			addGroup(org, acl.ACLitems["create"], "users")
+			addGroup(org, acl.ACLitems["create"], "clients")
+			addGroup(org, acl.ACLitems["read"], "admins")
+			addGroup(org, acl.ACLitems["update"], "admins")
+			addGroup(org, acl.ACLitems["delete"], "admins")
+			addGroup(org, acl.ACLitems["grant"], "admins")
+		case "shoveys": // certain to be modified further later
+			addGroup(org, acl.ACLitems["create"], "admins")
+			addGroup(org, acl.ACLitems["read"], "admins")
+			addGroup(org, acl.ACLitems["update"], "admins")
+			addGroup(org, acl.ACLitems["delete"], "admins")
+			addGroup(org, acl.ACLitems["grant"], "admins")
 		default:
 			acl.ACLitems = nil
 		}

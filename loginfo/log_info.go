@@ -288,3 +288,22 @@ func getOrgName(org *organization.Organization) string {
 	}
 	return ""
 }
+
+func (le *LogInfo) GetName() string {
+	return strconv.Itoa(le.ID)
+}
+
+func (le *LogInfo) ContainerType() string {
+	return "log-infos"
+}
+
+func (le *LogInfo) ContainerKind() string {
+	return "containers"
+}
+
+func (le *LogInfo) OrgName() string {
+	if le.org != nil {
+		return le.org.Name
+	}
+	return ""
+}

@@ -867,3 +867,19 @@ func (srs *ShoveyRunStream) importSave() error {
 func (s BySeq) Len() int           { return len(s) }
 func (s BySeq) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s BySeq) Less(i, j int) bool { return s[i].Seq < s[j].Seq }
+
+func (s *Shovey) GetName() string {
+	return s.RunID
+}
+
+func (s *Shovey) ContainerType() string {
+	return "shoveys"
+}
+
+func (s *Shovey) ContainerKind() string {
+	return "containers"
+}
+
+func (s *Shovey) OrgName() string {
+	return s.org.Name
+}

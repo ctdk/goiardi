@@ -372,3 +372,19 @@ func AllReports(org *organization.Organization) []*Report {
 	}
 	return reports
 }
+
+func (r *Report) GetName() string {
+	return r.RunID
+}
+
+func (r *Report) ContainerType() string {
+	return "reports"
+}
+
+func (r *Report) ContainerKind() string {
+	return "containers"
+}
+
+func (r *Report) OrgName() string {
+	return r.org.Name
+}

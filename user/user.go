@@ -519,6 +519,14 @@ func (u *User) URLType() string {
 	return "users"
 }
 
+func (u *User) ContainerType() string {
+	return u.URLType()
+}
+
+func (u *User) ContainerKind() string {
+	return "containers"
+}
+
 // OrgName satisfies the GoiardiObj interface, but at the moment isn't really
 // a thing for users.
 func (u *User) OrgName() string {
