@@ -353,6 +353,14 @@ func (e *ChefEnvironment) URLType() string {
 	return "environments"
 }
 
+func (e *ChefEnvironment) ContainerType() string {
+	return e.URLType()
+}
+
+func (e *ChefEnvironment) ContainerKind() string {
+	return "containers"
+}
+
 // OrgName returns the organization this environment belongs to.
 func (e *ChefEnvironment) OrgName() string {
 	return e.org.Name

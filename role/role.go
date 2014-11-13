@@ -273,6 +273,14 @@ func (r *Role) URLType() string {
 	return "roles"
 }
 
+func (r *Role) ContainerType() string {
+	return r.URLType()
+}
+
+func (r *Role) ContainerKind() string {
+	return "containers"
+}
+
 // OrgName returns the organization this role belongs to.
 func (r *Role) OrgName() string {
 	return r.org.Name

@@ -89,6 +89,14 @@ func (c *Cookbook) URLType() string {
 	return "cookbooks"
 }
 
+func (c *Cookbook) ContainerType() string {
+	return c.URLType()
+}
+
+func (c *Cookbook) ContainerKind() string {
+	return "containers"
+}
+
 // OrgName returns the organization this cookbook belongs to.
 func (c *Cookbook) OrgName() string {
 	return c.org.Name
@@ -102,6 +110,14 @@ func (cbv *CookbookVersion) GetName() string {
 // URLType returns the first path element in a cookbook version's URL.
 func (cbv *CookbookVersion) URLType() string {
 	return "cookbooks"
+}
+
+func (cbv *CookbookVersion) ContainerType() string {
+	return cbv.URLType()
+}
+
+func (cbv *CookbookVersion) ContainerKind() string {
+	return "containers"
 }
 
 // OrgName returns the organization this cookbook version belongs to.

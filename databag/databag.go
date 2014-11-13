@@ -187,6 +187,14 @@ func (db *DataBag) URLType() string {
 	return "data"
 }
 
+func (db *DataBag) ContainerType() string {
+	return db.URLType()
+}
+
+func (db *DataBag) ContainerKind() string {
+	return "containers"
+}
+
 // OrgName returns the organization this data bag belongs to.
 func (db *DataBag) OrgName() string {
 	return db.org.Name
@@ -200,6 +208,14 @@ func (dbi *DataBagItem) GetName() string {
 // URLType returns the base element of a data bag's URL.
 func (dbi *DataBagItem) URLType() string {
 	return "data"
+}
+
+func (dbi *DataBagItem) ContainerType() string {
+	return dbi.URLType()
+}
+
+func (dbi *DataBagItem) ContainerKind() string {
+	return "containers"
 }
 
 // OrgName returns the organization this data bag item belongs to.

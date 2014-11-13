@@ -310,6 +310,14 @@ func (n *Node) URLType() string {
 	return "nodes"
 }
 
+func (n *Node) ContainerType() string {
+	return n.URLType()
+}
+
+func (n *Node) ContainerKind() string {
+	return "containers"
+}
+
 // OrgName returns the name of the organization this node belongs to.
 func (n *Node) OrgName() string {
 	return n.org.Name
