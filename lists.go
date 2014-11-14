@@ -45,8 +45,6 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 	op := pathArray[2]
 	var listData map[string]string
 	switch op {
-	case "nodes":
-		listData = nodeHandling(org, w, r)
 	case "roles":
 		listData = roleHandling(org, w, r)
 	default:
@@ -59,75 +57,6 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 		}
 	}
-}
-
-func nodeHandling(org *organization.Organization, w http.ResponseWriter, r *http.Request) map[string]string {
-	/* We're dealing with nodes, then. */
-	nodeResponse := make(map[string]string)
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return nil
-	}
-	switch r.Method {
-	case "GET":
-		if opUser.IsValidator() {
-			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-			return nil
-		}
-		nodeList := node.GetList(org)
-		for _, k := range nodeList {
-			itemURL := util.JoinStr("/organizations/", org.Name, "/nodes/", k)
-			nodeResponse[k] = util.CustomURL(itemURL)
-		}
-	case "POST":
-		if opUser.IsValidator() {
-			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-			return nil
-		}
-		nodeData, jerr := parseObjJSON(r.Body)
-		if jerr != nil {
-			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-			return nil
-		}
-		nodeName, sterr := util.ValidateAsString(nodeData["name"])
-		if sterr != nil {
-			jsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
-			return nil
-		}
-		chefNode, _ := node.Get(org, nodeName)
-		if chefNode != nil {
-			httperr := fmt.Errorf("Node already exists")
-			jsonErrorReport(w, r, httperr.Error(), http.StatusConflict)
-			return nil
-		}
-		var nerr util.Gerror
-		chefNode, nerr = node.NewFromJSON(org, nodeData)
-		if nerr != nil {
-			jsonErrorReport(w, r, nerr.Error(), nerr.Status())
-			return nil
-		}
-		err := chefNode.Save()
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-			return nil
-		}
-		err = chefNode.UpdateStatus("new")
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-			return nil
-		}
-		if lerr := loginfo.LogEvent(org, opUser, chefNode, "create"); lerr != nil {
-			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
-			return nil
-		}
-		nodeResponse["uri"] = util.ObjURL(chefNode)
-		w.WriteHeader(http.StatusCreated)
-	default:
-		jsonErrorReport(w, r, "Method not allowed for nodes", http.StatusMethodNotAllowed)
-		return nil
-	}
-	return nodeResponse
 }
 
 func roleHandling(org *organization.Organization, w http.ResponseWriter, r *http.Request) map[string]string {
