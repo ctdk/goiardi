@@ -20,6 +20,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/environment"
@@ -46,9 +47,9 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, err := acl.Get(org, "containers", "clients")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
+	containerACL, cerr := acl.Get(org, "containers", "clients")
+	if cerr != nil {
+		jsonErrorReport(w, r, cerr.Error(), cerr.Status())
 		return
 	}
 	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
@@ -218,9 +219,9 @@ func roleListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, err := acl.Get(org, "containers", "roles")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
+	containerACL, cerr := acl.Get(org, "containers", "roles")
+	if cerr != nil {
+		jsonErrorReport(w, r, cerr.Error(), cerr.Status())
 		return
 	}
 	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
