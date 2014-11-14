@@ -19,16 +19,19 @@ package association
 import (
 	"encoding/gob"
 	"fmt"
+	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"testing"
 )
 
-func TestAssociationCreation(t *testing.T) {
+func TestAssociationReqCreation(t *testing.T) {
 	gob.Register(new(AssociationReq))
 	gob.Register(new(organization.Organization))
 	gob.Register(new(user.User))
 	gob.Register(make(map[string]interface{}))
+	gob.Register(new(Association))
+	gob.Register(new(group.Group))
 	u, _ := user.New("user1")
 	pass := "123456"
 	u.SetPasswd(pass)
@@ -48,7 +51,7 @@ func TestAssociationCreation(t *testing.T) {
 	}
 }
 
-func TestAssociationDeletion(t *testing.T) {
+func TestAssociationReqDeletion(t *testing.T) {
 	u, _ := user.New("user2")
 	pass := "123456"
 	u.SetPasswd(pass)
@@ -61,13 +64,48 @@ func TestAssociationDeletion(t *testing.T) {
 	}
 	key := assoc.Key()
 	assoc.Delete()
-	a2, err := Get(key)
+	a2, err := GetReq(key)
 	if err == nil {
 		t.Errorf("deleting %s didn't work. Value: %v", key, a2)
 	}
 }
 
-func TestOrgListing(t *testing.T) {
+func TestAcceptance(t *testing.T) {
+	u, _ := user.New("user100")
+	pass := "123456"
+	u.SetPasswd(pass)
+	u.Save()
+	up, _ := user.New("pivotal")
+	up.SetPasswd(pass)
+	up.Save()
+	o, _ := organization.New("org100", "org-porg")
+	o.Save()
+	err := group.MakeDefaultGroups(o)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	assoc, err := SetReq(u, o)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	err = assoc.Accept()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	_, err = GetAssoc(u, o)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	u2, _ := user.New("user101")
+	u2.SetPasswd(pass)
+	u2.Save()	
+	_, err = GetAssoc(u2, o)
+	if err == nil {
+		t.Errorf("found association when there should not have been one")
+	}
+}
+
+func TestOrgReqListing(t *testing.T) {
 	u, _ := user.New("user3")
 	pass := "123456"
 	u.SetPasswd(pass)
@@ -93,7 +131,7 @@ func TestOrgListing(t *testing.T) {
 	}
 }
 
-func TestUserListing(t *testing.T) {
+func TestUserReqListing(t *testing.T) {
 	o, _ := organization.New("userlist", "user list org")
 	o.Save()
 	pass := "123456"
@@ -116,9 +154,65 @@ func TestUserListing(t *testing.T) {
 	}
 }
 
-func TestDelUserAssoc(t *testing.T) {
+func TestUserAssocListing(t *testing.T) {
+	o, _ := organization.New("userlistz", "user list org")
+	o.Save()
+	group.MakeDefaultGroups(o)
+	pass := "123456"
+	for n := 0; n < 5; n++ {
+		name := fmt.Sprintf("userlistz%d", n)
+		u, err := user.New(name)
+		if err != nil {
+			t.Errorf(err.Error())
+		}
+		u.SetPasswd(pass)
+		u.Save()
+		r, err := SetReq(u, o)
+		if err != nil {
+			t.Errorf(err.Error())
+		}
+		r.Accept()
+	}
+	users, err := UserAssociations(o)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if len(users) != 5 {
+		t.Errorf("the number of users associated with the org should have been 5, got %d", len(users))
+	}
+}
+
+func TestOrgAssocListing(t *testing.T) {
+	u, _ := user.New("user300")
+	pass := "123456"
+	u.SetPasswd(pass)
+	u.Save()
+	for n := 0; n < 5; n++ {
+		name := fmt.Sprintf("orglistA%d", n)
+		o, e := organization.New(name, fmt.Sprintf("%s org thing", name))
+		if e != nil {
+			t.Errorf(e.Error())
+		}
+		o.Save()
+		group.MakeDefaultGroups(o)
+		r, err := SetReq(u, o)
+		if err != nil {
+			t.Errorf(err.Error())
+		}
+		r.Accept()
+	}
+	orgs, err := OrgAssociations(u)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if len(orgs) != 5 {
+		t.Errorf("the number of orgs associated with the user should have been 5, got %d", len(orgs))
+	}
+}
+
+func TestDelUserAssocReq(t *testing.T) {
 	o, _ := organization.Get("userlist")
-	err := DelAllOrgAssoc(o)
+	err := DelAllOrgAssocReqs(o)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -131,9 +225,9 @@ func TestDelUserAssoc(t *testing.T) {
 	}
 }
 
-func TestDelOrgAssoc(t *testing.T) {
+func TestDelOrgAssocReq(t *testing.T) {
 	u, _ := user.Get("user3")
-	err := DelAllUserAssoc(u)
+	err := DelAllUserAssocReqs(u)
 	if err != nil {
 		t.Errorf(err.Error())
 	}

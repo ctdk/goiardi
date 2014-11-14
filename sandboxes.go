@@ -20,6 +20,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/sandbox"
@@ -45,13 +46,22 @@ func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	containerACL, conerr := acl.Get(org, "containers", "sandboxes")
+	if conerr != nil {
+		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+		return
+	}
+
 	switch r.Method {
 	case "POST":
 		if pathArrayLen != 1 {
 			jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 			return
 		}
-		if !opUser.IsAdmin() {
+		if f, err := containerACL.CheckPerm("create", opUser); err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		} else if !f {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return
 		}
@@ -96,7 +106,10 @@ func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 			return
 		}
-		if !opUser.IsAdmin() {
+		if f, err := containerACL.CheckPerm("update", opUser); err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		} else if !f {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return
 		}

@@ -18,6 +18,7 @@ package acl
 
 import (
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/association"
 	//"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
@@ -25,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
+	"net/http"
 	"log"
 )
 
@@ -366,18 +368,24 @@ func (a *ACL) Save() util.Gerror {
 func (a *ACL) ToJSON() map[string]interface{} {
 	aclJSON := make(map[string]interface{})
 	for k, v := range a.ACLitems {
-		r := make(map[string][]string, 2)
-		r["actors"] = make([]string, len(v.Actors))
-		r["groups"] = make([]string, len(v.Groups))
-		for i, act := range v.Actors {
-			r["actors"][i] = act.GetName()
-		}
-		for i, gr := range v.Groups {
-			r["groups"][i] = gr.Name
-		}
-		aclJSON[k] = r
+		aclJSON[k] = v.ToJSON()
 	}
 	return aclJSON
+}
+
+func (acli *ACLitem) ToJSON() map[string]interface{} {
+	r := make(map[string]interface{}, 2)
+	ractors := make([]string, len(acli.Actors))
+	rgroups := make([]string, len(acli.Groups))
+	for i, act := range acli.Actors {
+		ractors[i] = act.GetName()
+	}
+	for i, gr := range acli.Groups {
+		rgroups[i] = gr.Name
+	}
+	r["actors"] = ractors
+	r["groups"] = rgroups
+	return r
 }
 
 func (a *ACL) CheckPerm(perm string, doer actor.Actor) (bool, util.Gerror) {
@@ -387,13 +395,25 @@ func (a *ACL) CheckPerm(perm string, doer actor.Actor) (bool, util.Gerror) {
 	if !ok {
 		return false, util.Errorf("invalid perm %s for %s-%s", perm, a.Kind, a.Subkind)
 	}
-	// first check for user perms in this ACL
+	// check for user perms in this ACL
 	if f, _ := acli.checkForActor(doer); f {
 		return f, nil
 	}
 	for _, g := range acli.Groups {
 		if f := g.SeekActor(doer); f {
 			return f, nil
+		}
+	}
+	if doer.IsUser() {
+		_, err := association.GetAssoc(doer.(*user.User), a.Org)
+		if err != nil {
+			return false, err
+		}
+	} else {
+		if doer.OrgName() != a.Org.Name {
+			err := util.Errorf("client %s is not associated iwth org %s", doer.GetName(), a.Org.Name)
+			err.SetStatus(http.StatusForbidden)
+			return false, err
 		}
 	}
 	return false, nil

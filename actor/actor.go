@@ -41,6 +41,7 @@ type Actor interface {
 	SetPublicKey(interface{}) error
 	GetName() string
 	CheckPermEdit(map[string]interface{}, string) util.Gerror
+	OrgName() string
 }
 
 // GetReqUser gets the actor making the request. If use-auth is not on, always

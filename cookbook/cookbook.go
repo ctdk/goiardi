@@ -774,6 +774,7 @@ func (c *Cookbook) GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) 
 			if cbv.Recipes == nil {
 				cbv.Recipes = make([]map[string]interface{}, 0)
 			}
+			cbv.org = c.org
 		}
 	}
 

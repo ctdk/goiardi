@@ -57,6 +57,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -191,6 +192,8 @@ func main() {
 	s.HandleFunc("/cookbooks", cookbookHandler)
 	s.HandleFunc("/cookbooks/{name}", cookbookHandler)
 	s.HandleFunc("/cookbooks/{name}/{version}", cookbookHandler)
+	s.HandleFunc("/cookbooks/{name}/_acl", cookbookACLHandler)
+	s.HandleFunc("/cookbooks/{name}/_acl/{perm}", cookbookACLPermHandler)
 	s.HandleFunc("/data", dataHandler)
 	s.HandleFunc("/data/{name}", dataHandler)
 	s.HandleFunc("/data/{name}/{item}", dataHandler)
@@ -284,8 +287,9 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	fstorere := regexp.MustCompile(`^/organizations/[^/]*/file_store`)
 	/* Make configurable, I guess, but Chef wants it to be 1000000 */
-	if !strings.HasPrefix(r.URL.Path, "/file_store") && r.ContentLength > config.Config.JSONReqMaxSize {
+	if !fstorere.MatchString(r.URL.Path) && r.ContentLength > config.Config.JSONReqMaxSize {
 		http.Error(w, "Content-length too long!", http.StatusRequestEntityTooLarge)
 		return
 	} else if r.ContentLength > config.Config.ObjMaxSize {
@@ -333,7 +337,8 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* Only perform the authorization check if that's configured. Bomb with
 	 * an error if the check of the headers, timestamps, etc. fails. */
 	/* No clue why /principals doesn't require authorization. Hrmph. */
-	if config.Config.UseAuth && !strings.HasPrefix(r.URL.Path, "/file_store") && !(strings.HasPrefix(r.URL.Path, "/principals") && r.Method == "GET") {
+	princre := regexp.MustCompile(`/organizations/[^/]*/principals`)
+	if config.Config.UseAuth && !fstorere.MatchString(r.URL.Path) && !(princre.MatchString(r.URL.Path) && r.Method == "GET") {
 		herr := authentication.CheckHeader(userID, r)
 		if herr != nil {
 			w.Header().Set("Content-Type", "application/json")

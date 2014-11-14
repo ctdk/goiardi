@@ -41,6 +41,10 @@ func (a *AssociationReq) Key() string {
 	return util.JoinStr(a.User.Name, "-", a.Org.Name)
 }
 
+func (a *Association) Key() string {
+	return util.JoinStr(a.User.Name, "-", a.Org.Name)
+}
+
 func SetReq(user *user.User, org *organization.Organization) (*AssociationReq, util.Gerror) {
 	if config.UsingDB() {
 
@@ -84,6 +88,10 @@ func (a *AssociationReq) Accept() util.Gerror {
 	}
 	// group stuff happens here, once that all gets figured out
 	// This one I think *does* happen. I think.
+	_, err := SetAssoc(a.User, a.Org)
+	if err != nil {
+		return err
+	}
 	g, err := group.Get(a.Org, "users")
 	if err != nil {
 		return err
@@ -142,6 +150,19 @@ func Orgs(user *user.User) ([]*organization.Organization, util.Gerror) {
 	return orgs, nil
 }
 
+func OrgAssociations(user *user.User) ([]*organization.Organization, util.Gerror) {
+	if config.UsingDB() {
+
+	}
+	ds := datastore.New()
+	o := ds.GetAssociations(user.Name, "organizations")
+	orgs := make([]*organization.Organization, len(o))
+	for i, v := range o {
+		orgs[i] = v.(*organization.Organization)
+	}
+	return orgs, nil
+}
+
 func OrgsAssociationReqCount(user *user.User) (int, util.Gerror) {
 	if config.UsingDB() {
 
@@ -172,6 +193,19 @@ func Users(org *organization.Organization) ([]*user.User, util.Gerror) {
 	}
 	ds := datastore.New()
 	u := ds.GetAssociationReqs(org.Name, "users")
+	users := make([]*user.User, len(u))
+	for i, v := range u {
+		users[i] = v.(*user.User)
+	}
+	return users, nil
+}
+
+func UserAssociations(org *organization.Organization) ([]*user.User, util.Gerror) {
+	if config.UsingDB() {
+
+	}
+	ds := datastore.New()
+	u := ds.GetAssociations(org.Name, "users")
 	users := make([]*user.User, len(u))
 	for i, v := range u {
 		users[i] = v.(*user.User)
@@ -262,4 +296,50 @@ func GetAllUsersAssociationReqs(org *organization.Organization) ([]*AssociationR
 		assoc[i] = a
 	}
 	return assoc, nil
+}
+
+func SetAssoc(user *user.User, org *organization.Organization) (*Association, util.Gerror) {
+	assoc := &Association{user, org}
+	ds := datastore.New()
+	_, found := ds.Get("association", assoc.Key())
+	if found {
+		err := util.Errorf("User %s already associated with org %s", user.Name, org.Name)
+		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
+	ds.Set("association", assoc.Key(), assoc)
+	ds.SetAssociation(org.Name, "users", user.Name, user)
+	ds.SetAssociation(user.Name, "organizations", org.Name, org)
+	return assoc, nil
+}
+
+func GetAssoc(user *user.User, org *organization.Organization) (*Association, util.Gerror) {
+	var assoc *Association
+	if config.UsingDB() {
+
+	} else {
+		ds := datastore.New()
+		key := util.JoinStr(user.Name, "-", org.Name)
+		a, found := ds.Get("association", key)
+		if !found {
+			gerr := util.Errorf("'%s' not associated with organization '%s'", user.Name, org.Name)
+			gerr.SetStatus(http.StatusForbidden)
+			return nil, gerr
+		}
+		if a != nil {
+			assoc = a.(*Association)
+		}
+	}
+	return assoc, nil
+}
+
+func (a *Association) Delete() util.Gerror {
+	if config.UsingDB() {
+
+	}
+	ds := datastore.New()
+	ds.Delete("association", a.Key())
+	ds.DelAssociation(a.Org.Name, "users", a.User.Name)
+	ds.DelAssociation(a.User.Name, "organizations", a.Org.Name)
+	return nil
 }

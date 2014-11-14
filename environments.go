@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/environment"
@@ -55,6 +56,19 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	containerACL, conerr := acl.Get(org, "containers", "environments")
+	if conerr != nil {
+		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		return
+	}
+
 	pathArray := splitPath(r.URL.Path)[2:]
 	envResponse := make(map[string]interface{})
 	var numResults string
@@ -86,8 +100,11 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				envResponse[env] = util.CustomURL(fmt.Sprintf("/environments/%s", env))
 			}
 		case "POST":
-			if !opUser.IsAdmin() {
-				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+			if f, err := containerACL.CheckPerm("create", opUser); err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			} else if !f {
+				jsonErrorReport(w, r, "You are not allowed to perform this action.", http.StatusForbidden)
 				return
 			}
 			envData, jerr := parseObjJSON(r.Body)
@@ -141,8 +158,11 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		case "GET", "DELETE":
 			/* We don't actually have to do much here. */
 			if r.Method == "DELETE" {
-				if !opUser.IsAdmin() {
-					jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				if f, err := containerACL.CheckPerm("delete", opUser); err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				} else if !f {
+					jsonErrorReport(w, r, "You are not allowed to perform this action.", http.StatusForbidden)
 					return
 				}
 				if envName == "_default" {
@@ -157,8 +177,11 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		case "PUT":
-			if !opUser.IsAdmin() {
-				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+			if f, err := containerACL.CheckPerm("update", opUser); err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			} else if !f {
+				jsonErrorReport(w, r, "You are not allowed to perform this action.", http.StatusForbidden)
 				return
 			}
 			envData, jerr := parseObjJSON(r.Body)

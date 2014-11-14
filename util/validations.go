@@ -162,7 +162,7 @@ func ValidateCookbookDivision(orgName string, dname string, div interface{}) ([]
 						}
 						return nil, merr
 					}
-					itemURL := fmt.Sprintf("/file_store/%s", chksum)
+					itemURL := fmt.Sprintf("/organizations/%s/file_store/%s", orgName, chksum)
 					v["url"] = CustomURL(itemURL)
 					d = append(d, v)
 				}
