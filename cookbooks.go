@@ -215,7 +215,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				} else if !f {
-					jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+					jsonErrorReport(w, r, "missing delete permission", http.StatusForbidden)
 					return
 				}
 				

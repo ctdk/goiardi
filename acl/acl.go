@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"log"
+	"sync"
 )
 
 var DefaultACLs = [5]string{
@@ -50,6 +51,7 @@ type ACLitem struct {
 	Perm   string
 	Actors []actor.Actor
 	Groups []*group.Group
+	m      sync.RWMutex
 }
 
 type ACL struct {
@@ -59,6 +61,7 @@ type ACL struct {
 	Owner      ACLOwner
 	Org        *organization.Organization
 	isModified bool
+	m      sync.RWMutex
 }
 
 func defaultACL(org *organization.Organization, kind string, subkind string) (*ACL, util.Gerror) {
@@ -80,7 +83,7 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 		// by default, all of these seem to have the same default
 		// user
 		for _, perm := range DefaultACLs {
-			ggerr := acl.AddActor(perm, defUser)
+			ggerr := acl.addActor(perm, defUser)
 			if ggerr != nil {
 				return nil, ggerr
 			}
@@ -180,7 +183,7 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 				if ggerr != nil {
 					return nil, ggerr
 				}
-				ggerr = acl.AddActor(perm, defUser)
+				ggerr = acl.addActor(perm, defUser)
 				if ggerr != nil {
 					return nil, ggerr
 				}
@@ -189,7 +192,7 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 			addGroup(org, acl.ACLitems["read"], "billing-admins")
 			addGroup(org, acl.ACLitems["update"], "billing-admins")
 			for _, perm := range DefaultACLs {
-				ggerr := acl.AddActor(perm, defUser)
+				ggerr := acl.addActor(perm, defUser)
 				if ggerr != nil {
 					return nil, ggerr
 				}
@@ -250,46 +253,68 @@ func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerro
 }
 
 func (a *ACL) AddGroup(perm string, g *group.Group) util.Gerror {
+	a.m.Lock()
+	defer a.m.Unlock()
+	return a.addGroup(perm, g)
+}
+
+func (a *ACL) AddActor(perm string, act actor.Actor) util.Gerror {
+	a.m.Lock()
+	defer a.m.Unlock()
+	return a.addActor(perm, act)
+}
+
+func (a *ACL) addGroup(perm string, g *group.Group) util.Gerror {
 	if !checkValidPerm(perm) {
 		err := util.Errorf("invalid perm %s", perm)
 		return err
 	}
 	if perm == "all" {
 		for _, p := range DefaultACLs {
+			a.ACLitems[p].m.Lock()
 			if f, _ := a.ACLitems[p].checkForGroup(g); !f {
 				a.ACLitems[p].Groups = append(a.ACLitems[p].Groups, g)
 			}
+			a.ACLitems[p].m.Unlock()
 		}
 	} else {
+		a.ACLitems[perm].m.Lock()
 		if f, _ := a.ACLitems[perm].checkForGroup(g); !f {
 			a.ACLitems[perm].Groups = append(a.ACLitems[perm].Groups, g)
 		}
+		a.ACLitems[perm].m.Unlock()
 	}
 	a.isModified = true
 	return nil
 }
 
-func (a *ACL) AddActor(perm string, act actor.Actor) util.Gerror {
+func (a *ACL) addActor(perm string, act actor.Actor) util.Gerror {
 	if !checkValidPerm(perm) {
 		err := util.Errorf("invalid perm %s", perm)
 		return err
 	}
 	if perm == "all" {
 		for _, p := range DefaultACLs {
+			a.ACLitems[p].m.Lock()
 			if f, _ := a.ACLitems[p].checkForActor(act); !f {
 				a.ACLitems[p].Actors = append(a.ACLitems[p].Actors, act)
 			}
+			a.ACLitems[p].m.Unlock()
 		}
 	} else {
+		a.ACLitems[perm].m.Lock()
 		if f, _ := a.ACLitems[perm].checkForActor(act); !f {
 			a.ACLitems[perm].Actors = append(a.ACLitems[perm].Actors, act)
 		}
+		a.ACLitems[perm].m.Unlock()
 	}
 	a.isModified = true
 	return nil
 }
 
 func (a *ACL) EditFromJSON(perm string, data interface{}) util.Gerror {
+	a.m.Lock()
+	defer a.m.Unlock()
 	switch data := data.(type) {
 	case map[string]interface{}:
 		if _, ok := data[perm]; !ok {
@@ -297,7 +322,12 @@ func (a *ACL) EditFromJSON(perm string, data interface{}) util.Gerror {
 		}
 		switch aclEdit := data[perm].(type) {
 		case map[string]interface{}:
+			a.ACLitems[perm].m.Lock()
+			defer a.ACLitems[perm].m.Unlock()
+			var acts []actor.Actor
+			var gs []*group.Group
 			if actors, ok := aclEdit["actors"].([]interface{}); ok {
+				acts = make([]actor.Actor, 0, len(actors))
 				for _, act := range actors {
 					switch act := act.(type){
 					case string:
@@ -305,10 +335,7 @@ func (a *ACL) EditFromJSON(perm string, data interface{}) util.Gerror {
 						if err != nil {
 							return err
 						}
-						err = a.AddActor(perm, actr)
-						if err != nil {
-							return err
-						}
+						acts = append(acts, actr)
 					default:
 						return util.Errorf("invalid type for actor in acl")
 					}
@@ -317,6 +344,7 @@ func (a *ACL) EditFromJSON(perm string, data interface{}) util.Gerror {
 				return util.Errorf("invalid acl %s data for actors", perm)
 			}
 			if groups, ok := aclEdit["groups"].([]interface{}); ok {
+				gs = make([]*group.Group, 0, len(groups))
 				for _, gr := range groups {
 					switch gr := gr.(type) {
 					case string:
@@ -324,10 +352,7 @@ func (a *ACL) EditFromJSON(perm string, data interface{}) util.Gerror {
 						if err != nil {
 							return err
 						}
-						err = a.AddGroup(perm, grp)
-						if err != nil {
-							return err
-						}
+						gs = append(gs, grp)
 					default:
 						return util.Errorf("invalid type for group in acl")
 					}
@@ -335,16 +360,25 @@ func (a *ACL) EditFromJSON(perm string, data interface{}) util.Gerror {
 			} else {
 				return util.Errorf("invalid acl %s data for groups", perm)
 			}
+			a.ACLitems[perm].Actors = acts
+			a.ACLitems[perm].Groups = gs
 		default:
 				return util.Errorf("invalid acl %s data", perm)
 		}
 	default:
 		return util.Errorf("invalid acl data")
 	}
-	return a.Save()
+	a.isModified = true
+	return a.save()
 }
 
 func (a *ACL) Save() util.Gerror {
+	a.m.Lock()
+	defer a.m.Unlock()
+	return a.save()
+}
+
+func (a *ACL) save() util.Gerror {
 	if config.UsingDB() {
 
 	}
@@ -367,6 +401,8 @@ func (a *ACL) Save() util.Gerror {
 }
 
 func (a *ACL) ToJSON() map[string]interface{} {
+	a.m.RLock()
+	defer a.m.RUnlock()
 	aclJSON := make(map[string]interface{})
 	for k, v := range a.ACLitems {
 		aclJSON[k] = v.ToJSON()
@@ -375,6 +411,8 @@ func (a *ACL) ToJSON() map[string]interface{} {
 }
 
 func (acli *ACLitem) ToJSON() map[string]interface{} {
+	acli.m.RLock()
+	defer acli.m.RUnlock()
 	r := make(map[string]interface{}, 2)
 	ractors := make([]string, len(acli.Actors))
 	rgroups := make([]string, len(acli.Groups))
@@ -390,8 +428,13 @@ func (acli *ACLitem) ToJSON() map[string]interface{} {
 }
 
 func (a *ACL) CheckPerm(perm string, doer actor.Actor) (bool, util.Gerror) {
+	a.m.RLock()
+	defer a.m.RUnlock()
 	log.Printf("The ACL: %+v", a)
 	acli, ok := a.ACLitems[perm]
+	acli.m.RLock()
+	defer acli.m.RUnlock()
+
 	log.Printf("The ACLitem: %+v", acli)
 	if !ok {
 		return false, util.Errorf("invalid perm %s for %s-%s", perm, a.Kind, a.Subkind)
@@ -443,6 +486,8 @@ func (a *ACLitem) checkForActor(actr actor.Actor) (bool, int) {
 }
 
 func (a *ACLitem) checkForGroup(g *group.Group) (bool, int) {
+	a.m.RLock()
+	defer a.m.RUnlock()
 	for i, gr := range a.Groups {
 		if gr.Name == g.Name {
 			return true, i
