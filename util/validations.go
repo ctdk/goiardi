@@ -139,7 +139,7 @@ func ValidateAttributes(key string, attrs interface{}) (map[string]interface{}, 
 func ValidateCookbookDivision(orgName string, dname string, div interface{}) ([]map[string]interface{}, Gerror) {
 	switch div := div.(type) {
 	case []interface{}:
-		var d []map[string]interface{}
+		d := make([]map[string]interface{}, 0, len(div))
 		err := Errorf("Invalid element in array value of '%s'.", dname)
 
 		for _, v := range div {
@@ -348,7 +348,7 @@ func ValidateRunList(rl interface{}) ([]string, Gerror) {
 		}
 
 		/* Remove dupes */
-		result := []string{}
+		result := make([]string, 0, len(rl))
 		found := map[string]bool{}
 		for _, u := range rl {
 			if _, ok := found[u]; !ok {

@@ -150,6 +150,39 @@ func clientACLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func clientACLPermHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	cb, clerr := client.Get(org, vars["name"])
+	if clerr != nil {
+		jsonErrorReport(w, r, clerr.Error(), clerr.Status())
+		return
+	}
+	a, rerr := acl.GetItemACL(org, cb)
+	if rerr != nil {
+		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		return
+	}
+	p, ok := a.ACLitems[vars["perm"]]
+	if !ok {
+		jsonErrorReport(w, r, "perm nonexistent", http.StatusBadRequest)
+		return
+	}
+	response := p.ToJSON()
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&response); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	}
+}
+
 func cookbookACLHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)

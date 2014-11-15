@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/databag"
@@ -229,12 +230,20 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
+	containerACL, conerr := acl.Get(org, "containers", "$$root$$")
+	if conerr != nil {
+		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		return
+	}
 	switch r.Method {
 	case "POST":
-		if !opUser.IsAdmin() {
-			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
-			return
-		}
 		reindexAll()
 		reindexResponse["reindex"] = "OK"
 	default:

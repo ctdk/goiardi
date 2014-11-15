@@ -18,6 +18,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
@@ -39,8 +40,16 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if !opUser.IsAdmin() {
-		jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
+	containerACL, err := acl.Get(org, "containers", "nodes")
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
 		return
 	}
 	pathArray := splitPath(r.URL.Path)[2:]

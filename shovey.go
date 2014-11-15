@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/organization"
@@ -47,9 +48,19 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if !opUser.IsAdmin() && r.Method != "PUT" {
-		jsonErrorReport(w, r, "you cannot perform this action", http.StatusForbidden)
+	containerACL, conerr := acl.Get(org, "containers", "shoveys")
+	if conerr != nil {
+		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
 		return
+	}
+	if r.Method != "PUT" {
+		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
 	}
 
 	if !config.Config.UseShovey {
@@ -165,6 +176,13 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			shoveyResponse["id"] = s.RunID
 			shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/shovey/jobs/%s", s.RunID))
 		case "PUT":
+			if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+				return
+			} else if !f {
+				jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+				return
+			}
 			switch pathArrayLen {
 			case 3:
 				if vars["job_id"] != "cancel" {
@@ -312,6 +330,13 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			shoveyResponse["output"] = combinedOutput
 		case "PUT":
+			if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+				return
+			} else if !f {
+				jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+				return
+			}
 			streamData, serr := parseObjJSON(r.Body)
 			logger.Debugf("streamData: %v", streamData)
 			if serr != nil {

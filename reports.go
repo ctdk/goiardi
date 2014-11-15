@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/report"
@@ -52,6 +53,12 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	containerACL, conerr := acl.Get(org, "containers", "reports")
+	if conerr != nil {
+		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+		return
+	}
+
 	pathArray := splitPath(r.URL.Path)[2:]
 	pathArrayLen := len(pathArray)
 	reportResponse := make(map[string]interface{})
@@ -60,7 +67,10 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		// Making an informed guess that admin rights are needed
 		// to see the node run reports
-		if !opUser.IsAdmin() {
+		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
@@ -170,6 +180,13 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		// Can't use the usual parseObjJSON function here, since
 		// the reporting "run_list" type is a string rather
 		// than []interface{}.
+		if f, ferr := containerACL.CheckPerm("create", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+			return
+		}
 		jsonReport := make(map[string]interface{})
 		dec := json.NewDecoder(r.Body)
 		if jerr := dec.Decode(&jsonReport); jerr != nil {

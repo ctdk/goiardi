@@ -166,6 +166,7 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 			addGroup(org, acl.ACLitems["create"], "admins")
 			addGroup(org, acl.ACLitems["read"], "admins")
 			addGroup(org, acl.ACLitems["update"], "admins")
+			addGroup(org, acl.ACLitems["update"], "clients")
 			addGroup(org, acl.ACLitems["delete"], "admins")
 			addGroup(org, acl.ACLitems["grant"], "admins")
 		default:

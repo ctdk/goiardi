@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
@@ -42,6 +43,20 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
+	containerACL, conerr := acl.Get(org, "containers", "log-infos")
+	if conerr != nil {
+		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		
 		return
 	}
 
@@ -117,10 +132,6 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		if !opUser.IsAdmin() {
-			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
-			return
-		}
 		var leList []*loginfo.LogInfo
 		var err error
 		if limitFound {
@@ -145,8 +156,12 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "DELETE":
-		if !opUser.IsAdmin() {
-			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
+		if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			
 			return
 		}
 		purged, err := loginfo.PurgeLogInfos(org, purgeFrom)
@@ -180,6 +195,19 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
+	containerACL, conerr := acl.Get(org, "containers", "log-infos")
+	if conerr != nil {
+		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		
+		return
+	}
 	eventID, aerr := strconv.Atoi(vars["id"])
 	if aerr != nil {
 		jsonErrorReport(w, r, aerr.Error(), http.StatusBadRequest)
@@ -188,10 +216,6 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		if !opUser.IsAdmin() {
-			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
-			return
-		}
 		le, err := loginfo.Get(org, eventID)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
@@ -203,8 +227,12 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "DELETE":
-		if !opUser.IsAdmin() {
-			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
+		if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			
 			return
 		}
 		le, err := loginfo.Get(org, eventID)

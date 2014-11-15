@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/loginfo"
@@ -47,6 +48,20 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
+
+	containerACL, conerr := acl.Get(org, "containers", "data")
+	if conerr != nil {
+		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		return
+	}
+
 	dbResponse := make(map[string]interface{})
 
 	if pathArrayLen == 1 {
@@ -63,7 +78,10 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				dbResponse[k] = util.CustomURL(util.JoinStr("/organizations/", org.Name, "/data/", k))
 			}
 		case "POST":
-			if !opUser.IsAdmin() {
+			if f, err := containerACL.CheckPerm("create", opUser); err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			} else if !f {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
@@ -129,9 +147,37 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		if opUser.IsValidator() || (!opUser.IsAdmin() && r.Method != "GET") {
+		if opUser.IsValidator() {
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
+		}
+		if r.Method != "GET" {
+			var permstr string
+			switch r.Method {
+				case "DELETE":
+					permstr = "delete"
+				case "PUT":
+					permstr = "update"
+				case "POST":
+					permstr = "create"
+				default:
+					if pathArrayLen == 2 {
+						w.Header().Set("Allow", "GET, DELETE, POST")
+						jsonErrorReport(w, r, "GET, DELETE, POST", http.StatusMethodNotAllowed)
+						return
+					} else {
+						w.Header().Set("Allow", "GET, DELETE, PUT")
+						jsonErrorReport(w, r, "GET, DELETE, PUT", http.StatusMethodNotAllowed)
+						return
+					}
+			}
+			if f, err := containerACL.CheckPerm(permstr, opUser); err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			} else if !f {
+				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				return
+			}
 		}
 		chefDbag, err := databag.Get(org, dbName)
 		if err != nil {

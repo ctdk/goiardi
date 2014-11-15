@@ -179,7 +179,10 @@ func MapifyObject(obj interface{}) map[string]interface{} {
 // Indexify prepares a flattened object for indexing by turning it into a sorted
 // slice of strings formatted like "key:value".
 func Indexify(flattened map[string]interface{}) []string {
-	var readyToIndex []string
+	// rough and ready allocation - allocate for the number of elements in
+	// the flattened map. It's likely to be more, but it's a good start.
+	// If it's too inaccurate it may be worth addressing however.
+	readyToIndex := make([]string, 0, len(flattened))
 	for k, v := range flattened {
 		switch v := v.(type) {
 		case string:
@@ -274,8 +277,8 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 		 * into their own separate indexes as well. */
 		if key == "run_list" {
 			roleMatch := regexp.MustCompile(`^(recipe|role)\[(.*)\]`)
-			var roles []string
-			var recipes []string
+			roles := make([]string, 0, len(v))
+			recipes := make([]string, 0, len(v))
 			for _, w := range v {
 				rItem := roleMatch.FindStringSubmatch(stringify(w))
 				if rItem != nil {
