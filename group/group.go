@@ -305,7 +305,7 @@ func (g *Group) checkForGroup(name string) (bool, int) {
 	return false, 0
 }
 
-func (g *Group) SeekActor(actr actor.Actor) (bool) {
+func (g *Group) SeekActor(actr actor.Actor) bool {
 	grs := make(map[string]*Group)
 	var actChk func(gs *Group) bool
 	actChk = func(gs *Group) bool {

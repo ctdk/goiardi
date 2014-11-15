@@ -56,7 +56,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if !f {
 		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-		
+
 		return
 	}
 
@@ -161,7 +161,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		} else if !f {
 			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-			
+
 			return
 		}
 		purged, err := loginfo.PurgeLogInfos(org, purgeFrom)
@@ -205,7 +205,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if !f {
 		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-		
+
 		return
 	}
 	eventID, aerr := strconv.Atoi(vars["id"])
@@ -232,7 +232,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		} else if !f {
 			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-			
+
 			return
 		}
 		le, err := loginfo.Get(org, eventID)

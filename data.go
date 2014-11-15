@@ -154,22 +154,22 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			var permstr string
 			switch r.Method {
-				case "DELETE":
-					permstr = "delete"
-				case "PUT":
-					permstr = "update"
-				case "POST":
-					permstr = "create"
-				default:
-					if pathArrayLen == 2 {
-						w.Header().Set("Allow", "GET, DELETE, POST")
-						jsonErrorReport(w, r, "GET, DELETE, POST", http.StatusMethodNotAllowed)
-						return
-					} else {
-						w.Header().Set("Allow", "GET, DELETE, PUT")
-						jsonErrorReport(w, r, "GET, DELETE, PUT", http.StatusMethodNotAllowed)
-						return
-					}
+			case "DELETE":
+				permstr = "delete"
+			case "PUT":
+				permstr = "update"
+			case "POST":
+				permstr = "create"
+			default:
+				if pathArrayLen == 2 {
+					w.Header().Set("Allow", "GET, DELETE, POST")
+					jsonErrorReport(w, r, "GET, DELETE, POST", http.StatusMethodNotAllowed)
+					return
+				} else {
+					w.Header().Set("Allow", "GET, DELETE, PUT")
+					jsonErrorReport(w, r, "GET, DELETE, PUT", http.StatusMethodNotAllowed)
+					return
+				}
 			}
 			if f, err := containerACL.CheckPerm(permstr, opUser); err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())

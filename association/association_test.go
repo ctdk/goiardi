@@ -98,7 +98,7 @@ func TestAcceptance(t *testing.T) {
 	}
 	u2, _ := user.New("user101")
 	u2.SetPasswd(pass)
-	u2.Save()	
+	u2.Save()
 	_, err = GetAssoc(u2, o)
 	if err == nil {
 		t.Errorf("found association when there should not have been one")

@@ -218,7 +218,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, "missing delete permission", http.StatusForbidden)
 					return
 				}
-				
+
 				err := cb.DeleteVersion(cookbookVersion)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())

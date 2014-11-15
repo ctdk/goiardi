@@ -180,7 +180,7 @@ func clientACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
 		return
 	}
-	
+
 	aclData, jerr := parseObjJSON(r.Body)
 	if jerr != nil {
 		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)

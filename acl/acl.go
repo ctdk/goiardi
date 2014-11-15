@@ -26,8 +26,8 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	"net/http"
 	"log"
+	"net/http"
 	"sync"
 )
 
@@ -61,7 +61,7 @@ type ACL struct {
 	Owner      ACLOwner
 	Org        *organization.Organization
 	isModified bool
-	m      sync.RWMutex
+	m          sync.RWMutex
 }
 
 func defaultACL(org *organization.Organization, kind string, subkind string) (*ACL, util.Gerror) {
@@ -329,7 +329,7 @@ func (a *ACL) EditFromJSON(perm string, data interface{}) util.Gerror {
 			if actors, ok := aclEdit["actors"].([]interface{}); ok {
 				acts = make([]actor.Actor, 0, len(actors))
 				for _, act := range actors {
-					switch act := act.(type){
+					switch act := act.(type) {
 					case string:
 						actr, err := actor.GetActor(a.Org, act)
 						if err != nil {
@@ -363,7 +363,7 @@ func (a *ACL) EditFromJSON(perm string, data interface{}) util.Gerror {
 			a.ACLitems[perm].Actors = acts
 			a.ACLitems[perm].Groups = gs
 		default:
-				return util.Errorf("invalid acl %s data", perm)
+			return util.Errorf("invalid acl %s data", perm)
 		}
 	default:
 		return util.Errorf("invalid acl data")

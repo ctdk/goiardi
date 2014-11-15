@@ -28,8 +28,8 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
-	"net/http"
 	"log"
+	"net/http"
 )
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
@@ -322,7 +322,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	} else if !f {
-		if opUser.IsValidator() { 
+		if opUser.IsValidator() {
 			if aerr := opUser.CheckPermEdit(clientData, "admin"); aerr != nil {
 				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 				return
@@ -355,7 +355,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		var perr error
 		if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
 			jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
-			return 
+			return
 		}
 	} else {
 		switch publicKey := publicKey.(type) {
@@ -374,7 +374,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		default:
 			jsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
-			return 
+			return
 		}
 	}
 	/* If we make it here, we want the public key in the
@@ -425,7 +425,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if lerr := loginfo.LogEvent(org, opUser, chefClient, "create"); lerr != nil {
 		jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
-		return 
+		return
 	}
 	clientResponse["uri"] = util.ObjURL(chefClient)
 	w.WriteHeader(http.StatusCreated)
