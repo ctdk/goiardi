@@ -187,6 +187,11 @@ func cookbookACLHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 
+	if r.Method != "GET" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	orgName := vars["org"]
 	org, orgerr := organization.Get(orgName)
 	if orgerr != nil {
@@ -214,6 +219,11 @@ func cookbookACLHandler(w http.ResponseWriter, r *http.Request) {
 func cookbookACLPermHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
+	// Seems to be a PUT only endpoint
+	if r.Method != "PUT" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
 	orgName := vars["org"]
 	org, orgerr := organization.Get(orgName)
@@ -226,12 +236,26 @@ func cookbookACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, clerr.Error(), clerr.Status())
 		return
 	}
+
+	aclData, jerr := parseObjJSON(r.Body)
+	if jerr != nil {
+		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+		return
+	}
+
+	perm := vars["perm"]
+
 	a, rerr := acl.GetItemACL(org, cb)
 	if rerr != nil {
 		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
 		return
 	}
-	p, ok := a.ACLitems[vars["perm"]]
+	ederr := a.EditFromJSON(perm, aclData)
+	if ederr != nil {
+		jsonErrorReport(w, r, ederr.Error(), ederr.Status())
+		return
+	}
+	p, ok := a.ACLitems[perm]
 	if !ok {
 		jsonErrorReport(w, r, "perm nonexistent", http.StatusBadRequest)
 		return
