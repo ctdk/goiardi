@@ -87,13 +87,6 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
 		return
 	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
-		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
-		return
-	} else if !f {
-		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-		return
-	}
 
 	/* chef-pedant is happier when checking if a validator can do something
 	 * surprisingly late in the game. It wants the perm checks to be
@@ -105,6 +98,13 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	 */
 
 	if pathArrayLen == 1 || (pathArrayLen == 2 && pathArray[1] == "") {
+		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
 		/* list all cookbooks */
 		cookbookResponse = cookbook.CookbookLister(org, numResults)
 	} else if pathArrayLen == 2 {
@@ -113,23 +113,44 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 		/* Undocumented behavior - a cookbook name of _latest gets a
 		 * list of the latest versions of all the cookbooks, and _recipe
 		 * gets the recipes of the latest cookbooks. */
-		if cookbookName == "_latest" {
-			cookbookResponse = cookbook.CookbookLatest(org)
-		} else if cookbookName == "_recipes" {
-			rlist, nerr := cookbook.CookbookRecipes(org)
-			if nerr != nil {
-				jsonErrorReport(w, r, nerr.Error(), nerr.Status())
+		if cookbookName == "_latest" || cookbookName == "_recipes" {
+			if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+				return
+			} else if !f {
+				jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
 				return
 			}
-			enc := json.NewEncoder(w)
-			if err := enc.Encode(&rlist); err != nil {
-				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			if cookbookName == "_latest" {
+				cookbookResponse = cookbook.CookbookLatest(org)
+			} else if cookbookName == "_recipes" {
+				rlist, nerr := cookbook.CookbookRecipes(org)
+				if nerr != nil {
+					jsonErrorReport(w, r, nerr.Error(), nerr.Status())
+					return
+				}
+				enc := json.NewEncoder(w)
+				if err := enc.Encode(&rlist); err != nil {
+					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				}
+				return
 			}
-			return
 		} else {
 			cb, err := cookbook.Get(org, cookbookName)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+				return
+			}
+			cbACL, cberr := acl.GetItemACL(org, cb)
+			if cberr != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			if f, ferr := cbACL.CheckPerm("read", opUser); ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+				return
+			} else if !f {
+				jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
 				return
 			}
 			/* Strange thing here. The API docs say if num_versions
@@ -182,10 +203,15 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
+			cbACL, cberr := acl.GetItemACL(org, cb)
+			if cberr != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
 			if r.Method == "DELETE" {
 				// do we need to track perms beyond the
 				// container ones?
-				if f, err := containerACL.CheckPerm("delete", opUser); err != nil {
+				if f, err := cbACL.CheckPerm("delete", opUser); err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				} else if !f {
@@ -228,6 +254,13 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				 * resolved in a non-crazy manner, for
 				 * this only send that info back if it's
 				 * a webui request. */
+				if f, err := cbACL.CheckPerm("read", opUser); err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				} else if !f {
+					jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+					return
+				}
 				if rs := r.Header.Get("X-Ops-Request-Source"); rs == "web" {
 					chkDiv := []string{"definitions", "libraries", "attributes", "providers", "resources", "templates", "root_files", "files"}
 					for _, cd := range chkDiv {
@@ -238,22 +271,6 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		case "PUT":
-			// need to check both create and update
-			if f, err := containerACL.CheckPerm("create", opUser); err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			} else if !f {
-				jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-				return
-			}
-			if f, err := containerACL.CheckPerm("update", opUser); err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			} else if !f {
-				jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-				return
-			}
-
 			cbvData, jerr := parseObjJSON(r.Body)
 			if jerr != nil {
 				jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -266,6 +283,13 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			 * the latest version as needed. */
 			cb, err := cookbook.Get(org, cookbookName)
 			if err != nil {
+				if f, err := containerACL.CheckPerm("create", opUser); err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				} else if !f {
+					jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+					return
+				}
 				cb, err = cookbook.New(org, cookbookName)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
@@ -280,6 +304,19 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				if lerr := loginfo.LogEvent(org, opUser, cb, "create"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+					return
+				}
+			} else {
+				cbACL, cberr := acl.GetItemACL(org, cb)
+				if cberr != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				if f, err := cbACL.CheckPerm("update", opUser); err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				} else if !f {
+					jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 					return
 				}
 			}
