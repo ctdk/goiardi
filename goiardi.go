@@ -175,6 +175,7 @@ func main() {
 	muxer.HandleFunc("/users/{name}/association_requests", userAssocHandler)
 	muxer.HandleFunc("/users/{name}/association_requests/count", userAssocCountHandler)
 	muxer.HandleFunc("/users/{name}/association_requests/{id}", userAssocIDHandler)
+	muxer.HandleFunc("/system_recovery", systemRecoveryHandler)
 	// organization routes
 	s := muxer.PathPrefix("/organizations/{org}/").Subrouter()
 	// get the org tool routes out of the way, out of order
