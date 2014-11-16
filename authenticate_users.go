@@ -37,6 +37,11 @@ type authResponse struct {
 func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	if r.Method != "POST" {
+		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	dec := json.NewDecoder(r.Body)
 	authJSON := make(map[string]interface{})
 	if err := dec.Decode(&authJSON); err != nil {

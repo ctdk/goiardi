@@ -17,11 +17,18 @@
 package main
 
 import (
+	"log"
 	"net/http"
 )
 
 func systemRecoveryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	userData, jerr := parseObjJSON(r.Body)
+	if jerr != nil {
+		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+		return
+	}
+	log.Printf("json data for system_recovery: %+v", userData)
 	jsonErrorReport(w, r, "not implemented yet", http.StatusNotImplemented)
 	return
 }
