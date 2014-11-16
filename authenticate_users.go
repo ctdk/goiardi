@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/user"
 	"net/http"
+	"log"
 )
 
 type authenticator struct {
@@ -48,6 +49,7 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 		return
 	}
+	log.Printf("authJSON now: %+v", authJSON)
 	auth, authErr := validateJSON(authJSON)
 	if authErr != nil {
 		jsonErrorReport(w, r, authErr.Error(), http.StatusBadRequest)
@@ -93,6 +95,14 @@ func validateJSON(authJSON map[string]interface{}) (*authenticator, error) {
 			auth.Name = name
 		default:
 			err := fmt.Errorf("Field 'name' invalid")
+			return nil, err
+		}
+	} else if name, ok := authJSON["username"]; ok {
+		switch name := name.(type) {
+		case string:
+			auth.Name = name
+		default:
+			err := fmt.Errorf("Field 'username' invalid")
 			return nil, err
 		}
 	} else {
