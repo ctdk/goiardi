@@ -45,6 +45,9 @@ type User struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Admin    bool   `json:"admin"`
+	FirstName string `json:"first_name"`
+	LastName string `json:"last_name"`
+	DisplayName string `json:"display_name"`
 	pubKey   string
 	passwd   string
 	salt     []byte
@@ -55,6 +58,9 @@ type privUser struct {
 	Name      *string `json:"name"`
 	Email     *string `json:"email"`
 	Admin     *bool   `json:"admin"`
+	FirstName *string `json:"first_name"`
+	LastName *string `json:"last_name"`
+	DisplayName *string `json:"display_name"`
 	PublicKey *string `json:"public_key"`
 	Passwd    *string `json:"password"`
 	Salt      *[]byte `json:"salt"`
@@ -218,6 +224,7 @@ func (u *User) Rename(newName string) util.Gerror {
 		ds.Delete("user", u.Username)
 	}
 	u.Username = newName
+	u.Name = newName
 	return nil
 }
 
@@ -313,6 +320,35 @@ ValidElem:
 		}
 		u.Admin = ab
 	}
+	if fName, ok := jsonUser["first_name"]; ok {
+		f, verr := util.ValidateAsString(fName)
+		if verr != nil {
+			return verr
+		}
+		u.FirstName = f
+	}
+	if lName, ok := jsonUser["last_name"]; ok {
+		l, verr := util.ValidateAsString(lName)
+		if verr != nil {
+			return verr
+		}
+		u.LastName = l
+	}
+	if dName, ok := jsonUser["display_name"]; ok {
+		d, verr := util.ValidateAsString(dName)
+		if verr != nil {
+			return verr
+		}
+		u.DisplayName = d
+	}
+	if e, ok := jsonUser["email"]; ok {
+		// TODO: actually verify as an email address, not just a string
+		email, verr := util.ValidateAsString(e)
+		if verr != nil {
+			return verr
+		}
+		u.Email = email
+	}
 
 	return nil
 }
@@ -343,8 +379,12 @@ func GetList() []string {
 // more idiomatic way to do this.
 func (u *User) ToJSON() map[string]interface{} {
 	toJSON := make(map[string]interface{})
-	toJSON["name"] = u.Name
-	toJSON["admin"] = u.Admin
+	toJSON["username"] = u.Username
+	//toJSON["admin"] = u.Admin
+	toJSON["email"] = u.Email
+	toJSON["first_name"] = u.FirstName
+	toJSON["last_name"] = u.LastName
+	toJSON["display_name"] = u.DisplayName
 	toJSON["public_key"] = u.PublicKey()
 
 	return toJSON
@@ -534,7 +574,7 @@ func (u *User) OrgName() string {
 }
 
 func (u *User) export() *privUser {
-	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt}
+	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt, FirstName: &u.FirstName, LastName: &u.LastName, DisplayName: &u.DisplayName}
 }
 
 func (u *User) GobEncode() ([]byte, error) {

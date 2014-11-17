@@ -31,8 +31,8 @@ type authenticator struct {
 	Name, Password string
 }
 type authResponse struct {
-	Name     string `json:"name"`
-	Verified bool   `json:"verified"`
+	User     map[string]interface{} `json:"user"`
+	Status string   `json:"status"`
 }
 
 func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -68,21 +68,25 @@ func validateLogin(auth *authenticator) authResponse {
 	// Check passwords and such later.
 	// Automatically validate if UseAuth is not on
 	var resp authResponse
-	resp.Name = auth.Name
-	if !config.Config.UseAuth {
-		resp.Verified = true
-		return resp
-	}
+	
 	u, err := user.Get(auth.Name)
 	if err != nil {
-		resp.Verified = false
+		resp.Status = "unknown"
+		return resp
+	}
+	resp.User = u.ToJSON()
+	delete(resp.User, "public_key")
+
+	if !config.Config.UseAuth {
+		resp.Status = "linked"
 		return resp
 	}
 	perr := u.CheckPasswd(auth.Password)
 	if perr != nil {
-		resp.Verified = false
+		resp.Status = "failed"
 	} else {
-		resp.Verified = true
+		// TODO: Check association with this org, I believe
+		resp.Status = "linked"
 	}
 	return resp
 }
