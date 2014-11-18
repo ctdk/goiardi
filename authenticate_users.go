@@ -113,9 +113,17 @@ func validateJSON(authJSON map[string]interface{}) (*authenticator, error) {
 		err := fmt.Errorf("Field 'name' missing")
 		return nil, err
 	}
+	if auth.Name == "" {
+		err := fmt.Errorf("Field 'name' missing")
+		return nil, err
+	}
 	if passwd, ok := authJSON["password"]; ok {
 		switch passwd := passwd.(type) {
 		case string:
+			if passwd == "" {
+				err := fmt.Errorf("Field 'password' invalid")
+				return nil, err
+			}
 			auth.Password = passwd
 		default:
 			err := fmt.Errorf("Field 'password' invalid")

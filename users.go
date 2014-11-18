@@ -139,7 +139,12 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		jsonName, sterr := util.ValidateAsString(userData["name"])
+		var nameFromJSON interface{}
+		var ok bool
+		if nameFromJSON, ok = userData["name"]; !ok {
+			nameFromJSON, _ = userData["username"]
+		}
+		jsonName, sterr := util.ValidateAsString(nameFromJSON)
 		if sterr != nil {
 			jsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
 			return

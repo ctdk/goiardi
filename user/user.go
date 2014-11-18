@@ -48,6 +48,7 @@ type User struct {
 	FirstName string `json:"first_name"`
 	LastName string `json:"last_name"`
 	DisplayName string `json:"display_name"`
+	Recoveror bool `json:"recovery_authentication_enabled"`
 	pubKey   string
 	passwd   string
 	salt     []byte
@@ -64,6 +65,7 @@ type privUser struct {
 	PublicKey *string `json:"public_key"`
 	Passwd    *string `json:"password"`
 	Salt      *[]byte `json:"salt"`
+	Recoveror *bool `json:"recovery_authentication_enabled"`
 }
 
 // New creates a new API user.
@@ -276,7 +278,7 @@ func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
 	/* Validations. */
 	/* Invalid top level elements */
 	// TODO: save the new chef 12 attrs
-	validElements := []string{"username", "name", "org_name", "public_key", "private_key", "admin", "password", "email", "salt", "email", "first_name", "last_name", "display_name"}
+	/* validElements := []string{"username", "name", "org_name", "public_key", "private_key", "admin", "password", "email", "salt", "email", "first_name", "last_name", "display_name", "external_authentication_id", "external_authentication_uid", "recovery_authentication_enabled"}
 ValidElem:
 	for k := range jsonUser {
 		for _, i := range validElements {
@@ -286,7 +288,7 @@ ValidElem:
 		}
 		err := util.Errorf("Invalid key %s in request body", k)
 		return err
-	}
+	} */
 	var verr util.Gerror
 
 	// Check the password first. If it's bad, bail before touching anything
@@ -348,6 +350,17 @@ ValidElem:
 			return verr
 		}
 		u.Email = email
+	}
+	if re, ok := jsonUser["recovery_authentication_enabled"]; ok {
+		var reb bool
+		if reb, verr = util.ValidateAsBool(re); verr != nil {
+			// NOTE: may need to tweak this error message depending
+			// if this is a user or a client
+			verr = util.Errorf("Field 'recovery_authentication_enabled' invalid")
+			return verr
+		} else {
+			u.Recoveror = reb
+		}
 	}
 
 	return nil
@@ -574,7 +587,7 @@ func (u *User) OrgName() string {
 }
 
 func (u *User) export() *privUser {
-	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt, FirstName: &u.FirstName, LastName: &u.LastName, DisplayName: &u.DisplayName}
+	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt, FirstName: &u.FirstName, LastName: &u.LastName, DisplayName: &u.DisplayName, Recoveror: &u.Recoveror}
 }
 
 func (u *User) GobEncode() ([]byte, error) {
