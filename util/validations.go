@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/filestore"
 	"net/http"
+	"net/mail"
 	"regexp"
 	"strconv"
 	"strings"
@@ -455,4 +456,19 @@ func CheckAdminPlusValidator(jsonActor map[string]interface{}) Gerror {
 		return err
 	}
 	return nil
+}
+
+func ValidateEmail(addr interface{}) (*mail.Address, Gerror) {
+	switch addr := addr.(type) {
+		case string:
+			e, err := mail.ParseAddress(addr)
+			if err != nil {
+				return nil, CastErr(err)
+			}
+			return e, nil
+		case nil:
+			return nil, Errorf("no email address provided")
+		default:
+			return nil, Errorf("invalid email address")
+	}
 }

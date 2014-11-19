@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"log"
 )
@@ -56,39 +57,44 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := validateLogin(auth)
-
+	resp, rerr := validateLogin(auth)
+	if rerr != nil {
+		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		return
+	}
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(resp); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func validateLogin(auth *authenticator) authResponse {
+func validateLogin(auth *authenticator) (authResponse, util.Gerror) {
 	// Check passwords and such later.
 	// Automatically validate if UseAuth is not on
 	var resp authResponse
 	
 	u, err := user.Get(auth.Name)
 	if err != nil {
-		resp.Status = "unknown"
-		return resp
+		gerr := util.Errorf("Failed to authenticate: Username and password incorrect")
+		gerr.SetStatus(http.StatusForbidden)
+		return resp, gerr
 	}
 	resp.User = u.ToJSON()
 	delete(resp.User, "public_key")
 
 	if !config.Config.UseAuth {
 		resp.Status = "linked"
-		return resp
+		return resp, nil
 	}
 	perr := u.CheckPasswd(auth.Password)
 	if perr != nil {
-		resp.Status = "failed"
+		gerr := util.CastErr(perr)
+		gerr.SetStatus(http.StatusUnauthorized)
 	} else {
 		// TODO: Check association with this org, I believe
 		resp.Status = "linked"
 	}
-	return resp
+	return resp, nil
 }
 
 func validateJSON(authJSON map[string]interface{}) (*authenticator, error) {

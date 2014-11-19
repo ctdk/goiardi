@@ -161,7 +161,22 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
+			err = chefUser.Save()
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
 			w.WriteHeader(http.StatusCreated)
+			// looks like we need to send back a non-standard
+			// response for renaming :-/
+			renameResp := make(map[string]string)
+			renameResp["uri"] = util.CustomURL(util.JoinStr("/users/", chefUser.Username))
+			enc := json.NewEncoder(w)
+			if encerr := enc.Encode(&renameResp); encerr != nil {
+				jsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
+				return
+			}
+			return
 		}
 		if uerr := chefUser.UpdateFromJSON(userData); uerr != nil {
 			jsonErrorReport(w, r, uerr.Error(), uerr.Status())

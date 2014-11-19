@@ -344,12 +344,13 @@ ValidElem:
 		u.DisplayName = d
 	}
 	if e, ok := jsonUser["email"]; ok {
-		// TODO: actually verify as an email address, not just a string
-		email, verr := util.ValidateAsString(e)
-		if verr != nil {
-			return verr
+		email, merr := util.ValidateEmail(e)
+		if merr != nil {
+			return merr
 		}
-		u.Email = email
+		u.Email = email.Address
+	} else {
+		return util.Errorf("no email address provided")
 	}
 	if re, ok := jsonUser["recovery_authentication_enabled"]; ok {
 		var reb bool
