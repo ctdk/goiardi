@@ -36,6 +36,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"log"
 )
 
 // User is, uh, a user. It's very similar to a Client, but subtly different, as
@@ -342,6 +343,8 @@ ValidElem:
 			return verr
 		}
 		u.DisplayName = d
+	} else {
+		return util.Errorf("no display_name given")
 	}
 	if e, ok := jsonUser["email"]; ok {
 		email, merr := util.ValidateEmail(e)
@@ -530,27 +533,33 @@ func (u *User) SetPasswd(password string) util.Gerror {
 		return err
 	}
 	/* If those validations pass, set the password */
+	log.Printf("old password hash was: %s", u.passwd)
 	var perr error
 	u.passwd, perr = chefcrypto.HashPasswd(password, u.salt)
 	if perr != nil {
 		err := util.Errorf(perr.Error())
 		return err
 	}
+	log.Printf("new password hash is: %s", u.passwd)
 	return nil
 }
 
 // CheckPasswd checks the provided password to see if it matches the stored
 // password hash.
 func (u *User) CheckPasswd(password string) util.Gerror {
+	log.Printf("Checking password %s", password)
 	h, perr := chefcrypto.HashPasswd(password, u.salt)
 	if perr != nil {
 		err := util.Errorf(perr.Error())
 		return err
 	}
+	log.Printf("password hashes are: %s %s", u.passwd, h)
 	if u.passwd != h {
+		log.Printf("did not match")
 		err := util.Errorf("password did not match")
 		return err
 	}
+	log.Printf("matched")
 
 	return nil
 }

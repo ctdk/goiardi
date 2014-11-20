@@ -90,6 +90,7 @@ func validateLogin(auth *authenticator) (authResponse, util.Gerror) {
 	if perr != nil {
 		gerr := util.CastErr(perr)
 		gerr.SetStatus(http.StatusUnauthorized)
+		return resp, gerr
 	} else {
 		// TODO: Check association with this org, I believe
 		resp.Status = "linked"

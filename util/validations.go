@@ -465,6 +465,10 @@ func ValidateEmail(addr interface{}) (*mail.Address, Gerror) {
 			if err != nil {
 				return nil, CastErr(err)
 			}
+			re := regexp.MustCompile(`(.*?)@(.*?)\.`)
+			if !re.MatchString(e.Address) {
+				return nil, Errorf("'%s' validates as an email address according to the relevant RFC, but is probably not what you actually want", e.Address)
+			}
 			return e, nil
 		case nil:
 			return nil, Errorf("no email address provided")
