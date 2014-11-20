@@ -20,7 +20,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
@@ -44,6 +44,8 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
+	
 	dec := json.NewDecoder(r.Body)
 	authJSON := make(map[string]interface{})
 	if err := dec.Decode(&authJSON); err != nil {
@@ -53,15 +55,30 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("authJSON now: %+v", authJSON)
 	auth, authErr := validateJSON(authJSON)
 	if authErr != nil {
-		jsonErrorReport(w, r, authErr.Error(), http.StatusBadRequest)
+		jsonErrorReport(w, r, authErr.Error(), authErr.Status())
 		return
 	}
 
 	resp, rerr := validateLogin(auth)
 	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		s := rerr.Status()
+		if !opUser.IsAdmin() {
+			s = http.StatusForbidden
+		}
+		jsonErrorReport(w, r, rerr.Error(), s)
 		return
 	}
+	// seems like this ought to be one of the first things done, but here
+	// we are.
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+	if !opUser.IsAdmin() {
+		jsonErrorReport(w, r, "not permitted for this user", http.StatusForbidden)
+		return
+	}
+
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(resp); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -76,6 +93,12 @@ func validateLogin(auth *authenticator) (authResponse, util.Gerror) {
 	u, err := user.Get(auth.Name)
 	if err != nil {
 		gerr := util.Errorf("Failed to authenticate: Username and password incorrect")
+		gerr.SetStatus(http.StatusUnauthorized)
+		return resp, gerr
+	}
+	// cannot allow the superuser to actually log in this way
+	if u.IsAdmin() {
+		gerr := util.Errorf("forbidden")
 		gerr.SetStatus(http.StatusForbidden)
 		return resp, gerr
 	}
@@ -98,14 +121,21 @@ func validateLogin(auth *authenticator) (authResponse, util.Gerror) {
 	return resp, nil
 }
 
-func validateJSON(authJSON map[string]interface{}) (*authenticator, error) {
+func validateJSON(authJSON map[string]interface{}) (*authenticator, util.Gerror) {
 	auth := new(authenticator)
+	/* for k := range authJSON {
+		if k != "name" && k != "username" && k != "password" {
+			err := util.Errorf("invalid key %s", k)
+			err.SetStatus(http.StatusForbidden)
+			return auth, err
+		}
+	} */
 	if name, ok := authJSON["name"]; ok {
 		switch name := name.(type) {
 		case string:
 			auth.Name = name
 		default:
-			err := fmt.Errorf("Field 'name' invalid")
+			err := util.Errorf("Field 'name' invalid")
 			return nil, err
 		}
 	} else if name, ok := authJSON["username"]; ok {
@@ -113,31 +143,31 @@ func validateJSON(authJSON map[string]interface{}) (*authenticator, error) {
 		case string:
 			auth.Name = name
 		default:
-			err := fmt.Errorf("Field 'username' invalid")
+			err := util.Errorf("Field 'username' invalid")
 			return nil, err
 		}
 	} else {
-		err := fmt.Errorf("Field 'username' missing")
+		err := util.Errorf("Field 'username' missing")
 		return nil, err
 	}
 	if auth.Name == "" {
-		err := fmt.Errorf("Field 'username' missing")
+		err := util.Errorf("Field 'username' missing")
 		return nil, err
 	}
 	if passwd, ok := authJSON["password"]; ok {
 		switch passwd := passwd.(type) {
 		case string:
 			if passwd == "" {
-				err := fmt.Errorf("Field 'password' invalid")
+				err := util.Errorf("Field 'password' invalid")
 				return nil, err
 			}
 			auth.Password = passwd
 		default:
-			err := fmt.Errorf("Field 'password' invalid")
+			err := util.Errorf("Field 'password' invalid")
 			return nil, err
 		}
 	} else {
-		err := fmt.Errorf("Field 'password' missing")
+		err := util.Errorf("Field 'password' missing")
 		return nil, err
 	}
 	return auth, nil
