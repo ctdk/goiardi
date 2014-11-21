@@ -147,6 +147,20 @@ func Get(name string) (*User, util.Gerror) {
 	return user, nil
 }
 
+func GetByEmail(email string) (*User, util.Gerror) {
+	// waaaay easier with a db.
+	if config.UsingDB() {
+
+	}
+	users := AllUsers()
+	for _, u := range users {
+		if u.Email == email {
+			return u, nil
+		}
+	}
+	return nil, util.Errorf("no user associated with email '%s' found", email)
+}
+
 // Save the user's current state.
 func (u *User) Save() util.Gerror {
 	if config.UsingDB() {

@@ -31,6 +31,8 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
+	"strconv"
+	"strings"
 )
 
 func userHandler(w http.ResponseWriter, r *http.Request) {
@@ -183,15 +185,27 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		var pkChange bool
 		if pk, pkfound := userData["public_key"]; pkfound {
 			switch pk := pk.(type) {
 			case string:
-				if pkok, pkerr := user.ValidatePublicKey(pk); !pkok {
-					jsonErrorReport(w, r, pkerr.Error(), http.StatusBadRequest)
-					return
+				if strings.Contains(pk, "CERTIFICATE") {
+					logger.Infof("Tried to set the public key for user %s to be a certificate", chefUser.Username)
+					p, _ := userData["private_key"].(bool)
+					if !p {
+						jsonErrorReport(w, r, "invalid public key (is a certificate)", http.StatusBadRequest)
+						return
+					}
+					logger.Infof("going to recreate private key")
+				} else {
+					if pkok, pkerr := user.ValidatePublicKey(pk); !pkok {
+						jsonErrorReport(w, r, pkerr.Error(), http.StatusBadRequest)
+						return
+					}
+					chefUser.SetPublicKey(pk)
+					jsonUser["public_key"] = pk
+					pkChange = true
 				}
-				chefUser.SetPublicKey(pk)
-				jsonUser["public_key"] = pk
 			case nil:
 				//show_public_key = false
 
@@ -201,6 +215,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		var privChange bool
 		if p, pfound := userData["private_key"]; pfound {
 			switch p := p.(type) {
 			case bool:
@@ -214,6 +229,8 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 					// client gets the new
 					// public key
 					jsonUser["public_key"] = chefUser.PublicKey()
+					privChange = true
+					pkChange = true
 				}
 			default:
 				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
@@ -231,6 +248,19 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if pkChange {
+			renameResp := make(map[string]string)
+			renameResp["uri"] = util.CustomURL(util.JoinStr("/users/", chefUser.Username))
+			if privChange {
+				renameResp["private_key"] = jsonUser["private_key"].(string)
+			}
+			enc := json.NewEncoder(w)
+			if encerr := enc.Encode(&renameResp); encerr != nil {
+				jsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
+				return
+			}
+			return
+		}
 		enc := json.NewEncoder(w)
 		if encerr := enc.Encode(&jsonUser); encerr != nil {
 			jsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
@@ -242,7 +272,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func userListHandler(w http.ResponseWriter, r *http.Request) {
-	userResponse := make(map[string]string)
+	userResponse := make(map[string]interface{})
 	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
@@ -258,14 +288,54 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	r.ParseForm()
+	var email string
+	if e, found := r.Form["email"]; found {
+		if len(e) < 0 {
+			jsonErrorReport(w, r, "invalid email param for search", http.StatusBadRequest)
+			return
+		}
+		email = e[0]
+	}
+	var verbose bool
+	if v, found := r.Form["verbose"]; found {
+		if len(v) < 0 {
+			jsonErrorReport(w, r, "invalid verbosity", http.StatusBadRequest)
+			return
+		}
+		vb, err := strconv.ParseBool(v[0])
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			return
+		}
+		verbose = vb
+	}
 
 	switch r.Method {
 	case "GET":
-		userList := user.GetList()
-		for _, k := range userList {
-			/* Make sure it's a client and not a user. */
-			itemURL := util.JoinStr("/users/", k)
-			userResponse[k] = util.CustomURL(itemURL)
+		if email == "" {
+			if verbose {
+				users := user.AllUsers()
+				for _, u := range users {
+					userResponse[u.Username] = u.ToJSON()
+				}
+			} else {
+				userList := user.GetList()
+				for _, k := range userList {
+					itemURL := util.JoinStr("/users/", k)
+					userResponse[k] = util.CustomURL(itemURL)
+				}
+			}
+		} else {
+			u, _ := user.GetByEmail(email)
+			if u != nil {
+				if verbose {
+					userResponse[u.Username] = u.ToJSON()
+				} else {
+					itemURL := util.JoinStr("/users/", u.Username)
+					userResponse[u.Username] = util.CustomURL(itemURL)
+				}
+			}
 		}
 	case "POST":
 		userData, jerr := parseObjJSON(r.Body)
