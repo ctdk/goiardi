@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/loginfo"
@@ -95,8 +96,15 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
-			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
-			return
+			orgAdmin, oerr := acl.IsOrgAdminForUser(chefUser, opUser)
+			if oerr != nil {
+				jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+				return
+			}
+			if !orgAdmin {
+				jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+				return
+			}
 		}
 
 		/* API docs are wrong here re: public_key vs.
@@ -313,6 +321,12 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
+		// Seems the user has to be a superuser for this functionality
+		// now.
+		if !opUser.IsAdmin() {
+			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			return
+		}
 		if email == "" {
 			if verbose {
 				users := user.AllUsers()

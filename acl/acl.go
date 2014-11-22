@@ -495,3 +495,23 @@ func (a *ACLitem) checkForGroup(g *group.Group) (bool, int) {
 	}
 	return false, 0
 }
+
+func IsOrgAdminForUser(chkUser *user.User, opUser actor.Actor) (bool, util.Gerror) {
+	// Another operation that may well be significantly easier when it's 
+	// DB-ified.
+	orgs, err := association.OrgAssociations(chkUser)
+	if err != nil {
+		return false, err
+	}
+	for _, org := range orgs {
+		admin, err := group.Get(org, "admins")
+		// unlikely
+		if err != nil {
+			return false, err
+		}
+		if admin.SeekActor(opUser) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
