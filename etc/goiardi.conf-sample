@@ -144,7 +144,7 @@ use-mysql = false
 		tls = "false"
 		foo = "bar"
 
-use-postgres = false
+use-postgresql = false
 
 # PostgreSQL options. If "use-postgres" is set to true on the command line or in
 # the configuration file, connect to postgres with the options in [postgres].
