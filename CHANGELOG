@@ -1,7 +1,15 @@
 1.0.0 (not released yet)
 -----
-* Organizations and RBAC (in progress).
+* Organizations and RBAC (in progress). This includes stuff like groups, ACLs,
+  and whatnot.
 * Refactor of HTTP handling to use gorilla-mux.
+
+0.8.2
+-----
+* Fix typo with checking for an existing client in SQL mode.
+* Fix typo in sample config file for postgres option.
+* Add additional checks to the local filestore option to make sure the supplied
+  directory name exists and is a directory.
 
 0.8.1
 -----
