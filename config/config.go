@@ -345,6 +345,17 @@ func ParseConfigOptions() error {
 		logger.Criticalf("local-filestore-dir must be set when running goiardi in SQL mode")
 		os.Exit(1)
 	}
+	if Config.LocalFstoreDir != "" {
+		finfo, ferr := os.Stat(Config.LocalFstoreDir)
+		if ferr != nil {
+			logger.Criticalf("Error checking local filestore dir: %s", ferr.Error())
+			os.Exit(1)
+		}
+		if !finfo.IsDir() {
+			logger.Criticalf("Local filestore dir %s is not a directory", Config.LocalFstoreDir)
+			os.Exit(1)
+		}
+	}
 
 	if !Config.FreezeData && (opts.FreezeInterval != 0 || Config.FreezeInterval != 0) {
 		logger.Warningf("FYI, setting the freeze data interval's not especially useful without setting the index and data files.")
