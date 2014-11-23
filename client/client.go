@@ -91,7 +91,7 @@ func New(clientname string) (*Client, util.Gerror) {
 		var cerr error
 		found, cerr = checkForClientSQL(datastore.Dbh, clientname)
 		if cerr != nil {
-			err := util.Errorf(err.Error())
+			err = util.Errorf(cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
 			return nil, err
 		}
