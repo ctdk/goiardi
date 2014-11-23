@@ -135,8 +135,14 @@
         <lastmod>2014-10-15T14:56:30-07:00</lastmod>
     </url>
     <url>
+        <loc>
+            http://ctdk.github.io/goiardi/blog/2014/11/23/goiardi-version-0-dot-8-2-can-shaped-cranberry-sauce/
+        </loc>
+        <lastmod>2014-11-23T11:33:36-08:00</lastmod>
+    </url>
+    <url>
         <loc>http://ctdk.github.io/goiardi/blog/archives/</loc>
-        <lastmod>2014-10-15T14:56:30-07:00</lastmod>
+        <lastmod>2014-11-23T11:33:36-08:00</lastmod>
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/docs/</loc>
@@ -144,7 +150,7 @@
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/</loc>
-        <lastmod>2014-10-15T14:56:30-07:00</lastmod>
+        <lastmod>2014-11-23T11:33:36-08:00</lastmod>
     </url>
     <url>
         <loc>http://ctdk.github.io/goiardi/robots.txt</loc>

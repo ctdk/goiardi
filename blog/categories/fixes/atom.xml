@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Fixes | Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/blog/categories/fixes/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-10-19T00:43:13-07:00</updated>
+  <updated>2014-11-23T11:39:50-08:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,19 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Version 0.8.2 - Can-shaped Cranberry Sauce]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/11/23/goiardi-version-0-dot-8-2-can-shaped-cranberry-sauce/"/>
+    <updated>2014-11-23T11:29:27-08:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/11/23/goiardi-version-0-dot-8-2-can-shaped-cranberry-sauce</id>
+    <content type="html"><![CDATA[<p>This is a minor release fixing a couple of small issues that popped up that seemed important enough that they probably shouldn&rsquo;t wait until 1.0.0 comes out.</p>
+
+<p><a href="https://github.com/ctdk/goiardi/releases/tag/v0.8.2">Goiardi version 0.8.2</a> fixes a couple of typos, one with checking errors when checking for the existence of a client in SQL mode, and one for the option to use postgres in the sample config file. The <code>use-postgresql</code> option was documented correctly elsewhere, but was listed incorrectly as <code>use-postgres</code> in the sample config file. This release also adds some checks to make sure the directory given for the local filestore exists, and is a directory.</p>
+
+<p>Binaries are up on the release page, as usual.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Goiardi Version 0.8.1 and Schob Version 0.1.1 - Hand of Ishtar, Hand of Nergal]]></title>

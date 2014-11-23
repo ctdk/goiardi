@@ -4,7 +4,7 @@
   <title><![CDATA[Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-10-19T00:43:13-07:00</updated>
+  <updated>2014-11-23T11:39:50-08:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,19 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Version 0.8.2 - Can-shaped Cranberry Sauce]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/11/23/goiardi-version-0-dot-8-2-can-shaped-cranberry-sauce/"/>
+    <updated>2014-11-23T11:29:27-08:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/11/23/goiardi-version-0-dot-8-2-can-shaped-cranberry-sauce</id>
+    <content type="html"><![CDATA[<p>This is a minor release fixing a couple of small issues that popped up that seemed important enough that they probably shouldn&rsquo;t wait until 1.0.0 comes out.</p>
+
+<p><a href="https://github.com/ctdk/goiardi/releases/tag/v0.8.2">Goiardi version 0.8.2</a> fixes a couple of typos, one with checking errors when checking for the existence of a client in SQL mode, and one for the option to use postgres in the sample config file. The <code>use-postgresql</code> option was documented correctly elsewhere, but was listed incorrectly as <code>use-postgres</code> in the sample config file. This release also adds some checks to make sure the directory given for the local filestore exists, and is a directory.</p>
+
+<p>Binaries are up on the release page, as usual.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Goiardi Version 0.8.1 and Schob Version 0.1.1 - Hand of Ishtar, Hand of Nergal]]></title>
@@ -536,17 +549,6 @@ README or godocs for details.</li>
 <p>While there isn&rsquo;t much in this release, I decided to make one here because it&rsquo;s a good place to make one before starting to tackle authentication. Enjoy.</p>
 
 <p><strong>Update:</strong> It&rsquo;s a little embarrassing, but there was a problem merging branches, and a necessary change got backed out or overlooked, so version 0.3.1 has been superseded by version 0.3.3. On the off chance anyone got the previous version, I apologize.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Go Test Coverage Progressing]]></title>
-    <link href="http://ctdk.github.io/goiardi/blog/2014/02/13/go-test-coverage-progressing/"/>
-    <updated>2014-02-13T09:28:49-08:00</updated>
-    <id>http://ctdk.github.io/goiardi/blog/2014/02/13/go-test-coverage-progressing</id>
-    <content type="html"><![CDATA[<p>It&rsquo;s in progress, but goiardi&rsquo;s getting actual golang test coverage. It&rsquo;s being built out in the <a href="https://github.com/ctdk/goiardi/tree/test_writing">test_writing</a> branch, and so far has coverage with the crypto, data store, indexer, and utility libraries inside goiardi. Already the data store and indexer save and load functions have been reworked to make testing easier, and more tests will be coming soon.</p>
-
-<p>Previously goiardi testing was done with chef-pedant, and that will continue to be the primary means of testing goiardi. However, there are areas where actual go tests will be useful, particularly with things like the data store and indexer that don&rsquo;t get quite as exercised by chef-pedant. My current thinking is that the go tests should focus more on internals, while chef-pedant coverage is important for testing its public behavior.</p>
 ]]></content>
   </entry>
   

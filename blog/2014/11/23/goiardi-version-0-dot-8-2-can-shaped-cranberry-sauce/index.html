@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Goiardi Version 0.8.0 (Plus Shovey) - Hojotoho! Hojotoho! - Goiardi</title>
+  <title>Goiardi Version 0.8.2 - Can-shaped Cranberry Sauce - Goiardi</title>
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="In honor of the upcoming Chef Summit, there are new releases from goiardi and friends. This officially brings out shovey, the goiardi push jobs &hellip;">
+  <meta name="description" content="This is a minor release fixing a couple of small issues that popped up that seemed important enough that they probably shouldn&rsquo;t wait until 1.0 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/09/29/goiardi-version-0-dot-8-0-plus-shovey-hojotoho-hojotoho">
+  <link rel="canonical" href="http://ctdk.github.io/goiardi/blog/2014/11/23/goiardi-version-0-dot-8-2-can-shaped-cranberry-sauce">
   <link href="/goiardi/favicon.png" rel="icon">
   <link href="/goiardi/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/goiardi/atom.xml" rel="alternate" title="Goiardi" type="application/atom+xml">
@@ -86,7 +86,7 @@
   
   <header>
     
-      <h1 class="entry-title">Goiardi Version 0.8.0 (Plus Shovey) - Hojotoho! Hojotoho!</h1>
+      <h1 class="entry-title">Goiardi Version 0.8.2 - Can-shaped Cranberry Sauce</h1>
     
     
       <p class="meta">
@@ -102,33 +102,18 @@
   
 
 
-<time datetime="2014-09-29T23:25:23-07:00" pubdate data-updated="true">Sep 29<span>th</span>, 2014</time>
+<time datetime="2014-11-23T11:29:27-08:00" pubdate data-updated="true">Nov 23<span>rd</span>, 2014</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>In honor of the upcoming <a href="https://www.getchef.com/summit/">Chef Summit</a>, there are new releases from goiardi and friends. This officially brings out <a href="https://github.com/ctdk/goiardi#shovey">shovey</a>, the goiardi push jobs facility, to the world.</p>
+<div class="entry-content"><p>This is a minor release fixing a couple of small issues that popped up that seemed important enough that they probably shouldn&rsquo;t wait until 1.0.0 comes out.</p>
 
-<p>Because of the relative complexity of shovey, there are actually three releases here:</p>
+<p><a href="https://github.com/ctdk/goiardi/releases/tag/v0.8.2">Goiardi version 0.8.2</a> fixes a couple of typos, one with checking errors when checking for the existence of a client in SQL mode, and one for the option to use postgres in the sample config file. The <code>use-postgresql</code> option was documented correctly elsewhere, but was listed incorrectly as <code>use-postgres</code> in the sample config file. This release also adds some checks to make sure the directory given for the local filestore exists, and is a directory.</p>
 
-<ul>
-<li><a href="https://github.com/ctdk/goiardi/releases/tag/v0.8.0">goiardi v0.8.0 &ndash; Hojotoho! Hojotoho!</a></li>
-<li><a href="https://github.com/ctdk/schob/releases/tag/v0.1.0">schob v0.1.0 &ndash; Heiaha! Heiaha!</a></li>
-<li><a href="https://github.com/ctdk/knife-shove/releases/tag/v0.6.0">knife-shove v0.6.0 &ndash; Helmwige! Hier!</a></li>
-</ul>
-
-
-<p>Astute readers may recognize the releases&#8217; codenames as the opening lines of <a href="https://www.youtube.com/watch?v=cg0rmuoqo7U">Act III of <i>Die Walküre</i></a>.</p>
-
-<p>Shovey&rsquo;s included with goiardi. Schob is the shovey client that gets installed on the nodes that will run jobs, and knife-shove is a knife plugin forked from knife-push to manage shovey jobs. The <a href="https://github.com/ctdk/goiardi/blob/master/README.md#shovey">goiardi shovey docs</a>, the <a href="https://github.com/ctdk/schob/blob/master/README.md">schob README</a>, and the <a href="https://github.com/ctdk/knife-shove/blob/master/README.rdoc">knife-shove README</a> have a bunch of documentation on how to use shovey.</p>
-
-<p>Nice, functional cookbooks for shovey and goiardi are also coming. There is a <a href="https://github.com/ctdk/shovey-jobs">shovey-jobs</a> cookbook already, but it only supports Debian. Other platforms are being added, and will be ready soon.</p>
-
-<p>Also coming reasonably soon are organizations and RBAC (it&rsquo;s finally time), and revamping the documentation. The README has gotten too long and unweildy. It will be split apart, reorganized, and expanded where needed, while the godocs for goiardi will stop being a mirror of the README and focus more on development and internals.</p>
-
-<p>See you at the Summit!</p>
+<p>Binaries are up on the release page, as usual.</p>
 </div>
 
 
@@ -151,12 +136,12 @@
   
 
 
-<time datetime="2014-09-29T23:25:23-07:00" pubdate data-updated="true">Sep 29<span>th</span>, 2014</time>
+<time datetime="2014-11-23T11:29:27-08:00" pubdate data-updated="true">Nov 23<span>rd</span>, 2014</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/goiardi/blog/categories/releases/'>releases</a>, <a class='category' href='/goiardi/blog/categories/shovey/'>shovey</a>
+    <a class='category' href='/goiardi/blog/categories/fixes/'>fixes</a>, <a class='category' href='/goiardi/blog/categories/releases/'>releases</a>
   
 </span>
 
@@ -173,10 +158,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/goiardi/blog/2014/09/24/goiardi-plus-shovey-in-final-prerelease-stage/" title="Previous Post: goiardi + shovey in final prerelease stage">&laquo; goiardi + shovey in final prerelease stage</a>
+        <a class="basic-alignment left" href="/goiardi/blog/2014/10/15/goiardi-version-0-dot-8-1-and-schob-version-0-dot-1-1-hand-of-ishtar-hand-of-nergal/" title="Previous Post: goiardi version 0.8.1 and schob version 0.1.1 - Hand of Ishtar, Hand of Nergal">&laquo; goiardi version 0.8.1 and schob version 0.1.1 - Hand of Ishtar, Hand of Nergal</a>
       
-      
-        <a class="basic-alignment right" href="/goiardi/blog/2014/10/15/goiardi-version-0-dot-8-1-and-schob-version-0-dot-1-1-hand-of-ishtar-hand-of-nergal/" title="Next Post: goiardi version 0.8.1 and schob version 0.1.1 - Hand of Ishtar, Hand of Nergal">goiardi version 0.8.1 and schob version 0.1.1 - Hand of Ishtar, Hand of Nergal &raquo;</a>
       
     </p>
   </footer>
@@ -267,8 +250,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/09/29/goiardi-version-0-dot-8-0-plus-shovey-hojotoho-hojotoho/';
-        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/09/29/goiardi-version-0-dot-8-0-plus-shovey-hojotoho-hojotoho/';
+        var disqus_identifier = 'http://ctdk.github.io/goiardi/blog/2014/11/23/goiardi-version-0-dot-8-2-can-shaped-cranberry-sauce/';
+        var disqus_url = 'http://ctdk.github.io/goiardi/blog/2014/11/23/goiardi-version-0-dot-8-2-can-shaped-cranberry-sauce/';
         var disqus_script = 'embed.js';
       
     (function () {

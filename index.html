@@ -9,7 +9,7 @@
   <meta name="author" content="Jeremy Bingham">
 
   
-  <meta name="description" content="In ancient Mesopotamia, diseases were often referred to as being the &ldquo;hand&rdquo; of some god. The hand of Nergal was a plague of some kind, &hellip;">
+  <meta name="description" content="This is a minor release fixing a couple of small issues that popped up that seemed important enough that they probably shouldn&rsquo;t wait until 1.0 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,46 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/goiardi/blog/2014/11/23/goiardi-version-0-dot-8-2-can-shaped-cranberry-sauce/">Goiardi Version 0.8.2 - Can-shaped Cranberry Sauce</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-11-23T11:29:27-08:00" pubdate data-updated="true">Nov 23<span>rd</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>This is a minor release fixing a couple of small issues that popped up that seemed important enough that they probably shouldn&rsquo;t wait until 1.0.0 comes out.</p>
+
+<p><a href="https://github.com/ctdk/goiardi/releases/tag/v0.8.2">Goiardi version 0.8.2</a> fixes a couple of typos, one with checking errors when checking for the existence of a client in SQL mode, and one for the option to use postgres in the sample config file. The <code>use-postgresql</code> option was documented correctly elsewhere, but was listed incorrectly as <code>use-postgres</code> in the sample config file. This release also adds some checks to make sure the directory given for the local filestore exists, and is a directory.</p>
+
+<p>Binaries are up on the release page, as usual.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -597,93 +637,6 @@ though, the reformatting, linting, and light refactoring has done it good.</li>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/goiardi/blog/2014/06/19/building-goiardi-on-solaris-slash-illumos-slash-etc/">Building Goiardi on Solaris/illumos/etc.</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-06-19T21:19:08-07:00" pubdate data-updated="true">Jun 19<span>th</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>With the recent release of <a href="http://golang.org/doc/go1.3">Go 1.3</a>, Go now has <a href="http://golang.org/doc/go1.3#solaris">experimental support for Solaris and its various derivatives</a>. This means that goiardi will build and run on Solaris, although in an experimental way.</p>
-
-<p>Unfortunately to get Go on Solaris/illumos/etc. you have to build it yourself from source, and at least when I was trying it out with OmniOS in vagrant it did not come with gcc by default. Getting go up so you can try out goiardi (if you don&rsquo;t want to <a href="https://github.com/ctdk/goiardi/releases/tag/v0.5.2">get the binary</a> is pretty straightforward.</p>
-
-<ul>
-<li>First, install gcc. <a href="http://omnios.omniti.com/wiki.php/DevEnv">These instructions</a> set you through installing gcc. It wasn&rsquo;t clear to me at first, but you do have to run all the <code>pkg install</code> commands mentioned. First install the appropriate version of gcc, then install those other packages.</li>
-</ul>
-
-
-<p>Once that&rsquo;s done, make sure your PATH is set per the instructions on that page.</p>
-
-<ul>
-<li><p>Install git with <code>pkg install developer/versioning/git</code></p></li>
-<li><p>Next, download go 1.3: <code>wget http://golang.org/dl/go1.3.src.tar.gz</code> and extract it somewhere. This will be your GOROOT. Set the environment variable with <code>export GOROOT=&lt;go's location&gt;</code> (assuming you&rsquo;re using bash or similar).</p></li>
-</ul>
-
-
-<p>The next steps come from <a href="http://golang.org/doc/install/source">*Installing Go from source</a>:</p>
-
-<ul>
-<li><p>In this new GOROOT, <code>cd src/</code>, then run <code>./all.bash</code>. It will build go for you. If it complains about being unable to find unistd.h, you were like me and forgot the second step on that <em>Installing GCC</em> page.</p></li>
-<li><p>You want to actually be able to use go, so add it to your path: <code>export PATH=$PATH:$GOROOT/bin</code>.</p></li>
-<li><p>Now you need a workspace. In your home directory, run:</p></li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>mkdir gocode
-</span><span class='line'>mkdir gocode/src
-</span><span class='line'>mkdir gocode/bin
-</span><span class='line'>mkdir gocode/pkg
-</span><span class='line'>export GOPATH=$HOME/gocode
-</span><span class='line'>export PATH=$PATH:$GOPATH/bin</span></code></pre></td></tr></table></div></figure>
-
-
-<ul>
-<li>Almost there. All that&rsquo;s left is running</li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>go get -t github.com/ctdk/goiardi
-</span><span class='line'>go install github.com/ctdk/goiardi</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Assuming all went well, you can run <code>goiardi</code> at your prompt with whatever options you want, and it will happily run. After this point using goiardi is like using it on any other platform.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/goiardi/blog/page/2/">&larr; Older</a>
@@ -720,6 +673,10 @@ though, the reformatting, linting, and light refactoring has done it good.</li>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/goiardi/blog/2014/11/23/goiardi-version-0-dot-8-2-can-shaped-cranberry-sauce/">Goiardi Version 0.8.2 - Can-shaped Cranberry Sauce</a>
+      </li>
+    
+      <li class="post">
         <a href="/goiardi/blog/2014/10/15/goiardi-version-0-dot-8-1-and-schob-version-0-dot-1-1-hand-of-ishtar-hand-of-nergal/">Goiardi Version 0.8.1 and Schob Version 0.1.1 - Hand of Ishtar, Hand of Nergal</a>
       </li>
     
@@ -733,10 +690,6 @@ though, the reformatting, linting, and light refactoring has done it good.</li>
     
       <li class="post">
         <a href="/goiardi/blog/2014/09/05/another-shovey-preview-the-shovey-jobs-cookbook/">Another Shovey Preview: The Shovey-Jobs Cookbook</a>
-      </li>
-    
-      <li class="post">
-        <a href="/goiardi/blog/2014/08/24/a-preview-of-shovey/">A Preview of Shovey</a>
       </li>
     
   </ul>
