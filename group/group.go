@@ -59,6 +59,7 @@ func New(org *organization.Organization, name string) (*Group, util.Gerror) {
 	}
 	if found {
 		err := util.Errorf("Group %s in organization %s already exists", name, org.Name)
+		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
 	g := &Group{

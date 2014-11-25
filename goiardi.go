@@ -215,6 +215,7 @@ func main() {
 	s.HandleFunc("/groups", groupListHandler)
 	s.HandleFunc("/groups/{group_name}", groupHandler)
 	s.HandleFunc("/groups/{group_name}/_acl", groupACLHandler)
+	s.HandleFunc("/groups/{group_name}/_acl/{perm}", groupACLPermHandler)
 	s.HandleFunc("/nodes", nodeListHandler)
 	s.HandleFunc("/nodes/{name}", nodeHandler)
 	s.HandleFunc("/organizations/_acl", orgACLHandler)

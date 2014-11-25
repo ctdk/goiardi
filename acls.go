@@ -21,6 +21,7 @@ import (
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"
+	"github.com/ctdk/goiardi/group"
 	//"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/organization"
 	//"github.com/ctdk/goiardi/util"
@@ -296,6 +297,11 @@ func groupACLHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 
+	if r.Method != "GET" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	orgName := vars["org"]
 	org, orgerr := organization.Get(orgName)
 	if orgerr != nil {
@@ -310,6 +316,58 @@ func groupACLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response := a.ToJSON()
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&response); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func groupACLPermHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	// Seems to be a PUT only endpoint
+	if r.Method != "PUT" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	gb, clerr := group.Get(org, vars["group_name"])
+	if clerr != nil {
+		jsonErrorReport(w, r, clerr.Error(), clerr.Status())
+		return
+	}
+
+	aclData, jerr := parseObjJSON(r.Body)
+	if jerr != nil {
+		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+		return
+	}
+
+	perm := vars["perm"]
+
+	a, rerr := acl.GetItemACL(org, gb)
+	if rerr != nil {
+		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		return
+	}
+	ederr := a.EditFromJSON(perm, aclData)
+	if ederr != nil {
+		jsonErrorReport(w, r, ederr.Error(), ederr.Status())
+		return
+	}
+	p, ok := a.ACLitems[perm]
+	if !ok {
+		jsonErrorReport(w, r, "perm nonexistent", http.StatusBadRequest)
+		return
+	}
+	response := p.ToJSON()
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {

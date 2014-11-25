@@ -79,7 +79,14 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "you are not allowed to perform that action", http.StatusForbidden)
 			return
 		}
-		err := g.Delete()
+		// it would be easier to do this inside the group object, but
+		// we can't. :-(
+		err := groupACL.Delete()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		err = g.Delete()
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return

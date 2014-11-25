@@ -252,6 +252,15 @@ func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerro
 	return defacl, nil
 }
 
+func (a *ACL) Delete() util.Gerror {
+	if config.UsingDB() {
+
+	}
+	ds := datastore.New()
+	ds.Delete(a.Org.DataKey("acl-item"), util.JoinStr(a.Owner.ContainerKind(), "-", a.Owner.ContainerType(), "-", a.Owner.GetName()))
+	return nil
+}
+
 func (a *ACL) AddGroup(perm string, g *group.Group) util.Gerror {
 	a.m.Lock()
 	defer a.m.Unlock()
