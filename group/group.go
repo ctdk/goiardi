@@ -259,6 +259,14 @@ func (g *Group) OrgName() string {
 	return g.Org.Name
 }
 
+func (g *Group) ContainerType() string {
+	return g.URLType()
+}
+
+func (g *Group) ContainerKind() string {
+	return "containers"
+}
+
 // should this actually return the groups?
 
 func MakeDefaultGroups(org *organization.Organization) util.Gerror {

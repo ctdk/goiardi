@@ -18,6 +18,8 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/ctdk/goiardi/acl"
+	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
@@ -39,6 +41,12 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
 	groupName := vars["group_name"]
 	log.Printf("group name: %s", groupName)
 	log.Printf("Method: %v", r.Method)
@@ -47,18 +55,43 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 		return
 	}
+	groupACL, gerr := acl.GetItemACL(org, g)
+	if gerr != nil {
+		jsonErrorReport(w, r, gerr.Error(), gerr.Status())
+		return
+	}
 
 	// hmm
 	switch r.Method {
 	case "GET":
-		// we're cool
+		if f, err := groupACL.CheckPerm("read", opUser); err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "you are not allowed to perform that action", http.StatusForbidden)
+			return
+		}
 	case "DELETE":
+		if f, err := groupACL.CheckPerm("delete", opUser); err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "you are not allowed to perform that action", http.StatusForbidden)
+			return
+		}
 		err := g.Delete()
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
 	case "PUT":
+		if f, err := groupACL.CheckPerm("update", opUser); err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "you are not allowed to perform that action", http.StatusForbidden)
+			return
+		}
 		gData, err := parseObjJSON(r.Body)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
@@ -175,6 +208,25 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
+	containerACL, err := acl.Get(org, "containers", "groups")
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		return
+	}
+
 	var response map[string]interface{}
 	switch r.Method {
 	case "GET":
@@ -184,6 +236,13 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 			response[g.Name] = util.ObjURL(g)
 		}
 	case "POST":
+		if f, ferr := containerACL.CheckPerm("create", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
 		gData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
