@@ -71,11 +71,51 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cList := container.GetList(org)
-	response := make(map[string]interface{})
-	for _, c := range cList {
-		conURL := util.JoinStr("/organizations/", org.Name, "/containers/", c)
-		response[c] = util.CustomURL(conURL)
+	var response interface{}
+
+	switch r.Method {
+	case "GET":
+		cList := container.GetList(org)
+		rp := make(map[string]interface{})
+		for _, c := range cList {
+			conURL := util.JoinStr("/organizations/", org.Name, "/containers/", c)
+			rp[c] = util.CustomURL(conURL)
+		}
+		response = rp
+	case "POST":
+		cData, err := parseObjJSON(r.Body)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			return
+		}
+		contName, ok := cData["containername"].(string)
+		if !ok {
+			jsonErrorReport(w, r, "invalid container name", http.StatusBadRequest)
+			return
+		} else if contName == "" {
+			jsonErrorReport(w, r, "container name missing", http.StatusBadRequest)
+			return
+		}
+		cont, cerr := container.New(org, contName)
+		if cerr != nil {
+			jsonErrorReport(w, r, cerr.Error(), cerr.Status())
+			return
+		}
+		cerr = cont.Save()
+		if cerr != nil {
+			jsonErrorReport(w, r, cerr.Error(), cerr.Status())
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		rp := make(map[string]interface{})
+		//rp["containername"] = cont.Name
+		//rp["containerpath"] = cont.Name
+		rp["uri"] = util.ObjURL(cont)
+		response = rp
+	default:
+		w.Header().Set("Allow", "GET, POST")
+		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 
 	enc := json.NewEncoder(w)
