@@ -52,6 +52,7 @@ func New(org *organization.Organization, name string) (*Container, util.Gerror) 
 	}
 	if found {
 		err := util.Errorf("Container %s in organization %s already exists", name, org.Name)
+		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
 	c := &Container{
@@ -116,6 +117,14 @@ func (c *Container) URLType() string {
 
 func (c *Container) OrgName() string {
 	return c.Org.Name
+}
+
+func (c *Container) ContainerType() string {
+	return c.URLType()
+}
+
+func (c *Container) ContainerKind() string {
+	return "containers"
 }
 
 func MakeDefaultContainers(org *organization.Organization) util.Gerror {

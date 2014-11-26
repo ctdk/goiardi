@@ -18,6 +18,8 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/ctdk/goiardi/acl"
+	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/container"
 	//"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/organization"
@@ -39,7 +41,12 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	_ = org
+
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
 
 	containerName := vars["name"]
 
@@ -49,7 +56,45 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	containerACL, gerr := acl.GetItemACL(org, con)
+	if gerr != nil {
+		jsonErrorReport(w, r, gerr.Error(), gerr.Status())
+		return
+	}
+
 	response := make(map[string]interface{})
+
+	switch r.Method {
+	case "GET":
+		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
+	case "DELETE":
+		if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
+		err := containerACL.Delete()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		err = con.Delete()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+	default:
+		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	response["containername"] = con.Name
 	response["containerpath"] = con.Name // might be something else
 	// sometimes
@@ -71,6 +116,25 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
+	containerACL, err := acl.Get(org, "containers", "containers")
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		return
+	}
+
 	var response interface{}
 
 	switch r.Method {
@@ -83,6 +147,13 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		response = rp
 	case "POST":
+		if f, ferr := containerACL.CheckPerm("create", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
 		cData, err := parseObjJSON(r.Body)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
