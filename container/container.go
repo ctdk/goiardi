@@ -44,6 +44,9 @@ type Container struct {
 
 func New(org *organization.Organization, name string) (*Container, util.Gerror) {
 	var found bool
+	if !util.ValidateName(name) {
+		return nil, util.Errorf("invalid name '%s' for container", name)
+	}
 	if config.UsingDB() {
 
 	} else {

@@ -92,6 +92,7 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	default:
+		w.Header().Set("Allow", "GET, DELETE")
 		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -159,7 +160,11 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 			return
 		}
-		contName, ok := cData["containername"].(string)
+		var contName string
+		var ok bool
+		if contName, ok = cData["id"].(string); !ok {
+			contName, ok = cData["containername"].(string)
+		}
 		if !ok {
 			jsonErrorReport(w, r, "invalid container name", http.StatusBadRequest)
 			return
