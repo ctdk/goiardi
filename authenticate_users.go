@@ -24,16 +24,16 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	"net/http"
 	"log"
+	"net/http"
 )
 
 type authenticator struct {
 	Name, Password string
 }
 type authResponse struct {
-	User     map[string]interface{} `json:"user"`
-	Status string   `json:"status"`
+	User   map[string]interface{} `json:"user"`
+	Status string                 `json:"status"`
 }
 
 func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +45,7 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
-	
+
 	dec := json.NewDecoder(r.Body)
 	authJSON := make(map[string]interface{})
 	if err := dec.Decode(&authJSON); err != nil {
@@ -89,7 +89,7 @@ func validateLogin(auth *authenticator) (authResponse, util.Gerror) {
 	// Check passwords and such later.
 	// Automatically validate if UseAuth is not on
 	var resp authResponse
-	
+
 	u, err := user.Get(auth.Name)
 	if err != nil {
 		gerr := util.Errorf("Failed to authenticate: Username and password incorrect")

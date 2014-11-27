@@ -35,38 +35,38 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
-	"net/http"
 	"log"
+	"net/http"
 )
 
 // User is, uh, a user. It's very similar to a Client, but subtly different, as
 // explained elsewhere.
 type User struct {
-	Username string `json:"username"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Admin    bool   `json:"admin"`
-	FirstName string `json:"first_name"`
-	LastName string `json:"last_name"`
+	Username    string `json:"username"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	Admin       bool   `json:"admin"`
+	FirstName   string `json:"first_name"`
+	LastName    string `json:"last_name"`
 	DisplayName string `json:"display_name"`
-	Recoveror bool `json:"recovery_authentication_enabled"`
-	pubKey   string
-	passwd   string
-	salt     []byte
+	Recoveror   bool   `json:"recovery_authentication_enabled"`
+	pubKey      string
+	passwd      string
+	salt        []byte
 }
 
 type privUser struct {
-	Username  *string `json:"username"`
-	Name      *string `json:"name"`
-	Email     *string `json:"email"`
-	Admin     *bool   `json:"admin"`
-	FirstName *string `json:"first_name"`
-	LastName *string `json:"last_name"`
+	Username    *string `json:"username"`
+	Name        *string `json:"name"`
+	Email       *string `json:"email"`
+	Admin       *bool   `json:"admin"`
+	FirstName   *string `json:"first_name"`
+	LastName    *string `json:"last_name"`
 	DisplayName *string `json:"display_name"`
-	PublicKey *string `json:"public_key"`
-	Passwd    *string `json:"password"`
-	Salt      *[]byte `json:"salt"`
-	Recoveror *bool `json:"recovery_authentication_enabled"`
+	PublicKey   *string `json:"public_key"`
+	Passwd      *string `json:"password"`
+	Salt        *[]byte `json:"salt"`
+	Recoveror   *bool   `json:"recovery_authentication_enabled"`
 }
 
 // New creates a new API user.
@@ -294,16 +294,16 @@ func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
 	/* Invalid top level elements */
 	// TODO: save the new chef 12 attrs
 	/* validElements := []string{"username", "name", "org_name", "public_key", "private_key", "admin", "password", "email", "salt", "email", "first_name", "last_name", "display_name", "external_authentication_id", "external_authentication_uid", "recovery_authentication_enabled"}
-ValidElem:
-	for k := range jsonUser {
-		for _, i := range validElements {
-			if k == i {
-				continue ValidElem
+	ValidElem:
+		for k := range jsonUser {
+			for _, i := range validElements {
+				if k == i {
+					continue ValidElem
+				}
 			}
-		}
-		err := util.Errorf("Invalid key %s in request body", k)
-		return err
-	} */
+			err := util.Errorf("Invalid key %s in request body", k)
+			return err
+		} */
 	var verr util.Gerror
 
 	// Check the password first. If it's bad, bail before touching anything

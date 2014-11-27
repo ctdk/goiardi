@@ -506,7 +506,7 @@ func (a *ACLitem) checkForGroup(g *group.Group) (bool, int) {
 }
 
 func IsOrgAdminForUser(chkUser *user.User, opUser actor.Actor) (bool, util.Gerror) {
-	// Another operation that may well be significantly easier when it's 
+	// Another operation that may well be significantly easier when it's
 	// DB-ified.
 	orgs, err := association.OrgAssociations(chkUser)
 	if err != nil {
