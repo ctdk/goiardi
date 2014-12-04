@@ -461,7 +461,7 @@ func userAssocHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !user.IsSelf(opUser) && !opUser.IsAdmin() {
-		jsonErrorNonArrayReport(w, r, "missing read permission", http.StatusForbidden)
+		jsonErrorReport(w, r, "missing read permission", http.StatusForbidden)
 		return
 	}
 	assoc, err := association.GetAllOrgsAssociationReqs(user)
@@ -503,7 +503,7 @@ func userAssocCountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !user.IsSelf(opUser) && !opUser.IsAdmin() {
-		jsonErrorNonArrayReport(w, r, "missing read permission", http.StatusForbidden)
+		jsonErrorReport(w, r, "missing read permission", http.StatusForbidden)
 		return
 	}
 	count, err := association.OrgsAssociationReqCount(user)
