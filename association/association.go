@@ -57,6 +57,12 @@ func SetReq(user *user.User, org *organization.Organization) (*AssociationReq, u
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
+	_, found = ds.Get("association", assoc.Key())
+	if found {
+		err := util.Errorf("The association already exists.")
+		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
 	ds.Set("associationreq", assoc.Key(), assoc)
 	ds.SetAssociationReq(org.Name, "users", user.Name, user)
 	ds.SetAssociationReq(user.Name, "organizations", org.Name, org)

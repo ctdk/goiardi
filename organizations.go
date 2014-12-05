@@ -94,6 +94,10 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	case "association_requests":
 		if len(pathArray) == 4 {
+			if r.Method != "DELETE" {
+				jsonErrorReport(w, r, "unrecognized method", http.StatusMethodNotAllowed)
+				return
+			}
 			id := vars["id"]
 			re := regexp.MustCompile(util.JoinStr("(.+)-", orgName))
 			userChk := re.FindStringSubmatch(id)
@@ -138,8 +142,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 				orgResponse = oR
 
 			case "POST":
-				// creates the association. TODO: make
-				// it do so
+				// creates the association.
 				arData, jerr := parseObjJSON(r.Body)
 				if jerr != nil {
 					jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)

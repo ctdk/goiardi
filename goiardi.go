@@ -175,6 +175,7 @@ func main() {
 	muxer.HandleFunc("/users/{name}/association_requests", userAssocHandler)
 	muxer.HandleFunc("/users/{name}/association_requests/count", userAssocCountHandler)
 	muxer.HandleFunc("/users/{name}/association_requests/{id}", userAssocIDHandler)
+	muxer.HandleFunc("/users/{name}/organizations", userListOrgHandler)
 	muxer.HandleFunc("/system_recovery", systemRecoveryHandler)
 	// organization routes
 	s := muxer.PathPrefix("/organizations/{org}/").Subrouter()
@@ -243,7 +244,7 @@ func main() {
 	s.HandleFunc("/status/{specif}/nodes", statusHandler)
 	s.HandleFunc("/status/{specif}/{node_name}/{op}", statusHandler)
 	s.HandleFunc("/users", userOrgListHandler)
-	s.HandleFunc("/users/{name}", userHandler)
+	s.HandleFunc("/users/{name}", userOrgHandler)
 	s.HandleFunc("/universe", universe.UniverseHandler)
 
 	/* TODO: figure out how to handle the root & not found pages */
