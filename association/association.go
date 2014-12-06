@@ -143,7 +143,7 @@ func (a *AssociationReq) Delete() util.Gerror {
 	return nil
 }
 
-func Orgs(user *user.User) ([]*organization.Organization, util.Gerror) {
+func OrgAssocReqs(user *user.User) ([]*organization.Organization, util.Gerror) {
 	if config.UsingDB() {
 
 	}
@@ -173,7 +173,7 @@ func OrgsAssociationReqCount(user *user.User) (int, util.Gerror) {
 	if config.UsingDB() {
 
 	}
-	orgs, err := Orgs(user)
+	orgs, err := OrgAssocReqs(user)
 	if err != nil {
 		return 0, err
 	}
@@ -185,7 +185,7 @@ func UsersAssociationReqCount(org *organization.Organization) (int, util.Gerror)
 	if config.UsingDB() {
 
 	}
-	users, err := Users(org)
+	users, err := UserAssocReqs(org)
 	if err != nil {
 		return 0, err
 	}
@@ -193,7 +193,7 @@ func UsersAssociationReqCount(org *organization.Organization) (int, util.Gerror)
 	return count, nil
 }
 
-func Users(org *organization.Organization) ([]*user.User, util.Gerror) {
+func UserAssocReqs(org *organization.Organization) ([]*user.User, util.Gerror) {
 	if config.UsingDB() {
 
 	}
@@ -224,7 +224,7 @@ func DelAllUserAssocReqs(user *user.User) util.Gerror {
 	if config.UsingDB() {
 
 	}
-	orgs, err := Orgs(user)
+	orgs, err := OrgAssocReqs(user)
 	if err != nil {
 		return err
 	}
@@ -246,7 +246,7 @@ func DelAllOrgAssocReqs(org *organization.Organization) util.Gerror {
 	if config.UsingDB() {
 
 	}
-	users, err := Users(org)
+	users, err := UserAssocReqs(org)
 	if err != nil {
 		return err
 	}
@@ -268,7 +268,7 @@ func GetAllOrgsAssociationReqs(user *user.User) ([]*AssociationReq, util.Gerror)
 	if config.UsingDB() {
 
 	}
-	orgs, err := Orgs(user)
+	orgs, err := OrgAssocReqs(user)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +288,7 @@ func GetAllUsersAssociationReqs(org *organization.Organization) ([]*AssociationR
 	if config.UsingDB() {
 
 	}
-	users, err := Users(org)
+	users, err := UserAssocReqs(org)
 	if err != nil {
 		return nil, err
 	}

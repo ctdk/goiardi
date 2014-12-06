@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
@@ -443,26 +444,48 @@ func userListOrgHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userName := vars["name"]
 
-	var org *organization.Organization
-	if orgName, ok := vars["org"]; ok {
-		var orgerr util.Gerror
-		org, orgerr = organization.Get(orgName)
-		if orgerr != nil {
-			jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
-			return
-		}
-	}
-	/* opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return
-	} */
 	if r.Method != "GET" {
 		jsonErrorReport(w, r, "unrecognized method", http.StatusMethodNotAllowed)
 		return
 	}
+
+	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
+	chefUser, err := user.Get(userName)
+
+	if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
+		ook, err := acl.IsOrgAdminForUser(chefUser, opUser)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		if !ook {
+			jsonErrorReport(w, r, "you are not allowed to perform that action", http.StatusForbidden)
+			return
+		}
+	}
+
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+
+	orgs, err := association.OrgAssociations(chefUser)
 	
-	response := make(map[string]interface{})
+	response := make([]map[string]interface{}, len(orgs))
+	for i, o := range orgs {
+		or := map[string]interface{}{"organization": o.ToJSON()}
+		response[i] = or
+	}
+
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
