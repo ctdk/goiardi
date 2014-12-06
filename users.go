@@ -439,6 +439,19 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func userListOrgHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	userName := vars["name"]
+
+	var org *organization.Organization
+	if orgName, ok := vars["org"]; ok {
+		var orgerr util.Gerror
+		org, orgerr = organization.Get(orgName)
+		if orgerr != nil {
+			jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+			return
+		}
+	}
 	/* opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
