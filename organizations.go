@@ -105,6 +105,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 				util.JSONErrorReport(w, r, util.JoinStr("Invalid ID ", id, ". Must be of the form username-", orgName), http.StatusNotFound)
 				return
 			}
+			log.Printf("Deleting assoc req %s", id)
 			// Looks like this is supposed to be a delete.
 			ar, err := association.GetReq(id)
 			if err != nil {
@@ -116,6 +117,12 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
+			log.Printf("deleted id %s", id)
+			ur, _ := association.GetAllUsersAssociationReqs(org)
+			log.Printf("assoc reqs after are:")
+			for _, v := range ur {
+				log.Printf("%s", v.Key())
+			}
 
 			oR := make(map[string]interface{})
 			oR["id"] = id
@@ -125,9 +132,15 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case "GET":
 				// returns a list of associations with
-				// this org. TODO: It should actually
-				// do that.
+				// this org.
 				userReqs, err := association.GetAllUsersAssociationReqs(org)
+				log.Printf("user association request length: %d", len(userReqs))
+				log.Printf("User association requests returned: %+v", userReqs)
+				log.Println("the association reqs")
+				for _, v := range userReqs {
+					log.Printf("%+v", v)
+					log.Printf("%s", v.Key())
+				}
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return

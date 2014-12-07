@@ -31,6 +31,7 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
+	"log"
 )
 
 func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +85,10 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		assoc, _ := association.GetAssoc(chefUser, org)
+		assoc, e := association.GetAssoc(chefUser, org)
+		if e != nil {
+			log.Printf("Error with org user delete get assoc: %s", e.Error())
+		}
 		if assoc != nil {
 			err = assoc.Delete()
 			if err != nil {
@@ -93,7 +97,10 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			key := util.JoinStr(userName, "-", org.Name)
-			assocReq, _ := association.GetReq(key)
+			assocReq, e := association.GetReq(key)
+			if e != nil {
+				log.Printf("Error with org user delete get req: %s", e.Error())
+			}
 			if assocReq != nil {
 				err = assocReq.Delete()
 				if err != nil {
