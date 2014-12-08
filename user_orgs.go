@@ -22,6 +22,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/organization"
@@ -36,24 +37,45 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 
+	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
 	orgName := vars["org"]
 	org, orgerr := organization.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	_ = org
+	containerACL, err := acl.Get(org, "containers", "$$root$$")
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		return
+	}
 	if r.Method != "GET" {
 		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	// so not the right way, exactly, but close enough for now
-	userList := user.GetList()
+	userList, err := association.UserAssociations(org)
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
 	// I don't even...
 	response := make([]map[string]map[string]string, len(userList))
 	for i, u := range userList {
 		ur := make(map[string]map[string]string)
-		ur["user"] = map[string]string{"username": u}
+		ur["user"] = map[string]string{"username": u.Name}
 		response[i] = ur
 	}
 	enc := json.NewEncoder(w)
@@ -67,6 +89,12 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userName := vars["name"]
 
+	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
 	orgName := vars["org"]
 	org, orgerr := organization.Get(orgName)
 	if orgerr != nil {
@@ -76,8 +104,28 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 
 	var response map[string]interface{}
 
+	containerACL, err := acl.Get(org, "containers", "$$root$$")
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		return
+	}
+
 	switch r.Method {
 	case "DELETE":
+		if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
 		chefUser, err := user.Get(userName)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
@@ -100,12 +148,20 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			} else {
-				jsonErrorReport(w, r, "user not in this organization", http.StatusNotFound)
+				errMsg := util.JoinStr("Cannot find a user ", userName, " in organization ", org.Name)
+				jsonErrorNonArrayReport(w, r, errMsg, http.StatusNotFound)
 				return
 			} 
 		}
 		response = make(map[string]interface{})
 		response["response"] = "ok"
+	case "GET":
+		chefUser, err := user.Get(userName)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		response = chefUser.ToJSON()
 	default:
 		jsonErrorReport(w, r, "unrecognized method", http.StatusMethodNotAllowed)
 		return	
@@ -127,7 +183,6 @@ func userAssocHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	_ = opUser
 	if r.Method != "GET" {
 		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
 		return
