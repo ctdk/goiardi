@@ -71,6 +71,19 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		 * deleted object. */
 		jsonUser := chefUser.ToJSON()
 
+		// Clear this user USAGs, groups and org associations if any
+		// remain.
+		err = association.DelAllUserAssocReqs(chefUser)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		err = association.DelAllUserAssociations(chefUser)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+
 		/* Log the delete event *before* deleting the user, in
 		 * case the user is deleting itself. */
 		if lerr := loginfo.LogEvent(org, opUser, chefUser, "delete"); lerr != nil {

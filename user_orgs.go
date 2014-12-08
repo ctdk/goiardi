@@ -22,7 +22,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/organization"
@@ -31,7 +30,6 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
-	"log"
 )
 
 func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
@@ -85,10 +83,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		assoc, e := association.GetAssoc(chefUser, org)
-		if e != nil {
-			log.Printf("Error with org user delete get assoc: %s", e.Error())
-		}
+		assoc, _ := association.GetAssoc(chefUser, org)
 		if assoc != nil {
 			err = assoc.Delete()
 			if err != nil {
@@ -97,10 +92,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			key := util.JoinStr(userName, "-", org.Name)
-			assocReq, e := association.GetReq(key)
-			if e != nil {
-				log.Printf("Error with org user delete get req: %s", e.Error())
-			}
+			assocReq, _ := association.GetReq(key)
 			if assocReq != nil {
 				err = assocReq.Delete()
 				if err != nil {
@@ -110,7 +102,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				jsonErrorReport(w, r, "user not in this organization", http.StatusNotFound)
 				return
-			}
+			} 
 		}
 		response = make(map[string]interface{})
 		response["response"] = "ok"
@@ -176,7 +168,6 @@ func userAssocCountHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userName := vars["name"]
 
-	logger.Debugf("called count handler")
 	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
@@ -207,8 +198,6 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 	userName := vars["name"]
-
-	logger.Debugf("called id handler")
 
 	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
