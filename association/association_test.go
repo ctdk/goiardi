@@ -105,6 +105,32 @@ func TestAcceptance(t *testing.T) {
 	}
 }
 
+func TestAcceptRemoveReq(t *testing.T) {
+	u, _ := user.New("user103")
+	pass := "123456"
+	u.SetPasswd(pass)
+	u.Save()
+	o, _ := organization.New("org103", "org-porg")
+	o.Save()
+	err := group.MakeDefaultGroups(o)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	assoc, err := SetReq(u, o)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	key := assoc.Key()
+	err = assoc.Accept()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	areq, _ := GetReq(key)
+	if areq != nil {
+		t.Errorf("Curious, this req shouldn't have been there: %+v", areq)
+	}
+}
+
 func TestOrgReqListing(t *testing.T) {
 	u, _ := user.New("user3")
 	pass := "123456"
