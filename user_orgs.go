@@ -65,13 +65,11 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	// so not the right way, exactly, but close enough for now
 	userList, err := association.UserAssociations(org)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
-	// I don't even...
 	response := make([]map[string]map[string]string, len(userList))
 	for i, u := range userList {
 		ur := make(map[string]map[string]string)

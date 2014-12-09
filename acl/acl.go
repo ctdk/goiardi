@@ -224,7 +224,7 @@ func Get(org *organization.Organization, kind string, subkind string) (*ACL, uti
 	a, found := ds.Get(org.DataKey("acl"), util.JoinStr(kind, "-", subkind))
 	if !found {
 		return defaultACL(org, kind, subkind)
-	}
+	} 
 	return a.(*ACL), nil
 }
 
@@ -271,6 +271,18 @@ func (a *ACL) AddActor(perm string, act actor.Actor) util.Gerror {
 	a.m.Lock()
 	defer a.m.Unlock()
 	return a.addActor(perm, act)
+}
+
+func ClearActor(act actor.Actor) util.Gerror {
+
+}
+
+func ClearGroup(g *group.Group) util.Gerror {
+
+}
+
+func allOrgACLs() []string {
+
 }
 
 func (a *ACL) addGroup(perm string, g *group.Group) util.Gerror {
