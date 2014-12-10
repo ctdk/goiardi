@@ -19,7 +19,7 @@ package acl
 import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
-	//"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/group"
@@ -224,7 +224,12 @@ func Get(org *organization.Organization, kind string, subkind string) (*ACL, uti
 	a, found := ds.Get(org.DataKey("acl"), util.JoinStr(kind, "-", subkind))
 	if !found {
 		return defaultACL(org, kind, subkind)
-	} 
+	} else {
+		err := a.(*ACL).resetActorsGroups()
+		if err != nil {
+			return nil, err
+		}
+	}
 	return a.(*ACL), nil
 }
 
@@ -248,8 +253,71 @@ func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerro
 		defacl.Owner = item
 	} else {
 		defacl = a.(*ACL)
+		err := defacl.resetActorsGroups()
+		if err != nil {
+			return nil, err
+		}
 	}
 	return defacl, nil
+}
+
+func (a *ACL) resetActorsGroups() util.Gerror {
+	// I suspect this is not necessary with an SQL backend. Sigh.
+	actors := make(map[string]actor.Actor)
+	groups := make(map[string]*group.Group)
+	badActors := make(map[string]bool)
+	badGroups := make(map[string]bool)
+	for _, item := range a.ACLitems {
+		acts := make([]actor.Actor, 0, len(item.Actors))
+		grs := make([]*group.Group, 0, len(item.Groups))
+		for _, ac := range item.Actors {
+			if badActors[ac.GetName()] {
+				continue
+			}
+			newAct, ok := actors[ac.GetName()]
+			if !ok {
+				if ac.IsUser() {
+					newAct, _ = user.Get(ac.GetName())
+					if newAct == nil {
+						badActors[ac.GetName()] = true
+						continue
+					}
+					assoc, _ := association.GetAssoc(newAct.(*user.User), a.Org)
+					if assoc == nil && !newAct.IsAdmin() {
+						badActors[ac.GetName()] = true
+						continue
+					}
+					actors[ac.GetName()] = newAct
+				} else {
+					newAct, _ = client.Get(a.Org, ac.GetName())
+					if newAct == nil {
+						badActors[ac.GetName()] = true
+						continue
+					}
+					actors[ac.GetName()] = newAct
+				}
+			}
+			acts = append(acts, newAct)
+		}
+		for _, gr := range item.Groups {
+			if badGroups[gr.Name] {
+				continue
+			}
+			newGr, ok := groups[gr.Name]
+			if !ok {
+				newGr, _ = group.Get(a.Org, gr.Name)
+				if newGr == nil {
+					badGroups[gr.Name] = true
+					continue
+				}
+				groups[gr.Name] = newGr
+			}
+			grs = append(grs, newGr)
+		}
+		item.Actors = acts
+		item.Groups = grs
+	}
+	return nil
 }
 
 func (a *ACL) Delete() util.Gerror {
@@ -271,18 +339,6 @@ func (a *ACL) AddActor(perm string, act actor.Actor) util.Gerror {
 	a.m.Lock()
 	defer a.m.Unlock()
 	return a.addActor(perm, act)
-}
-
-func ClearActor(act actor.Actor) util.Gerror {
-
-}
-
-func ClearGroup(g *group.Group) util.Gerror {
-
-}
-
-func allOrgACLs() []string {
-
 }
 
 func (a *ACL) addGroup(perm string, g *group.Group) util.Gerror {
@@ -462,13 +518,16 @@ func (a *ACL) CheckPerm(perm string, doer actor.Actor) (bool, util.Gerror) {
 	}
 	// check for user perms in this ACL
 	if f, _ := acli.checkForActor(doer); f {
+		log.Printf("Actor check for %s passed", doer.GetName())
 		return f, nil
 	}
 	for _, g := range acli.Groups {
 		if f := g.SeekActor(doer); f {
+			log.Printf("Group %s check for %s passed", g.Name, doer.GetName())
 			return f, nil
 		}
 	}
+	log.Printf("going to association check now for %s", doer.GetName())
 	if doer.IsUser() {
 		_, err := association.GetAssoc(doer.(*user.User), a.Org)
 		if err != nil {
@@ -507,8 +566,6 @@ func (a *ACLitem) checkForActor(actr actor.Actor) (bool, int) {
 }
 
 func (a *ACLitem) checkForGroup(g *group.Group) (bool, int) {
-	a.m.RLock()
-	defer a.m.RUnlock()
 	for i, gr := range a.Groups {
 		if gr.Name == g.Name {
 			return true, i

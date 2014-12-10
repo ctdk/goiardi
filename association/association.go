@@ -399,6 +399,10 @@ func (a *Association) Delete() util.Gerror {
 		}
 		g.DelGroup(usag)
 		g.DelActor(a.User)
+		err = g.Save()
+		if err != nil {
+			return err
+		}
 	}
 
 	err = usag.Delete()
