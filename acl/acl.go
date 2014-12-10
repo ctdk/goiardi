@@ -261,6 +261,26 @@ func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerro
 	return defacl, nil
 }
 
+func ResetACLs(org *organization.Organization) {
+	if config.UsingDB() {
+		// Not needed in this case
+		return 
+	}
+	ds := datastore.New()
+	keyTypes := [...]string{"acl", "acl-items"}
+	for _, k := range keyTypes {
+		// Reset any ACLs that have non-default values
+		keys := ds.GetList(org.DataKey(k))
+		for _, key := range keys {
+			a, _ := ds.Get(org.DataKey(k), key)
+			if a != nil {
+				ac := a.(*ACL)
+				ac.resetActorsGroups()
+			}
+		}
+	}
+}
+
 func (a *ACL) resetActorsGroups() util.Gerror {
 	// I suspect this is not necessary with an SQL backend. Sigh.
 	actors := make(map[string]actor.Actor)

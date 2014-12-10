@@ -136,6 +136,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
+			go acl.ResetACLs(org)
 		} else {
 			key := util.JoinStr(userName, "-", org.Name)
 			assocReq, _ := association.GetReq(key)

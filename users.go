@@ -73,6 +73,11 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Clear this user USAGs, groups and org associations if any
 		// remain.
+		orgs, err := association.OrgAssociations(chefUser)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
 		err = association.DelAllUserAssocReqs(chefUser)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
@@ -82,6 +87,9 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
+		}
+		for _, o := range orgs {
+			go acl.ResetACLs(o)
 		}
 
 		/* Log the delete event *before* deleting the user, in
