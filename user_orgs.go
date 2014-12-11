@@ -160,6 +160,15 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
+		_, err = association.GetAssoc(chefUser, org)
+		if err != nil {
+			if err.Status() == http.StatusForbidden {
+				err = util.Errorf("Cannot find a user %s in organization %s", chefUser.Name, org.Name)
+				err.SetStatus(http.StatusNotFound)
+			}
+			jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
+			return
+		}
 		response = chefUser.ToJSON()
 	default:
 		jsonErrorReport(w, r, "unrecognized method", http.StatusMethodNotAllowed)
