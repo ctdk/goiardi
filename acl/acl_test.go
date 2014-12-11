@@ -26,6 +26,8 @@ import (
 	"testing"
 )
 
+var pivotal *user.User
+
 func TestDefaultACLs(t *testing.T) {
 	gob.Register(new(organization.Organization))
 	gob.Register(new(group.Group))
@@ -38,6 +40,7 @@ func TestDefaultACLs(t *testing.T) {
 	u, _ := user.New("pivotal")
 	u.Admin = true
 	u.Save()
+	pivotal = u
 	org, _ := organization.New("florp", "mlorph normph")
 	group.MakeDefaultGroups(org)
 	a, err := Get(org, "groups", "admins")
@@ -89,7 +92,7 @@ func TestUserPermCheck(t *testing.T) {
 	a, _ := Get(org, "groups", "admins")
 	u, _ := user.New("moohoo")
 	u.Save()
-	ar, _ := association.SetReq(u, org)
+	ar, _ := association.SetReq(u, org, pivotal)
 	ar.Accept()
 	err := a.AddActor("create", u)
 	if err != nil {
@@ -143,7 +146,7 @@ func TestGroupPermCheck(t *testing.T) {
 	group.MakeDefaultGroups(org)
 	u, _ := user.New("moohoo2")
 	u.Save()
-	ar, _ := association.SetReq(u, org)
+	ar, _ := association.SetReq(u, org, pivotal)
 	ar.Accept()
 	a, _ := Get(org, "groups", "admins")
 	g, _ := group.New(org, "mnerg")
@@ -173,7 +176,7 @@ func TestMultiLevelGroupPermCheck(t *testing.T) {
 	group.MakeDefaultGroups(org)
 	u, _ := user.New("moohoo3")
 	u.Save()
-	ar, _ := association.SetReq(u, org)
+	ar, _ := association.SetReq(u, org, pivotal)
 	ar.Accept()
 	a, _ := Get(org, "groups", "admins")
 	g, _ := group.New(org, "mnergor")
@@ -205,7 +208,7 @@ func TestUserRemoval(t *testing.T) {
 	group.MakeDefaultGroups(org)
 	u, _ := user.New("moohoo4")
 	u.Save()
-	ar, _ := association.SetReq(u, org)
+	ar, _ := association.SetReq(u, org, pivotal)
 	ar.Accept()
 	a, _ := Get(org, "containers", "clients")
 	f, err := a.CheckPerm("read", u)

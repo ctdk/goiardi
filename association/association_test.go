@@ -25,6 +25,8 @@ import (
 	"testing"
 )
 
+var pivotal *user.User
+
 func TestAssociationReqCreation(t *testing.T) {
 	gob.Register(new(AssociationReq))
 	gob.Register(new(organization.Organization))
@@ -36,9 +38,13 @@ func TestAssociationReqCreation(t *testing.T) {
 	pass := "123456"
 	u.SetPasswd(pass)
 	u.Save()
+	up, _ := user.New("pivotal")
+	up.SetPasswd(pass)
+	up.Save()
+	pivotal = up
 	o, _ := organization.New("org", "org-porg")
 	o.Save()
-	assoc, err := SetReq(u, o)
+	assoc, err := SetReq(u, o, pivotal)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -58,7 +64,7 @@ func TestAssociationReqDeletion(t *testing.T) {
 	u.Save()
 	o, _ := organization.New("org2", "org-porg")
 	o.Save()
-	assoc, err := SetReq(u, o)
+	assoc, err := SetReq(u, o, pivotal)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -75,16 +81,14 @@ func TestAcceptance(t *testing.T) {
 	pass := "123456"
 	u.SetPasswd(pass)
 	u.Save()
-	up, _ := user.New("pivotal")
-	up.SetPasswd(pass)
-	up.Save()
+	
 	o, _ := organization.New("org100", "org-porg")
 	o.Save()
 	err := group.MakeDefaultGroups(o)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	assoc, err := SetReq(u, o)
+	assoc, err := SetReq(u, o, pivotal)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -116,7 +120,7 @@ func TestAcceptRemoveReq(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	assoc, err := SetReq(u, o)
+	assoc, err := SetReq(u, o, pivotal)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -143,7 +147,7 @@ func TestOrgReqListing(t *testing.T) {
 			t.Errorf(e.Error())
 		}
 		o.Save()
-		_, err := SetReq(u, o)
+		_, err := SetReq(u, o, pivotal)
 		if err != nil {
 			t.Errorf(err.Error())
 		}
@@ -166,7 +170,7 @@ func TestUserReqListing(t *testing.T) {
 		u, _ := user.New(name)
 		u.SetPasswd(pass)
 		u.Save()
-		_, err := SetReq(u, o)
+		_, err := SetReq(u, o, pivotal)
 		if err != nil {
 			t.Errorf(err.Error())
 		}
@@ -193,7 +197,7 @@ func TestUserAssocListing(t *testing.T) {
 		}
 		u.SetPasswd(pass)
 		u.Save()
-		r, err := SetReq(u, o)
+		r, err := SetReq(u, o, pivotal)
 		if err != nil {
 			t.Errorf(err.Error())
 		}
@@ -221,7 +225,7 @@ func TestOrgAssocListing(t *testing.T) {
 		}
 		o.Save()
 		group.MakeDefaultGroups(o)
-		r, err := SetReq(u, o)
+		r, err := SetReq(u, o, pivotal)
 		if err != nil {
 			t.Errorf(err.Error())
 		}
@@ -274,7 +278,7 @@ func TestDelOneUserOrgAssociation(t *testing.T) {
 	o, _ := organization.New("userlistz1", "user list org")
 	o.Save()
 	group.MakeDefaultGroups(o)
-	r, err := SetReq(u, o)
+	r, err := SetReq(u, o, pivotal)
 	if err != nil {
 		t.Errorf(err.Error())
 	}

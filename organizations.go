@@ -171,7 +171,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
-				assoc, err := association.SetReq(user, org)
+				assoc, err := association.SetReq(user, org, opUser)
 				if err != nil {
 					jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
 					return

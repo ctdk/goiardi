@@ -267,9 +267,6 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	// I think this will be required eventually, but I'm not quite entirely
-	// sure how yet
-	_ = opUser
 	if r.Method != "PUT" {
 		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -280,6 +277,11 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !opUser.IsAdmin() && !opUser.IsSelf(user) {
+		jsonErrorReport(w, r, "you may not accept that request on behalf of that user", http.StatusForbidden)
+		return
+	}
+
 	id := vars["id"]
 	re := regexp.MustCompile(util.JoinStr(user.Name, "-(.+)"))
 	o := re.FindStringSubmatch(id)
@@ -287,7 +289,12 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, util.JoinStr("Association request ", id, " is invalid. Must be ", userName, "-orgname."), http.StatusBadRequest)
 		return
 	}
-	org := o[1]
+	org, err := organization.Get(o[1])
+	if err != nil {
+		jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
+		return
+	}
+
 	userData, jerr := parseObjJSON(r.Body)
 	if jerr != nil {
 		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -296,6 +303,20 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 	assoc, err := association.GetReq(id)
 	if err != nil {
 		jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
+		return
+	}
+	// Have to check here if the user who issued the invitation is still an
+	// admin for the organization
+	containerACL, err := acl.Get(org, "containers", "$$root$$")
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("update", assoc.Inviter); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "The admin who issued this invitation is no longer associated with this organization", http.StatusForbidden)
 		return
 	}
 
@@ -322,7 +343,7 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response := make(map[string]map[string]interface{})
-	response["organization"] = map[string]interface{}{"name": org}
+	response["organization"] = map[string]interface{}{"name": org.Name}
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)

@@ -18,6 +18,7 @@ package association
 
 import (
 	"fmt"
+	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/group"
@@ -35,6 +36,7 @@ type Association struct {
 type AssociationReq struct {
 	User *user.User
 	Org  *organization.Organization
+	Inviter actor.Actor
 }
 
 func (a *AssociationReq) Key() string {
@@ -45,11 +47,11 @@ func (a *Association) Key() string {
 	return util.JoinStr(a.User.Name, "-", a.Org.Name)
 }
 
-func SetReq(user *user.User, org *organization.Organization) (*AssociationReq, util.Gerror) {
+func SetReq(user *user.User, org *organization.Organization, inviter actor.Actor) (*AssociationReq, util.Gerror) {
 	if config.UsingDB() {
 
 	}
-	assoc := &AssociationReq{user, org}
+	assoc := &AssociationReq{user, org, inviter}
 	ds := datastore.New()
 	_, found := ds.Get("associationreq", assoc.Key())
 	if found {
