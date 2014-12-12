@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Meta | Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/blog/categories/meta/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-12-12T09:18:06-08:00</updated>
+  <updated>2014-12-12T09:33:16-08:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -22,7 +22,7 @@
 
 <p>I switched the goiardi site from using <a href="http://octopress.org">Octopress</a> to <a href="http://gohugo.io/">Hugo</a>, a static site generator written in Go. It&rsquo;s pretty nice to use, and it&rsquo;s <em>fast</em>.</p>
 
-<p>I&rsquo;m going to spend some time sprucing the new site up some and adding content where appropriate, but it&rsquo;s a good place to roll out. Thanks, and take a look at it if you feel the yen.</p>
+<p>I&rsquo;m going to spend some time sprucing the new site up some and adding content where appropriate, but it&rsquo;s at a good place to roll out. Thanks, and take a look at it if you feel the yen.</p>
 ]]></content>
   </entry>
   
