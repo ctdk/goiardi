@@ -4,7 +4,7 @@
   <title><![CDATA[Goiardi]]></title>
   <link href="http://ctdk.github.io/goiardi/atom.xml" rel="self"/>
   <link href="http://ctdk.github.io/goiardi/"/>
-  <updated>2014-11-23T11:39:50-08:00</updated>
+  <updated>2014-12-12T09:18:06-08:00</updated>
   <id>http://ctdk.github.io/goiardi/</id>
   <author>
     <name><![CDATA[Jeremy Bingham]]></name>
@@ -12,6 +12,19 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Goiardi Has a New Home]]></title>
+    <link href="http://ctdk.github.io/goiardi/blog/2014/12/12/goiardi-has-a-new-home/"/>
+    <updated>2014-12-12T09:08:26-08:00</updated>
+    <id>http://ctdk.github.io/goiardi/blog/2014/12/12/goiardi-has-a-new-home</id>
+    <content type="html"><![CDATA[<p>It&rsquo;s true, goiardi now has a new website to call home. This Github Pages site will stay up indefinitely, since it&rsquo;s not hurting anything by being here, but future goiardi updates will be found at <a href="http://goiardi.gl"><a href="http://goiardi.gl">http://goiardi.gl</a></a>. It also features a new (but probably temporary) logo for goiardi.</p>
+
+<p>I switched the goiardi site from using <a href="http://octopress.org">Octopress</a> to <a href="http://gohugo.io/">Hugo</a>, a static site generator written in Go. It&rsquo;s pretty nice to use, and it&rsquo;s <em>fast</em>.</p>
+
+<p>I&rsquo;m going to spend some time sprucing the new site up some and adding content where appropriate, but it&rsquo;s a good place to roll out. Thanks, and take a look at it if you feel the yen.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Goiardi Version 0.8.2 - Can-shaped Cranberry Sauce]]></title>
@@ -534,21 +547,6 @@ README or godocs for details.</li>
 <p>Once those authorization issues are ironed out, I&rsquo;ll start work on updating the documentation and making a new formal release. If, in the meantime, anyone felt like testing it, it&rsquo;s pretty easy. Start goiardi with the <tt>-A</tt> or <tt>&#8211;use-auth</tt> flags, and set <tt>&#8211;conf-root</tt> to whereever you&rsquo;d like the chef-validator, chef-webui, and admin certificates to be stored. You&rsquo;d probably also want to specify index and data files for persistence, but you don&rsquo;t have to. Goiardi works with chef-webui fine as well, but at the moment you&rsquo;ll have to set a password for the admin user with knife.</p>
 
 <p>As of this writing goiardi authentication is still a work in progress, but it&rsquo;s far enough along to start banging on to look for problems. The chef-pedant tests are pretty happy, but that doesn&rsquo;t always catch every real world issue.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Version 0.3.3 of Goiardi Released]]></title>
-    <link href="http://ctdk.github.io/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released/"/>
-    <updated>2014-02-16T11:46:49-08:00</updated>
-    <id>http://ctdk.github.io/goiardi/blog/2014/02/16/version-0-dot-3-1-of-goiardi-released</id>
-    <content type="html"><![CDATA[<p>I am pleased to announce another goiardi release.</p>
-
-<p>This release, <a href="https://github.com/ctdk/goiardi/releases/tag/v0.3.3">version 0.3.3 of goiardi</a>, doesn&rsquo;t add much in the way of new functionality. The data store and indexer have been tweaked slightly, and go tests have been added for some of the goiardi components. The go test coverage isn&rsquo;t complete, and most goiardi testing is handled with chef-pedant, but these golang tests will be handy for testing internal functionality that could break, yet not show up in the chef-pedant testing.</p>
-
-<p>While there isn&rsquo;t much in this release, I decided to make one here because it&rsquo;s a good place to make one before starting to tackle authentication. Enjoy.</p>
-
-<p><strong>Update:</strong> It&rsquo;s a little embarrassing, but there was a problem merging branches, and a necessary change got backed out or overlooked, so version 0.3.1 has been superseded by version 0.3.3. On the off chance anyone got the previous version, I apologize.</p>
 ]]></content>
   </entry>
   
