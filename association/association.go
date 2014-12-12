@@ -34,8 +34,8 @@ type Association struct {
 }
 
 type AssociationReq struct {
-	User *user.User
-	Org  *organization.Organization
+	User    *user.User
+	Org     *organization.Organization
 	Inviter actor.Actor
 }
 

@@ -264,7 +264,7 @@ func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerro
 func ResetACLs(org *organization.Organization) {
 	if config.UsingDB() {
 		// Not needed in this case
-		return 
+		return
 	}
 	ds := datastore.New()
 	keyTypes := [...]string{"acl", "acl-items"}

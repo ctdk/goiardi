@@ -150,7 +150,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 				errMsg := util.JoinStr("Cannot find a user ", userName, " in organization ", org.Name)
 				jsonErrorNonArrayReport(w, r, errMsg, http.StatusNotFound)
 				return
-			} 
+			}
 		}
 		response = make(map[string]interface{})
 		response["response"] = "ok"
@@ -172,7 +172,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 		response = chefUser.ToJSON()
 	default:
 		jsonErrorReport(w, r, "unrecognized method", http.StatusMethodNotAllowed)
-		return	
+		return
 	}
 
 	enc := json.NewEncoder(w)

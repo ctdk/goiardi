@@ -500,7 +500,7 @@ func userListOrgHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgs, err := association.OrgAssociations(chefUser)
-	
+
 	response := make([]map[string]interface{}, len(orgs))
 	for i, o := range orgs {
 		or := map[string]interface{}{"organization": o.ToJSON()}

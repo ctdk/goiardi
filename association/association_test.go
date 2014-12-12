@@ -81,7 +81,7 @@ func TestAcceptance(t *testing.T) {
 	pass := "123456"
 	u.SetPasswd(pass)
 	u.Save()
-	
+
 	o, _ := organization.New("org100", "org-porg")
 	o.Save()
 	err := group.MakeDefaultGroups(o)
