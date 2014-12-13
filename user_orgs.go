@@ -316,7 +316,7 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
-		jsonErrorReport(w, r, "The admin who issued this invitation is no longer associated with this organization", http.StatusForbidden)
+		jsonErrorNonArrayReport(w, r, "This invitation is no longer valid. Please notify an administrator and request to be re-invited to the organization.", http.StatusForbidden)
 		return
 	}
 
