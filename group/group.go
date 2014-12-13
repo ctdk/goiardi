@@ -18,6 +18,7 @@ package group
 
 import (
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
@@ -193,6 +194,74 @@ func (g *Group) DelGroup(a *Group) util.Gerror {
 		g.Groups = append(g.Groups[:pos], g.Groups[pos+1:]...)
 	} else {
 		return util.Errorf("group %s not in group", a.GetName())
+	}
+	return nil
+}
+
+// Edit edits a group's membership en masse from JSON data listing the actors &
+// groups that should be in the group, clearing the existing entries out
+// entirely and adding everything back. This is not the preferred way, and
+// hopefully this functionality will be able to be removed, but for the moment
+// interoperability with mainstream Chef requires it.
+func (g *Group) Edit(jsonData interface{}) util.Gerror {
+	switch acts := jsonData.(type) {
+	case map[string]interface{}:
+		// presumably different once SQL mode catches up. Come back to
+		// this later, when that's ready.
+		actors := make([]actor.Actor, 0)
+		groups := make([]*Group, 0)
+		if us, uok := acts["users"].([]interface{}); uok {
+			for _, un := range us {
+				unv, err := util.ValidateAsString(un)
+				if err != nil {
+					return err
+				}
+				u, err := user.Get(unv)
+				if err != nil {
+					return err
+				}
+				actors = append(actors, u)
+			}
+		}
+		if cs, cok := acts["clients"].([]interface{}); cok {
+			for _, cn := range cs {
+				cnv, err := util.ValidateAsString(cn)
+				if err != nil {
+					return err
+				}
+				c, err := client.Get(g.Org, cnv)
+				if err != nil {
+					return err
+				}
+				actors = append(actors, c)
+			}
+		}
+		if grs, ok := acts["groups"].([]interface{}); ok {
+			for _, gn := range grs {
+				gnv, err := util.ValidateAsString(gn)
+				if err != nil {
+					return err
+				}
+				addGr, err := Get(g.Org, gnv)
+				if err != nil {
+					return err
+				}
+				groups = append(groups, addGr)
+			}
+		}
+		g.m.Lock()
+		defer g.m.Unlock()
+		g.Actors = actors
+		g.Groups = groups
+		err := g.save()
+		if err != nil {
+			return err
+		}
+	case nil:
+		;
+	default:
+		err := util.Errorf("invalid actors for group")
+		return err
 	}
 	return nil
 }

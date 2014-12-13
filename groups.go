@@ -20,10 +20,8 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
-	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"log"
@@ -121,75 +119,9 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return s
 		}
-		switch acts := gData["actors"].(type) {
-		case map[string]interface{}:
-			if us, uok := acts["users"].([]interface{}); uok {
-				for _, un := range us {
-					unv, err := util.ValidateAsString(un)
-					if err != nil {
-						jsonErrorReport(w, r, err.Error(), err.Status())
-						return
-					}
-					u, err := user.Get(unv)
-					if err != nil {
-						jsonErrorReport(w, r, err.Error(), statChk(err.Status()))
-						return
-					}
-					err = g.AddActor(u)
-					if err != nil {
-						jsonErrorReport(w, r, err.Error(), err.Status())
-						return
-					}
-				}
-			}
-			if cs, cok := acts["clients"].([]interface{}); cok {
-				for _, cn := range cs {
-					cnv, err := util.ValidateAsString(cn)
-					if err != nil {
-						jsonErrorReport(w, r, err.Error(), err.Status())
-						return
-					}
-					c, err := client.Get(org, cnv)
-					if err != nil {
-						jsonErrorReport(w, r, err.Error(), statChk(err.Status()))
-						return
-					}
-					err = g.AddActor(c)
-					if err != nil {
-						jsonErrorReport(w, r, err.Error(), err.Status())
-						return
-					}
-				}
-			}
-			if grs, ok := acts["groups"].([]interface{}); ok {
-				for _, gn := range grs {
-					gnv, err := util.ValidateAsString(gn)
-					if err != nil {
-						jsonErrorReport(w, r, err.Error(), err.Status())
-						return
-					}
-					addGr, err := group.Get(org, gnv)
-					if err != nil {
-						jsonErrorReport(w, r, err.Error(), statChk(err.Status()))
-						return
-					}
-					err = g.AddGroup(addGr)
-					if err != nil {
-						jsonErrorReport(w, r, err.Error(), err.Status())
-						return
-					}
-				}
-			}
-			err := g.Save()
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-		case nil:
-
-		default:
-			jsonErrorReport(w, r, "invalid actors for group", http.StatusBadRequest)
-			return
+		ederr := g.Edit(gData["actors"])
+		if ederr != nil {
+			jsonErrorReport(w, r, ederr.Error(), statChk(ederr.Status()))
 		}
 	default:
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
