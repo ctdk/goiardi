@@ -37,18 +37,19 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 
-	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return
-	}
-
 	orgName := vars["org"]
 	org, orgerr := organization.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
+
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
 	containerACL, err := acl.Get(org, "containers", "$$root$$")
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
@@ -87,16 +88,16 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userName := vars["name"]
 
-	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return
-	}
-
 	orgName := vars["org"]
 	org, orgerr := organization.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 
@@ -317,6 +318,7 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if !f {
 		jsonErrorNonArrayReport(w, r, "This invitation is no longer valid. Please notify an administrator and request to be re-invited to the organization.", http.StatusForbidden)
+		assoc.Delete()
 		return
 	}
 
