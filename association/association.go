@@ -18,6 +18,7 @@ package association
 
 import (
 	"fmt"
+	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/group"
@@ -33,8 +34,9 @@ type Association struct {
 }
 
 type AssociationReq struct {
-	User *user.User
-	Org  *organization.Organization
+	User    *user.User
+	Org     *organization.Organization
+	Inviter actor.Actor
 }
 
 func (a *AssociationReq) Key() string {
@@ -45,15 +47,21 @@ func (a *Association) Key() string {
 	return util.JoinStr(a.User.Name, "-", a.Org.Name)
 }
 
-func SetReq(user *user.User, org *organization.Organization) (*AssociationReq, util.Gerror) {
+func SetReq(user *user.User, org *organization.Organization, inviter actor.Actor) (*AssociationReq, util.Gerror) {
 	if config.UsingDB() {
 
 	}
-	assoc := &AssociationReq{user, org}
+	assoc := &AssociationReq{user, org, inviter}
 	ds := datastore.New()
 	_, found := ds.Get("associationreq", assoc.Key())
 	if found {
 		err := util.Errorf("The invite already exists.")
+		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
+	_, found = ds.Get("association", assoc.Key())
+	if found {
+		err := util.Errorf("The association already exists.")
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
@@ -105,7 +113,7 @@ func (a *AssociationReq) Accept() util.Gerror {
 	usagName := fmt.Sprintf("%x", []byte(a.User.Name))
 	usag, err := group.New(a.Org, usagName)
 	if err != nil {
-		return nil
+		return err
 	}
 	err = usag.Save()
 	if err != nil {
@@ -137,7 +145,7 @@ func (a *AssociationReq) Delete() util.Gerror {
 	return nil
 }
 
-func Orgs(user *user.User) ([]*organization.Organization, util.Gerror) {
+func OrgAssocReqs(user *user.User) ([]*organization.Organization, util.Gerror) {
 	if config.UsingDB() {
 
 	}
@@ -167,7 +175,7 @@ func OrgsAssociationReqCount(user *user.User) (int, util.Gerror) {
 	if config.UsingDB() {
 
 	}
-	orgs, err := Orgs(user)
+	orgs, err := OrgAssocReqs(user)
 	if err != nil {
 		return 0, err
 	}
@@ -179,7 +187,7 @@ func UsersAssociationReqCount(org *organization.Organization) (int, util.Gerror)
 	if config.UsingDB() {
 
 	}
-	users, err := Users(org)
+	users, err := UserAssocReqs(org)
 	if err != nil {
 		return 0, err
 	}
@@ -187,7 +195,7 @@ func UsersAssociationReqCount(org *organization.Organization) (int, util.Gerror)
 	return count, nil
 }
 
-func Users(org *organization.Organization) ([]*user.User, util.Gerror) {
+func UserAssocReqs(org *organization.Organization) ([]*user.User, util.Gerror) {
 	if config.UsingDB() {
 
 	}
@@ -218,7 +226,7 @@ func DelAllUserAssocReqs(user *user.User) util.Gerror {
 	if config.UsingDB() {
 
 	}
-	orgs, err := Orgs(user)
+	orgs, err := OrgAssocReqs(user)
 	if err != nil {
 		return err
 	}
@@ -240,7 +248,7 @@ func DelAllOrgAssocReqs(org *organization.Organization) util.Gerror {
 	if config.UsingDB() {
 
 	}
-	users, err := Users(org)
+	users, err := UserAssocReqs(org)
 	if err != nil {
 		return err
 	}
@@ -258,11 +266,54 @@ func DelAllOrgAssocReqs(org *organization.Organization) util.Gerror {
 	return nil
 }
 
+func DelAllUserAssociations(user *user.User) util.Gerror {
+	// these two will be vastly easier with the db, eh.
+	if config.UsingDB() {
+
+	}
+	orgs, err := OrgAssociations(user)
+	if err != nil {
+		return err
+	}
+	for _, o := range orgs {
+		a, err := GetAssoc(user, o)
+		if err != nil {
+			return err
+		}
+		err = a.Delete()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func DelAllOrgAssociations(org *organization.Organization) util.Gerror {
+	if config.UsingDB() {
+
+	}
+	users, err := UserAssociations(org)
+	if err != nil {
+		return err
+	}
+	for _, u := range users {
+		a, err := GetAssoc(u, org)
+		if err != nil {
+			return err
+		}
+		err = a.Delete()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func GetAllOrgsAssociationReqs(user *user.User) ([]*AssociationReq, util.Gerror) {
 	if config.UsingDB() {
 
 	}
-	orgs, err := Orgs(user)
+	orgs, err := OrgAssocReqs(user)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +333,7 @@ func GetAllUsersAssociationReqs(org *organization.Organization) ([]*AssociationR
 	if config.UsingDB() {
 
 	}
-	users, err := Users(org)
+	users, err := UserAssocReqs(org)
 	if err != nil {
 		return nil, err
 	}
@@ -338,6 +389,29 @@ func (a *Association) Delete() util.Gerror {
 
 	}
 	ds := datastore.New()
+	usagName := fmt.Sprintf("%x", []byte(a.User.Name))
+	usag, err := group.Get(a.Org, usagName)
+	if err != nil {
+		return err
+	}
+	allGroups := group.AllGroups(a.Org)
+	for _, g := range allGroups {
+		if g.Name == usag.Name {
+			continue
+		}
+		g.DelGroup(usag)
+		g.DelActor(a.User)
+		err = g.Save()
+		if err != nil {
+			return err
+		}
+	}
+
+	err = usag.Delete()
+	if err != nil {
+		return err
+	}
+
 	ds.Delete("association", a.Key())
 	ds.DelAssociation(a.Org.Name, "users", a.User.Name)
 	ds.DelAssociation(a.User.Name, "organizations", a.Org.Name)

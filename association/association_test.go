@@ -25,6 +25,8 @@ import (
 	"testing"
 )
 
+var pivotal *user.User
+
 func TestAssociationReqCreation(t *testing.T) {
 	gob.Register(new(AssociationReq))
 	gob.Register(new(organization.Organization))
@@ -36,9 +38,13 @@ func TestAssociationReqCreation(t *testing.T) {
 	pass := "123456"
 	u.SetPasswd(pass)
 	u.Save()
+	up, _ := user.New("pivotal")
+	up.SetPasswd(pass)
+	up.Save()
+	pivotal = up
 	o, _ := organization.New("org", "org-porg")
 	o.Save()
-	assoc, err := SetReq(u, o)
+	assoc, err := SetReq(u, o, pivotal)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -58,7 +64,7 @@ func TestAssociationReqDeletion(t *testing.T) {
 	u.Save()
 	o, _ := organization.New("org2", "org-porg")
 	o.Save()
-	assoc, err := SetReq(u, o)
+	assoc, err := SetReq(u, o, pivotal)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -75,16 +81,14 @@ func TestAcceptance(t *testing.T) {
 	pass := "123456"
 	u.SetPasswd(pass)
 	u.Save()
-	up, _ := user.New("pivotal")
-	up.SetPasswd(pass)
-	up.Save()
+
 	o, _ := organization.New("org100", "org-porg")
 	o.Save()
 	err := group.MakeDefaultGroups(o)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	assoc, err := SetReq(u, o)
+	assoc, err := SetReq(u, o, pivotal)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -105,6 +109,32 @@ func TestAcceptance(t *testing.T) {
 	}
 }
 
+func TestAcceptRemoveReq(t *testing.T) {
+	u, _ := user.New("user103")
+	pass := "123456"
+	u.SetPasswd(pass)
+	u.Save()
+	o, _ := organization.New("org103", "org-porg")
+	o.Save()
+	err := group.MakeDefaultGroups(o)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	assoc, err := SetReq(u, o, pivotal)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	key := assoc.Key()
+	err = assoc.Accept()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	areq, _ := GetReq(key)
+	if areq != nil {
+		t.Errorf("Curious, this req shouldn't have been there: %+v", areq)
+	}
+}
+
 func TestOrgReqListing(t *testing.T) {
 	u, _ := user.New("user3")
 	pass := "123456"
@@ -117,12 +147,12 @@ func TestOrgReqListing(t *testing.T) {
 			t.Errorf(e.Error())
 		}
 		o.Save()
-		_, err := SetReq(u, o)
+		_, err := SetReq(u, o, pivotal)
 		if err != nil {
 			t.Errorf(err.Error())
 		}
 	}
-	orgs, err := Orgs(u)
+	orgs, err := OrgAssocReqs(u)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -140,12 +170,12 @@ func TestUserReqListing(t *testing.T) {
 		u, _ := user.New(name)
 		u.SetPasswd(pass)
 		u.Save()
-		_, err := SetReq(u, o)
+		_, err := SetReq(u, o, pivotal)
 		if err != nil {
 			t.Errorf(err.Error())
 		}
 	}
-	users, err := Users(o)
+	users, err := UserAssocReqs(o)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -167,7 +197,7 @@ func TestUserAssocListing(t *testing.T) {
 		}
 		u.SetPasswd(pass)
 		u.Save()
-		r, err := SetReq(u, o)
+		r, err := SetReq(u, o, pivotal)
 		if err != nil {
 			t.Errorf(err.Error())
 		}
@@ -195,7 +225,7 @@ func TestOrgAssocListing(t *testing.T) {
 		}
 		o.Save()
 		group.MakeDefaultGroups(o)
-		r, err := SetReq(u, o)
+		r, err := SetReq(u, o, pivotal)
 		if err != nil {
 			t.Errorf(err.Error())
 		}
@@ -216,7 +246,7 @@ func TestDelUserAssocReq(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	users, err := Users(o)
+	users, err := UserAssocReqs(o)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -231,11 +261,52 @@ func TestDelOrgAssocReq(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	orgs, err := Orgs(u)
+	orgs, err := OrgAssocReqs(u)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 	if len(orgs) != 0 {
 		t.Errorf("org associations for this user should have been 0, got %d", len(orgs))
+	}
+}
+
+func TestDelOneUserOrgAssociation(t *testing.T) {
+	u, _ := user.New("user301")
+	pass := "123456"
+	u.SetPasswd(pass)
+	u.Save()
+	o, _ := organization.New("userlistz1", "user list org")
+	o.Save()
+	group.MakeDefaultGroups(o)
+	r, err := SetReq(u, o, pivotal)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	r.Accept()
+	assoc, err := GetAssoc(u, o)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	err = assoc.Delete()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	a2, _ := GetAssoc(u, o)
+	if a2 != nil {
+		t.Errorf("association still found")
+	}
+	ol, err := UserAssociations(o)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if len(ol) != 0 {
+		t.Errorf("Found user associations with org, but shouldn't have")
+	}
+	ul, err := OrgAssociations(u)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if len(ul) != 0 {
+		t.Errorf("Found org associations with user, but shouldn't have")
 	}
 }

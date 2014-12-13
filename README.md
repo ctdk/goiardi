@@ -53,7 +53,7 @@ improved, but is still an ongoing concern.
 AUTHOR
 ------
 
-Jeremy Bingham (<jbingham@gmail.com>)
+Jeremy Bingham (<jeremy@goiardi.gl>)
 
 COPYRIGHT
 ---------

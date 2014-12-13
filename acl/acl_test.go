@@ -18,6 +18,7 @@ package acl
 
 import (
 	"encoding/gob"
+	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
@@ -25,15 +26,21 @@ import (
 	"testing"
 )
 
+var pivotal *user.User
+
 func TestDefaultACLs(t *testing.T) {
 	gob.Register(new(organization.Organization))
 	gob.Register(new(group.Group))
 	gob.Register(new(ACL))
 	gob.Register(new(ACLitem))
 	gob.Register(new(user.User))
+	gob.Register(new(association.Association))
+	gob.Register(new(association.AssociationReq))
+	gob.Register(make(map[string]interface{}))
 	u, _ := user.New("pivotal")
 	u.Admin = true
 	u.Save()
+	pivotal = u
 	org, _ := organization.New("florp", "mlorph normph")
 	group.MakeDefaultGroups(org)
 	a, err := Get(org, "groups", "admins")
@@ -85,6 +92,8 @@ func TestUserPermCheck(t *testing.T) {
 	a, _ := Get(org, "groups", "admins")
 	u, _ := user.New("moohoo")
 	u.Save()
+	ar, _ := association.SetReq(u, org, pivotal)
+	ar.Accept()
 	err := a.AddActor("create", u)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -136,6 +145,9 @@ func TestGroupPermCheck(t *testing.T) {
 	org, _ := organization.New("florp5", "mlorph normph")
 	group.MakeDefaultGroups(org)
 	u, _ := user.New("moohoo2")
+	u.Save()
+	ar, _ := association.SetReq(u, org, pivotal)
+	ar.Accept()
 	a, _ := Get(org, "groups", "admins")
 	g, _ := group.New(org, "mnerg")
 	g.AddActor(u)
@@ -163,6 +175,9 @@ func TestMultiLevelGroupPermCheck(t *testing.T) {
 	org, _ := organization.New("florp6", "mlorph normph")
 	group.MakeDefaultGroups(org)
 	u, _ := user.New("moohoo3")
+	u.Save()
+	ar, _ := association.SetReq(u, org, pivotal)
+	ar.Accept()
 	a, _ := Get(org, "groups", "admins")
 	g, _ := group.New(org, "mnergor")
 	g.AddActor(u)
@@ -185,5 +200,35 @@ func TestMultiLevelGroupPermCheck(t *testing.T) {
 	}
 	if f {
 		t.Errorf("Group perm check succeeded when it should not have")
+	}
+}
+
+func TestUserRemoval(t *testing.T) {
+	org, _ := organization.New("florp7", "mlorph normph")
+	group.MakeDefaultGroups(org)
+	u, _ := user.New("moohoo4")
+	u.Save()
+	ar, _ := association.SetReq(u, org, pivotal)
+	ar.Accept()
+	a, _ := Get(org, "containers", "clients")
+	f, err := a.CheckPerm("read", u)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if !f {
+		t.Errorf("Client read perm check didn't work!")
+	}
+	assoc, _ := association.GetAssoc(u, org)
+	err = assoc.Delete()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	a, _ = Get(org, "containers", "clients")
+	f, err = a.CheckPerm("read", u)
+	if err == nil {
+		t.Errorf("There should have been an error here checking the perm, but there wasn't")
+	}
+	if f {
+		t.Errorf("Client read perm check was successful when it should not have been.")
 	}
 }

@@ -31,7 +31,6 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -71,6 +70,27 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		/* Docs were incorrect. It does want the body of the
 		 * deleted object. */
 		jsonUser := chefUser.ToJSON()
+
+		// Clear this user USAGs, groups and org associations if any
+		// remain.
+		orgs, err := association.OrgAssociations(chefUser)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		err = association.DelAllUserAssocReqs(chefUser)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		err = association.DelAllUserAssociations(chefUser)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		for _, o := range orgs {
+			go acl.ResetACLs(o)
+		}
 
 		/* Log the delete event *before* deleting the user, in
 		 * case the user is deleting itself. */
@@ -440,145 +460,53 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func userAssocHandler(w http.ResponseWriter, r *http.Request) {
+func userListOrgHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 	userName := vars["name"]
 
-	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return
-	}
-	_ = opUser
 	if r.Method != "GET" {
-		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
+		jsonErrorReport(w, r, "unrecognized method", http.StatusMethodNotAllowed)
 		return
 	}
-	user, err := user.Get(userName)
-	if err != nil {
-		jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
-		return
-	}
-	assoc, err := association.GetAllOrgsAssociationReqs(user)
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	response := make([]map[string]string, len(assoc))
-	for i, a := range assoc {
-		ar := make(map[string]string)
-		ar["id"] = a.Key()
-		ar["orgname"] = a.Org.Name
-		response[i] = ar
-	}
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&response); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func userAssocCountHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	if r.Method != "GET" {
-		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	vars := mux.Vars(r)
-	userName := vars["name"]
-
-	logger.Debugf("called count handler")
-	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return
-	}
-	_ = opUser
-	user, err := user.Get(userName)
-	if err != nil {
-		jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
-		return
-	}
-	count, err := association.OrgsAssociationReqCount(user)
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	response := map[string]interface{}{"value": count}
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&response); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	vars := mux.Vars(r)
-	userName := vars["name"]
-
-	logger.Debugf("called id handler")
 
 	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	// I think this will be required eventually, but I'm not quite entirely
-	// sure how yet
-	_ = opUser
-	if r.Method != "PUT" {
-		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	user, err := user.Get(userName)
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
 
-	id := vars["id"]
-	re := regexp.MustCompile(util.JoinStr(user.Name, "-(.+)"))
-	o := re.FindStringSubmatch(id)
-	if o == nil {
-		jsonErrorReport(w, r, util.JoinStr("Association request ", id, " is invalid. Must be ", userName, "-orgname."), http.StatusBadRequest)
-		return
-	}
-	org := o[1]
-	userData, jerr := parseObjJSON(r.Body)
-	if jerr != nil {
-		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-		return
-	}
-	assoc, err := association.GetReq(id)
-	if err != nil {
-		jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
-		return
-	}
+	chefUser, err := user.Get(userName)
 
-	res, ok := userData["response"].(string)
-	if !ok {
-		jsonErrorReport(w, r, "Param response must be either 'accept' or 'reject'", http.StatusBadRequest)
-		return
-	}
-	switch res {
-	case "accept":
-		err = assoc.Accept()
+	if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
+		ook, err := acl.IsOrgAdminForUser(chefUser, opUser)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-	case "reject":
-		err = assoc.Reject()
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
+		if !ook {
+			jsonErrorReport(w, r, "you are not allowed to perform that action", http.StatusForbidden)
 			return
 		}
-	default:
-		jsonErrorReport(w, r, "Param response must be either 'accept' or 'reject'", http.StatusBadRequest)
+	}
+
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
-	response := make(map[string]map[string]interface{})
-	response["organization"] = map[string]interface{}{"name": org}
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+
+	orgs, err := association.OrgAssociations(chefUser)
+
+	response := make([]map[string]interface{}, len(orgs))
+	for i, o := range orgs {
+		or := map[string]interface{}{"organization": o.ToJSON()}
+		response[i] = or
+	}
+
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
