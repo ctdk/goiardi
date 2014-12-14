@@ -119,18 +119,23 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "DELETE":
-		if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
-			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
-			return
-		} else if !f {
-			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-			return
-		}
 		chefUser, err := user.Get(userName)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
+		if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f && !opUser.IsSelf(chefUser) {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		} else if f && opUser.IsSelf(chefUser) {
+			errMsg := util.JoinStr("Please remove ", chefUser.Name, " from this organization's admins group before removing him or her from the organization.")
+			jsonErrorNonArrayReport(w, r, errMsg, http.StatusForbidden)
+			return
+		}
+		
 		assoc, _ := association.GetAssoc(chefUser, org)
 		if assoc != nil {
 			err = assoc.Delete()
