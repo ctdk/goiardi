@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
+	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
@@ -88,9 +89,12 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		for _, o := range orgs {
-			go acl.ResetACLs(o)
-		}
+		go func(orgs []*organization.Organization, chefUser *user.User){
+			for _, o := range orgs {
+				group.ClearActor(o, chefUser)
+				acl.ResetACLs(o)
+			}
+		}(orgs, chefUser)
 
 		/* Log the delete event *before* deleting the user, in
 		 * case the user is deleting itself. */

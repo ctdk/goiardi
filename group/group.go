@@ -317,6 +317,19 @@ func AllGroups(org *organization.Organization) []*Group {
 	return groups
 }
 
+func ClearActor(org *organization.Organization, act actor.Actor) {
+	if config.UsingDB() {
+
+	}
+	gs := AllGroups(org)
+	for _, g := range gs {
+		e := g.DelActor(act) // don't care if it's not available
+		if e != nil {
+			log.Printf("error deleting actor for %s: %s", act.GetName(), e.Error())
+		}
+	}
+}
+
 func (g *Group) GetName() string {
 	return g.Name
 }

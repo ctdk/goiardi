@@ -122,6 +122,7 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 		ederr := g.Edit(gData["actors"])
 		if ederr != nil {
 			jsonErrorReport(w, r, ederr.Error(), statChk(ederr.Status()))
+			return
 		}
 	default:
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
