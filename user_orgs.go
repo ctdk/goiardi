@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
+	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
@@ -137,6 +138,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
+			go group.ClearActor(org, chefUser)
 			go acl.ResetACLs(org)
 		} else {
 			key := util.JoinStr(userName, "-", org.Name)

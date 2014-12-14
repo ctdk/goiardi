@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"sync"
+	"log"
 )
 
 var DefaultGroups = [4]string{"admins", "billing-admins", "clients", "users"}
@@ -327,6 +328,7 @@ func ClearActor(org *organization.Organization, act actor.Actor) {
 		if e != nil {
 			log.Printf("error deleting actor for %s: %s", act.GetName(), e.Error())
 		}
+		g.Save()
 	}
 }
 
