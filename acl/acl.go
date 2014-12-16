@@ -177,17 +177,6 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 		}
 	case "groups":
 		switch subkind {
-		case "admins", "clients", "users":
-			for _, perm := range DefaultACLs {
-				ggerr := addGroup(org, acl.ACLitems[perm], "admins")
-				if ggerr != nil {
-					return nil, ggerr
-				}
-				ggerr = acl.addActor(perm, defUser)
-				if ggerr != nil {
-					return nil, ggerr
-				}
-			}
 		case "billing-admins":
 			addGroup(org, acl.ACLitems["read"], "billing-admins")
 			addGroup(org, acl.ACLitems["update"], "billing-admins")
@@ -198,7 +187,16 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 				}
 			}
 		default:
-			acl.ACLitems = nil
+			for _, perm := range DefaultACLs {
+				ggerr := addGroup(org, acl.ACLitems[perm], "admins")
+				if ggerr != nil {
+					return nil, ggerr
+				}
+				ggerr = acl.addActor(perm, defUser)
+				if ggerr != nil {
+					return nil, ggerr
+				}
+			}
 		}
 	default:
 		e := util.Errorf("Ok got to default with kind %s, subkind %s", kind, subkind)
