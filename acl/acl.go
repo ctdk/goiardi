@@ -88,6 +88,8 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 				return nil, ggerr
 			}
 		}
+		// TODO: change this addGroup to use the acl.addGroup method, &
+		// prefetch the groups to add
 		switch subkind {
 		case "$$root$$", "containers", "groups":
 			addGroup(org, acl.ACLitems["create"], "admins")
@@ -186,15 +188,32 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 					return nil, ggerr
 				}
 			}
-		default:
+		case "admins", "clients", "users":
+			admins, _ := group.Get(org, "admins")
 			for _, perm := range DefaultACLs {
-				ggerr := addGroup(org, acl.ACLitems[perm], "admins")
+				ggerr := acl.addGroup(perm, admins)
 				if ggerr != nil {
 					return nil, ggerr
 				}
 				ggerr = acl.addActor(perm, defUser)
 				if ggerr != nil {
 					return nil, ggerr
+				}
+			}
+		default:
+			admins, _ := group.Get(org, "admins")
+			addGroup(org, acl.ACLitems["read"], "users")
+			for _, perm := range DefaultACLs {
+				ggerr := acl.addGroup(perm, admins)
+				if ggerr != nil {
+					return nil, ggerr
+				}
+				ggerr = acl.addActor(perm, defUser)
+				if ggerr != nil {
+					return nil, ggerr
+				}
+				for _, u := range admins.Actors {
+					acl.addActor(perm, u)
 				}
 			}
 		}
