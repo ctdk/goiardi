@@ -10,7 +10,7 @@ Installation
 
 3. Download goairdi and its dependencies
 
-    go get -t github.com/ctdk/goiardi
+    go get -t -u github.com/ctdk/goiardi
 
 4. Run tests, if desired. Several goiardi subdirectories have go tests, and chef-pedant can and should be used for testing goiardi as well.
 

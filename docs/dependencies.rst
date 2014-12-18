@@ -3,7 +3,7 @@
 Dependencies
 ============
 
-Goiardi currently has nine dependencies: go-flags, go-cache, go-trie, toml, the mysql driver from go-sql-driver, the postgres driver, logger, go-uuid, and serf.
+Goiardi currently has ten dependencies: go-flags, go-cache, go-trie, toml, the mysql driver from go-sql-driver, the postgres driver, logger, go-uuid, serf, and msgp.
 
 To install them, run:
 
@@ -18,6 +18,7 @@ To install them, run:
     go get github.com/ctdk/goas/v2/logger
     go get github.com/codeskyblue/go-uuid
     go get github.com/hashicorp/serf/client
+    go get github.com/philhofer/msgp/msgp
 
 from your ``$GOROOT``, or just use the ``-t`` flag when you go get goiardi.
 
