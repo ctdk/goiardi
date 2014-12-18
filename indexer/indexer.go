@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"github.com/ctdk/go-trie/gtrie"
 	"github.com/ctdk/goas/v2/logger"
+	"github.com/philhofer/msgp/msgp"
 	"io/ioutil"
 	"os"
 	"path"
@@ -58,8 +59,8 @@ type IdxCollection struct {
 // IdxDoc is the indexed documents that are actually searched.
 type IdxDoc struct {
 	m       sync.RWMutex
-	trie    *gtrie.Node
-	docText string
+	trie    *bytes.Buffer
+	docText *bytes.Buffer
 }
 
 /* Index methods */
@@ -280,8 +281,15 @@ func (idoc *IdxDoc) update(object Indexable) {
 	if err != nil {
 		logger.Errorf(err.Error())
 	} else {
-		idoc.trie = trie
-		idoc.docText = flatText
+		var err error
+		idoc.trie, err = compressTrie(trie)
+		if err != nil {
+			panic(err)
+		}
+		idoc.docText, err = compressText(flatText)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -296,7 +304,10 @@ func (idoc *IdxDoc) Examine(term string) (bool, error) {
 		m, err := idoc.regexSearch(term)
 		return m, err
 	}
-	m := idoc.exactSearch(term)
+	m, err := idoc.exactSearch(term)
+	if err != nil {
+		return false, err
+	}
 	return m, nil
 }
 
@@ -315,7 +326,11 @@ func (idoc *IdxDoc) TextSearch(term string) (bool, error) {
 	}
 	idoc.m.RLock()
 	defer idoc.m.RUnlock()
-	m := reComp.MatchString(idoc.docText)
+	docText, err := decompressText(idoc.docText)
+	if err != nil {
+		return false, err
+	}
+	m := reComp.MatchString(docText)
 	return m, nil
 }
 
@@ -340,7 +355,11 @@ func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusiv
 	idoc.m.RLock()
 	defer idoc.m.RUnlock()
 	key := fmt.Sprintf("%s:", field)
-	if n, _ := idoc.trie.HasPrefix(key); n != nil {
+	trie, err := decompressTrie(idoc.trie)
+	if err != nil {
+		return false, err
+	}
+	if n, _ := trie.HasPrefix(key); n != nil {
 		kids := n.ChildKeys()
 		for _, child := range kids {
 			if inclusive {
@@ -377,8 +396,12 @@ func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusiv
 	return false, nil
 }
 
-func (idoc *IdxDoc) exactSearch(term string) bool {
-	return idoc.trie.Accepts(term)
+func (idoc *IdxDoc) exactSearch(term string) (bool, error) {
+	trie, err := decompressTrie(idoc.trie)
+	if err != nil {
+		return false, err
+	}
+	return trie.Accepts(term), nil
 }
 
 func (idoc *IdxDoc) regexSearch(reTerm string) (bool, error) {
@@ -395,7 +418,11 @@ func (idoc *IdxDoc) regexSearch(reTerm string) (bool, error) {
 	}
 	/* What would be better would be to fetch all of the parts of the key
 	 * before the regexp part starts. Hmmm. */
-	if n, _ := idoc.trie.HasPrefix(key); n != nil {
+	trie, err := decompressTrie(idoc.trie)
+	if err != nil {
+		return false, err
+	}
+	if n, _ := trie.HasPrefix(key); n != nil {
 		kids := n.ChildKeys()
 		for _, c := range kids {
 			if reComp.MatchString(c) {
@@ -597,4 +624,57 @@ func ReIndex(objects []Indexable) error {
 	// We really ought to be able to return from an error, but at the moment
 	// there aren't any ways it does so in the index save bits.
 	return nil
+}
+
+func compressTrie(t *gtrie.Node) (*bytes.Buffer, error) {
+	b := new(bytes.Buffer)
+	z := zlib.NewWriter(b)
+	err := msgp.Encode(z, t)
+	z.Close()
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func decompressTrie(b *bytes.Buffer) (*gtrie.Node, error) {
+	logger.Debugf("Pointer of buffer is %p, Length of buffer is: %d", b, b.Len())
+	z, err := zlib.NewReader(b)
+	if err != nil {
+		return nil, err
+	}
+	t := new(gtrie.Node)
+	err = msgp.Decode(z, t)
+	err2 := z.Close()
+	if err != nil {
+		return nil, err
+	}
+	if err2 != nil {
+		return nil, err2
+	}
+	return t, nil
+}
+
+func compressText(t string) (*bytes.Buffer, error) {
+	b := new(bytes.Buffer)
+	z := zlib.NewWriter(b)
+	_, err := z.Write([]byte(t))
+	z.Close()
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func decompressText(b *bytes.Buffer) (string, error) {
+	z, err := zlib.NewReader(b)
+	if err != nil {
+		return "", err
+	}
+	t, err := ioutil.ReadAll(z)
+	z.Close()
+	if err != nil {
+		return "", err
+	}
+	return string(t), nil
 }
