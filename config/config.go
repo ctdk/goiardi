@@ -381,6 +381,14 @@ func ParseConfigOptions() error {
 	}
 
 	Config.Ipaddress = opts.Ipaddress
+	if Config.Ipaddress != "" {
+		ip := net.ParseIP(Config.Ipaddress)
+		if ip == nil {
+			logger.Criticalf("IP address '%s' is not valid", Config.Ipaddress)
+			os.Exit(1)
+		}
+	}
+
 	if opts.Port != 0 {
 		Config.Port = opts.Port
 	}
