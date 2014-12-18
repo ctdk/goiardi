@@ -59,8 +59,8 @@ type IdxCollection struct {
 // IdxDoc is the indexed documents that are actually searched.
 type IdxDoc struct {
 	m       sync.RWMutex
-	trie    *bytes.Buffer
-	docText *bytes.Buffer
+	trie    []byte
+	docText []byte
 }
 
 /* Index methods */
@@ -626,7 +626,7 @@ func ReIndex(objects []Indexable) error {
 	return nil
 }
 
-func compressTrie(t *gtrie.Node) (*bytes.Buffer, error) {
+func compressTrie(t *gtrie.Node) ([]byte, error) {
 	b := new(bytes.Buffer)
 	z := zlib.NewWriter(b)
 	err := msgp.Encode(z, t)
@@ -634,11 +634,11 @@ func compressTrie(t *gtrie.Node) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return b, nil
+	return b.Bytes(), nil
 }
 
-func decompressTrie(b *bytes.Buffer) (*gtrie.Node, error) {
-	logger.Debugf("Pointer of buffer is %p, Length of buffer is: %d", b, b.Len())
+func decompressTrie(buf []byte) (*gtrie.Node, error) {
+	b := bytes.NewBuffer(buf)
 	z, err := zlib.NewReader(b)
 	if err != nil {
 		return nil, err
@@ -655,7 +655,7 @@ func decompressTrie(b *bytes.Buffer) (*gtrie.Node, error) {
 	return t, nil
 }
 
-func compressText(t string) (*bytes.Buffer, error) {
+func compressText(t string) ([]byte, error) {
 	b := new(bytes.Buffer)
 	z := zlib.NewWriter(b)
 	_, err := z.Write([]byte(t))
@@ -663,10 +663,11 @@ func compressText(t string) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return b, nil
+	return b.Bytes(), nil
 }
 
-func decompressText(b *bytes.Buffer) (string, error) {
+func decompressText(buf []byte) (string, error) {
+	b := bytes.NewBuffer(buf)
 	z, err := zlib.NewReader(b)
 	if err != nil {
 		return "", err
