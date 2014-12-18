@@ -75,12 +75,10 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		paramsRows = 1000
 	}
-	// TODO: get a default sort in, once sorting is sorted out.
+	sortOrder = "id ASC"
 	if s, found := r.Form["sort"]; found {
 		if len(s) > 0 {
 			sortOrder = s[0]
-		} else {
-			sortOrder = "id ASC"
 		}
 	}
 	_ = sortOrder
@@ -158,6 +156,9 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 					res[i] = util.MapifyObject(r)
 				}
 			}
+
+			// and at long last, sort
+			
 
 			/* If we're doing partial search, tease out the
 			 * fields we want. */
