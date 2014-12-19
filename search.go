@@ -32,9 +32,47 @@ import (
 	"github.com/ctdk/goiardi/search"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
+	"strings"
 )
+
+type results struct {
+	res []map[string]interface{}
+	sortKey string
+}
+
+func (r results) Len() int { return len(r.res) }
+func (r results) Swap(i, j int) { r.res[i], r.res[j] = r.res[j], r.res[i] }
+func (r results) Less(i, j int) bool {
+	ibase := r.res[i][r.sortKey]
+	jbase := r.res[j][r.sortKey]
+	ival := reflect.ValueOf(ibase)
+	jval := reflect.ValueOf(jbase)
+	if (!ival.IsValid() && !jval.IsValid()) || ival.IsValid() && !jval.IsValid() {
+		return true
+	} else if !ival.IsValid() && jval.IsValid() {
+		return false
+	}
+	// don't try and compare different types for now. If this ever becomes
+	// an issue in practice, though, it should be revisited
+	if ival.Type() == jval.Type() {
+		switch ibase.(type) {
+			case int, int8, int32, int64:
+				return ival.Int() < jval.Int()
+			case uint, uint8, uint32, uint64:
+				return ival.Uint() < jval.Uint()
+			case float32, float64:
+				return ival.Float() < jval.Float()
+			case string:
+				return ival.String() < jval.String()
+		}
+	}
+	
+	return false
+}
 
 func searchHandler(w http.ResponseWriter, r *http.Request) {
 	/* ... and we need search to run the environment tests, so here we
@@ -78,10 +116,13 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	sortOrder = "id ASC"
 	if s, found := r.Form["sort"]; found {
 		if len(s) > 0 {
-			sortOrder = s[0]
+			if s[0] != "" {
+				sortOrder = s[0]
+			}
+		} else {
+			sortOrder = "id ASC"
 		}
 	}
-	_ = sortOrder
 	if st, found := r.Form["start"]; found {
 		if len(st) > 0 {
 			start, _ = strconv.Atoi(st[0])
@@ -157,9 +198,6 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			// and at long last, sort
-			
-
 			/* If we're doing partial search, tease out the
 			 * fields we want. */
 			if r.Method == "POST" {
@@ -182,6 +220,26 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 					res[x] = tmpRes
 				}
 			}
+
+			// and at long last, sort
+			ss := strings.Split(sortOrder, " ")
+			sortKey := ss[0]
+			if sortKey == "id" {
+				sortKey = "name"
+			}
+			var ordering string
+			if len(ss) > 1 {
+				ordering = strings.ToLower(ss[1])
+			} else {
+				ordering = "asc"
+			}
+			sortResults := results{ res, sortKey }
+			if ordering == "desc" {
+				sort.Sort(sort.Reverse(sortResults))
+			} else {
+				sort.Sort(sortResults)
+			}
+			res = sortResults.res
 
 			end := start + paramsRows
 			if end > len(res) {

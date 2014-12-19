@@ -63,6 +63,11 @@ type IdxDoc struct {
 	docText []byte
 }
 
+type searchRes struct {
+	key string
+	doc *IdxDoc
+}
+
 /* Index methods */
 
 // Create a new index collection.
@@ -207,13 +212,36 @@ func (ic *IdxCollection) searchCollection(term string, notop bool) (map[string]*
 	results := make(map[string]*IdxDoc)
 	ic.m.RLock()
 	defer ic.m.RUnlock()
+	l := len(ic.docs)
+	errCh := make(chan error, l)
+	resCh := make(chan *searchRes, l)
 	for k, v := range ic.docs {
-		m, err := v.Examine(term)
-		if err != nil {
-			return nil, err
+		go func(k string, v *IdxDoc) {
+			m, err := v.Examine(term)
+			if err != nil {
+				errCh <- err
+				resCh <- nil
+			} else {
+				errCh <- nil
+				if (m && !notop) || (!m && notop) {
+					r := &searchRes{ k, v }
+					resCh <- r
+				} else {
+					resCh <- nil
+				}
+			}
+		}(k, v)
+	}
+	for i := 0; i < l; i++ {
+		e := <- errCh
+		if e != nil {
+			return nil, e
 		}
-		if (m && !notop) || (!m && notop) {
-			results[k] = v
+	}
+	for i := 0; i < l; i++ {
+		r := <- resCh
+		if r != nil {
+			results[r.key] = r.doc
 		}
 	}
 	rsafe := safeSearchResults(results)
@@ -224,13 +252,38 @@ func (ic *IdxCollection) searchTextCollection(term string, notop bool) (map[stri
 	results := make(map[string]*IdxDoc)
 	ic.m.RLock()
 	defer ic.m.RUnlock()
+	l := len(ic.docs)
+	errCh := make(chan error, l)
+	resCh := make(chan *searchRes, l)
 	for k, v := range ic.docs {
-		m, err := v.TextSearch(term)
-		if err != nil {
-			return nil, err
+		go func(k string, v *IdxDoc) {
+			m, err := v.TextSearch(term)
+			if err != nil {
+				errCh <- err
+				resCh <- nil
+			} else {
+				errCh <- nil
+				if (m && !notop) || (!m && notop) {
+					r := &searchRes{ k, v }
+					logger.Debugf("Adding result %s to channel", k)
+					resCh <- r
+				} else {
+					resCh <- nil
+				}
+			}
+		}(k, v)
+	}
+	for i := 0; i < l; i++ {
+		e := <- errCh
+		if e != nil {
+			return nil, e
 		}
-		if (m && !notop) || (!m && notop) {
-			results[k] = v
+	}
+	for i := 0; i < l; i++ {
+		r := <- resCh
+		if r != nil {
+			logger.Debugf("adding result")
+			results[r.key] = r.doc
 		}
 	}
 	rsafe := safeSearchResults(results)
@@ -241,14 +294,38 @@ func (ic *IdxCollection) searchRange(field string, start string, end string, inc
 	results := make(map[string]*IdxDoc)
 	ic.m.RLock()
 	defer ic.m.RUnlock()
-
+	l := len(ic.docs)
+	errCh := make(chan error, l)
+	resCh := make(chan *searchRes, l)
 	for k, v := range ic.docs {
-		m, err := v.RangeSearch(field, start, end, inclusive)
-		if err != nil {
-			return nil, err
+		go func(k string, v *IdxDoc) {
+			m, err := v.RangeSearch(field, start, end, inclusive)
+			if err != nil {
+				errCh <- err
+				resCh <- nil
+			} else {
+				errCh <- nil
+				if m {
+					r := &searchRes{ k, v }
+					logger.Debugf("Adding result %s to channel", k)
+					resCh <- r
+				} else {
+					resCh <- nil
+				}
+			}
+		}(k, v)
+	}
+	for i := 0; i < l; i++ {
+		e := <- errCh
+		if e != nil {
+			return nil, e
 		}
-		if m {
-			results[k] = v
+	}
+	for i := 0; i < l; i++ {
+		r := <- resCh
+		if r != nil {
+			logger.Debugf("adding result")
+			results[r.key] = r.doc
 		}
 	}
 	rsafe := safeSearchResults(results)
