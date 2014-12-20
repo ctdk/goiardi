@@ -78,7 +78,7 @@ type Conf struct {
 	DbPoolSize        int    `toml:"db-pool-size"`
 	MaxConn           int    `toml:"max-connections"`
 	UseSerf           bool   `toml:"use-serf"`
-	SerfEventAnnounce bool 	 `toml:"serf-event-announce"`
+	SerfEventAnnounce bool   `toml:"serf-event-announce"`
 	SerfAddr          string `toml:"serf-addr"`
 	UseShovey         bool   `toml:"use-shovey"`
 	SignPrivKey       string `toml:"sign-priv-key"`

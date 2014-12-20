@@ -114,7 +114,7 @@ func (n *Node) AllStatuses() ([]*NodeStatus, error) {
 
 // AllNodeStatuses returns all node status reports on the server, from all
 // nodes.
-func AllNodeStatuses() ([]*NodeStatus) {
+func AllNodeStatuses() []*NodeStatus {
 	var allStatus []*NodeStatus
 	nodes := AllNodes()
 	for _, n := range nodes {
@@ -125,7 +125,7 @@ func AllNodeStatuses() ([]*NodeStatus) {
 		}
 		allStatus = append(allStatus, ns...)
 	}
-	
+
 	return allStatus
 }
 

@@ -224,7 +224,7 @@ func (ic *IdxCollection) searchCollection(term string, notop bool) (map[string]*
 			} else {
 				errCh <- nil
 				if (m && !notop) || (!m && notop) {
-					r := &searchRes{ k, v }
+					r := &searchRes{k, v}
 					resCh <- r
 				} else {
 					resCh <- nil
@@ -233,13 +233,13 @@ func (ic *IdxCollection) searchCollection(term string, notop bool) (map[string]*
 		}(k, v)
 	}
 	for i := 0; i < l; i++ {
-		e := <- errCh
+		e := <-errCh
 		if e != nil {
 			return nil, e
 		}
 	}
 	for i := 0; i < l; i++ {
-		r := <- resCh
+		r := <-resCh
 		if r != nil {
 			results[r.key] = r.doc
 		}
@@ -264,7 +264,7 @@ func (ic *IdxCollection) searchTextCollection(term string, notop bool) (map[stri
 			} else {
 				errCh <- nil
 				if (m && !notop) || (!m && notop) {
-					r := &searchRes{ k, v }
+					r := &searchRes{k, v}
 					logger.Debugf("Adding result %s to channel", k)
 					resCh <- r
 				} else {
@@ -274,13 +274,13 @@ func (ic *IdxCollection) searchTextCollection(term string, notop bool) (map[stri
 		}(k, v)
 	}
 	for i := 0; i < l; i++ {
-		e := <- errCh
+		e := <-errCh
 		if e != nil {
 			return nil, e
 		}
 	}
 	for i := 0; i < l; i++ {
-		r := <- resCh
+		r := <-resCh
 		if r != nil {
 			logger.Debugf("adding result")
 			results[r.key] = r.doc
@@ -306,7 +306,7 @@ func (ic *IdxCollection) searchRange(field string, start string, end string, inc
 			} else {
 				errCh <- nil
 				if m {
-					r := &searchRes{ k, v }
+					r := &searchRes{k, v}
 					logger.Debugf("Adding result %s to channel", k)
 					resCh <- r
 				} else {
@@ -316,13 +316,13 @@ func (ic *IdxCollection) searchRange(field string, start string, end string, inc
 		}(k, v)
 	}
 	for i := 0; i < l; i++ {
-		e := <- errCh
+		e := <-errCh
 		if e != nil {
 			return nil, e
 		}
 	}
 	for i := 0; i < l; i++ {
-		r := <- resCh
+		r := <-resCh
 		if r != nil {
 			logger.Debugf("adding result")
 			results[r.key] = r.doc

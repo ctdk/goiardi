@@ -184,9 +184,9 @@ func main() {
 
 	listenAddr := config.ListenAddr()
 	var err error
-	srv := &http.Server{ Addr: listenAddr, Handler: &interceptHandler{} }
+	srv := &http.Server{Addr: listenAddr, Handler: &interceptHandler{}}
 	if config.Config.UseSSL {
-		srv.TLSConfig = &tls.Config{ MinVersion: tls.VersionTLS10 }
+		srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS10}
 		err = srv.ListenAndServeTLS(config.Config.SSLCert, config.Config.SSLKey)
 	} else {
 		err = srv.ListenAndServe()

@@ -544,7 +544,7 @@ func GetList() []string {
 }
 
 // AllShoveys returns all shovey objects on the server
-func AllShoveys() ([]*Shovey) {
+func AllShoveys() []*Shovey {
 	var shoveys []*Shovey
 	if config.UsingDB() {
 		return allShoveysSQL()
@@ -562,7 +562,7 @@ func AllShoveys() ([]*Shovey) {
 	return shoveys
 }
 
-func AllShoveyRuns() ([]*ShoveyRun) {
+func AllShoveyRuns() []*ShoveyRun {
 	var shoveyRuns []*ShoveyRun
 	shoveys := AllShoveys()
 	for _, s := range shoveys {
@@ -576,10 +576,10 @@ func AllShoveyRuns() ([]*ShoveyRun) {
 	return shoveyRuns
 }
 
-func AllShoveyRunStreams() ([]*ShoveyRunStream) {
+func AllShoveyRunStreams() []*ShoveyRunStream {
 	var streams []*ShoveyRunStream
 	shoveyRuns := AllShoveyRuns()
-	outputTypes := []string{ "stdout", "stderr" }
+	outputTypes := []string{"stdout", "stderr"}
 	for _, sr := range shoveyRuns {
 		for _, t := range outputTypes {
 			srs, err := sr.GetStreamOutput(t, 0)
@@ -784,7 +784,7 @@ func ImportShovey(shoveyJSON map[string]interface{}) error {
 	status := shoveyJSON["status"].(string)
 	timeout := time.Duration(shoveyJSON["timeout"].(float64))
 	quorum := shoveyJSON["quorum"].(string)
-	s := &Shovey{ RunID: runID, NodeNames: nodeNames, Command: command, CreatedAt: createdAt, UpdatedAt: updatedAt, Status: status, Timeout: timeout, Quorum: quorum }
+	s := &Shovey{RunID: runID, NodeNames: nodeNames, Command: command, CreatedAt: createdAt, UpdatedAt: updatedAt, Status: status, Timeout: timeout, Quorum: quorum}
 	return s.importSave()
 }
 
@@ -808,12 +808,12 @@ func ImportShoveyRun(sRunJSON map[string]interface{}) error {
 	}
 	errMsg := sRunJSON["error"].(string)
 	exitStatus := uint8(sRunJSON["exit_status"].(float64))
-	sr := &ShoveyRun{ ShoveyUUID: shoveyUUID, NodeName: nodeName, Status: status, AckTime: ackTime, EndTime: endTime, Error: errMsg, ExitStatus: exitStatus }
+	sr := &ShoveyRun{ShoveyUUID: shoveyUUID, NodeName: nodeName, Status: status, AckTime: ackTime, EndTime: endTime, Error: errMsg, ExitStatus: exitStatus}
 	// This can use the normal save function
 	return sr.save()
 }
 
-// ImportShoveyRunStream is used to import shovey jobs from the exported JSON 
+// ImportShoveyRunStream is used to import shovey jobs from the exported JSON
 // dump.
 func ImportShoveyRunStream(srStreamJSON map[string]interface{}) error {
 	shoveyUUID := srStreamJSON["ShoveyUUID"].(string)
@@ -827,7 +827,7 @@ func ImportShoveyRunStream(srStreamJSON map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-	srs := &ShoveyRunStream{ ShoveyUUID: shoveyUUID, NodeName: nodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: createdAt }
+	srs := &ShoveyRunStream{ShoveyUUID: shoveyUUID, NodeName: nodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: createdAt}
 	return srs.importSave()
 }
 

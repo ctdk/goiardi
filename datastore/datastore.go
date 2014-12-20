@@ -302,7 +302,7 @@ func (ds *DataStore) LatestNodeStatus(nodeName string) (interface{}, error) {
 	return n, nil
 }
 
-// DeleteNodeStatus deletes all status reports for a node from the in-memory 
+// DeleteNodeStatus deletes all status reports for a node from the in-memory
 // data store.
 func (ds *DataStore) DeleteNodeStatus(nodeName string) error {
 	ds.m.Lock()

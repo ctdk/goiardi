@@ -40,11 +40,11 @@ import (
 )
 
 type results struct {
-	res []map[string]interface{}
+	res     []map[string]interface{}
 	sortKey string
 }
 
-func (r results) Len() int { return len(r.res) }
+func (r results) Len() int      { return len(r.res) }
 func (r results) Swap(i, j int) { r.res[i], r.res[j] = r.res[j], r.res[i] }
 func (r results) Less(i, j int) bool {
 	ibase := r.res[i][r.sortKey]
@@ -60,17 +60,17 @@ func (r results) Less(i, j int) bool {
 	// an issue in practice, though, it should be revisited
 	if ival.Type() == jval.Type() {
 		switch ibase.(type) {
-			case int, int8, int32, int64:
-				return ival.Int() < jval.Int()
-			case uint, uint8, uint32, uint64:
-				return ival.Uint() < jval.Uint()
-			case float32, float64:
-				return ival.Float() < jval.Float()
-			case string:
-				return ival.String() < jval.String()
+		case int, int8, int32, int64:
+			return ival.Int() < jval.Int()
+		case uint, uint8, uint32, uint64:
+			return ival.Uint() < jval.Uint()
+		case float32, float64:
+			return ival.Float() < jval.Float()
+		case string:
+			return ival.String() < jval.String()
 		}
 	}
-	
+
 	return false
 }
 
@@ -233,7 +233,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				ordering = "asc"
 			}
-			sortResults := results{ res, sortKey }
+			sortResults := results{res, sortKey}
 			if ordering == "desc" {
 				sort.Sort(sort.Reverse(sortResults))
 			} else {
