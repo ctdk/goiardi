@@ -32,29 +32,11 @@ import (
 // various acl handlers
 
 func orgACLHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
-
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
-	if orgerr != nil {
-		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
-		return
-	}
-
 	kind := "containers"
 	subkind := "$$root$$"
-	a, rerr := acl.Get(org, kind, subkind)
-	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
-		return
-	}
-	response := a.ToJSON()
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&response); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-	}
+	baseACLPermHandler(w, r, orgName, kind, subkind)
 }
 
 func orgACLEditHandler(w http.ResponseWriter, r *http.Request) {
@@ -99,28 +81,12 @@ func orgACLEditHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func containerACLHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
-	if orgerr != nil {
-		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
-		return
-	}
 	kind := "containers"
 	subkind := vars["name"]
-	a, rerr := acl.Get(org, kind, subkind)
-	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
-		return
-	}
-	response := a.ToJSON()
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&response); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-	}
+	baseACLHandler(w, r, orgName, kind, subkind)
 }
 
 func clientACLHandler(w http.ResponseWriter, r *http.Request) {
@@ -294,39 +260,17 @@ func cookbookACLPermHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func groupACLHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 
-	if r.Method != "GET" {
-		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
-	if orgerr != nil {
-		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
-		return
-	}
 	kind := "groups"
 	subkind := vars["group_name"]
-	a, rerr := acl.Get(org, kind, subkind)
-	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
-		return
-	}
-	response := a.ToJSON()
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&response); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-	}
+	baseACLHandler(w, r, orgName, kind, subkind)
 }
 
 func groupACLPermHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
-	// Seems to be a PUT only endpoint
 	if r.Method != "PUT" {
 		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -343,6 +287,43 @@ func groupACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, clerr.Error(), clerr.Status())
 		return
 	}
+	perm := vars["perm"]
+	
+	baseACLPermHandler(w, r, org, gb, perm)
+}
+
+func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind string, subkind string) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != "GET" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	a, rerr := acl.Get(org, kind, subkind)
+	if rerr != nil {
+		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		return
+	}
+	response := a.ToJSON()
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&response); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func baseACLPermHandler(w http.ResponseWriter, r *http.Request, org *organization.Organization, aclOwner acl.ACLOwner, perm string) {
+	a, rerr := acl.GetItemACL(org, aclOwner)
+	if rerr != nil {
+		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		return
+	}
 
 	aclData, jerr := parseObjJSON(r.Body)
 	if jerr != nil {
@@ -350,18 +331,12 @@ func groupACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	perm := vars["perm"]
-
-	a, rerr := acl.GetItemACL(org, gb)
-	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
-		return
-	}
 	ederr := a.EditFromJSON(perm, aclData)
 	if ederr != nil {
 		jsonErrorReport(w, r, ederr.Error(), ederr.Status())
 		return
 	}
+
 	p, ok := a.ACLitems[perm]
 	if !ok {
 		jsonErrorReport(w, r, "perm nonexistent", http.StatusBadRequest)
