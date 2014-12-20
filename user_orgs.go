@@ -135,7 +135,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorNonArrayReport(w, r, errMsg, http.StatusForbidden)
 			return
 		}
-		
+
 		assoc, _ := association.GetAssoc(chefUser, org)
 		if assoc != nil {
 			err = assoc.Delete()

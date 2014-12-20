@@ -89,7 +89,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		go func(orgs []*organization.Organization, chefUser *user.User){
+		go func(orgs []*organization.Organization, chefUser *user.User) {
 			for _, o := range orgs {
 				group.ClearActor(o, chefUser)
 				acl.ResetACLs(o)

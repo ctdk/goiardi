@@ -24,9 +24,9 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
+	"log"
 	"net/http"
 	"sync"
-	"log"
 )
 
 var DefaultGroups = [4]string{"admins", "billing-admins", "clients", "users"}
@@ -259,7 +259,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 			return err
 		}
 	case nil:
-		;
+
 	default:
 		err := util.Errorf("invalid actors for group")
 		return err
