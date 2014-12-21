@@ -36,7 +36,11 @@ func orgACLHandler(w http.ResponseWriter, r *http.Request) {
 	orgName := vars["org"]
 	kind := "containers"
 	subkind := "$$root$$"
-	baseACLPermHandler(w, r, orgName, kind, subkind)
+	baseACLHandler(w, r, orgName, kind, subkind)
+}
+
+type responder interface {
+	ToJSON() map[string]interface{}
 }
 
 func orgACLEditHandler(w http.ResponseWriter, r *http.Request) {
@@ -109,17 +113,7 @@ func clientACLHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, clerr.Error(), clerr.Status())
 		return
 	}
-	a, rerr := acl.GetItemACL(org, cl)
-	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
-		return
-	}
-	response := a.ToJSON()
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&response); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-	}
+	baseItemACLHandler(w, r, org, cl)
 }
 
 func clientACLPermHandler(w http.ResponseWriter, r *http.Request) {
@@ -142,36 +136,9 @@ func clientACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, clerr.Error(), clerr.Status())
 		return
 	}
-	a, rerr := acl.GetItemACL(org, cb)
-	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
-		return
-	}
-
-	aclData, jerr := parseObjJSON(r.Body)
-	if jerr != nil {
-		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-		return
-	}
 	perm := vars["perm"]
-
-	ederr := a.EditFromJSON(perm, aclData)
-	if ederr != nil {
-		jsonErrorReport(w, r, ederr.Error(), ederr.Status())
-		return
-	}
-
-	p, ok := a.ACLitems[perm]
-	if !ok {
-		jsonErrorReport(w, r, "perm nonexistent", http.StatusBadRequest)
-		return
-	}
-	response := p.ToJSON()
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&response); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-	}
+	
+	baseACLPermHandler(w, r, org, cb, perm)
 }
 
 func cookbookACLHandler(w http.ResponseWriter, r *http.Request) {
@@ -318,6 +285,15 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 	}
 }
 
+func baseItemACLHandler(w http.ResponseWriter, r *http.Request, org *organization.Organization, aclOwner acl.ACLOwner) {
+	a, rerr := acl.GetItemACL(org, aclOwner)
+	if rerr != nil {
+		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		return
+	}
+	sendResponse(w, r, a)
+}
+
 func baseACLPermHandler(w http.ResponseWriter, r *http.Request, org *organization.Organization, aclOwner acl.ACLOwner, perm string) {
 	a, rerr := acl.GetItemACL(org, aclOwner)
 	if rerr != nil {
@@ -342,7 +318,11 @@ func baseACLPermHandler(w http.ResponseWriter, r *http.Request, org *organizatio
 		jsonErrorReport(w, r, "perm nonexistent", http.StatusBadRequest)
 		return
 	}
-	response := p.ToJSON()
+	sendResponse(w, r, p)
+}
+
+func sendResponse(w http.ResponseWriter, r *http.Request, resp responder) {
+	response := resp.ToJSON()
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
