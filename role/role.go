@@ -22,7 +22,6 @@ package role
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
@@ -188,7 +187,7 @@ ValidElem:
 }
 
 // Get a role.
-func Get(org *organization.Organization, roleName string) (*Role, error) {
+func Get(org *organization.Organization, roleName string) (*Role, util.Gerror) {
 	var role *Role
 	var found bool
 	if config.UsingDB() {
@@ -198,7 +197,7 @@ func Get(org *organization.Organization, roleName string) (*Role, error) {
 			if err == sql.ErrNoRows {
 				found = false
 			} else {
-				return nil, err
+				return nil, util.CastErr(err)
 			}
 		} else {
 			found = true
@@ -213,21 +212,22 @@ func Get(org *organization.Organization, roleName string) (*Role, error) {
 		}
 	}
 	if !found {
-		err := fmt.Errorf("Cannot load role %s", roleName)
+		err := util.Errorf("Cannot load role %s", roleName)
+		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
 	return role, nil
 }
 
 // Save the role.
-func (r *Role) Save() error {
+func (r *Role) Save() util.Gerror {
 	if config.Config.UseMySQL {
 		if err := r.saveMySQL(); err != nil {
-			return nil
+			return util.CastErr(err)
 		}
 	} else if config.Config.UsePostgreSQL {
 		if err := r.savePostgreSQL(); err != nil {
-			return nil
+			return util.CastErr(err)
 		}
 	} else {
 		ds := datastore.New()
@@ -238,10 +238,10 @@ func (r *Role) Save() error {
 }
 
 // Delete a role.
-func (r *Role) Delete() error {
+func (r *Role) Delete() util.Gerror {
 	if config.UsingDB() {
 		if err := r.deleteSQL(); err != nil {
-			return err
+			return util.CastErr(err)
 		}
 	} else {
 		ds := datastore.New()

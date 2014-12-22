@@ -22,6 +22,9 @@ import (
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/group"
+	"github.com/ctdk/goiardi/environment"
+	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/role"
 	//"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/organization"
 	//"github.com/ctdk/goiardi/util"
@@ -220,6 +223,150 @@ func groupACLPermHandler(w http.ResponseWriter, r *http.Request) {
 	perm := vars["perm"]
 	
 	baseACLPermHandler(w, r, org, gb, perm)
+}
+
+func environmentACLHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	if r.Method != "GET" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	it, iterr := environment.Get(org, vars["name"])
+	if iterr != nil {
+		jsonErrorReport(w, r, iterr.Error(), iterr.Status())
+		return
+	}
+	baseItemACLHandler(w, r, org, it)
+}
+
+func environmentACLPermHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	if r.Method != "PUT" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	it, iterr := environment.Get(org, vars["name"])
+	if iterr != nil {
+		jsonErrorReport(w, r, iterr.Error(), iterr.Status())
+		return
+	}
+	perm := vars["perm"]
+	
+	baseACLPermHandler(w, r, org, it, perm)
+}
+
+func nodeACLHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	if r.Method != "GET" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	it, iterr := node.Get(org, vars["name"])
+	if iterr != nil {
+		jsonErrorReport(w, r, iterr.Error(), iterr.Status())
+		return
+	}
+	baseItemACLHandler(w, r, org, it)
+}
+
+func nodeACLPermHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	if r.Method != "PUT" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	it, iterr := node.Get(org, vars["name"])
+	if iterr != nil {
+		jsonErrorReport(w, r, iterr.Error(), iterr.Status())
+		return
+	}
+	perm := vars["perm"]
+	
+	baseACLPermHandler(w, r, org, it, perm)
+}
+
+func roleACLHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	if r.Method != "GET" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	it, iterr := role.Get(org, vars["name"])
+	if iterr != nil {
+		jsonErrorReport(w, r, iterr.Error(), iterr.Status())
+		return
+	}
+	baseItemACLHandler(w, r, org, it)
+}
+
+func roleACLPermHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	if r.Method != "PUT" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	it, iterr := role.Get(org, vars["name"])
+	if iterr != nil {
+		jsonErrorReport(w, r, iterr.Error(), iterr.Status())
+		return
+	}
+	perm := vars["perm"]
+	
+	baseACLPermHandler(w, r, org, it, perm)
 }
 
 func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind string, subkind string) {

@@ -204,7 +204,7 @@ func main() {
 	s.HandleFunc("/environments", environmentHandler)
 	s.HandleFunc("/environments/{name}", environmentHandler)
 	s.HandleFunc("/environments/{name}/_acl", environmentACLHandler)
-	s.HandleFunc("/environments/{name}/_acl/{perm}), environmentACLPermHandler)
+	s.HandleFunc("/environments/{name}/_acl/{perm}", environmentACLPermHandler)
 	es := s.PathPrefix("/environments/{name}/").Subrouter()
 	es.HandleFunc("/cookbooks", environmentHandler)
 	es.HandleFunc("/cookbooks/{op_name}", environmentHandler)

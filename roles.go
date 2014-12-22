@@ -87,8 +87,8 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			enc := json.NewEncoder(w)
-			if err = enc.Encode(&chefRole); err != nil {
-				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			if jerr := enc.Encode(&chefRole); jerr != nil {
+				jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
 				return
 			}
 			if r.Method == "DELETE" {
@@ -146,8 +146,8 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			enc := json.NewEncoder(w)
-			if err = enc.Encode(&chefRole); err != nil {
-				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			if jerr = enc.Encode(&chefRole); err != nil {
+				jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
 			}
 		default:
 			jsonErrorReport(w, r, "Unrecognized method!", http.StatusMethodNotAllowed)
@@ -184,8 +184,8 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				resp := make(map[string][]string, 1)
 				resp["run_list"] = runList
-				if err = enc.Encode(&resp); err != nil {
-					jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				if jerr := enc.Encode(&resp); jerr != nil {
+					jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 				}
 			} else {
 				roleEnvs := make([]string, len(chefRole.EnvRunLists)+1)
@@ -195,8 +195,8 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 					roleEnvs[i] = k
 					i++
 				}
-				if err = enc.Encode(&roleEnvs); err != nil {
-					jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+				if jerr := enc.Encode(&roleEnvs); jerr != nil {
+					jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 				}
 			}
 		default:
