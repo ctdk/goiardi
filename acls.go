@@ -292,3 +292,56 @@ func sendResponse(w http.ResponseWriter, r *http.Request, resp responder) {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }
+
+/*****************
+ * Skeleton ACL handler functions
+
+func _SKEL_ACLHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	if r.Method != "GET" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	it, iterr := _SKEL_.Get(org, vars["name"])
+	if iterr != nil {
+		jsonErrorReport(w, r, iterr.Error(), iterr.Status())
+		return
+	}
+	baseItemACLHandler(w, r, org, it)
+}
+
+func _SKEL_ACLPermHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	if r.Method != "PUT" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	it, iterr := _SKEL_.Get(org, vars["name"])
+	if iterr != nil {
+		jsonErrorReport(w, r, iterr.Error(), iterr.Status())
+		return
+	}
+	perm := vars["perm"]
+	
+	baseACLPermHandler(w, r, org, it, perm)
+}
+
+******************/
