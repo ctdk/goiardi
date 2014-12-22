@@ -131,14 +131,14 @@ func clientACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	cb, clerr := client.Get(org, vars["name"])
+	cl, clerr := client.Get(org, vars["name"])
 	if clerr != nil {
 		jsonErrorReport(w, r, clerr.Error(), clerr.Status())
 		return
 	}
 	perm := vars["perm"]
 	
-	baseACLPermHandler(w, r, org, cb, perm)
+	baseACLPermHandler(w, r, org, cl, perm)
 }
 
 func cookbookACLHandler(w http.ResponseWriter, r *http.Request) {
@@ -161,17 +161,7 @@ func cookbookACLHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, clerr.Error(), clerr.Status())
 		return
 	}
-	a, rerr := acl.GetItemACL(org, cb)
-	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
-		return
-	}
-	response := a.ToJSON()
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&response); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-	}
+	baseItemACLHandler(w, r, org, cb)
 }
 
 func cookbookACLPermHandler(w http.ResponseWriter, r *http.Request) {
@@ -194,36 +184,9 @@ func cookbookACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, clerr.Error(), clerr.Status())
 		return
 	}
-
-	aclData, jerr := parseObjJSON(r.Body)
-	if jerr != nil {
-		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-		return
-	}
-
 	perm := vars["perm"]
-
-	a, rerr := acl.GetItemACL(org, cb)
-	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
-		return
-	}
-	ederr := a.EditFromJSON(perm, aclData)
-	if ederr != nil {
-		jsonErrorReport(w, r, ederr.Error(), ederr.Status())
-		return
-	}
-	p, ok := a.ACLitems[perm]
-	if !ok {
-		jsonErrorReport(w, r, "perm nonexistent", http.StatusBadRequest)
-		return
-	}
-	response := p.ToJSON()
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&response); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-	}
+	
+	baseACLPermHandler(w, r, org, cb, perm)
 }
 
 func groupACLHandler(w http.ResponseWriter, r *http.Request) {
