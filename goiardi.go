@@ -200,6 +200,8 @@ func main() {
 	s.HandleFunc("/cookbooks/{name}/{version}", cookbookHandler)
 	s.HandleFunc("/data", dataHandler)
 	s.HandleFunc("/data/{name}", dataHandler)
+	s.HandleFunc("/data/{name}/_acl", dataACLHandler)
+	s.HandleFunc("/data/{name}/_acl/{perm}", dataACLPermHandler)
 	s.HandleFunc("/data/{name}/{item}", dataHandler)
 	s.HandleFunc("/environments", environmentHandler)
 	s.HandleFunc("/environments/{name}", environmentHandler)

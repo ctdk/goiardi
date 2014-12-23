@@ -21,6 +21,7 @@ import (
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"
+	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/node"
@@ -360,6 +361,54 @@ func roleACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	it, iterr := role.Get(org, vars["name"])
+	if iterr != nil {
+		jsonErrorReport(w, r, iterr.Error(), iterr.Status())
+		return
+	}
+	perm := vars["perm"]
+	
+	baseACLPermHandler(w, r, org, it, perm)
+}
+
+func dataACLHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	if r.Method != "GET" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	it, iterr := databag.Get(org, vars["name"])
+	if iterr != nil {
+		jsonErrorReport(w, r, iterr.Error(), iterr.Status())
+		return
+	}
+	baseItemACLHandler(w, r, org, it)
+}
+
+func dataACLPermHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	if r.Method != "PUT" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orgName := vars["org"]
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	it, iterr := databag.Get(org, vars["name"])
 	if iterr != nil {
 		jsonErrorReport(w, r, iterr.Error(), iterr.Status())
 		return
