@@ -193,6 +193,7 @@ func main() {
 	s.HandleFunc("/containers", containerListHandler)
 	s.HandleFunc("/containers/{name}", containerHandler)
 	s.HandleFunc("/containers/{name}/_acl", containerACLHandler)
+	s.HandleFunc("/containers/{name}/_acl/{perm}", containerACLPermHandler)
 	s.HandleFunc("/cookbooks", cookbookHandler)
 	s.HandleFunc("/cookbooks/{name}", cookbookHandler)
 	s.HandleFunc("/cookbooks/{name}/_acl", cookbookACLHandler)
