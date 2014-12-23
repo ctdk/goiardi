@@ -346,7 +346,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
 			return
 		}
-		userID = "chef-webui"
+		userID = "default-webui"
 	}
 	/* Only perform the authorization check if that's configured. Bomb with
 	 * an error if the check of the headers, timestamps, etc. fails. */

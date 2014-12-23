@@ -26,9 +26,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"io"
 	"io/ioutil"
@@ -52,11 +54,17 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 			return err
 		}
 	}
-	user, err := actor.GetReqUser(org, userID)
+	u, err := actor.GetReqUser(org, userID)
 	if err != nil {
 		gerr := util.Errorf("Failed to authenticate as '%s'. Ensure that your node_name and client key are correct.", userID)
 		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
+	}
+	if org != nil && u.IsUser() && !u.IsAdmin() {
+		_, aerr := association.GetAssoc(u.(*user.User), org)
+		if aerr != nil {
+			return aerr
+		}
 	}
 	contentHash := r.Header.Get("X-OPS-CONTENT-HASH")
 	if contentHash == "" {
@@ -126,9 +134,9 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 	headToCheck := assembleHeaderToCheck(r, chkHash, apiVer)
 
 	if apiVer == "1.2" {
-		chkerr = checkAuth12Headers(user, r, headToCheck, signedHeaders)
+		chkerr = checkAuth12Headers(u, r, headToCheck, signedHeaders)
 	} else {
-		chkerr = checkAuthHeaders(user, r, headToCheck, signedHeaders)
+		chkerr = checkAuthHeaders(u, r, headToCheck, signedHeaders)
 	}
 
 	if chkerr != nil {
