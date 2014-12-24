@@ -63,6 +63,9 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 	if org != nil && u.IsUser() && !u.IsAdmin() {
 		_, aerr := association.GetAssoc(u.(*user.User), org)
 		if aerr != nil {
+			if aerr.Status() == http.StatusForbidden {
+				aerr.SetStatus(http.StatusUnauthorized)
+			}
 			return aerr
 		}
 	}
@@ -140,7 +143,6 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 	}
 
 	if chkerr != nil {
-		chkerr.SetStatus(http.StatusUnauthorized)
 		return chkerr
 	}
 
@@ -156,7 +158,9 @@ func checkAuth12Headers(user actor.Actor, r *http.Request, headToCheck, signedHe
 	sigSha := sha1.Sum([]byte(headToCheck))
 	err = chefcrypto.Auth12HeaderVerify(user.PublicKey(), sigSha[:], sig)
 	if err != nil {
-		return util.CastErr(err)
+		gerr := util.CastErr(err)
+		gerr.SetStatus(http.StatusUnauthorized)
+		return gerr
 	}
 	return nil
 }
@@ -166,12 +170,12 @@ func checkAuthHeaders(user actor.Actor, r *http.Request, headToCheck, signedHead
 
 	if berr != nil {
 		gerr := util.Errorf(berr.Error())
-		gerr.SetStatus(http.StatusUnauthorized)
+		gerr.SetStatus(http.StatusForbidden)
 		return gerr
 	}
 	if string(decHead) != headToCheck {
 		gerr := util.Errorf("failed to verify authorization")
-		gerr.SetStatus(http.StatusUnauthorized)
+		gerr.SetStatus(http.StatusForbidden)
 		return gerr
 	}
 
