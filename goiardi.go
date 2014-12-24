@@ -340,11 +340,19 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		if _, uherr := actor.GetReqUser(org, userID); uherr != nil {
+		u, uherr := actor.GetReqUser(org, userID)
+		if uherr != nil {
 			w.Header().Set("Content-Type", "application/json")
 			logger.Warningf("Attempting to use invalid user %s through X-Ops-Request-Source = web", userID)
 			jsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
 			return
+		}
+		if org != nil && u.IsUser() && !u.IsAdmin() {
+			_, aerr := association.GetAssoc(u.(*user.User), org)
+			if aerr != nil {
+				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+				return
+			}
 		}
 		userID = "pivotal"
 	}

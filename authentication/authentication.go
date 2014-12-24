@@ -170,12 +170,12 @@ func checkAuthHeaders(user actor.Actor, r *http.Request, headToCheck, signedHead
 
 	if berr != nil {
 		gerr := util.Errorf(berr.Error())
-		gerr.SetStatus(http.StatusForbidden)
+		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
 	}
 	if string(decHead) != headToCheck {
 		gerr := util.Errorf("failed to verify authorization")
-		gerr.SetStatus(http.StatusForbidden)
+		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
 	}
 
