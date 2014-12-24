@@ -48,6 +48,7 @@ type Indexable interface {
 type Index struct {
 	m      sync.RWMutex
 	idxmap map[string]*IdxCollection
+	updated bool
 }
 
 // IdxCollection holds a map of documents.
@@ -77,6 +78,7 @@ type searchRes struct {
 func CreateNewCollection(idxName string) {
 	indexMap.m.Lock()
 	defer indexMap.m.Unlock()
+	indexMap.updated = true
 	indexMap.createCollection(idxName)
 }
 
@@ -108,6 +110,7 @@ func (i *Index) createCollection(idxName string) {
 func (i *Index) deleteCollection(idxName string) {
 	i.m.Lock()
 	defer i.m.Unlock()
+	i.updated = true
 	delete(i.idxmap, idxName)
 }
 
@@ -115,6 +118,7 @@ func (i *Index) saveIndex(object Indexable) {
 	/* Have to check to see if data bag indexes exist */
 	i.m.Lock()
 	defer i.m.Unlock()
+	i.updated = true
 	if _, found := i.idxmap[object.Index()]; !found {
 		i.createCollection(object.Index())
 	}
@@ -124,6 +128,7 @@ func (i *Index) saveIndex(object Indexable) {
 func (i *Index) deleteItem(idxName string, doc string) error {
 	i.m.Lock()
 	defer i.m.Unlock()
+	i.updated = true
 	if _, found := i.idxmap[idxName]; !found {
 		err := fmt.Errorf("Index collection %s not found", idxName)
 		return err
@@ -524,6 +529,7 @@ func (i *Index) makeDefaultCollections() {
 	defaults := [...]string{"client", "environment", "node", "role"}
 	i.m.Lock()
 	defer i.m.Unlock()
+	i.updated = true
 	i.idxmap = make(map[string]*IdxCollection)
 	for _, d := range defaults {
 		i.createCollection(d)
@@ -639,6 +645,9 @@ func (i *Index) save(idxFile string) error {
 		err := fmt.Errorf("Yikes! Cannot save index to disk because no file was specified.")
 		return err
 	}
+	if !i.updated {
+		return nil
+	}
 	fp, err := ioutil.TempFile(path.Dir(idxFile), "idx-build")
 	if err != nil {
 		return err
@@ -646,6 +655,7 @@ func (i *Index) save(idxFile string) error {
 	zfp := zlib.NewWriter(fp)
 	i.m.RLock()
 	defer i.m.RUnlock()
+	i.updated = false
 	enc := gob.NewEncoder(zfp)
 	err = enc.Encode(i)
 	zfp.Close()
