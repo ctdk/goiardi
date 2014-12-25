@@ -48,6 +48,7 @@ type DataStore struct {
 	dsc     *cache.Cache
 	objList map[string]map[string]bool
 	m       sync.RWMutex
+	updated bool
 }
 
 type dsFileStore struct {
@@ -85,6 +86,7 @@ func (ds *DataStore) Set(keyType string, key string, val interface{}) {
 	dsKey := ds.makeKey(keyType, key)
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	if config.Config.UseUnsafeMemStore {
 		ds.dsc.Set(dsKey, val, -1)
 	} else {
@@ -154,6 +156,7 @@ func (ds *DataStore) Delete(keyType string, key string) {
 	dsKey := ds.makeKey(keyType, key)
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	ds.dsc.Delete(dsKey)
 	ds.removeFromList(keyType, key)
 }
@@ -194,6 +197,7 @@ func (ds *DataStore) GetList(keyType string) []string {
 func (ds *DataStore) SetNodeStatus(nodeName string, obj interface{}, nsID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	nsKey := ds.makeKey("nodestatus", "nodestatuses")
 	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
@@ -307,6 +311,7 @@ func (ds *DataStore) LatestNodeStatus(nodeName string) (interface{}, error) {
 func (ds *DataStore) DeleteNodeStatus(nodeName string) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	nsKey := ds.makeKey("nodestatus", "nodestatuses")
 	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
@@ -370,6 +375,7 @@ func (ds *DataStore) setLogInfoMap(liMap map[int]interface{}) {
 func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	arr := ds.getLogInfoMap()
 	var nextID int
 	if logID != nil {
@@ -386,6 +392,7 @@ func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
 func (ds *DataStore) DeleteLogInfo(id int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	arr := ds.getLogInfoMap()
 	delete(arr, id)
 	ds.setLogInfoMap(arr)
@@ -397,6 +404,7 @@ func (ds *DataStore) DeleteLogInfo(id int) error {
 func (ds *DataStore) PurgeLogInfoBefore(id int) (int64, error) {
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	arr := ds.getLogInfoMap()
 	newLogs := make(map[int]interface{})
 	var purged int64
@@ -446,6 +454,9 @@ func (ds *DataStore) GetLogInfoList() map[int]interface{} {
 
 // Save freezes and saves the data store to disk.
 func (ds *DataStore) Save(dsFile string) error {
+	if !ds.updated {
+		return nil
+	}
 	if dsFile == "" {
 		err := fmt.Errorf("Yikes! Cannot save data store to disk because no file was specified.")
 		return err
@@ -461,6 +472,7 @@ func (ds *DataStore) Save(dsFile string) error {
 	objList := new(bytes.Buffer)
 	ds.m.RLock()
 	defer ds.m.RUnlock()
+	ds.updated = false
 
 	err = ds.dsc.Save(dscache)
 	if err != nil {

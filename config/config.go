@@ -130,7 +130,7 @@ type Options struct {
 	Port              int    `short:"P" long:"port" description:"Port to listen on. If port is set to 443, SSL will be activated. (default: 4545)"`
 	IndexFile         string `short:"i" long:"index-file" description:"File to save search index data to."`
 	DataStoreFile     string `short:"D" long:"data-file" description:"File to save data store data to."`
-	FreezeInterval    int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk (requires -i/--index-file and -D/--data-file options to be set). (Default 300 seconds/5 minutes.)"`
+	FreezeInterval    int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk if there have been any changes (requires -i/--index-file and -D/--data-file options to be set). (Default 10 seconds.)"`
 	LogFile           string `short:"L" long:"log-file" description:"Log to file X"`
 	SysLog            bool   `short:"s" long:"syslog" description:"Log to syslog rather than a log file. Incompatible with -L/--log-file."`
 	TimeSlew          string `long:"time-slew" description:"Time difference allowed between the server's clock and the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m."`
@@ -364,7 +364,7 @@ func ParseConfigOptions() error {
 		Config.FreezeInterval = opts.FreezeInterval
 	}
 	if Config.FreezeInterval == 0 {
-		Config.FreezeInterval = 300
+		Config.FreezeInterval = 10
 	}
 
 	/* Root directory for certs and the like */
