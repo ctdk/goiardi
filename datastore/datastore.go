@@ -30,6 +30,7 @@ import (
 	"compress/zlib"
 	"encoding/gob"
 	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
 	"github.com/pmylund/go-cache"
 	"io/ioutil"
@@ -457,6 +458,7 @@ func (ds *DataStore) Save(dsFile string) error {
 	if !ds.updated {
 		return nil
 	}
+	logger.Infof("Data has changed, saving data store to disk")
 	if dsFile == "" {
 		err := fmt.Errorf("Yikes! Cannot save data store to disk because no file was specified.")
 		return err
