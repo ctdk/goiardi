@@ -46,8 +46,8 @@ type Indexable interface {
 
 // Index holds a map of document collections.
 type Index struct {
-	m      sync.RWMutex
-	idxmap map[string]*IdxCollection
+	m       sync.RWMutex
+	idxmap  map[string]*IdxCollection
 	updated bool
 }
 
