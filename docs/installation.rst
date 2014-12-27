@@ -43,8 +43,8 @@ Currently available command line and config file options::
     -D, --data-file=       File to save data store data to.
     -F, --freeze-interval= Interval in seconds to freeze in-memory data
                            structures to disk (requires -i/--index-file and
-                           -D/--data-file options to be set). (Default 300
-                           seconds/5 minutes.)
+                           -D/--data-file options to be set). (Default 10
+                           seconds.)
     -L, --log-file=        Log to file X
     -s, --syslog           Log to syslog rather than a log file. Incompatible
                            with -L/--log-file.

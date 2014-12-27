@@ -1,4 +1,4 @@
-0.9.0 (unreleased)
+0.9.0
 -----
 * Validate IP address supplied on the command line or in the config file.
 * Compress index docs to reduce memory usage with the search index.
