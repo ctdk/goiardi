@@ -4,7 +4,7 @@ Installation
 ============
 
 
-1. Install go. (http://golang.org/doc/install.html) You may need to upgrade to go 1.2 to compile all the dependencies. Go 1.3 is also confirmed to work.
+1. Install go. (http://golang.org/doc/install.html) You will need to use at least go 1.3 to compile goiardi, but go 1.4 works as well and is recommended.
 
 2. Make sure your ``$GOROOT`` and ``$PATH`` are set up correctly per the Go installation instructions.
 
