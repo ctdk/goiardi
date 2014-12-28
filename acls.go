@@ -23,8 +23,8 @@ import (
 	"github.com/ctdk/goiardi/container"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/databag"
-	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/environment"
+	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	//"github.com/ctdk/goiardi/user"
@@ -133,7 +133,7 @@ func containerACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	perm := vars["perm"]
-	
+
 	baseACLPermHandler(w, r, org, it, perm)
 }
 
@@ -181,7 +181,7 @@ func clientACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	perm := vars["perm"]
-	
+
 	baseACLPermHandler(w, r, org, cl, perm)
 }
 
@@ -229,7 +229,7 @@ func cookbookACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	perm := vars["perm"]
-	
+
 	baseACLPermHandler(w, r, org, cb, perm)
 }
 
@@ -262,7 +262,7 @@ func groupACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	perm := vars["perm"]
-	
+
 	baseACLPermHandler(w, r, org, gb, perm)
 }
 
@@ -310,7 +310,7 @@ func environmentACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	perm := vars["perm"]
-	
+
 	baseACLPermHandler(w, r, org, it, perm)
 }
 
@@ -358,7 +358,7 @@ func nodeACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	perm := vars["perm"]
-	
+
 	baseACLPermHandler(w, r, org, it, perm)
 }
 
@@ -406,7 +406,7 @@ func roleACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	perm := vars["perm"]
-	
+
 	baseACLPermHandler(w, r, org, it, perm)
 }
 
@@ -454,7 +454,7 @@ func dataACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	perm := vars["perm"]
-	
+
 	baseACLPermHandler(w, r, org, it, perm)
 }
 
@@ -576,7 +576,7 @@ func _SKEL_ACLPermHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	perm := vars["perm"]
-	
+
 	baseACLPermHandler(w, r, org, it, perm)
 }
 
