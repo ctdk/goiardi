@@ -621,13 +621,11 @@ func setSaveTicker() {
 		go func() {
 			for _ = range ticker.C {
 				if config.Config.DataStoreFile != "" {
-					logger.Infof("Automatically saving data store...")
 					uerr := ds.Save(config.Config.DataStoreFile)
 					if uerr != nil {
 						logger.Errorf(uerr.Error())
 					}
 				}
-				logger.Infof("Automatically saving index...")
 				ierr := indexer.SaveIndex(config.Config.IndexFile)
 				if ierr != nil {
 					logger.Errorf(ierr.Error())

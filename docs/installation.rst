@@ -4,13 +4,13 @@ Installation
 ============
 
 
-1. Install go. (http://golang.org/doc/install.html) You may need to upgrade to go 1.2 to compile all the dependencies. Go 1.3 is also confirmed to work.
+1. Install go. (http://golang.org/doc/install.html) You will need to use at least go 1.3 to compile goiardi, but go 1.4 works as well and is recommended.
 
 2. Make sure your ``$GOROOT`` and ``$PATH`` are set up correctly per the Go installation instructions.
 
 3. Download goairdi and its dependencies
 
-    go get -t github.com/ctdk/goiardi
+    go get -t -u github.com/ctdk/goiardi
 
 4. Run tests, if desired. Several goiardi subdirectories have go tests, and chef-pedant can and should be used for testing goiardi as well.
 
@@ -43,8 +43,8 @@ Currently available command line and config file options::
     -D, --data-file=       File to save data store data to.
     -F, --freeze-interval= Interval in seconds to freeze in-memory data
                            structures to disk (requires -i/--index-file and
-                           -D/--data-file options to be set). (Default 300
-                           seconds/5 minutes.)
+                           -D/--data-file options to be set). (Default 10
+                           seconds.)
     -L, --log-file=        Log to file X
     -s, --syslog           Log to syslog rather than a log file. Incompatible
                            with -L/--log-file.

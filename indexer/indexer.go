@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"github.com/ctdk/go-trie/gtrie"
 	"github.com/ctdk/goas/v2/logger"
+	"github.com/philhofer/msgp/msgp"
 	"io/ioutil"
 	"os"
 	"path"
@@ -46,8 +47,9 @@ type Indexable interface {
 
 // Index holds a map of document collections.
 type Index struct {
-	m      sync.RWMutex
-	idxmap map[string]map[string]*IdxCollection
+	m       sync.RWMutex
+	idxmap  map[string]map[string]*IdxCollection
+	updated bool
 }
 
 // IdxCollection holds a map of documents.
@@ -59,8 +61,13 @@ type IdxCollection struct {
 // IdxDoc is the indexed documents that are actually searched.
 type IdxDoc struct {
 	m       sync.RWMutex
-	trie    *gtrie.Node
-	docText string
+	trie    []byte
+	docText []byte
+}
+
+type searchRes struct {
+	key string
+	doc *IdxDoc
 }
 
 /* Index methods */
@@ -68,6 +75,7 @@ type IdxDoc struct {
 // CreateOrgDex makes an organization's index.
 func CreateOrgDex(orgName string) error {
 	indexMap.m.Lock()
+	indexMap.updated = true
 	indexMap.checkOrCreateOrgDex(orgName)
 	indexMap.m.Unlock()
 	indexMap.makeDefaultCollections(orgName)
@@ -78,6 +86,7 @@ func CreateOrgDex(orgName string) error {
 func DeleteOrgDex(orgName string) error {
 	indexMap.m.Lock()
 	defer indexMap.m.Unlock()
+	indexMap.updated = true
 	if _, ok := indexMap.idxmap[orgName]; !ok {
 		return fmt.Errorf("Organization index %s not found", orgName)
 	}
@@ -90,6 +99,7 @@ func DeleteOrgDex(orgName string) error {
 func CreateNewCollection(orgName string, idxName string) {
 	indexMap.m.Lock()
 	defer indexMap.m.Unlock()
+	indexMap.updated = true
 	indexMap.createCollection(orgName, idxName)
 }
 
@@ -114,6 +124,7 @@ func DeleteItemFromCollection(orgName string, idxName string, doc string) error 
 func (i *Index) checkOrCreateOrgDex(orgName string) {
 	if _, ok := i.idxmap[orgName]; !ok {
 		i.idxmap[orgName] = make(map[string]*IdxCollection)
+		i.updated = true
 	}
 }
 
@@ -128,6 +139,7 @@ func (i *Index) createCollection(orgName, idxName string) {
 func (i *Index) deleteCollection(orgName, idxName string) {
 	i.m.Lock()
 	defer i.m.Unlock()
+	i.updated = true
 	i.checkOrCreateOrgDex(orgName)
 	delete(i.idxmap[orgName], idxName)
 }
@@ -136,6 +148,7 @@ func (i *Index) saveIndex(object Indexable) {
 	/* Have to check to see if data bag indexes exist */
 	i.m.Lock()
 	defer i.m.Unlock()
+	i.updated = true
 	i.checkOrCreateOrgDex(object.OrgName())
 	if _, found := i.idxmap[object.OrgName()][object.Index()]; !found {
 		i.createCollection(object.OrgName(), object.Index())
@@ -146,6 +159,7 @@ func (i *Index) saveIndex(object Indexable) {
 func (i *Index) deleteItem(orgName, idxName string, doc string) error {
 	i.m.Lock()
 	defer i.m.Unlock()
+	i.updated = true
 	i.checkOrCreateOrgDex(orgName)
 	if _, found := i.idxmap[orgName][idxName]; !found {
 		err := fmt.Errorf("Index collection %s not found", idxName)
@@ -254,13 +268,36 @@ func (ic *IdxCollection) searchCollection(term string, notop bool) (map[string]*
 	results := make(map[string]*IdxDoc)
 	ic.m.RLock()
 	defer ic.m.RUnlock()
+	l := len(ic.docs)
+	errCh := make(chan error, l)
+	resCh := make(chan *searchRes, l)
 	for k, v := range ic.docs {
-		m, err := v.Examine(term)
-		if err != nil {
-			return nil, err
+		go func(k string, v *IdxDoc) {
+			m, err := v.Examine(term)
+			if err != nil {
+				errCh <- err
+				resCh <- nil
+			} else {
+				errCh <- nil
+				if (m && !notop) || (!m && notop) {
+					r := &searchRes{k, v}
+					resCh <- r
+				} else {
+					resCh <- nil
+				}
+			}
+		}(k, v)
+	}
+	for i := 0; i < l; i++ {
+		e := <-errCh
+		if e != nil {
+			return nil, e
 		}
-		if (m && !notop) || (!m && notop) {
-			results[k] = v
+	}
+	for i := 0; i < l; i++ {
+		r := <-resCh
+		if r != nil {
+			results[r.key] = r.doc
 		}
 	}
 	rsafe := safeSearchResults(results)
@@ -271,13 +308,38 @@ func (ic *IdxCollection) searchTextCollection(term string, notop bool) (map[stri
 	results := make(map[string]*IdxDoc)
 	ic.m.RLock()
 	defer ic.m.RUnlock()
+	l := len(ic.docs)
+	errCh := make(chan error, l)
+	resCh := make(chan *searchRes, l)
 	for k, v := range ic.docs {
-		m, err := v.TextSearch(term)
-		if err != nil {
-			return nil, err
+		go func(k string, v *IdxDoc) {
+			m, err := v.TextSearch(term)
+			if err != nil {
+				errCh <- err
+				resCh <- nil
+			} else {
+				errCh <- nil
+				if (m && !notop) || (!m && notop) {
+					r := &searchRes{k, v}
+					logger.Debugf("Adding result %s to channel", k)
+					resCh <- r
+				} else {
+					resCh <- nil
+				}
+			}
+		}(k, v)
+	}
+	for i := 0; i < l; i++ {
+		e := <-errCh
+		if e != nil {
+			return nil, e
 		}
-		if (m && !notop) || (!m && notop) {
-			results[k] = v
+	}
+	for i := 0; i < l; i++ {
+		r := <-resCh
+		if r != nil {
+			logger.Debugf("adding result")
+			results[r.key] = r.doc
 		}
 	}
 	rsafe := safeSearchResults(results)
@@ -288,14 +350,38 @@ func (ic *IdxCollection) searchRange(field string, start string, end string, inc
 	results := make(map[string]*IdxDoc)
 	ic.m.RLock()
 	defer ic.m.RUnlock()
-
+	l := len(ic.docs)
+	errCh := make(chan error, l)
+	resCh := make(chan *searchRes, l)
 	for k, v := range ic.docs {
-		m, err := v.RangeSearch(field, start, end, inclusive)
-		if err != nil {
-			return nil, err
+		go func(k string, v *IdxDoc) {
+			m, err := v.RangeSearch(field, start, end, inclusive)
+			if err != nil {
+				errCh <- err
+				resCh <- nil
+			} else {
+				errCh <- nil
+				if m {
+					r := &searchRes{k, v}
+					logger.Debugf("Adding result %s to channel", k)
+					resCh <- r
+				} else {
+					resCh <- nil
+				}
+			}
+		}(k, v)
+	}
+	for i := 0; i < l; i++ {
+		e := <-errCh
+		if e != nil {
+			return nil, e
 		}
-		if m {
-			results[k] = v
+	}
+	for i := 0; i < l; i++ {
+		r := <-resCh
+		if r != nil {
+			logger.Debugf("adding result")
+			results[r.key] = r.doc
 		}
 	}
 	rsafe := safeSearchResults(results)
@@ -328,8 +414,15 @@ func (idoc *IdxDoc) update(object Indexable) {
 	if err != nil {
 		logger.Errorf(err.Error())
 	} else {
-		idoc.trie = trie
-		idoc.docText = flatText
+		var err error
+		idoc.trie, err = compressTrie(trie)
+		if err != nil {
+			panic(err)
+		}
+		idoc.docText, err = compressText(flatText)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -344,7 +437,10 @@ func (idoc *IdxDoc) Examine(term string) (bool, error) {
 		m, err := idoc.regexSearch(term)
 		return m, err
 	}
-	m := idoc.exactSearch(term)
+	m, err := idoc.exactSearch(term)
+	if err != nil {
+		return false, err
+	}
 	return m, nil
 }
 
@@ -363,7 +459,11 @@ func (idoc *IdxDoc) TextSearch(term string) (bool, error) {
 	}
 	idoc.m.RLock()
 	defer idoc.m.RUnlock()
-	m := reComp.MatchString(idoc.docText)
+	docText, err := decompressText(idoc.docText)
+	if err != nil {
+		return false, err
+	}
+	m := reComp.MatchString(docText)
 	return m, nil
 }
 
@@ -388,7 +488,11 @@ func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusiv
 	idoc.m.RLock()
 	defer idoc.m.RUnlock()
 	key := fmt.Sprintf("%s:", field)
-	if n, _ := idoc.trie.HasPrefix(key); n != nil {
+	trie, err := decompressTrie(idoc.trie)
+	if err != nil {
+		return false, err
+	}
+	if n, _ := trie.HasPrefix(key); n != nil {
 		kids := n.ChildKeys()
 		for _, child := range kids {
 			if inclusive {
@@ -425,8 +529,12 @@ func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusiv
 	return false, nil
 }
 
-func (idoc *IdxDoc) exactSearch(term string) bool {
-	return idoc.trie.Accepts(term)
+func (idoc *IdxDoc) exactSearch(term string) (bool, error) {
+	trie, err := decompressTrie(idoc.trie)
+	if err != nil {
+		return false, err
+	}
+	return trie.Accepts(term), nil
 }
 
 func (idoc *IdxDoc) regexSearch(reTerm string) (bool, error) {
@@ -443,7 +551,11 @@ func (idoc *IdxDoc) regexSearch(reTerm string) (bool, error) {
 	}
 	/* What would be better would be to fetch all of the parts of the key
 	 * before the regexp part starts. Hmmm. */
-	if n, _ := idoc.trie.HasPrefix(key); n != nil {
+	trie, err := decompressTrie(idoc.trie)
+	if err != nil {
+		return false, err
+	}
+	if n, _ := trie.HasPrefix(key); n != nil {
 		kids := n.ChildKeys()
 		for _, c := range kids {
 			if reComp.MatchString(c) {
@@ -469,6 +581,7 @@ func (i *Index) makeDefaultCollections(orgName string) {
 	defaults := [...]string{"client", "environment", "node", "role"}
 	i.m.Lock()
 	defer i.m.Unlock()
+	i.updated = true
 	for _, d := range defaults {
 		i.createCollection(orgName, d)
 	}
@@ -583,6 +696,10 @@ func (i *Index) save(idxFile string) error {
 		err := fmt.Errorf("Yikes! Cannot save index to disk because no file was specified.")
 		return err
 	}
+	if !i.updated {
+		return nil
+	}
+	logger.Infof("Index has changed, saving to disk")
 	fp, err := ioutil.TempFile(path.Dir(idxFile), "idx-build")
 	if err != nil {
 		return err
@@ -590,6 +707,7 @@ func (i *Index) save(idxFile string) error {
 	zfp := zlib.NewWriter(fp)
 	i.m.RLock()
 	defer i.m.RUnlock()
+	i.updated = false
 	enc := gob.NewEncoder(zfp)
 	err = enc.Encode(i)
 	zfp.Close()
@@ -651,4 +769,58 @@ func ReIndex(objects []Indexable) error {
 	// We really ought to be able to return from an error, but at the moment
 	// there aren't any ways it does so in the index save bits.
 	return nil
+}
+
+func compressTrie(t *gtrie.Node) ([]byte, error) {
+	b := new(bytes.Buffer)
+	z := zlib.NewWriter(b)
+	err := msgp.Encode(z, t)
+	z.Close()
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
+func decompressTrie(buf []byte) (*gtrie.Node, error) {
+	b := bytes.NewBuffer(buf)
+	z, err := zlib.NewReader(b)
+	if err != nil {
+		return nil, err
+	}
+	t := new(gtrie.Node)
+	err = msgp.Decode(z, t)
+	err2 := z.Close()
+	if err != nil {
+		return nil, err
+	}
+	if err2 != nil {
+		return nil, err2
+	}
+	return t, nil
+}
+
+func compressText(t string) ([]byte, error) {
+	b := new(bytes.Buffer)
+	z := zlib.NewWriter(b)
+	_, err := z.Write([]byte(t))
+	z.Close()
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
+func decompressText(buf []byte) (string, error) {
+	b := bytes.NewBuffer(buf)
+	z, err := zlib.NewReader(b)
+	if err != nil {
+		return "", err
+	}
+	t, err := ioutil.ReadAll(z)
+	z.Close()
+	if err != nil {
+		return "", err
+	}
+	return string(t), nil
 }

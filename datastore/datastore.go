@@ -30,6 +30,7 @@ import (
 	"compress/zlib"
 	"encoding/gob"
 	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
 	"github.com/pmylund/go-cache"
 	"io/ioutil"
@@ -48,6 +49,7 @@ type DataStore struct {
 	dsc     *cache.Cache
 	objList map[string]map[string]bool
 	m       sync.RWMutex
+	updated bool
 }
 
 type dsFileStore struct {
@@ -85,6 +87,7 @@ func (ds *DataStore) Set(keyType string, key string, val interface{}) {
 	dsKey := ds.makeKey(keyType, key)
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	if config.Config.UseUnsafeMemStore {
 		ds.dsc.Set(dsKey, val, -1)
 	} else {
@@ -154,6 +157,7 @@ func (ds *DataStore) Delete(keyType string, key string) {
 	dsKey := ds.makeKey(keyType, key)
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	ds.dsc.Delete(dsKey)
 	ds.removeFromList(keyType, key)
 }
@@ -198,6 +202,7 @@ func (ds *DataStore) GetListLen(keyType string) int {
 func (ds *DataStore) SetNodeStatus(nodeName string, orgName string, obj interface{}, nsID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	nsKey := ds.makeKey(joinStr("nodestatus-", orgName), "nodestatuses")
 	nsListKey := ds.makeKey(joinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
@@ -311,6 +316,7 @@ func (ds *DataStore) LatestNodeStatus(nodeName string, orgName string) (interfac
 func (ds *DataStore) DeleteNodeStatus(nodeName string, orgName string) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	nsKey := ds.makeKey(joinStr("nodestatus-", orgName), "nodestatuses")
 	nsListKey := ds.makeKey(joinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
@@ -374,6 +380,7 @@ func (ds *DataStore) setLogInfoMap(orgName string, liMap map[int]interface{}) {
 func (ds *DataStore) SetLogInfo(orgName string, obj interface{}, logID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	arr := ds.getLogInfoMap(orgName)
 	var nextID int
 	if logID != nil {
@@ -390,6 +397,7 @@ func (ds *DataStore) SetLogInfo(orgName string, obj interface{}, logID ...int) e
 func (ds *DataStore) DeleteLogInfo(orgName string, id int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	arr := ds.getLogInfoMap(orgName)
 	delete(arr, id)
 	ds.setLogInfoMap(orgName, arr)
@@ -401,6 +409,7 @@ func (ds *DataStore) DeleteLogInfo(orgName string, id int) error {
 func (ds *DataStore) PurgeLogInfoBefore(orgName string, id int) (int64, error) {
 	ds.m.Lock()
 	defer ds.m.Unlock()
+	ds.updated = true
 	arr := ds.getLogInfoMap(orgName)
 	newLogs := make(map[int]interface{})
 	var purged int64
@@ -450,6 +459,10 @@ func (ds *DataStore) GetLogInfoList(orgName string) map[int]interface{} {
 
 // Save freezes and saves the data store to disk.
 func (ds *DataStore) Save(dsFile string) error {
+	if !ds.updated {
+		return nil
+	}
+	logger.Infof("Data has changed, saving data store to disk")
 	if dsFile == "" {
 		err := fmt.Errorf("Yikes! Cannot save data store to disk because no file was specified.")
 		return err
@@ -465,6 +478,7 @@ func (ds *DataStore) Save(dsFile string) error {
 	objList := new(bytes.Buffer)
 	ds.m.RLock()
 	defer ds.m.RUnlock()
+	ds.updated = false
 
 	err = ds.dsc.Save(dscache)
 	if err != nil {

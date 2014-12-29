@@ -4,6 +4,17 @@
   and whatnot.
 * Refactor of HTTP handling to use gorilla-mux.
 
+0.9.0
+-----
+* Validate IP address supplied on the command line or in the config file.
+* Compress index docs to reduce memory usage with the search index.
+* Ordering searches works now.
+* Index and datastore files now only write to disk if there have been changes
+  since the last time they were saved.
+* In tandem with the previous change, freeze interval default has been changed
+  from 300 seconds to 10 seconds.
+* Bump Chef Server version we claim to be from 11.1.3 to 11.1.6.
+
 0.8.2
 -----
 * Fix typo with checking for an existing client in SQL mode.

@@ -130,7 +130,7 @@ type Options struct {
 	Port              int    `short:"P" long:"port" description:"Port to listen on. If port is set to 443, SSL will be activated. (default: 4545)"`
 	IndexFile         string `short:"i" long:"index-file" description:"File to save search index data to."`
 	DataStoreFile     string `short:"D" long:"data-file" description:"File to save data store data to."`
-	FreezeInterval    int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk (requires -i/--index-file and -D/--data-file options to be set). (Default 300 seconds/5 minutes.)"`
+	FreezeInterval    int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk if there have been any changes (requires -i/--index-file and -D/--data-file options to be set). (Default 10 seconds.)"`
 	LogFile           string `short:"L" long:"log-file" description:"Log to file X"`
 	SysLog            bool   `short:"s" long:"syslog" description:"Log to syslog rather than a log file. Incompatible with -L/--log-file."`
 	TimeSlew          string `long:"time-slew" description:"Time difference allowed between the server's clock and the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m."`
@@ -161,10 +161,10 @@ type Options struct {
 }
 
 // The goiardi version.
-const Version = "0.8.2"
+const Version = "0.9.0"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
-const ChefVersion = "11.1.3"
+const ChefVersion = "11.1.6"
 
 /* The general plan is to read the command-line options, then parse the config
  * file, fill in the config struct with those values, then apply the
@@ -364,7 +364,7 @@ func ParseConfigOptions() error {
 		Config.FreezeInterval = opts.FreezeInterval
 	}
 	if Config.FreezeInterval == 0 {
-		Config.FreezeInterval = 300
+		Config.FreezeInterval = 10
 	}
 
 	/* Root directory for certs and the like */
@@ -381,6 +381,14 @@ func ParseConfigOptions() error {
 	}
 
 	Config.Ipaddress = opts.Ipaddress
+	if Config.Ipaddress != "" {
+		ip := net.ParseIP(Config.Ipaddress)
+		if ip == nil {
+			logger.Criticalf("IP address '%s' is not valid", Config.Ipaddress)
+			os.Exit(1)
+		}
+	}
+
 	if opts.Port != 0 {
 		Config.Port = opts.Port
 	}
