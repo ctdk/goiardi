@@ -60,15 +60,7 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
 	}
-	if org != nil && u.IsUser() && !u.IsAdmin() {
-		_, aerr := association.GetAssoc(u.(*user.User), org)
-		if aerr != nil {
-			if aerr.Status() == http.StatusForbidden {
-				aerr.SetStatus(http.StatusUnauthorized)
-			}
-			return aerr
-		}
-	}
+	
 	contentHash := r.Header.Get("X-OPS-CONTENT-HASH")
 	if contentHash == "" {
 		gerr := util.Errorf("no content hash provided")
@@ -144,6 +136,14 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 
 	if chkerr != nil {
 		return chkerr
+	}
+
+	// maybe check association last of all?
+	if org != nil && u.IsUser() && !u.IsAdmin() {
+		_, aerr := association.GetAssoc(u.(*user.User), org)
+		if aerr != nil {
+			return aerr
+		}
 	}
 
 	return nil
