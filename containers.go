@@ -182,6 +182,17 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, cerr.Error(), cerr.Status())
 			return
 		}
+		// newly created containers are only accessible by the creator
+		newACL, gerr := acl.GetItemACL(org, cont)
+		if gerr != nil {
+			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
+			return
+		}	
+		gerr = newACL.CreatorOnly(opUser)
+		if gerr != nil {
+			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
+			return
+		}
 		w.WriteHeader(http.StatusCreated)
 		rp := make(map[string]interface{})
 		//rp["containername"] = cont.Name
