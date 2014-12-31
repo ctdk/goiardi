@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/acl"
+	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/container"
 	"github.com/ctdk/goiardi/cookbook"
@@ -29,7 +30,7 @@ import (
 	"github.com/ctdk/goiardi/role"
 	//"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/organization"
-	//"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -72,6 +73,10 @@ func orgACLEditHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	perm := vars["perm"]
+	if aerr := aclPermCheck(r, org, a, "grant"); aerr != nil {
+		jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+		return
+	}
 	aclData, jerr := parseObjJSON(r.Body)
 	if jerr != nil {
 		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -476,6 +481,10 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
 		return
 	}
+	if aerr := aclPermCheck(r, org, a, "grant"); aerr != nil {
+		jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+		return
+	}
 	response := a.ToJSON()
 
 	enc := json.NewEncoder(w)
@@ -490,6 +499,10 @@ func baseItemACLHandler(w http.ResponseWriter, r *http.Request, org *organizatio
 		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
 		return
 	}
+	if aerr := aclPermCheck(r, org, a, "grant"); aerr != nil {
+		jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+		return
+	}
 	sendResponse(w, r, a)
 }
 
@@ -497,6 +510,10 @@ func baseACLPermHandler(w http.ResponseWriter, r *http.Request, org *organizatio
 	a, rerr := acl.GetItemACL(org, aclOwner)
 	if rerr != nil {
 		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+		return
+	}
+	if aerr := aclPermCheck(r, org, a, "grant"); aerr != nil {
+		jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 		return
 	}
 
@@ -527,6 +544,22 @@ func sendResponse(w http.ResponseWriter, r *http.Request, resp responder) {
 	if err := enc.Encode(&response); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func aclPermCheck(r *http.Request, org *organization.Organization, objACL *acl.ACL, perm string) util.Gerror {
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		return oerr
+	}
+	if f, ferr := objACL.CheckPerm(perm, opUser); ferr != nil {
+		return ferr
+	} else if !f {
+		err := util.Errorf("You do not have permission to do that")
+		err.SetStatus(http.StatusForbidden)
+		return err
+	}
+
+	return nil
 }
 
 /*****************
