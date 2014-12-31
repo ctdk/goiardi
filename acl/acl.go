@@ -82,10 +82,16 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 	case "containers":
 		// by default, all of these seem to have the same default
 		// user
+		admins, _ := group.Get(org, "admins")
 		for _, perm := range DefaultACLs {
 			ggerr := acl.addActor(perm, defUser)
 			if ggerr != nil {
 				return nil, ggerr
+			}
+			if admins != nil && subkind != "$$root$$" {
+				for _, u := range admins.Actors {
+					acl.addActor(perm, u)
+				}
 			}
 		}
 		// TODO: change this addGroup to use the acl.addGroup method, &
@@ -114,16 +120,16 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 		case "data":
 			addGroup(org, acl.ACLitems["create"], "admins")
 			addGroup(org, acl.ACLitems["create"], "users")
-			addGroup(org, acl.ACLitems["create"], "clients")
+			//addGroup(org, acl.ACLitems["create"], "clients")
 			addGroup(org, acl.ACLitems["read"], "admins")
 			addGroup(org, acl.ACLitems["read"], "users")
 			addGroup(org, acl.ACLitems["read"], "clients")
 			addGroup(org, acl.ACLitems["update"], "admins")
 			addGroup(org, acl.ACLitems["update"], "users")
-			addGroup(org, acl.ACLitems["update"], "clients")
+			//addGroup(org, acl.ACLitems["update"], "clients")
 			addGroup(org, acl.ACLitems["delete"], "admins")
 			addGroup(org, acl.ACLitems["delete"], "users")
-			addGroup(org, acl.ACLitems["delete"], "clients")
+			//addGroup(org, acl.ACLitems["delete"], "clients")
 			addGroup(org, acl.ACLitems["grant"], "admins")
 		case "nodes":
 			addGroup(org, acl.ACLitems["create"], "admins")
