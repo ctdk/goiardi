@@ -47,18 +47,6 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, cerr := acl.Get(org, "containers", "clients")
-	if cerr != nil {
-		jsonErrorReport(w, r, cerr.Error(), cerr.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
-		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
-		return
-	} else if !f {
-		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-		return
-	}
 
 	/* Roles are bit weird in that there's /roles/NAME, but also
 	 * /roles/NAME/environments and /roles/NAME/environments/NAME, so we'll
@@ -70,6 +58,19 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 	chefRole, err := role.Get(org, roleName)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	containerACL, cerr := acl.GetItemACL(org, chefRole)
+	if cerr != nil {
+		jsonErrorReport(w, r, cerr.Error(), cerr.Status())
+		return
+	}
+	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
 		return
 	}
 

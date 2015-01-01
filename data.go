@@ -49,22 +49,23 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, conerr := acl.Get(org, "containers", "data")
-	if conerr != nil {
-		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
-		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
-		return
-	} else if !f {
-		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-		return
-	}
+	
 
 	dbResponse := make(map[string]interface{})
 
 	if pathArrayLen == 1 {
+		containerACL, conerr := acl.Get(org, "containers", "data")
+		if conerr != nil {
+			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+			return
+		}
+		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
 		/* Either a list of data bags, or a POST to create a new one */
 		switch r.Method {
 		case "GET":
@@ -151,34 +152,6 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
-		if r.Method != "GET" {
-			var permstr string
-			switch r.Method {
-			case "DELETE":
-				permstr = "delete"
-			case "PUT":
-				permstr = "update"
-			case "POST":
-				permstr = "create"
-			default:
-				if pathArrayLen == 2 {
-					w.Header().Set("Allow", "GET, DELETE, POST")
-					jsonErrorReport(w, r, "GET, DELETE, POST", http.StatusMethodNotAllowed)
-					return
-				} else {
-					w.Header().Set("Allow", "GET, DELETE, PUT")
-					jsonErrorReport(w, r, "GET, DELETE, PUT", http.StatusMethodNotAllowed)
-					return
-				}
-			}
-			if f, err := containerACL.CheckPerm(permstr, opUser); err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			} else if !f {
-				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-				return
-			}
-		}
 		chefDbag, err := databag.Get(org, dbName)
 		if err != nil {
 			var errMsg string
@@ -201,6 +174,41 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, errMsg, status)
 			return
 		}
+
+		var permstr string
+		switch r.Method {
+		case "GET":
+			permstr = "read"
+		case "DELETE":
+			permstr = "delete"
+		case "PUT":
+			permstr = "update"
+		case "POST":
+			permstr = "create"
+		default:
+			if pathArrayLen == 2 {
+				w.Header().Set("Allow", "GET, DELETE, POST")
+				jsonErrorReport(w, r, "GET, DELETE, POST", http.StatusMethodNotAllowed)
+				return
+			} else {
+				w.Header().Set("Allow", "GET, DELETE, PUT")
+				jsonErrorReport(w, r, "GET, DELETE, PUT", http.StatusMethodNotAllowed)
+				return
+			}
+		}
+		containerACL, conerr := acl.GetItemACL(org, chefDbag)
+		if conerr != nil {
+			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+			return
+		}
+		if f, err := containerACL.CheckPerm(permstr, opUser); err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+			return
+		}
+		
 		if pathArrayLen == 2 {
 			/* getting list of data bag items and creating data bag
 			 * items. */
