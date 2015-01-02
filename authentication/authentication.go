@@ -60,7 +60,7 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
 	}
-	
+
 	contentHash := r.Header.Get("X-OPS-CONTENT-HASH")
 	if contentHash == "" {
 		gerr := util.Errorf("no content hash provided")

@@ -187,7 +187,7 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 		if gerr != nil {
 			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 			return
-		}	
+		}
 		gerr = newACL.CreatorOnly(opUser)
 		if gerr != nil {
 			jsonErrorReport(w, r, gerr.Error(), gerr.Status())

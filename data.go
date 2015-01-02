@@ -49,8 +49,6 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
-
 	dbResponse := make(map[string]interface{})
 
 	if pathArrayLen == 1 {
@@ -208,7 +206,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
-		
+
 		if pathArrayLen == 2 {
 			/* getting list of data bag items and creating data bag
 			 * items. */

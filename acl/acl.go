@@ -411,10 +411,10 @@ func (a *ACL) addGroup(perm string, g *group.Group) util.Gerror {
 func (a *ACL) CreatorOnly(act actor.Actor) util.Gerror {
 	a.m.Lock()
 	defer a.m.Unlock()
-	acts := []actor.Actor{ act }
+	acts := []actor.Actor{act}
 	for _, p := range DefaultACLs {
 		a.ACLitems[p].m.Lock()
-		a.ACLitems[p].Groups = make([]*group.Group,0)
+		a.ACLitems[p].Groups = make([]*group.Group, 0)
 		a.ACLitems[p].Actors = acts
 		a.ACLitems[p].m.Unlock()
 	}
