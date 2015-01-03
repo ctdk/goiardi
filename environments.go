@@ -56,19 +56,6 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, conerr := acl.Get(org, "containers", "environments")
-	if conerr != nil {
-		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
-		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
-		return
-	} else if !f {
-		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-		return
-	}
-
 	pathArray := splitPath(r.URL.Path)[2:]
 	envResponse := make(map[string]interface{})
 	var numResults string
@@ -89,6 +76,18 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 	pathArrayLen := len(pathArray)
 
 	if pathArrayLen == 1 {
+		containerACL, conerr := acl.Get(org, "containers", "environments")
+		if conerr != nil {
+			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+			return
+		}
+		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
 		switch r.Method {
 		case "GET":
 			if opUser.IsValidator() {
@@ -154,6 +153,12 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
+		containerACL, conerr := acl.GetItemACL(org, env)
+		if conerr != nil {
+			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+			return
+		}
+		
 		switch r.Method {
 		case "GET", "DELETE":
 			/* We don't actually have to do much here. */
@@ -171,6 +176,13 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				delEnv = true
 			} else {
+				if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+					jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+					return
+				} else if !f {
+					jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+					return
+				}
 				if opUser.IsValidator() {
 					jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 					return
@@ -281,6 +293,19 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		containerACL, conerr := acl.GetItemACL(org, env)
+		if conerr != nil {
+			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+			return
+		}
+		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
+
 		switch op {
 		case "cookbook_versions":
 			/* Chef Server API docs aren't even remotely
@@ -360,6 +385,16 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		env, err := environment.Get(org, envName)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		if op == "cookbook_versions" && r.Method != "POST" || op != "cookbook_versions" && r.Method != "GET" {
+			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		if opUser.IsValidator() {
+			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
 
