@@ -49,36 +49,46 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, err := acl.Get(org, "containers", "nodes")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
+	if opUser.IsValidator() {
+		jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 		return
 	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
-		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+
+	chefNode, nerr := node.Get(org, nodeName)
+	if nerr != nil {
+		jsonErrorReport(w, r, nerr.Error(), http.StatusNotFound)
 		return
-	} else if !f {
-		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+	}
+
+	containerACL, err := acl.GetItemACL(org, chefNode)
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
 
 	/* So, what are we doing? Depends on the HTTP method, of course */
 	switch r.Method {
 	case "GET", "DELETE":
-		delchk, ferr := containerACL.CheckPerm("delete", opUser)
-		if ferr != nil {
-			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
-			return
+		if r.Method == "DELETE" {
+			delchk, ferr := containerACL.CheckPerm("delete", opUser)
+			if ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+				return
+			}
+			if !delchk && !(opUser.IsClient() && opUser.(*client.Client).NodeName == nodeName) {
+				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+				return
+			}
+		} else {
+			if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+				return
+			} else if !f {
+				jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+				return
+			}
 		}
-		if opUser.IsValidator() || !delchk && r.Method == "DELETE" && !(opUser.IsClient() && opUser.(*client.Client).NodeName == nodeName) {
-			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-			return
-		}
-		chefNode, nerr := node.Get(org, nodeName)
-		if nerr != nil {
-			jsonErrorReport(w, r, nerr.Error(), http.StatusNotFound)
-			return
-		}
+		
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(&chefNode); err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -108,11 +118,6 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 		nodeData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-			return
-		}
-		chefNode, kerr := node.Get(org, nodeName)
-		if kerr != nil {
-			jsonErrorReport(w, r, kerr.Error(), http.StatusNotFound)
 			return
 		}
 		/* If nodeName and nodeData["name"] don't match, we
