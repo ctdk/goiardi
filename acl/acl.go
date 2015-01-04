@@ -304,12 +304,36 @@ func ResetACLs(org *organization.Organization) {
 	}
 }
 
+func RenameUser(org *organization.Organization, act actor.Actor, oldName string) util.Gerror {
+	// shouldn't be necessary with a db backend
+	if config.UsingDB() {
+		return nil
+	}
+	ds := datastore.New()
+	keyTypes := [...]string{"acl", "acl-items"}
+	// This *might* be sufficient for renamed users. Maybe.
+	for _, k := range keyTypes {
+		// Reset any ACLs that have non-default values
+		keys := ds.GetList(org.DataKey(k))
+		for _, key := range keys {
+			a, _ := ds.Get(org.DataKey(k), key)
+			if a != nil {
+				ac := a.(*ACL)
+				ac.resetActorsGroups()
+			}
+		}
+	}
+	return nil
+}
+
 func (a *ACL) resetActorsGroups() util.Gerror {
 	// I suspect this is not necessary with an SQL backend. Sigh.
 	actors := make(map[string]actor.Actor)
 	groups := make(map[string]*group.Group)
 	badActors := make(map[string]bool)
 	badGroups := make(map[string]bool)
+	a.m.Lock()
+	defer a.m.Unlock()
 	for _, item := range a.ACLitems {
 		acts := make([]actor.Actor, 0, len(item.Actors))
 		grs := make([]*group.Group, 0, len(item.Groups))
