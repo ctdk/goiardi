@@ -197,6 +197,11 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
+			err = clientACL.Renamed(chefClient)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
 			w.WriteHeader(http.StatusCreated)
 		}
 		if uerr := chefClient.UpdateFromJSON(clientData); uerr != nil {

@@ -110,6 +110,11 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
+				err = groupACL.Renamed(g)
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
 				w.WriteHeader(http.StatusCreated)
 			}
 		}

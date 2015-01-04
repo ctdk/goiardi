@@ -234,6 +234,10 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				oldenv, olderr := environment.Get(org, envName)
 				if olderr == nil {
 					oldenv.Delete()
+					if aerr := containerACL.Renamed(env); aerr != nil {
+						jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+						return
+					}
 				}
 			} else {
 				if jsonName == "" {
@@ -265,6 +269,10 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			err := env.Delete()
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if aerr := containerACL.Delete(); aerr != nil {
+				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 				return
 			}
 			if lerr := loginfo.LogEvent(org, opUser, env, "delete"); lerr != nil {

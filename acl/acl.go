@@ -422,6 +422,18 @@ func (a *ACL) CreatorOnly(act actor.Actor) util.Gerror {
 	return a.save()
 }
 
+func (a *ACL) Renamed(owner ACLOwner) util.Gerror {
+	a.m.Lock()
+	defer a.m.Unlock()
+	if config.UsingDB() {
+
+	}
+	a.Delete()
+	a.Owner = owner
+	a.isModified = true
+	return a.save()
+}
+
 func (a *ACL) addActor(perm string, act actor.Actor) util.Gerror {
 	if !checkValidPerm(perm) {
 		err := util.Errorf("invalid perm %s", perm)

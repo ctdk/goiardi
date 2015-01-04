@@ -100,6 +100,10 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			if aerr := containerACL.Delete(); aerr != nil {
+				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+				return
+			}
 			if lerr := loginfo.LogEvent(org, opUser, chefNode, "delete"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
