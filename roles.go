@@ -98,6 +98,11 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
+				err = containerACL.Delete()
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
 				if lerr := loginfo.LogEvent(org, opUser, chefRole, "delete"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return

@@ -236,6 +236,10 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 						jsonErrorReport(w, r, cerr.Error(), http.StatusInternalServerError)
 						return
 					}
+					if aerr := cbACL.Delete(); aerr != nil {
+						jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+						return
+					} 
 				}
 			} else {
 				/* Special JSON rendition of the
@@ -282,6 +286,8 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			 * so, update it, otherwise, create it and set
 			 * the latest version as needed. */
 			cb, err := cookbook.Get(org, cookbookName)
+			var cbACL *acl.ACL
+			var cberr util.Gerror
 			if err != nil {
 				if f, err := containerACL.CheckPerm("create", opUser); err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
@@ -306,8 +312,13 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
+				cbACL, cberr = acl.GetItemACL(org, cb)
+				if cberr != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
 			} else {
-				cbACL, cberr := acl.GetItemACL(org, cb)
+				cbACL, cberr = acl.GetItemACL(org, cb)
 				if cberr != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
@@ -353,6 +364,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					// it needs to be deleted.
 					if cb.NumVersions() == 0 {
 						cb.Delete()
+						cbACL.Delete()
 					}
 					jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 					return
