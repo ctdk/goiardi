@@ -410,6 +410,34 @@ func cleanPath(p string) string {
 
 // TODO: this has to change for organizations.
 func createDefaultActors() {
+	// the admin user is called 'pivotal' now with chef12 for some reason.
+	if uadmin, _ := user.Get("pivotal"); uadmin == nil {
+		if admin, aerr := user.New("pivotal"); aerr != nil {
+			logger.Criticalf(aerr.Error())
+			os.Exit(1)
+		} else {
+			admin.Admin = true
+			pem, err := admin.GenerateKeys()
+			if err != nil {
+				logger.Criticalf(err.Error())
+				os.Exit(1)
+			}
+			if config.Config.UseAuth {
+				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, admin.Name)); ferr == nil {
+					fp.Chmod(0600)
+					fp.WriteString(pem)
+					fp.Close()
+				} else {
+					logger.Criticalf(ferr.Error())
+					os.Exit(1)
+				}
+			}
+			if aerr := admin.Save(); aerr != nil {
+				logger.Criticalf(aerr.Error())
+				os.Exit(1)
+			}
+		}
+	}
 	cworg, _ := organization.Get("default")
 	if cworg == nil {
 		if org, oerr := organization.New("default", "default org"); oerr != nil {
@@ -422,6 +450,7 @@ func createDefaultActors() {
 				os.Exit(1)
 			}
 			cworg = org
+			group.MakeDefaultGroups(cworg)
 		}
 	}
 	if cwebui, _ := client.Get(cworg, "default-webui"); cwebui == nil {
@@ -472,35 +501,6 @@ func createDefaultActors() {
 				}
 			}
 			validator.Save()
-		}
-	}
-
-	// the admin user is called 'pivotal' now with chef12 for some reason.
-	if uadmin, _ := user.Get("pivotal"); uadmin == nil {
-		if admin, aerr := user.New("pivotal"); aerr != nil {
-			logger.Criticalf(aerr.Error())
-			os.Exit(1)
-		} else {
-			admin.Admin = true
-			pem, err := admin.GenerateKeys()
-			if err != nil {
-				logger.Criticalf(err.Error())
-				os.Exit(1)
-			}
-			if config.Config.UseAuth {
-				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, admin.Name)); ferr == nil {
-					fp.Chmod(0600)
-					fp.WriteString(pem)
-					fp.Close()
-				} else {
-					logger.Criticalf(ferr.Error())
-					os.Exit(1)
-				}
-			}
-			if aerr := admin.Save(); aerr != nil {
-				logger.Criticalf(aerr.Error())
-				os.Exit(1)
-			}
 		}
 	}
 
