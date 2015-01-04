@@ -200,6 +200,16 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
+			orgs, err := association.OrgAssociations(chefUser)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			go func(orgs []*organization.Organization, chefUser *user.User) {
+				for _, o := range orgs {
+					acl.RenameUser(o, chefUser, userName)
+				}
+			}(orgs, chefUser)
 			w.WriteHeader(http.StatusCreated)
 			// looks like we need to send back a non-standard
 			// response for renaming :-/
