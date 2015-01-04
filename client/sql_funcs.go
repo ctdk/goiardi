@@ -20,7 +20,9 @@ import (
 	"database/sql"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/util"
 	"log"
+	"net/http"
 )
 
 func checkForClientSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -65,10 +67,12 @@ func getClientSQL(name string) (*Client, error) {
 	return client, nil
 }
 
-func (c *Client) deleteSQL() error {
+func (c *Client) deleteSQL() util.Gerror {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		return err
+		gerr := util.CastErr(err)
+		gerr.SetStatus(http.StatusInternalServerError)
+		return gerr
 	}
 	if config.Config.UseMySQL {
 		_, err = tx.Exec("DELETE FROM clients WHERE name = ?", c.Name)
@@ -77,7 +81,9 @@ func (c *Client) deleteSQL() error {
 	}
 	if err != nil {
 		tx.Rollback()
-		return err
+		gerr := util.CastErr(err)
+		gerr.SetStatus(http.StatusInternalServerError)
+		return gerr
 	}
 	tx.Commit()
 	return nil

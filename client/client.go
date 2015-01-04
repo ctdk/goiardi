@@ -184,11 +184,11 @@ func (c *Client) Save() error {
 
 // Delete a client, but will refuse to do so if it is the last client
 // that is an adminstrator.
-func (c *Client) Delete() error {
+func (c *Client) Delete() util.Gerror {
 	// Make sure this isn't the last admin or something
 	// This will be a *lot* easier with an actual database.
 	if c.isLastAdmin() {
-		err := fmt.Errorf("Cannot delete the last admin")
+		err := util.Errorf("Cannot delete the last admin")
 		return err
 	}
 

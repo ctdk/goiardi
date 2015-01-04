@@ -82,10 +82,18 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusForbidden)
 			return
 		}
+		// I really wish we could delete the ACL in the client object
+		// itself, but dependency loops prevent that from happening
+		// sadly.
+		err = clientACL.Delete()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
 
 		enc := json.NewEncoder(w)
-		if err = enc.Encode(&jsonClient); err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		if jerr := enc.Encode(&jsonClient); jerr != nil {
+			jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "GET":
