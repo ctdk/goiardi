@@ -88,7 +88,7 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		
+
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(&chefNode); err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)

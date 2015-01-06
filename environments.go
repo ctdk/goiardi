@@ -158,7 +158,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
 			return
 		}
-		
+
 		switch r.Method {
 		case "GET", "DELETE":
 			/* We don't actually have to do much here. */

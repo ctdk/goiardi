@@ -239,7 +239,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					if aerr := cbACL.Delete(); aerr != nil {
 						jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 						return
-					} 
+					}
 				}
 			} else {
 				/* Special JSON rendition of the
