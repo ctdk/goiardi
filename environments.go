@@ -76,7 +76,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 	pathArrayLen := len(pathArray)
 
 	if pathArrayLen == 1 {
-		containerACL, conerr := acl.Get(org, "containers", "environments")
+		containerACL, conerr := acl.GetContainerACL(org, "environments")
 		if conerr != nil {
 			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
 			return

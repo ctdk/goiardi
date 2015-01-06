@@ -21,6 +21,7 @@ import (
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/container"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
@@ -256,6 +257,14 @@ func Get(org *organization.Organization, kind string, subkind string) (*ACL, uti
 	return a.(*ACL), nil
 }
 
+func GetContainerACL(org *organization.Organization, containerName string) (*ACL, util.Gerror) {
+	cont, err := container.Get(org, containerName)
+	if err != nil {
+		return nil, err
+	}
+	return GetItemACL(org, cont)
+}
+
 func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerror) {
 	if config.UsingDB() {
 
@@ -266,10 +275,11 @@ func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerro
 	if !found {
 		log.Printf("Did not find an ACL for client %s, using default", util.JoinStr(item.ContainerKind(), "-", item.ContainerType(), "-", item.GetName()))
 		var err util.Gerror
-		//defacl, err = defaultACL(org, item.ContainerKind(), item.ContainerType())
+		defacl, err = defaultACL(org, item.ContainerKind(), item.ContainerType())
+		// This experiment may have petered out
 		// Experiment: inherit the parent container's ACL, rather than
 		// the default for this type.
-		defacl, err = Get(org, item.ContainerKind(), item.ContainerType())
+		//defacl, err = Get(org, item.ContainerKind(), item.ContainerType())
 		if err != nil {
 			return nil, err
 		}

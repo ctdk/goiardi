@@ -46,7 +46,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, conerr := acl.Get(org, "containers", "log-infos")
+	containerACL, conerr := acl.GetContainerACL(org, "log-infos")
 	if conerr != nil {
 		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
 		return
@@ -195,7 +195,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, conerr := acl.Get(org, "containers", "log-infos")
+	containerACL, conerr := acl.GetContainerACL(org, "log-infos")
 	if conerr != nil {
 		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
 		return

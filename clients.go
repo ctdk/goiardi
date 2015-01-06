@@ -276,7 +276,7 @@ func clientListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, err := acl.Get(org, "containers", "clients")
+	containerACL, err := acl.GetContainerACL(org, "clients")
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
@@ -315,7 +315,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, err := acl.Get(org, "containers", "clients")
+	containerACL, err := acl.GetContainerACL(org, "clients")
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return

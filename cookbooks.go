@@ -82,7 +82,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check container perms
-	containerACL, conerr := acl.Get(org, "containers", "cookbooks")
+	containerACL, conerr := acl.GetContainerACL(org, "cookbooks")
 	if conerr != nil {
 		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
 		return

@@ -53,7 +53,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, conerr := acl.Get(org, "containers", "reports")
+	containerACL, conerr := acl.GetContainerACL(org, "reports")
 	if conerr != nil {
 		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
 		return

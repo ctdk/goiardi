@@ -225,7 +225,7 @@ func roleListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, cerr := acl.Get(org, "containers", "roles")
+	containerACL, cerr := acl.GetContainerACL(org, "roles")
 	if cerr != nil {
 		jsonErrorReport(w, r, cerr.Error(), cerr.Status())
 		return

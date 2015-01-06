@@ -123,7 +123,7 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, err := acl.Get(org, "containers", "containers")
+	containerACL, err := acl.GetContainerACL(org, "containers")
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return

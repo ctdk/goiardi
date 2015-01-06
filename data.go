@@ -52,7 +52,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	dbResponse := make(map[string]interface{})
 
 	if pathArrayLen == 1 {
-		containerACL, conerr := acl.Get(org, "containers", "data")
+		containerACL, conerr := acl.GetContainerACL(org, "data")
 		if conerr != nil {
 			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
 			return

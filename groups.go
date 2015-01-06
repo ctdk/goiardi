@@ -159,7 +159,7 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, err := acl.Get(org, "containers", "groups")
+	containerACL, err := acl.GetContainerACL(org, "groups")
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return

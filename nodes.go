@@ -180,7 +180,7 @@ func nodeListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, err := acl.Get(org, "containers", "nodes")
+	containerACL, err := acl.GetContainerACL(org, "nodes")
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
