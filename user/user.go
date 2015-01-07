@@ -52,6 +52,7 @@ type User struct {
 	pubKey      string
 	passwd      string
 	salt        []byte
+	AuthzID string `json:"authz_id"`
 }
 
 type privUser struct {
@@ -66,6 +67,7 @@ type privUser struct {
 	Passwd      *string `json:"password"`
 	Salt        *[]byte `json:"salt"`
 	Recoveror   *bool   `json:"recovery_authentication_enabled"`
+	AuthzID *string `json:"authz_id"`
 }
 
 // New creates a new API user.
@@ -106,6 +108,7 @@ func New(name string) (*User, util.Gerror) {
 		Email:    "",
 		pubKey:   "",
 		salt:     salt,
+		AuthzID: util.MakeAuthzID(),
 	}
 	return user, nil
 }
@@ -604,7 +607,7 @@ func (u *User) OrgName() string {
 }
 
 func (u *User) export() *privUser {
-	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt, FirstName: &u.FirstName, LastName: &u.LastName, DisplayName: &u.DisplayName, Recoveror: &u.Recoveror}
+	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt, FirstName: &u.FirstName, LastName: &u.LastName, DisplayName: &u.DisplayName, Recoveror: &u.Recoveror, AuthzID: &u.AuthzID}
 }
 
 func (u *User) GobEncode() ([]byte, error) {
@@ -664,4 +667,8 @@ func chkInMemClient(name string) error {
 		err = fmt.Errorf("a client named %s was found that would conflict with this user", name)
 	}
 	return err
+}
+
+func (u *User) Authz() string {
+	return u.AuthzID
 }

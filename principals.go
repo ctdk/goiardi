@@ -21,7 +21,10 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -31,7 +34,15 @@ func principalHandler(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	org, orgerr := organization.Get(vars["org"])
+	errMap := make(map[string]interface{})
+
 	if orgerr != nil {
+		if orgerr.Status() == http.StatusNotFound {
+			errMap["not_found"] = "org"
+			errMap["error"] = util.JoinStr("Cannot find org ", vars["org"])
+			util.JSONErrorMapReport(w, r, errMap, http.StatusNotFound)
+			return
+		}
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
@@ -45,19 +56,30 @@ func principalHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		chefActor, err := actor.GetReqUser(org, principalName)
 		if err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			errMsg := util.JoinStr("Cannot find principal ", principalName)
+			errMap["not_found"] = "principal"
+			errMap["error"] = errMsg
+			util.JSONErrorMapReport(w, r, errMap, http.StatusNotFound)
 			return
 		}
 		var chefType string
+		var orgMember bool
 		if chefActor.IsUser() {
 			chefType = "user"
+			ac, _ := association.GetAssoc(chefActor.(*user.User), org)
+			if ac != nil {
+				orgMember = true
+			}
 		} else {
 			chefType = "client"
+			orgMember = true
 		}
 		jsonPrincipal := map[string]interface{}{
 			"name":       chefActor.GetName(),
 			"type":       chefType,
 			"public_key": chefActor.PublicKey(),
+			"org_member": orgMember,
+			"authz_id": chefActor.Authz(),
 		}
 		enc := json.NewEncoder(w)
 		if encerr := enc.Encode(&jsonPrincipal); encerr != nil {

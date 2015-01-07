@@ -22,7 +22,7 @@ import (
 	"strings"
 )
 
-// StringSlice makes it possible to scan Posgres arrays directly into a golang
+// StringSlice makes it possible to scan Postgres arrays directly into a golang
 // slice. Borrowed from https://gist.github.com/adharris/4163702.
 type StringSlice []string
 

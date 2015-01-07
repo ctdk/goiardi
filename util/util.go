@@ -33,6 +33,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"github.com/codeskyblue/go-uuid"
 )
 
 // NoDBConfigured is an error for when no database has been configured for use,
@@ -353,6 +354,12 @@ func JSONErrorNonArrayReport(w http.ResponseWriter, r *http.Request, errorStr st
 	return
 }
 
+func JSONErrorMapReport(w http.ResponseWriter, r *http.Request, errMap map[string]interface{}, status int) {
+	logger.Infof("%+v", errMap)
+	sendErrorReport(w, errMap, status)
+	return
+}
+
 func sendErrorReport(w http.ResponseWriter, jsonError interface{}, status int) {
 	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
@@ -360,4 +367,8 @@ func sendErrorReport(w http.ResponseWriter, jsonError interface{}, status int) {
 		logger.Errorf(err.Error())
 	}
 	return
+}
+
+func MakeAuthzID() string {
+	return fmt.Sprintf("%32x", []byte(uuid.NewRandom()))
 }
