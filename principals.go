@@ -79,7 +79,7 @@ func principalHandler(w http.ResponseWriter, r *http.Request) {
 			"type":       chefType,
 			"public_key": chefActor.PublicKey(),
 			"org_member": orgMember,
-			"authz_id": chefActor.Authz(),
+			"authz_id":   chefActor.Authz(),
 		}
 		enc := json.NewEncoder(w)
 		if encerr := enc.Encode(&jsonPrincipal); encerr != nil {

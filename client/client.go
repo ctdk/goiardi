@@ -55,7 +55,7 @@ type Client struct {
 	Admin       bool   `json:"admin"`
 	Certificate string `json:"certificate"`
 	org         *organization.Organization
-	AuthzID string `json:"authz_id"`
+	AuthzID     string `json:"authz_id"`
 }
 
 // for gob encoding. Needed the json tags for flattening, but that's handled
@@ -71,7 +71,7 @@ type privClient struct {
 	PublicKey   *string `json:"public_key"`
 	Admin       *bool   `json:"admin"`
 	Certificate *string `json:"certificate"`
-	AuthzID *string `json:"authz_id"`
+	AuthzID     *string `json:"authz_id"`
 }
 
 // For flattening. Needs the json tags for flattening.
@@ -85,7 +85,7 @@ type flatClient struct {
 	PublicKey   string `json:"public_key"`
 	Admin       bool   `json:"admin"`
 	Certificate string `json:"certificate"`
-	AuthzID string `json:"authz_id"`
+	AuthzID     string `json:"authz_id"`
 }
 
 // New creates a new client.
@@ -123,7 +123,7 @@ func New(org *organization.Organization, clientname string) (*Client, util.Gerro
 		Admin:       false,
 		Certificate: "",
 		org:         org,
-		AuthzID: util.MakeAuthzID(),
+		AuthzID:     util.MakeAuthzID(),
 	}
 	return client, nil
 }

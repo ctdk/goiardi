@@ -25,6 +25,7 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/codeskyblue/go-uuid"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
 	"net/http"
@@ -33,7 +34,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"github.com/codeskyblue/go-uuid"
 )
 
 // NoDBConfigured is an error for when no database has been configured for use,

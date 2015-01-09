@@ -52,7 +52,7 @@ type User struct {
 	pubKey      string
 	passwd      string
 	salt        []byte
-	AuthzID string `json:"authz_id"`
+	AuthzID     string `json:"authz_id"`
 }
 
 type privUser struct {
@@ -67,7 +67,7 @@ type privUser struct {
 	Passwd      *string `json:"password"`
 	Salt        *[]byte `json:"salt"`
 	Recoveror   *bool   `json:"recovery_authentication_enabled"`
-	AuthzID *string `json:"authz_id"`
+	AuthzID     *string `json:"authz_id"`
 }
 
 // New creates a new API user.
@@ -108,7 +108,7 @@ func New(name string) (*User, util.Gerror) {
 		Email:    "",
 		pubKey:   "",
 		salt:     salt,
-		AuthzID: util.MakeAuthzID(),
+		AuthzID:  util.MakeAuthzID(),
 	}
 	return user, nil
 }
