@@ -96,7 +96,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			envList := environment.GetList(org)
 			for _, env := range envList {
-				envResponse[env] = util.CustomURL(fmt.Sprintf("/environments/%s", env))
+				envResponse[env] = util.CustomURL(util.JoinStr("/organizations/", org.Name, "/environments/", env))
 			}
 		case "POST":
 			if f, err := containerACL.CheckPerm("create", opUser); err != nil {
