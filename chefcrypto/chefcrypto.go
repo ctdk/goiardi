@@ -111,6 +111,9 @@ func HeaderDecrypt(pkPem string, data string) ([]byte, error) {
 	/* skip past the 0xff padding added to the header before encrypting. */
 	skip := 0
 	for i := 2; i < len(dec); i++ {
+		if i+1 >= len(dec) {
+			break
+		}
 		if dec[i] == 0xff && dec[i+1] == 0 {
 			skip = i + 2
 			break
