@@ -122,6 +122,12 @@ func Get(chksum string) (*FileStore, error) {
 			return nil, err
 		}
 	}
+
+	if filestore.Data == nil {
+		d := make([]byte, 0)
+		filestore.Data = &d
+	}
+
 	return filestore, nil
 }
 
