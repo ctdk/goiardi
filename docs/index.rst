@@ -21,6 +21,7 @@ The goiardi manual is licensed under a Creative Commons Attribution 4.0 License 
    installation
    upgrading
    platforms
+   features/authentication
    features/persistence
    features/data
    features/event_logging
