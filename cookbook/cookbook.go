@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/util"
+	"github.com/hashicorp/terraform/depgraph"
 	"net/http"
 	"regexp"
 	"sort"
@@ -396,6 +397,7 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 				cdList[k] = []string{ec}
 				continue /* and break out of this step */
 			}
+			/*
 			switch newop {
 			case ">", ">=":
 				if versionLess(orgver, newver) {
@@ -421,6 +423,10 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 				err := fmt.Errorf("An unlikely occurance, but the constraint '%s' for cookbook %s in this environment is impossible.", ec, k)
 				return nil, err
 			}
+			*/
+			// Try just appending the dependency and resolve the
+			// graph later
+			cdList[k] = append(cdList[k], ec)
 		}
 	}
 
