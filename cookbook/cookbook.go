@@ -75,6 +75,14 @@ type CookbookVersion struct {
 	cookbookID   int32
 }
 
+type depsolveErrors struct {
+	nonExistent []error
+	noVersions []error
+	mostConstrained []error
+	unsatisfiable []error
+	seen map[string]bool
+}
+
 /* Cookbook methods and functions */
 
 // GetName returns the name of the cookbook.
@@ -360,6 +368,9 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 	cdList := make(map[string][]string, len(runList))
 	runListRef := make([]string, len(runList))
 
+	depErrs := &depsolveErrors{}
+	depErrs.seen = make(map[string]bool)
+
 	for i, cbV := range runList {
 		var cbName string
 		var constraint string
@@ -397,7 +408,7 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 				cdList[k] = []string{ec}
 				continue /* and break out of this step */
 			}
-			/*
+			
 			switch newop {
 			case ">", ">=":
 				if versionLess(orgver, newver) {
@@ -410,20 +421,24 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 			case "=":
 				if orgver != newver {
 					err := fmt.Errorf("This run list has a constraint '%s' for %s that conflicts with '%s' in the environment's cookbook versions.", cdList[k][0], k, ec)
-					return nil, err
+					depErrs.unsatisfiable = append(depErrs.unsatisfiable, err)
+					//return nil, err
+					
 				}
 			case "~>":
 				if action := verConstraintCheck(orgver, newver, newop); action == "ok" {
 					cdList[k] = []string{ec}
 				} else {
 					err := fmt.Errorf("This run list has a constraint '%s' for %s that conflicts with '%s' in the environment's cookbook versions.", cdList[k][0], k, ec)
-					return nil, err
+					depErrs.unsatisfiable = append(depErrs.unsatisfiable, err)
+					//return nil, err
 				}
 			default:
 				err := fmt.Errorf("An unlikely occurance, but the constraint '%s' for cookbook %s in this environment is impossible.", ec, k)
-				return nil, err
+				depErrs.unsatisfiable = append(depErrs.unsatisfiable, err)
+				//return nil, err
 			}
-			*/
+			
 			// Try just appending the dependency and resolve the
 			// graph later
 			cdList[k] = append(cdList[k], ec)
@@ -436,12 +451,14 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 		if err != nil {
 			return nil, err
 		}
+		depErrs.seen[cbName] = true
 		cbv := c.LatestConstrained(cdList[cbName][0])
 		if cbv == nil {
-			return nil, fmt.Errorf("No cookbook found for %s that satisfies constraint '%s'", c.Name, cdList[cbName][0])
+			cerr := fmt.Errorf("No cookbook found for %s that satisfies constraint '%s'", c.Name, cdList[cbName][0])
+			depErrs.noVersions = append(depErrs.noVersions, cerr)
 		}
 
-		nerr := cbv.resolveDependencies(cdList)
+		nerr := cbv.resolveDependencies(cdList, depErrs)
 		if nerr != nil {
 			return nil, nerr
 		}
@@ -500,45 +517,38 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 	return cookbookDeps, nil
 }
 
-func (cbv *CookbookVersion) resolveDependencies(cdList map[string][]string) error {
+func (cbv *CookbookVersion) resolveDependencies(cdList map[string][]string, depErrs *depsolveErrors) error {
 	depList := cbv.Metadata["dependencies"].(map[string]interface{})
 
 	for r, c2 := range depList {
 		c := c2.(string)
+		if depErrs.seen[c] {
+			continue
+		}
+		depErrs.seen[c] = true
 		depCb, err := Get(r)
 		if err != nil {
-			return err
+			depErrs.nonExistent = append(depErrs.nonExistent, err)
+			continue
+			//return err
 		}
 		debCbv := depCb.LatestConstrained(c)
 		if debCbv == nil {
 			err := fmt.Errorf("No cookbook version for %s satisfies constraint '%s'.", r, c)
-			return err
+			depErrs.noVersions = append(depErrs.noVersions, err)
+			continue
+			//return err
 		}
 
 		/* Do we satisfy the constraints we have? */
 		if constraints, found := cdList[r]; found {
-			for _, dcon := range constraints {
-				if dcon != "" {
-					op, ver, err := splitConstraint(dcon)
-					if err != nil {
-						return err
-					}
-					stat := verConstraintCheck(debCbv.Version, ver, op)
-					if stat != "ok" {
-						err := fmt.Errorf("Oh no! Cookbook %s (ver %s) depends on a version of cookbook %s matching the constraint '%s', but that constraint conflicts with the previous constraint of '%s'. Bailing, sorry.", cbv.CookbookName, cbv.Version, debCbv.CookbookName, c, dcon)
-						return err
-					}
-				}
-			}
+			cdList[r] = append(cdList[r], c)
 		} else {
 			/* Add our constraint */
 			cdList[r] = []string{c}
 		}
 
-		nerr := debCbv.resolveDependencies(cdList)
-		if nerr != nil {
-			return nerr
-		}
+		debCbv.resolveDependencies(cdList)
 	}
 	return nil
 }
