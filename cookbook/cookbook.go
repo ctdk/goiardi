@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/util"
+	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform/depgraph"
 	"net/http"
 	"regexp"
@@ -365,7 +366,33 @@ func (c *Cookbook) ConstrainedInfoHash(numResults interface{}, constraint string
 // DependsCookbooks will, for the given run list and environment constraints,
 // return the cookbook dependencies.
 func DependsCookbooks(runList []string, envConstraints map[string]string) (map[string]interface{}, error) {
-
+	nodes := make(map[string]*depgraph.Noun)
+	runListRef := make([]string, len(runList))
+	for i, cbV := range runList {
+		var cbName string
+		var constraint string
+		cx := strings.Split(cbV, "@")
+		cbName = strings.Split(cx[0], "::")[0]
+		if len(cx) == 2 {
+			constraint = fmt.Sprintf("= %s", cx[1])
+		}
+		nodes[cbName] = &depgraph.Noun{Name: cbName}
+		if constraint != "" {
+			nodes[cbName].Meta = gversion.NewConstraint(constraint)
+		}
+		runListRef[i] = cbName
+	}
+	for k, ec := range envConstraints {
+		if _, found := nodes[k]; !found {
+			continue
+		}
+		envc := gversion.NewConstraint(ec)
+		if nodes[k].Meta == nil {
+			nodes[k].Meta = envc
+		} else {
+			nodes[k].Meta = append(nodes[k].Meta.(*gversion.Constraints), envc...)
+		}
+	}
 }
 
 func splitConstraint(constraint string) (string, string, error) {
