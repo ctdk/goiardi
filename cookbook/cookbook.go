@@ -81,8 +81,9 @@ type depsolveErrors struct {
 	noVersions []error
 	mostConstrained []error
 	unsatisfiable []error
-	seen map[string]bool
 }
+
+type versionConstraint depgraph.Constraints
 
 /* Cookbook methods and functions */
 
@@ -368,6 +369,7 @@ func (c *Cookbook) ConstrainedInfoHash(numResults interface{}, constraint string
 func DependsCookbooks(runList []string, envConstraints map[string]string) (map[string]interface{}, error) {
 	nodes := make(map[string]*depgraph.Noun)
 	runListRef := make([]string, len(runList))
+
 	for i, cbV := range runList {
 		var cbName string
 		var constraint string
@@ -382,6 +384,7 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 		}
 		runListRef[i] = cbName
 	}
+
 	for k, ec := range envConstraints {
 		if _, found := nodes[k]; !found {
 			continue
@@ -392,6 +395,64 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 		} else {
 			nodes[k].Meta = append(nodes[k].Meta.(*gversion.Constraints), envc...)
 		}
+	}
+
+	depErr := &depsolvErrors{}
+	graphRoot := &depgraph.Noun{Name: "^runlist_root^"}
+	g := &depgraph.Graph{ Name: "runlist", Root: graphRoot }
+
+	// fill in constraints for runlist deps now
+	for k, n := range nodes {
+		d := &depgraph.Dependency{ Name: fmt.Sprintf("%s-%s", g.Name, k), Source: graphRoot, Target: n, Constraints: []depgraph.Constraint{ *versionConstraint(n.Meta.(*gversion.Constraints)) } }
+		g.Deps = append(g.Deps, d)
+	}
+
+	seen := make(map[string]bool)
+
+	for _, cbName := range runListRef {
+		seen[cbName] = true
+		cb, err := Get(cbName)
+		if err != nil {
+			depErr.nonExistent == append(depErr.nonExistent, err)
+			continue
+		}
+		var cbv *CookbookVersion
+		if nodes[cbName].Meta == nil {
+			cbv = cb.LatestVersion()
+			if cbv == nil {
+				cberr := fmt.Errorf("No version of cookbook %s found somehow. This is a very strange occurance.", cbName)
+				depErr.noVersions = append(depErr.noVersions, cberr)
+				continue
+			}
+		} else {
+			constraints := nodes[cbName].Meta.(*gversion.Constraints)
+			cbversions := cb.sortedVersions()
+Ver:
+			for _, cver := range cbversions {
+				v, _ := gversion.NewVersion(cver.Version)
+				for _, c := range constraints {
+					if !c.Check(v) {
+						continue Ver
+					}
+				}
+				cbv = cver
+				break Ver
+			}
+			if cbv == nil {
+				cberr := fmt.Errorf("No version of cookbook %s satisfied all constraints '%s'", cbName, constraints.String())
+				depErr.noVersions = append(depErr.noVersions, cberr)
+				continue
+			}
+		}
+		cbv.getDependencies(g, depErr, nodes, seen)
+	}
+}
+
+func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, depErr depsolvErrors, nodes map[string]*depgraph.Nouns, seen map[string]bool) {
+	depList := cbv.Metadata["dependencies"].(map[string]interface{})
+	for r, c2 := range depList {
+		c := c2.(string)
+		
 	}
 }
 
