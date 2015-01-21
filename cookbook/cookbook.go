@@ -92,7 +92,6 @@ type depMeta struct {
 	noVersion bool
 }
 
-
 /* Cookbook methods and functions */
 
 // GetName returns the name of the cookbook.
@@ -389,9 +388,9 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 		nodes[cbName] = &depgraph.Noun{Name: cbName}
 		meta := &depMeta{}
 		if constraint != "" {
-			meta = gversion.NewConstraint(constraint)
+			meta.constraint = gversion.NewConstraint(constraint)
 		}
-		nodes[cbName] = meta
+		nodes[cbName].Meta = meta
 		runListRef[i] = cbName
 	}
 
@@ -399,14 +398,8 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 		if _, found := nodes[k]; !found {
 			continue
 		}
+		appendConstraint(nodes[k].Meta.(*depMeta).constraint, ec)
 		envc := gversion.NewConstraint(ec)
-		if len(envc) > 0 {
-			if nodes[k].Meta.(*depMeta).constraint == nil {
-				nodes[k].Meta.(*depMeta).constraint = envc
-			} else {
-				nodes[k].Meta.(*depMeta).constraint = append(nodes[k].Meta.(*depMeta).constraint, envc...)
-			}
-		}
 	}
 
 	graphRoot := &depgraph.Noun{Name: "^runlist_root^"}
@@ -436,6 +429,7 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 		}
 		cbv.getDependencies(g, nodes, cbShelf)
 	}
+
 }
 
 func (c *Cookbook) latestMultiConstraint(constraints versionConstraint) *CookbookVersion {
@@ -462,6 +456,11 @@ Ver:
 func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]*depgraph.Nouns, cbShelf map[string]*Cookbook) {
 	depList := cbv.Metadata["dependencies"].(map[string]interface{})
 	for r, c2 := range depList {
+		if _, ok := node[r]; ok {
+			if node[r].Meta.(*depMeta).noVersion || node[r].Meta.(*depMeta).notFound {
+				continue
+			}
+		}
 		c := c2.(string)
 		var depCb *Cookbook
 		var err util.Gerror
@@ -472,9 +471,45 @@ func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]
 				node[cbName].Meta.(*depMeta).notFound = true
 				continue
 			}
+		} else {
+			// see if this constraint for this cookbook is already
+			// in place. If it is, go ahead and move along, we've
+			// already been here.
+			if constraintPresent(c) {
+				continue
+			}
+		}
+		if _, ok := node[r]; !ok {
+			nodes[r] = &depgraph.Noun{Name: cbName, Meta: &depMeta{} }
 		}
 		
+		appendConstraint(nodes[r].Meta.(*depMeta).constraint, c)
+		cbShelf[r] = depCb
+		depCbv := cb.latestMultiConstraint(nodes[r].Meta.(*depMeta).constraint)
+		if depCbv == nil {
+			node[r].Meta.(*depMeta).noVersion = true
+			continue
+		}
+		depCbv.getDependencies(g, nodes, cbShelf)
 	}
+}
+
+func constraintPresent(constraints versionConstraint, cons string) bool {
+	for _, c := constraints {
+		if c.String() {
+			// already in here, bail
+			return true
+		}
+	}
+	return false
+}
+
+func appendConstraint(constraints versionConstraint, cons string) {
+	if constraintPresent(constraints, cons) {
+		return
+	}
+	newcon, _ := gversion.NewConstraint(cons)
+	constraints = append(constraints, newcon...)
 }
 
 func splitConstraint(constraint string) (string, string, error) {
