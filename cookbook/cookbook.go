@@ -407,8 +407,8 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 
 	// fill in constraints for runlist deps now
 	for k, n := range nodes {
-		d := &depgraph.Dependency{ Name: fmt.Sprintf("%s-%s", g.Name, k), Source: graphRoot, Target: n, Constraints: []depgraph.Constraint{ *versionConstraint(n.Meta.(*depMeta).constraint) } }
-		g.Deps = append(g.Deps, d)
+		d := &depgraph.Dependency{ Name: fmt.Sprintf("%s-%s", g.Name, k), Source: graphRoot, Target: n, Constraints: []depgraph.Constraint{ n.Meta.(*depMeta).constraint } }
+		graphRoot.Deps = append(graphRoot.Deps, d)
 	}
 
 	var cbShelf := make(map[string]*Cookbook)
