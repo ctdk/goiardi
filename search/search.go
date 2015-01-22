@@ -34,7 +34,7 @@ import (
 type SolrQuery struct {
 	queryChain Queryable
 	idxName    string
-	docs       map[string]*indexer.IdxDoc
+	docs       map[string]*indexer.Document
 }
 
 // Search parses the given query string and search the given index for any
@@ -52,7 +52,7 @@ func Search(idx string, q string) ([]indexer.Indexable, error) {
 	}
 	qq.Execute()
 	qchain := qq.Evaluate()
-	d := make(map[string]*indexer.IdxDoc)
+	d := make(map[string]*indexer.Document)
 	solrQ := &SolrQuery{queryChain: qchain, idxName: idx, docs: d}
 
 	_, err := solrQ.execute()
@@ -64,11 +64,11 @@ func Search(idx string, q string) ([]indexer.Indexable, error) {
 	return objs, nil
 }
 
-func (sq *SolrQuery) execute() (map[string]*indexer.IdxDoc, error) {
+func (sq *SolrQuery) execute() (map[string]*indexer.Document, error) {
 	s := sq.queryChain
 	curOp := OpNotAnOp
 	for s != nil {
-		var r map[string]*indexer.IdxDoc
+		var r map[string]*indexer.Document
 		var err error
 		switch c := s.(type) {
 		case *SubQuery:
@@ -78,7 +78,7 @@ func (sq *SolrQuery) execute() (map[string]*indexer.IdxDoc, error) {
 				return nil, err
 			}
 			s = nend
-			d := make(map[string]*indexer.IdxDoc)
+			d := make(map[string]*indexer.Document)
 			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d}
 			r, err = nsq.execute()
 		default:
@@ -94,7 +94,7 @@ func (sq *SolrQuery) execute() (map[string]*indexer.IdxDoc, error) {
 				sq.docs[k] = v
 			}
 		} else if curOp == OpBinAnd {
-			newRes := make(map[string]*indexer.IdxDoc, len(sq.docs)+len(r))
+			newRes := make(map[string]*indexer.Document, len(sq.docs)+len(r))
 			for k, v := range sq.docs {
 				if _, found := r[k]; found {
 					newRes[k] = v
