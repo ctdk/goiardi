@@ -245,7 +245,13 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 
 		env, err := environment.Get(envName)
 		if err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			var errMsg string
+			if err.Status() == http.StatusNotFound {
+				errMsg = fmt.Sprintf("environment '%s' not found", envName)
+			} else {
+				errMsg = err.Error()
+			}
+			jsonErrorReport(w, r, errMsg, err.Status())
 			return
 		}
 
