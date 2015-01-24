@@ -585,6 +585,9 @@ func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]
 		var err util.Gerror
 		var found bool
 
+		if _, ok := nodes[r]; !ok {
+			nodes[r] = &depgraph.Noun{Name: r, Meta: &depMeta{} }
+		}
 		dep, depPos, dt := checkDependency(nodes[cbv.CookbookName], r)
 		if dep == nil {
 			dep = &depgraph.Dependency{ Name: fmt.Sprintf("%s-%s", cbv.CookbookName, r), Source: nodes[cbv.CookbookName], Target: nodes[r] }
@@ -596,10 +599,7 @@ func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]
 		} else {
 			nodes[cbv.CookbookName].Deps[depPos] = dep
 		}
-
-		if _, ok := nodes[r]; !ok {
-			nodes[r] = &depgraph.Noun{Name: r, Meta: &depMeta{} }
-		}
+		
 		if depCb, found = cbShelf[r]; !found {
 			logger.Debugf("%s not found", r)
 			depCb, err = Get(r)
@@ -613,7 +613,7 @@ func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]
 			// see if this constraint and a dependency for this 
 			// cookbook is already in place. If it is, go ahead and
 			// move along, we've already been here.
-			if _, f := nodes[r]; f && dt && constraintPresent(nodes[r].Meta.(*depMeta).constraint, c) {
+			if dt && constraintPresent(nodes[r].Meta.(*depMeta).constraint, c) {
 				logger.Debugf("breaking out of this loop for %s", r)
 				continue
 			}
