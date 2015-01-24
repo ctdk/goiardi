@@ -86,7 +86,7 @@ func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 		return false, err
 	}
 	if tMeta.version == "" {
-		err := fmt.Errorf("no version number found for %s", tail.Name)
+		err := fmt.Errorf("no version number found for %s :: %s :: %+v", tail.Name, tMeta.constraint.String(), v)
 		return false, err
 	}
 	
@@ -97,8 +97,13 @@ func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 			cons = append(cons, c.String())
 		}
 	}
+	for _, c := range v {
+		if !c.Check(ver) {
+			cons = append(cons, c.String())
+		}
+	}
 	if cons != nil {
-		err := fmt.Errorf("Cookbook %s version %s failed to satisfy constraints '%s'", tail.Name, tMeta.version, strings.Join(cons, ","))
+		err := fmt.Errorf("Cookbook %s version %s failed to satisfy constraints '%s' -- v is %+v", tail.Name, tMeta.version, strings.Join(cons, ","), v)
 		return false, err
 	}
 	return true, nil
@@ -579,8 +584,19 @@ func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]
 		var depCb *Cookbook
 		var err util.Gerror
 		var found bool
-		var dep *depgraph.Dependency
-		var dt bool
+
+		dep, depPos, dt := checkDependency(nodes[cbv.CookbookName], r)
+		if dep == nil {
+			dep = &depgraph.Dependency{ Name: fmt.Sprintf("%s-%s", cbv.CookbookName, r), Source: nodes[cbv.CookbookName], Target: nodes[r] }
+		}
+		depCons, _ := gversion.NewConstraint(c)
+		dep.Constraints = []depgraph.Constraint{ versionConstraint(depCons) }
+		if !dt || nodes[cbv.CookbookName].Deps == nil {
+			nodes[cbv.CookbookName].Deps = append(nodes[cbv.CookbookName].Deps, dep)
+		} else {
+			nodes[cbv.CookbookName].Deps[depPos] = dep
+		}
+
 		if _, ok := nodes[r]; !ok {
 			nodes[r] = &depgraph.Noun{Name: r, Meta: &depMeta{} }
 		}
@@ -589,6 +605,7 @@ func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]
 			depCb, err = Get(r)
 			if err != nil {
 				nodes[r].Meta.(*depMeta).notFound = true
+				appendConstraint(&nodes[r].Meta.(*depMeta).constraint, c)
 				continue
 			}
 		} else {
@@ -596,16 +613,14 @@ func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]
 			// see if this constraint and a dependency for this 
 			// cookbook is already in place. If it is, go ahead and
 			// move along, we've already been here.
-			dep, dt = checkDependency(nodes[cbv.CookbookName], r)
 			if _, f := nodes[r]; f && dt && constraintPresent(nodes[r].Meta.(*depMeta).constraint, c) {
 				logger.Debugf("breaking out of this loop for %s", r)
 				continue
 			}
 			logger.Debugf("Still in the loop for %s - dep is %+v, dt is %v, node is %+v, constraintPresent is %v, c is %s, constraints are %+v", r, dep, dt, nodes[r], constraintPresent(nodes[r].Meta.(*depMeta).constraint, c), c, nodes[r].Meta.(*depMeta).constraint)
 		}
-		
 		appendConstraint(&nodes[r].Meta.(*depMeta).constraint, c)
-		logger.Debugf("constraints is now %+v", nodes[r].Meta.(*depMeta).constraint)
+		
 		cbShelf[r] = depCb
 		depCbv := depCb.latestMultiConstraint(nodes[r].Meta.(*depMeta).constraint)
 		if depCbv == nil {
@@ -617,13 +632,7 @@ func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]
 			// They'll be filled in 
 			nodes[r].Deps = make([]*depgraph.Dependency, 0)
 		}
-		if dep == nil {
-			dep = &depgraph.Dependency{ Name: fmt.Sprintf("%s-%s", cbv.CookbookName, r), Source: nodes[cbv.CookbookName], Target: nodes[r] }
-		}
-		dep.Constraints = []depgraph.Constraint{ versionConstraint(nodes[r].Meta.(*depMeta).constraint) }
-		if !dt {
-			nodes[cbv.CookbookName].Deps = append(nodes[cbv.CookbookName].Deps, dep)
-		}
+		
 		nodes[r].Meta.(*depMeta).version = depCbv.Version
 		
 		depCbv.getDependencies(g, nodes, cbShelf)
@@ -653,14 +662,14 @@ func appendConstraint(constraints *versionConstraint, cons string) {
 	logger.Debugf("constraints is now %s", constraints)
 }
 
-func checkDependency(node *depgraph.Noun, cbName string) (*depgraph.Dependency, bool) {
+func checkDependency(node *depgraph.Noun, cbName string) (*depgraph.Dependency, int, bool) {
 	depName := fmt.Sprintf("%s-%s", node.Name, cbName)
-	for _, d := range node.Deps {
+	for i, d := range node.Deps {
 		if depName == d.Name {
-			return d, true
+			return d, i, true
 		}
 	}
-	return nil, false
+	return nil, -1, false
 }
 
 func splitConstraint(constraint string) (string, string, error) {
