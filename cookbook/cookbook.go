@@ -76,25 +76,35 @@ type CookbookVersion struct {
 	cookbookID   int32
 }
 
+const (
+	CookbookNotFound int = iota
+	CookbookNoVersion
+	CookbookBadConstraint
+)
+
 type versionConstraint gversion.Constraints
 
 type VersionConstraintError struct {
-	violationType string
-	cookbook string
-	constraint string
-	msg string
+	ViolationType int
+	ParentCookbook string
+	ParentVersion string
+	Cookbook string
+	Constraint string
 }
 
 func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 	tMeta := tail.Meta.(*depMeta)
+
+	verr := &VersionConstraintError{ ParentCookbook: head.Name, ParentVersion: head.Meta.(*depMeta).version, Cookbook: tail.Name }
 	
 	if tMeta.notFound {
-		err := fmt.Errorf("cookbook %s not found", tail.Name)
-		return false, err
+		verr.ViolationType = CookbookNotFound
+		return false, verr
 	}
 	if tMeta.version == "" {
-		err := fmt.Errorf("no version number found for %s :: %s :: %+v", tail.Name, tMeta.constraint.String(), v)
-		return false, err
+		//err := fmt.Errorf("no version number found for %s :: %s :: %+v", tail.Name, tMeta.constraint.String(), v)
+		verr.ViolationType = CookbookNoVersion
+		return false, verr
 	}
 	
 	ver, _ := gversion.NewVersion(tMeta.version)
