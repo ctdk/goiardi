@@ -28,7 +28,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/util"
-	gversion "github.com/hashicorp/go-version"
+	gversion "github.com/ctdk/go-version"
 	"github.com/hashicorp/terraform/depgraph"
 	"net/http"
 	"regexp"
