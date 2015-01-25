@@ -78,6 +78,13 @@ type CookbookVersion struct {
 
 type versionConstraint gversion.Constraints
 
+type VersionConstraintError struct {
+	violationType string
+	cookbook string
+	constraint string
+	msg string
+}
+
 func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 	tMeta := tail.Meta.(*depMeta)
 	
@@ -111,13 +118,6 @@ func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 
 func (v versionConstraint) String() string {
 	return gversion.Constraints(v).String()
-}
-
-type depsolveErrors struct {
-	nonExistent []error
-	noVersions []error
-	mostConstrained []error
-	unsatisfiable []error
 }
 
 type depMeta struct {
@@ -1410,4 +1410,17 @@ func verConstraintCheck(verA, verB, op string) string {
 	default:
 		return "invalid"
 	}
+}
+
+func (v *VersionConstraintError) Error() string {
+	// assemble error message from what we have
+}
+
+func (v *VersionConstraintError) String() string {
+	return v.Error()
+}
+
+// this might be able to be a different kind of map
+func (v *VersionConstraintError) ErrorMap() map[string]interface{} {
+
 }
