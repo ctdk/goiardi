@@ -51,15 +51,6 @@ type Index interface {
 type Document interface {
 }
 
-type IndexCollection interface {
-	addDoc(Indexable)
-	delDoc(string)
-	allDocs() map[string]*Document
-	searchCollection(string, bool) (map[string]*Document, error)
-	searchTextCollection(string, bool) (map[string]*Document, error)
-	searchRange(string, string, string, bool) (map[string]*Document, error)
-}
-
 var indexMap Index
 
 func Initialize(config *config.Conf) {

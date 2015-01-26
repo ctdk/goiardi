@@ -24,6 +24,15 @@ type FileIndex struct {
 	updated bool
 }
 
+type IndexCollection interface {
+	addDoc(Indexable)
+	delDoc(string)
+	allDocs() map[string]*Document
+	searchCollection(string, bool) (map[string]*Document, error)
+	searchTextCollection(string, bool) (map[string]*Document, error)
+	searchRange(string, string, string, bool) (map[string]*Document, error)
+}
+
 // IdxCollection holds a map of documents.
 type IdxCollection struct {
 	m    sync.RWMutex
