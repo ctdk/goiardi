@@ -82,6 +82,8 @@ const (
 	CookbookBadConstraint
 )
 
+var cookbookVerErr = map[int]string{ CookbookNotFound: "not found", CookbookNoVersion: "no version", CookbookBadConstraint: "bad constraint" }
+
 type versionConstraint gversion.Constraints
 
 type VersionConstraintError struct {
@@ -94,8 +96,12 @@ type VersionConstraintError struct {
 
 func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 	tMeta := tail.Meta.(*depMeta)
+	var headVersion string
+	if head.Meta != nil {
+		headVersion = head.Meta.(*depMeta).version
+	}
 
-	verr := &VersionConstraintError{ ParentCookbook: head.Name, ParentVersion: head.Meta.(*depMeta).version, Cookbook: tail.Name }
+	verr := &VersionConstraintError{ ParentCookbook: head.Name, ParentVersion: headVersion, Cookbook: tail.Name, Constraint: v.String() }
 	
 	if tMeta.notFound {
 		verr.ViolationType = CookbookNotFound
@@ -120,8 +126,9 @@ func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 		}
 	}
 	if cons != nil {
-		err := fmt.Errorf("Cookbook %s version %s failed to satisfy constraints '%s' -- v is %+v", tail.Name, tMeta.version, strings.Join(cons, ","), v)
-		return false, err
+		//err := fmt.Errorf("Cookbook %s version %s failed to satisfy constraints '%s' -- v is %+v", tail.Name, tMeta.version, strings.Join(cons, ","), v)
+		verr.ViolationType = CookbookBadConstraint
+		return false, verr
 	}
 	return true, nil
 }
@@ -525,6 +532,7 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 			var y []string
 			for _, ce := range cerr.(*depgraph.ConstraintError).Violations {
 				y = append(y, fmt.Sprintf("violation: %+v", ce))
+				y = append(y, fmt.Sprintf("%+v", ce.Err.(*VersionConstraintError).Constraint))
 			}
 			fullcmsg = strings.Join(y, ",")
 		}
@@ -1424,6 +1432,8 @@ func verConstraintCheck(verA, verB, op string) string {
 
 func (v *VersionConstraintError) Error() string {
 	// assemble error message from what we have
+	msg := fmt.Sprintf("%s: %s %s %s %s", cookbookVerErr[v.ViolationType], v.ParentCookbook, v.ParentVersion, v.Cookbook, v.Constraint)
+	return msg
 }
 
 func (v *VersionConstraintError) String() string {
@@ -1432,5 +1442,5 @@ func (v *VersionConstraintError) String() string {
 
 // this might be able to be a different kind of map
 func (v *VersionConstraintError) ErrorMap() map[string]interface{} {
-
+	return nil
 }
