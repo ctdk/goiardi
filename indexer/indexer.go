@@ -29,7 +29,7 @@ import (
 type Indexable interface {
 	DocID() string
 	Index() string
-	Flatten() []string
+	Flatten() map[string]interface{}
 }
 
 // Index holds a map of document collections.

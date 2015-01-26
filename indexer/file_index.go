@@ -7,6 +7,7 @@ import (
 	"github.com/ctdk/go-trie/gtrie"
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/philhofer/msgp/msgp"
+	"github.com/ctdk/goiardi/util"
 	"os"
 	"path"
 	"regexp"
@@ -343,7 +344,7 @@ func (ic *IdxCollection) allDocs() map[string]*Document {
 func (idoc *IdxDoc) update(object Indexable) {
 	idoc.m.Lock()
 	defer idoc.m.Unlock()
-	flattened := object.Flatten()
+	flattened := util.Indexify(object.Flatten())
 	flatText := strings.Join(flattened, "\n")
 	/* recover from horrific trie errors that seem to happen with really
 	 * big values. :-/ */

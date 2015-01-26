@@ -415,7 +415,7 @@ func (dbi *DataBagItem) Index() string {
 }
 
 // Flatten a data bag item out so it's suitable for indexing.
-func (dbi *DataBagItem) Flatten() []string {
+func (dbi *DataBagItem) Flatten() map[string]interface{} {
 	flatten := make(map[string]interface{})
 	for key, v := range dbi.RawData {
 		subExpand := util.DeepMerge(key, v)
@@ -423,8 +423,7 @@ func (dbi *DataBagItem) Flatten() []string {
 			flatten[k] = u
 		}
 	}
-	indexified := util.Indexify(flatten)
-	return indexified
+	return flatten
 }
 
 // AllDataBags returns all data bags on this server, and all their items.

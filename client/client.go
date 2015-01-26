@@ -449,10 +449,8 @@ func (c *Client) Index() string {
 }
 
 // Flatten out the client so it's suitable for indexing.
-func (c *Client) Flatten() []string {
-	flatten := util.FlattenObj(c.flatExport())
-	indexified := util.Indexify(flatten)
-	return indexified
+func (c *Client) Flatten() map[string]interface{} {
+	return util.FlattenObj(c.flatExport())
 }
 
 /* Permission functions. Later role-based perms may be implemented, but for now

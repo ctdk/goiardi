@@ -407,10 +407,8 @@ func (e *ChefEnvironment) Index() string {
 }
 
 // Flatten the environment so it's suitable for indexing.
-func (e *ChefEnvironment) Flatten() []string {
-	flatten := util.FlattenObj(e)
-	indexified := util.Indexify(flatten)
-	return indexified
+func (e *ChefEnvironment) Flatten() map[string]interface{} {
+	return util.FlattenObj(e)
 }
 
 // AllEnvironments returns a slice of all environments on this server.
