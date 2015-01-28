@@ -61,6 +61,8 @@ func (i *FileIndex) initialize() {
 	gob.Register(in)
 	gob.Register(ic)
 	gob.Register(id)
+
+	i.makeDefaultCollections()
 }
 
 func (i *FileIndex) createCollection(idxName string) {
@@ -157,6 +159,10 @@ func (i *FileIndex) endpoints() []string {
 
 	sort.Strings(endpoints)
 	return endpoints
+}
+
+func (i *FileIndex) clear() {
+	i.makeDefaultCollections()
 }
 
 func (i *FileIndex) makeDefaultCollections() {

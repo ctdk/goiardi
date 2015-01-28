@@ -43,7 +43,7 @@ type Index interface {
 	searchText(string, string, bool) (map[string]*Document, error)
 	searchRange(string, string, string, string, bool) (map[string]*Document, error)
 	endpoints() []string
-	makeDefaultCollections()
+	clear()
 	save() error
 	load() error
 }
@@ -58,7 +58,6 @@ func Initialize(config *config.Conf) {
 	fileindex.file = config.IndexFile
 
 	im := Index(fileindex)
-	im.makeDefaultCollections()
 	im.initialize()
 
 	indexMap = im
@@ -132,7 +131,7 @@ func LoadIndex() error {
 
 // ClearIndex of all collections and documents
 func ClearIndex() {
-	indexMap.makeDefaultCollections()
+	indexMap.clear()
 	return
 }
 
