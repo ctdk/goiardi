@@ -54,10 +54,16 @@ type Document interface {
 var indexMap Index
 
 func Initialize(config *config.Conf) {
-	fileindex := new(FileIndex)
-	fileindex.file = config.IndexFile
+	var im Index
+	if config.UsePostgreSQL {
+		im = Index(new(PostgreSQLIndex))
+	} else {
+		fileindex := new(FileIndex)
+		fileindex.file = config.IndexFile
 
-	im := Index(fileindex)
+		im = Index(fileindex)
+	}
+
 	im.initialize()
 
 	indexMap = im
