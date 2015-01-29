@@ -86,7 +86,7 @@ var cookbookVerErr = map[int]string{ CookbookNotFound: "not found", CookbookNoVe
 
 type versionConstraint gversion.Constraints
 
-type VersionConstraintError struct {
+type versionConstraintError struct {
 	ViolationType int
 	ParentCookbook string
 	ParentVersion string
@@ -101,7 +101,7 @@ func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 		headVersion = head.Meta.(*depMeta).version
 	}
 
-	verr := &VersionConstraintError{ ParentCookbook: head.Name, ParentVersion: headVersion, Cookbook: tail.Name, Constraint: v.String() }
+	verr := &versionConstraintError{ ParentCookbook: head.Name, ParentVersion: headVersion, Cookbook: tail.Name, Constraint: v.String() }
 	
 	if tMeta.notFound {
 		verr.ViolationType = CookbookNotFound
@@ -532,7 +532,7 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 			var y []string
 			for _, ce := range cerr.(*depgraph.ConstraintError).Violations {
 				y = append(y, fmt.Sprintf("violation: %+v", ce))
-				y = append(y, fmt.Sprintf("%+v", ce.Err.(*VersionConstraintError).Constraint))
+				y = append(y, fmt.Sprintf("%+v", ce.Err.(*versionConstraintError).Constraint))
 			}
 			fullcmsg = strings.Join(y, ",")
 		}
@@ -1430,17 +1430,12 @@ func verConstraintCheck(verA, verB, op string) string {
 	}
 }
 
-func (v *VersionConstraintError) Error() string {
+func (v *versionConstraintError) Error() string {
 	// assemble error message from what we have
 	msg := fmt.Sprintf("%s: %s %s %s %s", cookbookVerErr[v.ViolationType], v.ParentCookbook, v.ParentVersion, v.Cookbook, v.Constraint)
 	return msg
 }
 
-func (v *VersionConstraintError) String() string {
+func (v *versionConstraintError) String() string {
 	return v.Error()
-}
-
-// this might be able to be a different kind of map
-func (v *VersionConstraintError) ErrorMap() map[string]interface{} {
-	return nil
 }
