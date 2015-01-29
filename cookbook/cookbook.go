@@ -144,6 +144,13 @@ type depMeta struct {
 	noVersion bool
 }
 
+type DependsError struct {
+	notFound []string
+	noVersion []string
+	// TODO: figure out best way to store unsatisfiable run list item and
+	// most constrained
+}
+
 /* Cookbook methods and functions */
 
 // GetName returns the name of the cookbook.
@@ -1438,4 +1445,16 @@ func (v *versionConstraintError) Error() string {
 
 func (v *versionConstraintError) String() string {
 	return v.Error()
+}
+
+func (d *DependsError) Error() string {
+	
+}
+
+func (d *DependsError) String() string {
+	return d.Error()
+}
+
+func (d *DependsError) ErrMap() map[string]interface{} {
+
 }
