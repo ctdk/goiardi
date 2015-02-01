@@ -1448,7 +1448,7 @@ func (v *versionConstraintError) String() string {
 }
 
 func (d *DependsError) Error() string {
-	
+	return strings.Join(d.notFound, ",")
 }
 
 func (d *DependsError) String() string {
@@ -1456,5 +1456,5 @@ func (d *DependsError) String() string {
 }
 
 func (d *DependsError) ErrMap() map[string]interface{} {
-
+	return nil
 }
