@@ -491,59 +491,24 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 	}
 	nouns := make([]*depgraph.Noun, 1)
 	nouns[0] = graphRoot
-	/*
-		i := 1
-		for _, n := range nodes {
-			nouns[i] = n
-			i++
-		}
-	*/
 	g.Nouns = nouns
-
-	// check for nonexistent cookbooks
-	var nfErrs []string
-	var nvErrs []string
-	for k, v := range nodes {
-		if v.Meta.(*depMeta).notFound {
-			nfErrs = append(nfErrs, k)
-		}
-		if v.Meta.(*depMeta).noVersion {
-			nvErrs = append(nvErrs, k)
-		}
-	}
-	/* if nfErrs != nil {
-		err := fmt.Errorf("No versions found for cookbooks %s", strings.Join(nfErrs, ", "))
-		return nil, err
-	}
-	*/
-
-	// should be able to validate?
-	verr := g.Validate()
-	/* if verr != nil {
-		// more errors will be needed, but for now just return this
-		logger.Debugf("the graph: %s", g.String())
-		return nil, verr
-	} */
 
 	cerr := g.CheckConstraints()
 
-	if verr != nil || cerr != nil || nfErrs != nil || nvErrs != nil {
-		var vmsg string
+	if cerr != nil {
 		var cmsg string
 		var fullcmsg string
-		if verr != nil {
-			vmsg = verr.Error()
-		}
 		if cerr != nil {
 			cmsg = cerr.Error()
 			var y []string
 			for _, ce := range cerr.(*depgraph.ConstraintError).Violations {
 				y = append(y, fmt.Sprintf("violation: %+v", ce))
 				y = append(y, fmt.Sprintf("%+v", ce.Err.(*versionConstraintError).Constraint))
+				y = append(y, fmt.Sprintf("%+v", ce.Err.(*versionConstraintError)))
 			}
 			fullcmsg = strings.Join(y, ",")
 		}
-		err := fmt.Errorf("We had some mishaps! graph error: %s not found: %s no versions: %s constraint err: %s full cmsg: %s\n", vmsg, strings.Join(nfErrs, ","), strings.Join(nvErrs, ","), cmsg, fullcmsg)
+		err := fmt.Errorf("We had some mishaps! constraint err: %s full cmsg: %s\n", cmsg, fullcmsg)
 		return nil, err
 	}
 
@@ -556,19 +521,6 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 			return nil, err
 		}
 		gcbvJSON := cbv.ToJSON("POST")
-		/* Sigh. For some reason, *some* places want nothing
-		 * sent for cookbook information divisions like
-		 * attributes, libraries, providers, etc. However,
-		 * others will flip out if nothing is sent at all, and
-		 * environment/<env>/cookbook_versions is one of them.
-		 * Go through the list of possibly guilty divisions and
-		 * set them to an empty slice of maps if they're nil. */
-		/* chkDiv := []string{"definitions", "libraries", "attributes", "providers", "resources", "templates", "root_files", "files"}
-		for _, cd := range chkDiv {
-			if gcbvJSON[cd] == nil {
-				gcbvJSON[cd] = make([]map[string]interface{}, 0)
-			}
-		} */
 		cookbookDeps[cbv.CookbookName] = gcbvJSON
 	}
 	return cookbookDeps, nil
@@ -1447,8 +1399,24 @@ func (v *versionConstraintError) String() string {
 	return v.Error()
 }
 
+func buildDependsError(err error) *DependsError {
+	depErr := &DependsError{}
+	for _, ce := range err.(*depgraph.ConstraintError).Violations {
+		verr := ce.Err.(*versionConstraintError)
+		switch verr.ViolationType {
+		case CookbookNotFound:
+			depErr.notFound = append(depErr.notFound, verr.Cookbook)
+		case CookbookNoVersion:
+			depErr.noVersion = append(depErr.noVersion, fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint))	
+		case CookbookBadConstraint:
+
+		}
+	}
+	return depErr
+}
+
 func (d *DependsError) Error() string {
-	return strings.Join(d.notFound, ",")
+	return ""
 }
 
 func (d *DependsError) String() string {
