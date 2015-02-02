@@ -1,4 +1,4 @@
-%syntax-version=1.0.0-b2
+%syntax-version=1.0.0
 %project=goiardi_postgres
 %uri=http://ctdk.github.com/goiardi/postgres-support
 
@@ -43,3 +43,5 @@ shovey 2014-07-16T05:07:12Z Jeremy Bingham <jeremy@terqa.local> # add shovey tab
 node_latest_statuses [node_statuses] 2014-07-26T20:32:02Z Jeremy Bingham <jbingham@gmail.com> # Add a view to easily get nodes by their latest status
 shovey_insert_update [shovey] 2014-08-27T07:46:20Z Jeremy Bingham <jbingham@gmail.com> # insert/update functions for shovey
 @v0.8.0 2014-09-25T04:17:41Z Jeremy Bingham <jbingham@gmail.com> # Tag v0.8.0
+
+node_search 2015-02-02T13:33:41Z Zsolt <zsolt@takacs.cc># node_search create
