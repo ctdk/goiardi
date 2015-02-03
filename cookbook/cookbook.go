@@ -87,7 +87,7 @@ var cookbookVerErr = map[int]string{CookbookNotFound: "not found", CookbookNoVer
 type versionConstraint gversion.Constraints
 
 type versionConstraintError struct {
-	ViolationType int
+	ViolationType  int
 	ParentCookbook string
 	ParentVersion  string
 	Cookbook       string
@@ -101,8 +101,8 @@ func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 		headVersion = head.Meta.(*depMeta).version
 	}
 
-	verr := &versionConstraintError{ ParentCookbook: head.Name, ParentVersion: headVersion, Cookbook: tail.Name, Constraint: v.String() }
-	
+	verr := &versionConstraintError{ParentCookbook: head.Name, ParentVersion: headVersion, Cookbook: tail.Name, Constraint: v.String()}
+
 	if tMeta.notFound {
 		verr.ViolationType = CookbookNotFound
 		return false, verr
@@ -145,7 +145,7 @@ type depMeta struct {
 }
 
 type DependsError struct {
-	notFound []string
+	notFound  []string
 	noVersion []string
 	// TODO: figure out best way to store unsatisfiable run list item and
 	// most constrained
@@ -1407,7 +1407,7 @@ func buildDependsError(err error) *DependsError {
 		case CookbookNotFound:
 			depErr.notFound = append(depErr.notFound, verr.Cookbook)
 		case CookbookNoVersion:
-			depErr.noVersion = append(depErr.noVersion, fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint))	
+			depErr.noVersion = append(depErr.noVersion, fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint))
 		case CookbookBadConstraint:
 
 		}
