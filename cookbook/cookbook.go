@@ -79,7 +79,6 @@ type CookbookVersion struct {
 const (
 	CookbookNotFound int = iota
 	CookbookNoVersion
-	CookbookBadConstraint
 )
 
 var cookbookVerErr = map[int]string{CookbookNotFound: "not found", CookbookNoVersion: "no version", CookbookBadConstraint: "bad constraint"}
@@ -147,6 +146,7 @@ type depMeta struct {
 type DependsError struct {
 	notFound  []string
 	noVersion []string
+	badConstraint []string
 	// TODO: figure out best way to store unsatisfiable run list item and
 	// most constrained
 }
@@ -1409,7 +1409,13 @@ func buildDependsError(err error) *DependsError {
 		case CookbookNoVersion:
 			depErr.noVersion = append(depErr.noVersion, fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint))
 		case CookbookBadConstraint:
-
+			// Aha! bad constraints can either be a cookbook
+			// depending on a notFound cookbook, or one with no
+			// version that satisfies the constraint. The difference
+			// with CookbookNotFound and CookbookNoVersion is that
+			// those two are only root dependencies, while bad
+			// constraint errors are farther up. That, it turns out,
+			// is the key.
 		}
 	}
 	return depErr
