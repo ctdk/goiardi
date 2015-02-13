@@ -81,13 +81,14 @@ const (
 	CookbookNoVersion
 )
 
-var cookbookVerErr = map[int]string{CookbookNotFound: "not found", CookbookNoVersion: "no version", CookbookBadConstraint: "bad constraint"}
+var cookbookVerErr = map[int]string{CookbookNotFound: "not found", CookbookNoVersion: "no version"}
 
 type versionConstraint gversion.Constraints
 
 type versionConstraintError struct {
 	ViolationType  int
 	ParentCookbook string
+	ParentConstraint string
 	ParentVersion  string
 	Cookbook       string
 	Constraint     string
@@ -96,11 +97,13 @@ type versionConstraintError struct {
 func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 	tMeta := tail.Meta.(*depMeta)
 	var headVersion string
+	var headConstraint string
 	if head.Meta != nil {
 		headVersion = head.Meta.(*depMeta).version
+		headConstraint = head.Meta.(*depMeta).constraint.String()
 	}
 
-	verr := &versionConstraintError{ParentCookbook: head.Name, ParentVersion: headVersion, Cookbook: tail.Name, Constraint: v.String()}
+	verr := &versionConstraintError{ParentCookbook: head.Name, ParentVersion: headVersion, ParentConstraint: headConstraint, Cookbook: tail.Name, Constraint: v.String()}
 
 	if tMeta.notFound {
 		verr.ViolationType = CookbookNotFound
@@ -112,23 +115,6 @@ func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 		return false, verr
 	}
 
-	ver, _ := gversion.NewVersion(tMeta.version)
-	var cons []string
-	for _, c := range tMeta.constraint {
-		if !c.Check(ver) {
-			cons = append(cons, c.String())
-		}
-	}
-	for _, c := range v {
-		if !c.Check(ver) {
-			cons = append(cons, c.String())
-		}
-	}
-	if cons != nil {
-		//err := fmt.Errorf("Cookbook %s version %s failed to satisfy constraints '%s' -- v is %+v", tail.Name, tMeta.version, strings.Join(cons, ","), v)
-		verr.ViolationType = CookbookBadConstraint
-		return false, verr
-	}
 	return true, nil
 }
 
@@ -144,11 +130,10 @@ type depMeta struct {
 }
 
 type DependsError struct {
-	notFound  []string
+	notFound []string
 	noVersion []string
-	badConstraint []string
-	// TODO: figure out best way to store unsatisfiable run list item and
-	// most constrained
+	unsatisfiable []string
+	mostConstrained []string
 }
 
 /* Cookbook methods and functions */
@@ -496,6 +481,7 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 	cerr := g.CheckConstraints()
 
 	if cerr != nil {
+		/*
 		var cmsg string
 		var fullcmsg string
 		if cerr != nil {
@@ -509,6 +495,8 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 			fullcmsg = strings.Join(y, ",")
 		}
 		err := fmt.Errorf("We had some mishaps! constraint err: %s full cmsg: %s\n", cmsg, fullcmsg)
+		*/
+		err := buildDependsError(cerr)
 		return nil, err
 	}
 
@@ -1401,28 +1389,44 @@ func (v *versionConstraintError) String() string {
 
 func buildDependsError(err error) *DependsError {
 	depErr := &DependsError{}
+	depErr.notFound = make([]string, 0)
+	depErr.mostConstrained = make([]string, 0)
+	depErr.noVersion = make([]string, 0)
+
+	// Aha! bad constraints can either be a cookbook
+	// depending on a notFound cookbook, or one with no
+	// version that satisfies the constraint. The difference
+	// with CookbookNotFound and CookbookNoVersion is that
+	// those two are only root dependencies, while bad
+	// constraint errors are farther up. That, it turns out,
+	// is the key.
+
 	for _, ce := range err.(*depgraph.ConstraintError).Violations {
 		verr := ce.Err.(*versionConstraintError)
+		var unsat bool
+		if verr.ParentCookbook != "^runlist_root^" {
+			unsat = true
+			depErr.unsatisfiable = append(depErr.unsatisfiable, fmt.Sprintf("(%s %s)", verr.ParentCookbook, verr.ParentConstraint))
+		}
+
 		switch verr.ViolationType {
 		case CookbookNotFound:
 			depErr.notFound = append(depErr.notFound, verr.Cookbook)
 		case CookbookNoVersion:
-			depErr.noVersion = append(depErr.noVersion, fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint))
-		case CookbookBadConstraint:
-			// Aha! bad constraints can either be a cookbook
-			// depending on a notFound cookbook, or one with no
-			// version that satisfies the constraint. The difference
-			// with CookbookNotFound and CookbookNoVersion is that
-			// those two are only root dependencies, while bad
-			// constraint errors are farther up. That, it turns out,
-			// is the key.
+			if unsat {
+				depErr.mostConstrained = append(depErr.mostConstrained, fmt.Sprintf("%s %s -> [<thing>]", verr.ParentCookbook, verr.ParentConstraint))
+			} else {
+				depErr.noVersion = append(depErr.noVersion, fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint))
+			}
+			
 		}
 	}
 	return depErr
 }
 
 func (d *DependsError) Error() string {
-	return ""
+	errMap := d.ErrMap()
+	return errMap["message"].(string)
 }
 
 func (d *DependsError) String() string {
@@ -1430,5 +1434,32 @@ func (d *DependsError) String() string {
 }
 
 func (d *DependsError) ErrMap() map[string]interface{} {
-	return nil
+	errMap := make(map[string]interface{})
+	var msg string
+
+	errMap["non_existent_cookbooks"] = d.notFound
+	if d.unsatisfiable != nil && len(d.unsatisfiable) > 0 {
+		errMap["most_constrained_cookbooks"] = d.mostConstrained
+		errMap["unsatisfiable_run_list_item"] = d.unsatisfiable[0]
+		msg = fmt.Sprintf("Unable to satisfy constraints on package %s due to solution constraint", d.unsatisfiable[0])
+	} else {
+		msg = "Run list contains invalid items:"
+		errMap["cookbooks_with_no_versions"] = d.noVersion
+		if len(d.notFound) > 0 {
+			var werd string
+			if len(d.notFound) == 1 {
+				werd = "cookbook"
+			} else {
+				werd = "cookbooks"
+			}
+			msg = fmt.Sprintf("%s no such %s %s", msg, werd, strings.Join(d.notFound, ", "))
+		}
+		if len(d.noVersion) > 0 {
+			msg = fmt.Sprintf("%s no versions match the constraint on cookbook %s", msg, strings.Join(d.noVersion, ", "))
+		}
+	}
+	msg = fmt.Sprintf("%s.", msg)
+	errMap["message"] = msg
+
+	return errMap
 }

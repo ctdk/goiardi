@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/environment"
@@ -277,9 +278,24 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, "POSTed JSON badly formed.", http.StatusMethodNotAllowed)
 				return
 			}
-			deps, err := cookbook.DependsCookbooks(cbVer["run_list"].([]string), env.CookbookVersions)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), http.StatusPreconditionFailed)
+			deps, derr := cookbook.DependsCookbooks(cbVer["run_list"].([]string), env.CookbookVersions)
+			if derr != nil {
+				switch derr := derr.(type) {
+				case *cookbook.DependsError:
+					// In 1.0.0-dev, there's a 
+					// JSONErrorMapReport function in util.
+					// Use that when moving this forward
+					errMap := make(map[string][]map[string]interface{})
+					errMap["error"] = make([]map[string]interface{}, 1)
+					errMap["error"][0] = derr.ErrMap()
+					w.WriteHeader(http.StatusPreconditionFailed)
+					enc := json.NewEncoder(w)
+					if jerr := enc.Encode(&errMap); jerr != nil {
+						logger.Errorf(jerr.Error())
+					}
+				default:
+					jsonErrorReport(w, r, derr.Error(), http.StatusPreconditionFailed)
+				}
 				return
 			}
 			/* Need our own encoding here too. */
