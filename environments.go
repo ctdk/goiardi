@@ -282,7 +282,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			if derr != nil {
 				switch derr := derr.(type) {
 				case *cookbook.DependsError:
-					// In 1.0.0-dev, there's a 
+					// In 1.0.0-dev, there's a
 					// JSONErrorMapReport function in util.
 					// Use that when moving this forward
 					errMap := make(map[string][]map[string]interface{})

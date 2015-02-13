@@ -86,12 +86,12 @@ var cookbookVerErr = map[int]string{CookbookNotFound: "not found", CookbookNoVer
 type versionConstraint gversion.Constraints
 
 type versionConstraintError struct {
-	ViolationType  int
-	ParentCookbook string
+	ViolationType    int
+	ParentCookbook   string
 	ParentConstraint string
-	ParentVersion  string
-	Cookbook       string
-	Constraint     string
+	ParentVersion    string
+	Cookbook         string
+	Constraint       string
 }
 
 func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
@@ -130,9 +130,9 @@ type depMeta struct {
 }
 
 type DependsError struct {
-	notFound []string
-	noVersion []string
-	unsatisfiable []string
+	notFound        []string
+	noVersion       []string
+	unsatisfiable   []string
 	mostConstrained []string
 }
 
@@ -482,19 +482,19 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 
 	if cerr != nil {
 		/*
-		var cmsg string
-		var fullcmsg string
-		if cerr != nil {
-			cmsg = cerr.Error()
-			var y []string
-			for _, ce := range cerr.(*depgraph.ConstraintError).Violations {
-				y = append(y, fmt.Sprintf("violation: %+v", ce))
-				y = append(y, fmt.Sprintf("%+v", ce.Err.(*versionConstraintError).Constraint))
-				y = append(y, fmt.Sprintf("%+v", ce.Err.(*versionConstraintError)))
+			var cmsg string
+			var fullcmsg string
+			if cerr != nil {
+				cmsg = cerr.Error()
+				var y []string
+				for _, ce := range cerr.(*depgraph.ConstraintError).Violations {
+					y = append(y, fmt.Sprintf("violation: %+v", ce))
+					y = append(y, fmt.Sprintf("%+v", ce.Err.(*versionConstraintError).Constraint))
+					y = append(y, fmt.Sprintf("%+v", ce.Err.(*versionConstraintError)))
+				}
+				fullcmsg = strings.Join(y, ",")
 			}
-			fullcmsg = strings.Join(y, ",")
-		}
-		err := fmt.Errorf("We had some mishaps! constraint err: %s full cmsg: %s\n", cmsg, fullcmsg)
+			err := fmt.Errorf("We had some mishaps! constraint err: %s full cmsg: %s\n", cmsg, fullcmsg)
 		*/
 		err := buildDependsError(cerr)
 		return nil, err
@@ -1418,7 +1418,7 @@ func buildDependsError(err error) *DependsError {
 			} else {
 				depErr.noVersion = append(depErr.noVersion, fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint))
 			}
-			
+
 		}
 	}
 	return depErr
