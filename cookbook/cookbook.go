@@ -112,6 +112,12 @@ func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 	if tMeta.version == "" {
 		//err := fmt.Errorf("no version number found for %s :: %s :: %+v", tail.Name, tMeta.constraint.String(), v)
 		verr.ViolationType = CookbookNoVersion
+		// but what constraint isn't met?
+		cb, _ := Get(tail.Name)
+		if cb != nil {
+			badver := cb.badConstraints(v)
+			verr.Constraint = strings.Join(badver, ",")
+		}
 		return false, verr
 	}
 
@@ -533,6 +539,24 @@ func (c *Cookbook) latestMultiConstraint(constraints versionConstraint) *Cookboo
 		}
 	}
 	return cbv
+}
+
+func (c *Cookbook) badConstraints(constraints versionConstraint) []string {
+	bad := make([]string, 0, len(constraints))
+	if constraints == nil {
+		return bad
+	}
+	cbversions := c.sortedVersions()
+	for _, cs := range constraints {
+		for _, cver := range cbversions {
+			v, _ := gversion.NewVersion(cver.Version)
+			if !cs.Check(v) {
+				bad = append(bad, cs.String())
+				break
+			}
+		}
+	}
+	return bad
 }
 
 func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]*depgraph.Noun, cbShelf map[string]*Cookbook) {
@@ -1416,7 +1440,7 @@ func buildDependsError(err error) *DependsError {
 			if unsat {
 				depErr.mostConstrained = append(depErr.mostConstrained, fmt.Sprintf("%s %s -> [<thing>]", verr.ParentCookbook, verr.ParentConstraint))
 			} else {
-				depErr.noVersion = append(depErr.noVersion, fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint))
+				depErr.noVersion = append(depErr.noVersion, fmt.Sprintf("(%s %s)", verr.Cookbook, verr.Constraint))
 			}
 
 		}
@@ -1455,7 +1479,7 @@ func (d *DependsError) ErrMap() map[string]interface{} {
 			msg = fmt.Sprintf("%s no such %s %s", msg, werd, strings.Join(d.notFound, ", "))
 		}
 		if len(d.noVersion) > 0 {
-			msg = fmt.Sprintf("%s no versions match the constraint on cookbook %s", msg, strings.Join(d.noVersion, ", "))
+			msg = fmt.Sprintf("%s no versions match the constraints on cookbook %s", msg, strings.Join(d.noVersion, ", "))
 		}
 	}
 	msg = fmt.Sprintf("%s.", msg)
