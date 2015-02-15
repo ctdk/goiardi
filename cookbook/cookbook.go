@@ -499,7 +499,6 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 			}
 			err := fmt.Errorf("We had some mishaps! constraint err: %s full cmsg: %s\n", cmsg, fullcmsg)
 		*/
-		err := buildDependsError(cerr)
 		err := &DependsError{cerr.(*depgraph.ConstraintError)}
 		return nil, err
 	}
@@ -1409,43 +1408,6 @@ func (v *versionConstraintError) String() string {
 	return v.Error()
 }
 
-func buildDependsError(err error) *DependsError {
-	depErr := &DependsError{}
-	depErr.notFound = make([]string, 0)
-	depErr.mostConstrained = make([]string, 0)
-	depErr.noVersion = make([]string, 0)
-
-	// Aha! bad constraints can either be a cookbook
-	// depending on a notFound cookbook, or one with no
-	// version that satisfies the constraint. The difference
-	// with CookbookNotFound and CookbookNoVersion is that
-	// those two are only root dependencies, while bad
-	// constraint errors are farther up. That, it turns out,
-	// is the key.
-
-	for _, ce := range err.(*depgraph.ConstraintError).Violations {
-		verr := ce.Err.(*versionConstraintError)
-		var unsat bool
-		if verr.ParentCookbook != "^runlist_root^" {
-			unsat = true
-			depErr.unsatisfiable = append(depErr.unsatisfiable, fmt.Sprintf("(%s %s)", verr.ParentCookbook, verr.ParentConstraint))
-		}
-
-		switch verr.ViolationType {
-		case CookbookNotFound:
-			depErr.notFound = append(depErr.notFound, verr.Cookbook)
-		case CookbookNoVersion:
-			if unsat {
-				depErr.mostConstrained = append(depErr.mostConstrained, fmt.Sprintf("%s %s -> [<thing>]", verr.ParentCookbook, verr.ParentConstraint))
-			} else {
-				depErr.noVersion = append(depErr.noVersion, fmt.Sprintf("(%s %s)", verr.Cookbook, verr.Constraint))
-			}
-
-		}
-	}
-	return depErr
-}
-
 func (d *DependsError) Error() string {
 	errMap := d.ErrMap()
 	return errMap["message"].(string)
@@ -1458,11 +1420,11 @@ func (d *DependsError) String() string {
 func (d *DependsError) ErrMap() map[string]interface{} {
 	errMap := make(map[string]interface{})
 
-	var msg string
-	notFound = make([]string, 0)
-	mostConstrained = make([]string, 0)
-	noVersion = make([]string, 0)
-	unsatisfiable = make([]string, 0)
+	allMsgs := make([]string, 0)
+	notFound := make([]string, 0)
+	mostConstrained := make([]string, 0)
+	noVersion := make([]string, 0)
+	unsatisfiable := make([]string, 0)
 
 	for _, ce := range d.depErr.Violations {
 		var vMsg string
@@ -1477,38 +1439,46 @@ func (d *DependsError) ErrMap() map[string]interface{} {
 		} else {
 			if unsat {
 				p := fmt.Sprintf("%s %s", verr.ParentCookbook, verr.ParentConstraint)
-				c := fmt.Sprintf("%s %s", verr.Cookbook, verr.CookbookVersion)
-				mostConstrained = append(mostConstrained, fmt.Sprintf("%s -> %s", p, c)
+				c := fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint)
+				mostConstrained = append(mostConstrained, fmt.Sprintf("%s -> %s", p, c))
 			} else {
 				noVersion = append(noVersion, fmt.Sprintf("(%s %s)", verr.Cookbook, verr.Constraint))
 			}
 		}
-	}
-
-
-	errMap["non_existent_cookbooks"] = d.notFound
-	if d.unsatisfiable != nil && len(d.unsatisfiable) > 0 {
-		errMap["most_constrained_cookbooks"] = d.mostConstrained
-		errMap["unsatisfiable_run_list_item"] = d.unsatisfiable[0]
-		msg = fmt.Sprintf("Unable to satisfy constraints on package %s due to solution constraint", d.unsatisfiable[0])
-	} else {
-		msg = "Run list contains invalid items:"
-		errMap["cookbooks_with_no_versions"] = d.noVersion
-		if len(d.notFound) > 0 {
-			var werd string
-			if len(d.notFound) == 1 {
-				werd = "cookbook"
-			} else {
-				werd = "cookbooks"
+		// craft our message:
+		if unsat {
+			var doesntExist string
+			if verr.ViolationType == CookbookNotFound {
+				doesntExist = ", which does not exist,"
 			}
-			msg = fmt.Sprintf("%s no such %s %s", msg, werd, strings.Join(d.notFound, ", "))
+			vMsg = fmt.Sprintf("Unable to satisfy constraints on package %s%s due to solution constraint (%s %s). Solution constraints that may result in a constraint on %s: [(%s = %s) -> (%s %s)]", verr.Cookbook, doesntExist, verr.ParentCookbook, verr.ParentConstraint, verr.Cookbook, verr.ParentCookbook, verr.ParentVersion, verr.Cookbook, verr.Constraint)
+		} else {
+			vMsg = "Run list contains invalid items:"
+			if len(notFound) > 0 {
+				var werd string
+				if len(notFound) == 1 {
+					werd = "cookbook"
+				} else {
+					werd = "cookbooks"
+				}
+				vMsg = fmt.Sprintf("%s no such %s %s", vMsg, werd, strings.Join(notFound, ", "))
+			}
+			if len(noVersion) > 0 {
+				vMsg = fmt.Sprintf("%s no versions match the constraints on cookbook %s", vMsg, strings.Join(noVersion, ", "))
+			}
 		}
-		if len(d.noVersion) > 0 {
-			msg = fmt.Sprintf("%s no versions match the constraints on cookbook %s", msg, strings.Join(d.noVersion, ", "))
-		}
+		allMsgs = append(allMsgs, vMsg)
 	}
-	msg = fmt.Sprintf("%s.", msg)
+	msg := strings.Join(allMsgs, "\n")
 	errMap["message"] = msg
+
+	errMap["non_existent_cookbooks"] = notFound
+	if len(unsatisfiable) > 0 {
+		errMap["unsatisfiable_run_list_item"] = strings.Join(unsatisfiable, ", ")
+		errMap["most_constrained_cookbooks"] = mostConstrained
+	} else {
+		errMap["cookbooks_with_no_versions"] = noVersion
+	}
 
 	return errMap
 }
