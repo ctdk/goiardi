@@ -136,10 +136,7 @@ type depMeta struct {
 }
 
 type DependsError struct {
-	notFound        []string
-	noVersion       []string
-	unsatisfiable   []string
-	mostConstrained []string
+	depErr *depgraph.ConstraintError
 }
 
 /* Cookbook methods and functions */
@@ -503,6 +500,7 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 			err := fmt.Errorf("We had some mishaps! constraint err: %s full cmsg: %s\n", cmsg, fullcmsg)
 		*/
 		err := buildDependsError(cerr)
+		err := &DependsError{cerr.(*depgraph.ConstraintError)}
 		return nil, err
 	}
 
@@ -1459,7 +1457,34 @@ func (d *DependsError) String() string {
 
 func (d *DependsError) ErrMap() map[string]interface{} {
 	errMap := make(map[string]interface{})
+
 	var msg string
+	notFound = make([]string, 0)
+	mostConstrained = make([]string, 0)
+	noVersion = make([]string, 0)
+	unsatisfiable = make([]string, 0)
+
+	for _, ce := range d.depErr.Violations {
+		var vMsg string
+		verr := ce.Err.(*versionConstraintError)
+		var unsat bool
+		if verr.ParentCookbook != "^runlist_root^" {
+			unsat = true
+			unsatisfiable = append(unsatisfiable, fmt.Sprintf("(%s %s)", verr.ParentCookbook, verr.ParentConstraint))
+		}
+		if verr.ViolationType == CookbookNotFound {
+			notFound = append(notFound, verr.Cookbook)
+		} else {
+			if unsat {
+				p := fmt.Sprintf("%s %s", verr.ParentCookbook, verr.ParentConstraint)
+				c := fmt.Sprintf("%s %s", verr.Cookbook, verr.CookbookVersion)
+				mostConstrained = append(mostConstrained, fmt.Sprintf("%s -> %s", p, c)
+			} else {
+				noVersion = append(noVersion, fmt.Sprintf("(%s %s)", verr.Cookbook, verr.Constraint))
+			}
+		}
+	}
+
 
 	errMap["non_existent_cookbooks"] = d.notFound
 	if d.unsatisfiable != nil && len(d.unsatisfiable) > 0 {
