@@ -1457,7 +1457,7 @@ func (d *DependsError) ErrMap() map[string]interface{} {
 					c = fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint)
 				}
 				mostConstrained = append(mostConstrained, fmt.Sprintf("%s -> [%s]", c, p))
-				
+
 			} else {
 				noVersion = append(noVersion, fmt.Sprintf("(%s %s)", verr.Cookbook, verr.Constraint))
 			}
