@@ -1438,9 +1438,26 @@ func (d *DependsError) ErrMap() map[string]interface{} {
 			notFound = append(notFound, verr.Cookbook)
 		} else {
 			if unsat {
-				p := fmt.Sprintf("%s %s", verr.ParentCookbook, verr.ParentConstraint)
-				c := fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint)
-				mostConstrained = append(mostConstrained, fmt.Sprintf("%s -> %s", p, c))
+				cb, _ := Get(verr.Cookbook)
+				var cbv *CookbookVersion
+				if cb != nil {
+					cbv = cb.LatestVersion()
+				}
+				var p, c string
+				if cbv != nil {
+					c = fmt.Sprintf("%s = %s", cbv.CookbookName, cbv.Version)
+					depList := cbv.Metadata["dependencies"].(map[string]interface{})
+					if dp, ok := depList[verr.ParentCookbook]; ok {
+						p = fmt.Sprintf("(%s %s)", verr.ParentCookbook, dp)
+					}
+				} else {
+					// something is very bad, try our best
+					// to recover
+					p = fmt.Sprintf("%s %s", verr.ParentCookbook, verr.ParentConstraint)
+					c = fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint)
+				}
+				mostConstrained = append(mostConstrained, fmt.Sprintf("%s -> [%s]", c, p))
+				
 			} else {
 				noVersion = append(noVersion, fmt.Sprintf("(%s %s)", verr.Cookbook, verr.Constraint))
 			}
@@ -1466,6 +1483,7 @@ func (d *DependsError) ErrMap() map[string]interface{} {
 			if len(noVersion) > 0 {
 				vMsg = fmt.Sprintf("%s no versions match the constraints on cookbook %s", vMsg, strings.Join(noVersion, ", "))
 			}
+			vMsg = fmt.Sprintf("%s.", vMsg)
 		}
 		allMsgs = append(allMsgs, vMsg)
 	}
