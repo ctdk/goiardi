@@ -319,10 +319,8 @@ func (n *Node) Index() string {
 }
 
 // Flatten a node for indexing.
-func (n *Node) Flatten() []string {
-	flatten := util.FlattenObj(n)
-	indexified := util.Indexify(flatten)
-	return indexified
+func (n *Node) Flatten() map[string]interface{} {
+	return util.FlattenObj(n)
 }
 
 // AllNodes returns all the nodes on the server
