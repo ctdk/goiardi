@@ -75,6 +75,7 @@ func main() {
 
 	gobRegister()
 	ds := datastore.New()
+	indexer.Initialize(config.Config)
 	if config.Config.FreezeData {
 		if config.Config.DataStoreFile != "" {
 			uerr := ds.Load(config.Config.DataStoreFile)
@@ -83,7 +84,7 @@ func main() {
 				os.Exit(1)
 			}
 		}
-		ierr := indexer.LoadIndex(config.Config.IndexFile)
+		ierr := indexer.LoadIndex()
 		if ierr != nil {
 			logger.Criticalf(ierr.Error())
 			os.Exit(1)
@@ -116,7 +117,7 @@ func main() {
 					logger.Errorf(err.Error())
 				}
 			}
-			if err := indexer.SaveIndex(config.Config.IndexFile); err != nil {
+			if err := indexer.SaveIndex(); err != nil {
 				logger.Errorf(err.Error())
 			}
 		}
@@ -404,7 +405,7 @@ func handleSignals() {
 							logger.Errorf(err.Error())
 						}
 					}
-					if err := indexer.SaveIndex(config.Config.IndexFile); err != nil {
+					if err := indexer.SaveIndex(); err != nil {
 						logger.Errorf(err.Error())
 					}
 				}
@@ -442,12 +443,6 @@ func gobRegister() {
 	gob.Register(m)
 	var si []interface{}
 	gob.Register(si)
-	i := new(indexer.Index)
-	ic := new(indexer.IdxCollection)
-	id := new(indexer.IdxDoc)
-	gob.Register(i)
-	gob.Register(ic)
-	gob.Register(id)
 	var ss []string
 	gob.Register(ss)
 	ms := make(map[string]string)
@@ -494,7 +489,7 @@ func setSaveTicker() {
 						logger.Errorf(uerr.Error())
 					}
 				}
-				ierr := indexer.SaveIndex(config.Config.IndexFile)
+				ierr := indexer.SaveIndex()
 				if ierr != nil {
 					logger.Errorf(ierr.Error())
 				}
