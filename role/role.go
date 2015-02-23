@@ -280,10 +280,8 @@ func (r *Role) Index() string {
 }
 
 // Flatten a role so it's suitable for indexing.
-func (r *Role) Flatten() []string {
-	flatten := util.FlattenObj(r)
-	indexified := util.Indexify(flatten)
-	return indexified
+func (r *Role) Flatten() map[string]interface{} {
+	return util.FlattenObj(r)
 }
 
 // AllRoles returns all the roles on the server
