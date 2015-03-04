@@ -131,6 +131,13 @@ func TestSearchNodeAll(t *testing.T) {
 	}
 }
 
+func TestSearchNodeFalse(t *testing.T) {
+	n, _ := Search("node", "foo:bar AND NOT foo:bar")
+	if len(n) != 0 {
+		t.Errorf("Incorrect number of items returned, expected 0, got %d", len(n))
+	}
+}
+
 func TestSearchRole(t *testing.T) {
 	r, _ := Search("role", "name:role1")
 	if r[0].(*role.Role).Name != "role1" {
