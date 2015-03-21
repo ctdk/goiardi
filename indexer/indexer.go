@@ -560,12 +560,12 @@ func SearchRange(idxName string, field string, start string, end string, inclusi
 	return res, err
 }
 
-// SearchIndexResults does a basic search from an existing collection of
-// documents, rather than the full index.
-func SearchIndexResults(term string, notop bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
+// SearchResults does a basic search from an existing collection of documents,
+// rather than the full index.
+func SearchResults(term string, notop bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
 	indexMap.m.RLock()
 	defer indexMap.m.RUnlock()
-	idc := &IdxCollection{ docs: docs }
+	idc := &IdxCollection{docs: docs}
 	if term == "*:*" {
 		if notop {
 			d := make(map[string]*IdxDoc)
@@ -575,6 +575,26 @@ func SearchIndexResults(term string, notop bool, docs map[string]*IdxDoc) (map[s
 		}
 	}
 	res, err := idc.searchCollection(term, notop)
+	return res, err
+}
+
+// SearchResultsRange does a range search on a collection of search results,
+// rather than the full index.
+func SearchResultsRange(field string, start string, end string, inclusive bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
+	indexMap.m.RLock()
+	defer indexMap.m.RUnlock()
+	idc := &IdxCollection{docs: docs}
+	res, err := idc.searchRange(field, start, end, inclusive)
+	return res, err
+}
+
+// SearchResultsText does a text searc on a collection of search results,
+// rather than the full index.
+func SearchResultsText(term string, notop bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
+	indexMap.m.RLock()
+	defer indexMap.m.RUnlock()
+	idc := &IdxCollection{docs: docs}
+	res, err := idc.searchTextCollection(term, notop)
 	return res, err
 }
 

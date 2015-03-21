@@ -178,7 +178,7 @@ func (q *BasicQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[strin
 	// TODO: add field == ""
 
 	searchTerm := fmt.Sprintf("%s:%s", q.field, q.term.term)
-	res, err := indexer.SearchIndexResults(searchTerm, notop, curRes)
+	res, err := indexer.SearchResults(searchTerm, notop, curRes)
 
 	return res, err
 }
@@ -345,6 +345,11 @@ func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, 
 		}
 		tmpRes[i].res = r
 	}
+	res, err := mergeResults(tmpRes)
+	return res, err
+}
+
+func mergeResults(tmpRes []groupQueryHolder) (map[string]*indexer.IdxDoc, error) {
 	reqOp := false
 	res := make(map[string]*indexer.IdxDoc)
 	var req map[string]*indexer.IdxDoc
@@ -384,11 +389,27 @@ func (q *SubQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, erro
 }
 
 func (q *GroupedQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error) {
-	return nil, nil
+	tmpRes := make([]groupQueryHolder, len(q.terms))
+	for i, v := range q.terms {
+		tmpRes[i].op = v.mod
+		notop := false
+		if v.mod == OpUnaryNot || v.mod == OpUnaryPro {
+			notop = true
+		}
+		searchTerm := fmt.Sprintf("%s:%s", q.field, v.term)
+		r, err := indexer.SearchResults(searchTerm, notop, curRes)
+		if err != nil {
+			return nil, err
+		}
+		tmpRes[i].res = r
+	}
+	res, err := mergeResults(tmpRes)
+	return res, err
 }
 
 func (q *RangeQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error) {
-	return nil, nil
+	res, err := indexer.SearchResultsRange(string(q.field), string(q.start), string(q.end), q.inclusive, curRes)
+	return res, err
 }
 
 func (q *SubQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error) {
