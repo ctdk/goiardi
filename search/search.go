@@ -78,29 +78,30 @@ func (sq *SolrQuery) execute() (map[string]*indexer.IdxDoc, error) {
 				return nil, err
 			}
 			s = nend
-			d := make(map[string]*indexer.IdxDoc)
+			var d map[string]*indexer.IdxDoc
+			if curOp == OpBinAnd {
+				d = sq.docs
+			} else {
+				d = make(map[string]*indexer.IdxDoc)
+			}
 			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d}
 			r, err = nsq.execute()
 		default:
-			r, err = s.SearchIndex(sq.idxName)
+			if curOp == OpBinAnd {
+				r, err = s.SearchResults(sq.docs)
+			} else {
+				r, err = s.SearchIndex(sq.idxName)
+			}
 		}
 		if err != nil {
 			return nil, err
 		}
-		if len(sq.docs) == 0 { // nothing in place yet
+		if len(sq.docs) == 0 || curOp == OpBinAnd { // nothing in place yet
 			sq.docs = r
 		} else if curOp == OpBinOr {
 			for k, v := range r {
 				sq.docs[k] = v
 			}
-		} else if curOp == OpBinAnd {
-			newRes := make(map[string]*indexer.IdxDoc, len(sq.docs)+len(r))
-			for k, v := range sq.docs {
-				if _, found := r[k]; found {
-					newRes[k] = v
-				}
-			}
-			sq.docs = newRes
 		} else {
 			logger.Debugf("Somehow we got to what should have been an impossible state with search")
 		}

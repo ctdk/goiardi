@@ -124,6 +124,8 @@ type SubQuery struct {
 type Queryable interface {
 	// Search the index for the given term.
 	SearchIndex(string) (map[string]*indexer.IdxDoc, error)
+	// Search for the given term from already gathered search results
+	SearchResults(map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error)
 	// Add an operator to this query chain link.
 	AddOp(Op)
 	// Get this query chain link's op.
@@ -164,6 +166,19 @@ func (q *BasicQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, er
 	}
 	searchTerm := fmt.Sprintf("%s:%s", q.field, q.term.term)
 	res, err := indexer.SearchIndex(idxName, searchTerm, notop)
+
+	return res, err
+}
+
+func (q *BasicQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error) {
+	notop := false
+	if (q.term.mod == OpUnaryNot) || (q.term.mod == OpUnaryPro) {
+		notop = true
+	}
+	// TODO: add field == ""
+
+	searchTerm := fmt.Sprintf("%s:%s", q.field, q.term.term)
+	res, err := indexer.SearchIndexResults(searchTerm, notop, curRes)
 
 	return res, err
 }
@@ -365,6 +380,18 @@ func (q *RangeQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, er
 }
 
 func (q *SubQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
+	return nil, nil
+}
+
+func (q *GroupedQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error) {
+	return nil, nil
+}
+
+func (q *RangeQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error) {
+	return nil, nil
+}
+
+func (q *SubQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error) {
 	return nil, nil
 }
 
