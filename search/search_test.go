@@ -25,7 +25,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"testing"
-	"time"
+	//"time"
 )
 
 // Most search testing can be handled fine with chef-pedant, but that's no
@@ -67,6 +67,8 @@ func makeSearchItems() int {
 
 	for i := 0; i < 4; i++ {
 		nodes[i], _ = node.New(fmt.Sprintf("node%d", i))
+		nodes[i].Default["baz"] = fmt.Sprintf("borb")
+		nodes[i].Default["blurg"] = fmt.Sprintf("b%d", i)
 		nodes[i].Save()
 		roles[i], _ = role.New(fmt.Sprintf("role%d", i))
 		roles[i].Save()
@@ -128,6 +130,41 @@ func TestSearchNodeAll(t *testing.T) {
 	n, _ := Search("node", "*:*")
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
+	}
+}
+
+func TestSearchNodeFalse(t *testing.T) {
+	n, _ := Search("node", "foo:bar AND NOT foo:bar")
+	if len(n) != 0 {
+		t.Errorf("Incorrect number of items returned, expected 0, got %d", len(n))
+	}
+}
+
+func TestSearchNodeAttr(t *testing.T) {
+	n, _ := Search("node", "name:node1 AND NOT baz:urb")
+	if len(n) != 1 {
+		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(n))
+	}
+}
+
+func TestSearchNodeAttrExists(t *testing.T) {
+	n, _ := Search("node", "name:node1 AND NOT baz:borb")
+	if len(n) != 0 {
+		t.Errorf("Incorrect number of items returned, expected 0, got %d", len(n))
+	}
+}
+
+func TestSearchNodeAttrAndExists(t *testing.T) {
+	n, _ := Search("node", "name:node1 AND baz:borb")
+	if len(n) != 1 {
+		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(n))
+	}
+}
+
+func TestSearchNodeAttrAndNotExists(t *testing.T) {
+	n, _ := Search("node", "name:node1 AND baz:urb")
+	if len(n) != 0 {
+		t.Errorf("Incorrect number of items returned, expected 0, got %d", len(n))
 	}
 }
 
