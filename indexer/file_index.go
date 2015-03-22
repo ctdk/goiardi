@@ -54,7 +54,7 @@ type searchRes struct {
 
 /* Index methods */
 
-func (i *FileIndex) initialize() {
+func (i *FileIndex) Initialize() {
 	in := new(FileIndex)
 	ic := new(IdxCollection)
 	id := new(IdxDoc)
@@ -65,7 +65,7 @@ func (i *FileIndex) initialize() {
 	i.makeDefaultCollections()
 }
 
-func (i *FileIndex) createCollection(idxName string) {
+func (i *FileIndex) CreateCollection(idxName string) {
 	i.updated = true
 
 	if _, ok := i.idxmap[idxName]; !ok {
@@ -76,25 +76,25 @@ func (i *FileIndex) createCollection(idxName string) {
 	}
 }
 
-func (i *FileIndex) deleteCollection(idxName string) {
+func (i *FileIndex) DeleteCollection(idxName string) {
 	i.m.Lock()
 	defer i.m.Unlock()
 	i.updated = true
 	delete(i.idxmap, idxName)
 }
 
-func (i *FileIndex) saveIndex(object Indexable) {
+func (i *FileIndex) SaveItem(object Indexable) {
 	/* Have to check to see if data bag indexes exist */
 	i.m.Lock()
 	defer i.m.Unlock()
 	i.updated = true
 	if _, found := i.idxmap[object.Index()]; !found {
-		i.createCollection(object.Index())
+		i.CreateCollection(object.Index())
 	}
 	i.idxmap[object.Index()].addDoc(object)
 }
 
-func (i *FileIndex) deleteItem(idxName string, doc string) error {
+func (i *FileIndex) DeleteItem(idxName string, doc string) error {
 	i.m.Lock()
 	defer i.m.Unlock()
 	i.updated = true
@@ -106,7 +106,7 @@ func (i *FileIndex) deleteItem(idxName string, doc string) error {
 	return nil
 }
 
-func (i *FileIndex) search(idx string, term string, notop bool) (map[string]*Document, error) {
+func (i *FileIndex) Search(idx string, term string, notop bool) (map[string]*Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
 	idc, found := i.idxmap[idx]
@@ -122,7 +122,7 @@ func (i *FileIndex) search(idx string, term string, notop bool) (map[string]*Doc
 	return results, err
 }
 
-func (i *FileIndex) searchText(idx string, term string, notop bool) (map[string]*Document, error) {
+func (i *FileIndex) SearchText(idx string, term string, notop bool) (map[string]*Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
 	idc, found := i.idxmap[idx]
@@ -134,7 +134,7 @@ func (i *FileIndex) searchText(idx string, term string, notop bool) (map[string]
 	return results, err
 }
 
-func (i *FileIndex) searchRange(idx string, field string, start string, end string, inclusive bool) (map[string]*Document, error) {
+func (i *FileIndex) SearchRange(idx string, field string, start string, end string, inclusive bool) (map[string]*Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
 	idc, found := i.idxmap[idx]
@@ -146,7 +146,7 @@ func (i *FileIndex) searchRange(idx string, field string, start string, end stri
 	return results, err
 }
 
-func (i *FileIndex) endpoints() []string {
+func (i *FileIndex) Endpoints() []string {
 	i.m.RLock()
 	defer i.m.RUnlock()
 
@@ -161,7 +161,7 @@ func (i *FileIndex) endpoints() []string {
 	return endpoints
 }
 
-func (i *FileIndex) clear() {
+func (i *FileIndex) Clear() {
 	i.makeDefaultCollections()
 }
 
@@ -172,7 +172,7 @@ func (i *FileIndex) makeDefaultCollections() {
 	i.updated = true
 	i.idxmap = make(map[string]IndexCollection)
 	for _, d := range defaults {
-		i.createCollection(d)
+		i.CreateCollection(d)
 	}
 }
 
@@ -581,7 +581,7 @@ func (idoc *IdxDoc) GobDecode(buf []byte) error {
 	return decoder.Decode(&idoc.docText)
 }
 
-func (i *FileIndex) save() error {
+func (i *FileIndex) Save() error {
 	idxFile := i.file
 	if idxFile == "" {
 		err := fmt.Errorf("Yikes! Cannot save index to disk because no file was specified.")
@@ -613,7 +613,7 @@ func (i *FileIndex) save() error {
 	return os.Rename(fp.Name(), idxFile)
 }
 
-func (i *FileIndex) load() error {
+func (i *FileIndex) Load() error {
 	idxFile := i.file
 	if idxFile == "" {
 		err := fmt.Errorf("Yikes! Cannot load index from disk because no file was specified.")
