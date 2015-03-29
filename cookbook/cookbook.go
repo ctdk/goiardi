@@ -500,7 +500,7 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 			return nil, err
 		}
 		gcbvJSON := cbv.ToJSON("POST")
-		
+
 		for _, cd := range chkDiv {
 			if gcbvJSON[cd] == nil {
 				gcbvJSON[cd] = make([]map[string]interface{}, 0)
