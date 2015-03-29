@@ -37,6 +37,10 @@ import (
 	"strings"
 )
 
+// cookbook divisions, when resolving cookbook dependencies, that must be filled
+// with a zero length array (not nil) when they are returned.
+var chkDiv = [...]string{"definitions", "libraries", "attributes", "providers", "resources", "templates", "root_files", "files"}
+
 // VersionStrings is a type to make version strings with the format "x.y.z"
 // sortable.
 type VersionStrings []string
@@ -512,6 +516,12 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 			return nil, err
 		}
 		gcbvJSON := cbv.ToJSON("POST")
+		
+		for _, cd := range chkDiv {
+			if gcbvJSON[cd] == nil {
+				gcbvJSON[cd] = make([]map[string]interface{}, 0)
+			}
+		}
 		cookbookDeps[cbv.CookbookName] = gcbvJSON
 	}
 	return cookbookDeps, nil
