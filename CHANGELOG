@@ -1,3 +1,15 @@
+0.9.1 (unreleased)
+-----
+* Fix error where requests for zero byte cookbook files would crash.
+* Authentication docs improvments (thanks oker1!)
+* Rewritten and more robust cookbook depsolver.
+* Fix for client creation with cheffish (thanks whiteley!)
+* Fix for search where searching for something like "foo:bar AND NOT foo:bar"
+  was returning incorrect results. (brought to my attention and test provided
+  by brimstone, thanks!)
+* Fixed a bug where clients could be created with the same name as a user (or
+  vice versa) in in-memory mode.
+
 0.9.0
 -----
 * Validate IP address supplied on the command line or in the config file.
