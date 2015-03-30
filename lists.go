@@ -210,7 +210,12 @@ func clientHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 		 * response. I think. */
 		clientResponse["public_key"] = chefClient.PublicKey()
 
-		chefClient.Save()
+		err = chefClient.Save()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return nil
+		}
+
 		if lerr := loginfo.LogEvent(opUser, chefClient, "create"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return nil

@@ -560,7 +560,7 @@ func ExportAllUsers() []interface{} {
 func chkInMemClient(name string) error {
 	var err error
 	ds := datastore.New()
-	if _, found := ds.Get("clients", name); found {
+	if _, found := ds.Get("client", name); found {
 		err = fmt.Errorf("a client named %s was found that would conflict with this user", name)
 	}
 	return err

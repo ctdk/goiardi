@@ -156,7 +156,7 @@ func Get(clientname string) (*Client, util.Gerror) {
 
 // Save the client. If a user with the same name as the client exists, returns
 // an error. Additionally, if running with MySQL it will return any DB error.
-func (c *Client) Save() error {
+func (c *Client) Save() util.Gerror {
 	if config.UsingDB() {
 		var err error
 		if config.Config.UseMySQL {
@@ -165,7 +165,7 @@ func (c *Client) Save() error {
 			err = c.savePostgreSQL()
 		}
 		if err != nil {
-			return err
+			return util.CastErr(err)
 		}
 	} else {
 		if err := chkInMemUser(c.Name); err != nil {
@@ -600,11 +600,12 @@ func ExportAllClients() []interface{} {
 	return export
 }
 
-func chkInMemUser(name string) error {
-	var err error
+func chkInMemUser(name string) util.Gerror {
+	var err util.Gerror
 	ds := datastore.New()
-	if _, found := ds.Get("users", name); found {
-		err = fmt.Errorf("a user named %s was found that would conflict with this client", name)
+	if _, found := ds.Get("user", name); found {
+		err = util.Errorf("a user named %s was found that would conflict with this client", name)
+		err.SetStatus(http.StatusConflict)
 	}
 	return err
 }
