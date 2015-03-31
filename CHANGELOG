@@ -1,4 +1,4 @@
-0.9.1 (unreleased)
+0.9.1
 -----
 * Fix error where requests for zero byte cookbook files would crash.
 * Authentication docs improvments (thanks oker1!)
