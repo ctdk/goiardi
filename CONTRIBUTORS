@@ -7,3 +7,11 @@
   - remove a needless newline in a debugging statement
 * Jose Diaz-Gonzales
   - split up README and converted it to rst, for nice formatting and flexibility
+* Zsolt Takács (oker1)
+  - Better authentication documentation
+  - Found bugs with serving zero byte files and cookbooks that depend on each
+    other, and search performance issues with hundreds or thousands of nodes.
+* Matt Whiteley (whiteley)
+  - Fix for client creation with cheffish
+* brimstone
+  - Test for the broken "foo:bar AND NOT foo:bar" search case.
