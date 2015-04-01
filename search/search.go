@@ -29,15 +29,15 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"net/url"
 	"reflect"
-	"strings"
 	"sort"
+	"strings"
 )
 
 // Searcher is an interface that any search backend needs to implement. It's
 // up to the Searcher to use whatever backend it wants to return the desired
 // results.
 type Searcher interface {
-	Search(string, string, int, string, int) ([]map[string]interface{}, error)
+	Search(string, string, int, string, int, map[string]interface{}) ([]map[string]interface{}, error)
 	GetEndpoints() []string
 }
 
