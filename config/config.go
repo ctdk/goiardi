@@ -161,6 +161,7 @@ type Options struct {
 	UseShovey         bool   `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes. Requires --use-serf."`
 	SignPrivKey       string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests."`
 	DotSearch bool `long:"dot-search" description:"If set, searches will use . to separate elements instead of _."`
+	ConvertSearch bool `long:"convert-search" description:"If set, convert _ syntax searches to . syntax. Only useful if --dot-search is set."`
 }
 
 // The goiardi version.
@@ -557,6 +558,15 @@ func ParseConfigOptions() error {
 		Key.Lock()
 		defer Key.Unlock()
 		Key.PrivKey = privKey
+	}
+
+	if opts.DotSearch {
+		Config.DotSearch = opts.DotSearch
+	}
+	if Config.DotSearch {
+		if opts.ConvertSearch {
+			Config.ConvertSearch = opts.ConvertSearch
+		}
 	}
 
 	return nil

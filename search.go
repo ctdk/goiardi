@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/indexer"
@@ -34,6 +35,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 func searchHandler(w http.ResponseWriter, r *http.Request) {
@@ -93,6 +95,16 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		start = 0
 	}
 
+	// if we're using dot syntax for search and changing _ to ., change
+	// the query.
+	if config.Config.ConvertSearch {
+		z := strings.SplitN(paramQuery, ":", 2)
+		if len(z) > 1 {
+			fq := strings.Replace(z[0], "_", ".", -1)
+			paramQuery = strings.Join([]string{fq, z[1]}, ",")
+		}
+	}
+	
 	searcher := &search.TrieSearch{}
 
 	if pathArrayLen == 1 {
