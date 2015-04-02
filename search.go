@@ -93,6 +93,8 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		start = 0
 	}
 
+	searcher := &search.TrieSearch{}
+
 	if pathArrayLen == 1 {
 		/* base end points */
 		switch r.Method {
@@ -101,7 +103,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
-			searchEndpoints := search.GetEndpoints()
+			searchEndpoints := searcher.GetEndpoints()
 			for _, s := range searchEndpoints {
 				searchResponse[s] = util.CustomURL(fmt.Sprintf("/search/%s", s))
 			}
@@ -130,7 +132,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			idx := pathArray[1]
-			res, err := search.Search(idx, paramQuery, paramsRows, sortOrder, start, partialData)
+			res, err := searcher.Search(idx, paramQuery, paramsRows, sortOrder, start, partialData)
 
 			if err != nil {
 				statusCode := http.StatusBadRequest

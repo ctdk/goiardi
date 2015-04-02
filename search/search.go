@@ -84,9 +84,13 @@ type SolrQuery struct {
 	docs       map[string]*indexer.IdxDoc
 }
 
+type TrieSearch struct{
+
+}
+
 // Search parses the given query string and search the given index for any
 // matching results.
-func Search(idx string, q string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
+func (t *TrieSearch) Search(idx string, q string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
 	/* Eventually we'll want more prep. To start, look right in the index */
 	query, qerr := url.QueryUnescape(q)
 	if qerr != nil {
@@ -128,22 +132,9 @@ func Search(idx string, q string, rows int, sortOrder string, start int, partial
 
 	/* If we're doing partial search, tease out the fields we want. */
 	if partialData != nil {
-		res, err = PartialSearchFormat(res, partialData)
+		res, err = formatPartials(res, objs, partialData)
 		if err != nil {
 			return nil, err
-		}
-		for x, z := range res {
-			tmpRes := make(map[string]interface{})
-			switch ro := objs[x].(type) {
-			case *databag.DataBagItem:
-				dbiURL := fmt.Sprintf("/data/%s/%s", ro.DataBagName, ro.RawData["id"].(string))
-				tmpRes["url"] = util.CustomURL(dbiURL)
-			default:
-				tmpRes["url"] = util.ObjURL(objs[x].(util.GoiardiObj))
-			}
-			tmpRes["data"] = z
-
-			res[x] = tmpRes
 		}
 	}
 
@@ -265,7 +256,7 @@ func (sq *SolrQuery) results() []string {
 // GetEndpoints gets a list from the indexer of all the endpoints available to
 // search, namely the defaults (node, role, client, environment) and any data
 // bags.
-func GetEndpoints() []string {
+func (t *TrieSearch) GetEndpoints() []string {
 	endpoints := indexer.Endpoints()
 	return endpoints
 }
@@ -315,7 +306,7 @@ func getResults(variety string, toGet []string) []indexer.Indexable {
 	return results
 }
 
-func PartialSearchFormat(results []map[string]interface{}, partialFormat map[string]interface{}) ([]map[string]interface{}, error) {
+func partialSearchFormat(results []map[string]interface{}, partialFormat map[string]interface{}) ([]map[string]interface{}, error) {
 	/* regularize partial search keys */
 	psearchKeys := make(map[string][]string, len(partialFormat))
 	for k, v := range partialFormat {
@@ -409,4 +400,26 @@ func walk(v interface{}, keys []string) interface{} {
 		}
 		return nil
 	}
+}
+
+func formatPartials(results []map[string]interface{}, objs []indexer.Indexable, partialData map[string]interface{}) ([]map[string]interface{}, error) {
+	var err error
+	results, err = partialSearchFormat(results, partialData)
+	if err != nil {
+		return nil, err
+	}
+	for x, z := range results {
+		tmpRes := make(map[string]interface{})
+		switch ro := objs[x].(type) {
+		case *databag.DataBagItem:
+			dbiURL := fmt.Sprintf("/data/%s/%s", ro.DataBagName, ro.RawData["id"].(string))
+			tmpRes["url"] = util.CustomURL(dbiURL)
+		default:
+			tmpRes["url"] = util.ObjURL(objs[x].(util.GoiardiObj))
+		}
+		tmpRes["data"] = z
+
+		results[x] = tmpRes
+	}
+	return results, nil
 }

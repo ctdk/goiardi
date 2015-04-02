@@ -199,6 +199,12 @@ func escapeStr(s string) string {
 // DeepMerge merges disparate data structures into a flat hash.
 func DeepMerge(key string, source interface{}) map[string]interface{} {
 	merger := make(map[string]interface{})
+	var sep string
+	if config.Config.DotSearch {
+		sep = "."
+	} else {
+		sep = "_"
+	}
 	switch v := source.(type) {
 	case map[string]interface{}:
 		/* We also need to get things like
@@ -214,7 +220,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 			if key == "" {
 				nkey = k
 			} else {
-				nkey = fmt.Sprintf("%s_%s", key, k)
+				nkey = fmt.Sprintf("%s%s%s", key, sep, k)
 			}
 			nm := DeepMerge(nkey, u)
 			for j, q := range nm {
@@ -238,7 +244,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 			if key == "" {
 				nkey = k
 			} else {
-				nkey = fmt.Sprintf("%s_%s", key, k)
+				nkey = fmt.Sprintf("%s%s%s", key, k)
 			}
 			merger[nkey] = u
 		}

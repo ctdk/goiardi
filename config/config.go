@@ -82,6 +82,8 @@ type Conf struct {
 	SerfAddr          string `toml:"serf-addr"`
 	UseShovey         bool   `toml:"use-shovey"`
 	SignPrivKey       string `toml:"sign-priv-key"`
+	DotSearch bool `toml:"dot-search"`
+	ConvertSearch bool `toml:"convert-search"`
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -158,6 +160,7 @@ type Options struct {
 	SerfAddr          string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373."`
 	UseShovey         bool   `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes. Requires --use-serf."`
 	SignPrivKey       string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests."`
+	DotSearch bool `long:"dot-search" description:"If set, searches will use . to separate elements instead of _."`
 }
 
 // The goiardi version.
