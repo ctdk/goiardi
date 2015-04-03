@@ -33,6 +33,7 @@ import (
 	"github.com/ctdk/goiardi/search"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -95,15 +96,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		start = 0
 	}
 
-	// if we're using dot syntax for search and changing _ to ., change
-	// the query.
-	if config.Config.ConvertSearch {
-		z := strings.SplitN(paramQuery, ":", 2)
-		if len(z) > 1 {
-			fq := strings.Replace(z[0], "_", ".", -1)
-			paramQuery = strings.Join([]string{fq, z[1]}, ",")
-		}
-	}
+	
 	
 	searcher := &search.TrieSearch{}
 
@@ -129,6 +122,21 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 			if opUser.IsValidator() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
+			}
+			var qerr error
+			paramQuery, qerr = url.QueryUnescape(paramQuery)
+			if qerr != nil {
+				jsonErrorReport(w, r, qerr.Error(), http.StatusBadRequest)
+				return
+			}
+			// if we're using dot syntax for search and changing _ 
+			// to ., change the query.
+			if config.Config.ConvertSearch {
+				z := strings.SplitN(paramQuery, ":", 2)
+				if len(z) > 1 {
+					fq := strings.Replace(z[0], "_", ".", -1)
+					paramQuery = strings.Join([]string{fq, z[1]}, ":")
+				}
 			}
 			/* start figuring out what comes in POSTS now,
 			 * so the partial search tests don't complain

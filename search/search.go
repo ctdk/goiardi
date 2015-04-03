@@ -27,7 +27,6 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
-	"net/url"
 	"reflect"
 	"sort"
 	"strings"
@@ -90,12 +89,7 @@ type TrieSearch struct{
 
 // Search parses the given query string and search the given index for any
 // matching results.
-func (t *TrieSearch) Search(idx string, q string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
-	/* Eventually we'll want more prep. To start, look right in the index */
-	query, qerr := url.QueryUnescape(q)
-	if qerr != nil {
-		return nil, qerr
-	}
+func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
 	qq := &Tokenizer{Buffer: query}
 	qq.Init()
 	if err := qq.Parse(); err != nil {
