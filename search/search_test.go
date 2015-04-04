@@ -111,6 +111,8 @@ func makeSearchItems() int {
 
 var v = makeSearchItems()
 
+var searcher = &TrieSearch{}
+
 func TestFoo(t *testing.T) {
 	return
 }
@@ -120,105 +122,105 @@ func TestFoo(t *testing.T) {
  */
 
 func TestSearchNode(t *testing.T) {
-	n, _ := Search("node", "name:node1")
-	if n[0].(*node.Node).Name != "node1" {
+	n, _ := searcher.Search("node", "name:node1", 1000, "id ASC", 0, nil)
+	if n[0]["name"] != "node1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchNodeAll(t *testing.T) {
-	n, _ := Search("node", "*:*")
+	n, _ := searcher.Search("node", "*:*", 1000, "id ASC", 0, nil)
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
 func TestSearchNodeFalse(t *testing.T) {
-	n, _ := Search("node", "foo:bar AND NOT foo:bar")
+	n, _ := searcher.Search("node", "foo:bar AND NOT foo:bar", 1000, "id ASC", 0, nil)
 	if len(n) != 0 {
 		t.Errorf("Incorrect number of items returned, expected 0, got %d", len(n))
 	}
 }
 
 func TestSearchNodeAttr(t *testing.T) {
-	n, _ := Search("node", "name:node1 AND NOT baz:urb")
+	n, _ := searcher.Search("node", "name:node1 AND NOT baz:urb", 1000, "id ASC", 0, nil)
 	if len(n) != 1 {
 		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(n))
 	}
 }
 
 func TestSearchNodeAttrExists(t *testing.T) {
-	n, _ := Search("node", "name:node1 AND NOT baz:borb")
+	n, _ := searcher.Search("node", "name:node1 AND NOT baz:borb", 1000, "id ASC", 0, nil)
 	if len(n) != 0 {
 		t.Errorf("Incorrect number of items returned, expected 0, got %d", len(n))
 	}
 }
 
 func TestSearchNodeAttrAndExists(t *testing.T) {
-	n, _ := Search("node", "name:node1 AND baz:borb")
+	n, _ := searcher.Search("node", "name:node1 AND baz:borb", 1000, "id ASC", 0, nil)
 	if len(n) != 1 {
 		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(n))
 	}
 }
 
 func TestSearchNodeAttrAndNotExists(t *testing.T) {
-	n, _ := Search("node", "name:node1 AND baz:urb")
+	n, _ := searcher.Search("node", "name:node1 AND baz:urb", 1000, "id ASC", 0, nil)
 	if len(n) != 0 {
 		t.Errorf("Incorrect number of items returned, expected 0, got %d", len(n))
 	}
 }
 
 func TestSearchRole(t *testing.T) {
-	r, _ := Search("role", "name:role1")
-	if r[0].(*role.Role).Name != "role1" {
+	r, _ := searcher.Search("role", "name:role1", 1000, "id ASC", 0, nil)
+	if r[0]["name"] != "role1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchRoleAll(t *testing.T) {
-	n, _ := Search("role", "*:*")
+	n, _ := searcher.Search("role", "*:*", 1000, "id ASC", 0, nil)
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
 func TestSearchEnv(t *testing.T) {
-	e, _ := Search("environment", "name:env1")
-	if e[0].(*environment.ChefEnvironment).Name != "env1" {
+	e, _ := searcher.Search("environment", "name:env1", 1000, "id ASC", 0, nil)
+	if e[0]["name"] != "env1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchEnvAll(t *testing.T) {
-	n, _ := Search("environment", "*:*")
+	n, _ := searcher.Search("environment", "*:*", 1000, "id ASC", 0, nil)
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
 func TestSearchClient(t *testing.T) {
-	c, _ := Search("client", "name:client1")
-	if c[0].(*client.Client).Name != "client1" {
+	c, _ := searcher.Search("client", "name:client1", 1000, "id ASC", 0, nil)
+	if c[0]["name"] != "client1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchClientAll(t *testing.T) {
-	n, _ := Search("client", "*:*")
+	n, _ := searcher.Search("client", "*:*", 1000, "id ASC", 0, nil)
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
 func TestSearchDbag(t *testing.T) {
-	d, _ := Search("databag1", "foo:dbag_item_1")
+	d, _ := searcher.Search("databag1", "foo:dbag_item_1", 1000, "id ASC", 0, nil)
 	if len(d) == 0 {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchDbagAll(t *testing.T) {
-	d, _ := Search("databag1", "*:*")
+	d, _ := searcher.Search("databag1", "*:*", 1000, "id ASC", 0, nil)
 	if len(d) != 1 {
 		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(d))
 	}
@@ -244,15 +246,15 @@ func TestEmbiggenSearch(t *testing.T) {
 		d.NewDBItem(dbi)
 	}
 	time.Sleep(1 * time.Second)
-	n, _ := Search("client", "*:*")
+	n, _ := searcher.Search("client", "*:*", 1000, "id ASC", 0, nil)
 	if len(n) != 35000 {
 		t.Errorf("Incorrect number of items returned, expected 500, got %d", len(n))
 	}
-	c, _ := Search("node", "*:*")
+	c, _ := searcher.Search("node", "*:*", 1000, "id ASC", 0, nil)
 	if len(c) != 35000 {
 		t.Errorf("Incorrect number of nodes returned, expected 500, got %d", len(n))
 	}
-	e, _ := Search("environment", "name:env11666")
+	e, _ := searcher.Search("environment", "name:env11666", 1000, "id ASC", 0, nil)
 	if e[0].(*environment.ChefEnvironment).Name != "env11666" {
 		t.Errorf("nothing returned from search")
 	}
