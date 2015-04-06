@@ -492,6 +492,7 @@ func (idoc *IdxDoc) regexSearch(reTerm string) (bool, error) {
 	re := z[1]
 	/* Must add . before any * or ? in the regexp first. Taking the easy way
 	 * out and using strings.Replace. */
+	re = strings.Replace(re, ".", "\\.", -1)
 	re = strings.Replace(re, "*", ".*", -1)
 	re = strings.Replace(re, "?", ".?", -1)
 	reComp, err := regexp.Compile(re)
