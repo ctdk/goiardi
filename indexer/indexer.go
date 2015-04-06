@@ -20,20 +20,8 @@
 package indexer
 
 import (
-	"bytes"
-	"compress/zlib"
-	"encoding/gob"
 	"fmt"
-	"github.com/ctdk/go-trie/gtrie"
-	"github.com/ctdk/goas/v2/logger"
-	"github.com/philhofer/msgp/msgp"
-	"io/ioutil"
-	"os"
-	"path"
-	"regexp"
-	"sort"
-	"strings"
-	"sync"
+	"github.com/ctdk/goiardi/config"
 )
 
 // Indexable is an interface that provides all the information necessary to
@@ -41,45 +29,46 @@ import (
 type Indexable interface {
 	DocID() string
 	Index() string
-	Flatten() []string
+	Flatten() map[string]interface{}
 }
 
 // Index holds a map of document collections.
-type Index struct {
-	m       sync.RWMutex
-	idxmap  map[string]*IdxCollection
-	updated bool
+type Index interface {
+	Initialize()
+	CreateCollection(string)
+	DeleteCollection(string)
+	SaveItem(Indexable)
+	DeleteItem(string, string) error
+	Search(string, string, bool) (map[string]*Document, error)
+	SearchText(string, string, bool) (map[string]*Document, error)
+	SearchRange(string, string, string, string, bool) (map[string]*Document, error)
+	Endpoints() []string
+	Clear()
+	Save() error
+	Load() error
 }
 
-// IdxCollection holds a map of documents.
-type IdxCollection struct {
-	m    sync.RWMutex
-	docs map[string]*IdxDoc
+type Document interface {
 }
 
-// IdxDoc is the indexed documents that are actually searched.
-type IdxDoc struct {
-	m       sync.RWMutex
-	trie    []byte
-	docText []byte
-}
+var indexMap Index
 
-type searchRes struct {
-	key string
-	doc *IdxDoc
-}
+func Initialize(config *config.Conf) {
+	fileindex := new(FileIndex)
+	fileindex.file = config.IndexFile
 
-/* Index methods */
+	im := Index(fileindex)
+	im.Initialize()
+
+	indexMap = im
+}
 
 // Create a new index collection.
 
 // CreateNewCollection creates an index for data bags when they are created,
 // rather than when the first data bag item is uploaded
 func CreateNewCollection(idxName string) {
-	indexMap.m.Lock()
-	defer indexMap.m.Unlock()
-	indexMap.updated = true
-	indexMap.createCollection(idxName)
+	indexMap.CreateCollection(idxName)
 }
 
 // DeleteCollection deletes a collection from the index. Useful only for data
@@ -90,474 +79,37 @@ func DeleteCollection(idxName string) error {
 		err := fmt.Errorf("%s is a default search index, cannot be deleted.", idxName)
 		return err
 	}
-	indexMap.deleteCollection(idxName)
+	indexMap.DeleteCollection(idxName)
 	return nil
 }
 
 // DeleteItemFromCollection deletes an item from a collection
 func DeleteItemFromCollection(idxName string, doc string) error {
-	err := indexMap.deleteItem(idxName, doc)
+	err := indexMap.DeleteItem(idxName, doc)
 	return err
-}
-
-func (i *Index) createCollection(idxName string) {
-	if _, ok := i.idxmap[idxName]; !ok {
-		i.idxmap[idxName] = new(IdxCollection)
-		i.idxmap[idxName].docs = make(map[string]*IdxDoc)
-	}
-}
-
-func (i *Index) deleteCollection(idxName string) {
-	i.m.Lock()
-	defer i.m.Unlock()
-	i.updated = true
-	delete(i.idxmap, idxName)
-}
-
-func (i *Index) saveIndex(object Indexable) {
-	/* Have to check to see if data bag indexes exist */
-	i.m.Lock()
-	defer i.m.Unlock()
-	i.updated = true
-	if _, found := i.idxmap[object.Index()]; !found {
-		i.createCollection(object.Index())
-	}
-	i.idxmap[object.Index()].addDoc(object)
-}
-
-func (i *Index) deleteItem(idxName string, doc string) error {
-	i.m.Lock()
-	defer i.m.Unlock()
-	i.updated = true
-	if _, found := i.idxmap[idxName]; !found {
-		err := fmt.Errorf("Index collection %s not found", idxName)
-		return err
-	}
-	i.idxmap[idxName].delDoc(doc)
-	return nil
-}
-
-func (i *Index) search(idx string, term string, notop bool) (map[string]*IdxDoc, error) {
-	i.m.RLock()
-	defer i.m.RUnlock()
-	idc, found := i.idxmap[idx]
-	if !found {
-		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
-		return nil, err
-	}
-	// Special case - if term is '*:*', just return all of the keys
-	if term == "*:*" {
-		return idc.docs, nil
-	}
-	results, err := idc.searchCollection(term, notop)
-	return results, err
-}
-
-func (i *Index) searchText(idx string, term string, notop bool) (map[string]*IdxDoc, error) {
-	i.m.RLock()
-	defer i.m.RUnlock()
-	idc, found := i.idxmap[idx]
-	if !found {
-		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
-		return nil, err
-	}
-	results, err := idc.searchTextCollection(term, notop)
-	return results, err
-}
-
-func (i *Index) searchRange(idx string, field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error) {
-	i.m.RLock()
-	defer i.m.RUnlock()
-	idc, found := i.idxmap[idx]
-	if !found {
-		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
-		return nil, err
-	}
-	results, err := idc.searchRange(field, start, end, inclusive)
-	return results, err
-}
-
-func (i *Index) endpoints() []string {
-	i.m.RLock()
-	defer i.m.RUnlock()
-
-	endpoints := make([]string, len(i.idxmap))
-	n := 0
-	for k := range i.idxmap {
-		endpoints[n] = k
-		n++
-	}
-
-	sort.Strings(endpoints)
-	return endpoints
-}
-
-/* IdxCollection methods */
-
-func (ic *IdxCollection) addDoc(object Indexable) {
-	ic.m.Lock()
-	if _, found := ic.docs[object.DocID()]; !found {
-		ic.docs[object.DocID()] = new(IdxDoc)
-	}
-	ic.m.Unlock()
-	ic.m.RLock()
-	defer ic.m.RUnlock()
-	ic.docs[object.DocID()].update(object)
-}
-
-func (ic *IdxCollection) delDoc(doc string) {
-	ic.m.Lock()
-	defer ic.m.Unlock()
-
-	delete(ic.docs, doc)
-}
-
-/* Search for an exact key/value match */
-func (ic *IdxCollection) searchCollection(term string, notop bool) (map[string]*IdxDoc, error) {
-	results := make(map[string]*IdxDoc)
-	ic.m.RLock()
-	defer ic.m.RUnlock()
-	l := len(ic.docs)
-	errCh := make(chan error, l)
-	resCh := make(chan *searchRes, l)
-	for k, v := range ic.docs {
-		go func(k string, v *IdxDoc) {
-			m, err := v.Examine(term)
-			if err != nil {
-				errCh <- err
-				resCh <- nil
-			} else {
-				errCh <- nil
-				if (m && !notop) || (!m && notop) {
-					r := &searchRes{k, v}
-					resCh <- r
-				} else {
-					resCh <- nil
-				}
-			}
-		}(k, v)
-	}
-	for i := 0; i < l; i++ {
-		e := <-errCh
-		if e != nil {
-			return nil, e
-		}
-	}
-	for i := 0; i < l; i++ {
-		r := <-resCh
-		if r != nil {
-			results[r.key] = r.doc
-		}
-	}
-	rsafe := safeSearchResults(results)
-	return rsafe, nil
-}
-
-func (ic *IdxCollection) searchTextCollection(term string, notop bool) (map[string]*IdxDoc, error) {
-	results := make(map[string]*IdxDoc)
-	ic.m.RLock()
-	defer ic.m.RUnlock()
-	l := len(ic.docs)
-	errCh := make(chan error, l)
-	resCh := make(chan *searchRes, l)
-	for k, v := range ic.docs {
-		go func(k string, v *IdxDoc) {
-			m, err := v.TextSearch(term)
-			if err != nil {
-				errCh <- err
-				resCh <- nil
-			} else {
-				errCh <- nil
-				if (m && !notop) || (!m && notop) {
-					r := &searchRes{k, v}
-					logger.Debugf("Adding result %s to channel", k)
-					resCh <- r
-				} else {
-					resCh <- nil
-				}
-			}
-		}(k, v)
-	}
-	for i := 0; i < l; i++ {
-		e := <-errCh
-		if e != nil {
-			return nil, e
-		}
-	}
-	for i := 0; i < l; i++ {
-		r := <-resCh
-		if r != nil {
-			logger.Debugf("adding result")
-			results[r.key] = r.doc
-		}
-	}
-	rsafe := safeSearchResults(results)
-	return rsafe, nil
-}
-
-func (ic *IdxCollection) searchRange(field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error) {
-	results := make(map[string]*IdxDoc)
-	ic.m.RLock()
-	defer ic.m.RUnlock()
-	l := len(ic.docs)
-	errCh := make(chan error, l)
-	resCh := make(chan *searchRes, l)
-	for k, v := range ic.docs {
-		go func(k string, v *IdxDoc) {
-			m, err := v.RangeSearch(field, start, end, inclusive)
-			if err != nil {
-				errCh <- err
-				resCh <- nil
-			} else {
-				errCh <- nil
-				if m {
-					r := &searchRes{k, v}
-					logger.Debugf("Adding result %s to channel", k)
-					resCh <- r
-				} else {
-					resCh <- nil
-				}
-			}
-		}(k, v)
-	}
-	for i := 0; i < l; i++ {
-		e := <-errCh
-		if e != nil {
-			return nil, e
-		}
-	}
-	for i := 0; i < l; i++ {
-		r := <-resCh
-		if r != nil {
-			logger.Debugf("adding result")
-			results[r.key] = r.doc
-		}
-	}
-	rsafe := safeSearchResults(results)
-	return rsafe, nil
-}
-
-func safeSearchResults(results map[string]*IdxDoc) map[string]*IdxDoc {
-	rsafe := make(map[string]*IdxDoc, len(results))
-	for k, v := range results {
-		j := &v
-		rsafe[k] = *j
-	}
-	return rsafe
-}
-
-/* IdxDoc methods */
-func (idoc *IdxDoc) update(object Indexable) {
-	idoc.m.Lock()
-	defer idoc.m.Unlock()
-	flattened := object.Flatten()
-	flatText := strings.Join(flattened, "\n")
-	/* recover from horrific trie errors that seem to happen with really
-	 * big values. :-/ */
-	defer func() {
-		if e := recover(); e != nil {
-			logger.Errorf("There was a problem creating the trie: %s", fmt.Sprintln(e))
-		}
-	}()
-	trie, err := gtrie.Create(flattened)
-	if err != nil {
-		logger.Errorf(err.Error())
-	} else {
-		var err error
-		idoc.trie, err = compressTrie(trie)
-		if err != nil {
-			panic(err)
-		}
-		idoc.docText, err = compressText(flatText)
-		if err != nil {
-			panic(err)
-		}
-	}
-}
-
-// Examine searches a document, determining if it needs to do a search for an
-// exact term or a regexp search.
-func (idoc *IdxDoc) Examine(term string) (bool, error) {
-	idoc.m.RLock()
-	defer idoc.m.RUnlock()
-
-	r := regexp.MustCompile(`\*|\?`)
-	if r.MatchString(term) {
-		m, err := idoc.regexSearch(term)
-		return m, err
-	}
-	m, err := idoc.exactSearch(term)
-	if err != nil {
-		return false, err
-	}
-	return m, nil
-}
-
-// TextSearch performs a text search of an index document.
-func (idoc *IdxDoc) TextSearch(term string) (bool, error) {
-	if term[0] == '*' || term[0] == '?' {
-		err := fmt.Errorf("Can't start a term with a wildcard character")
-		return false, err
-	}
-	term = strings.Replace(term, "*", ".*", -1)
-	term = strings.Replace(term, "?", ".?", -1)
-	re := fmt.Sprintf("(?m):%s$", term)
-	reComp, err := regexp.Compile(re)
-	if err != nil {
-		return false, err
-	}
-	idoc.m.RLock()
-	defer idoc.m.RUnlock()
-	docText, err := decompressText(idoc.docText)
-	if err != nil {
-		return false, err
-	}
-	m := reComp.MatchString(docText)
-	return m, nil
-}
-
-// RangeSearch searches for a range of values.
-func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusive bool) (bool, error) {
-	// The parser should catch a lot of possible errors, happily
-
-	// "*" is permitted as a range that indicates anything bigger or smaller
-	// than the other range, depending
-	wildStart := false
-	wildEnd := false
-	if start == "*" {
-		wildStart = true
-	}
-	if end == "*" {
-		wildEnd = true
-	}
-	if wildStart && wildEnd {
-		err := fmt.Errorf("you can't have both start and end be wild in a range search, sadly")
-		return false, err
-	}
-	idoc.m.RLock()
-	defer idoc.m.RUnlock()
-	key := fmt.Sprintf("%s:", field)
-	trie, err := decompressTrie(idoc.trie)
-	if err != nil {
-		return false, err
-	}
-	if n, _ := trie.HasPrefix(key); n != nil {
-		kids := n.ChildKeys()
-		for _, child := range kids {
-			if inclusive {
-				if wildStart {
-					if child <= end {
-						return true, nil
-					}
-				} else if wildEnd {
-					if child >= start {
-						return true, nil
-					}
-				} else {
-					if child >= start && child <= end {
-						return true, nil
-					}
-				}
-			} else {
-				if wildStart {
-					if child < end {
-						return true, nil
-					}
-				} else if wildEnd {
-					if child > start {
-						return true, nil
-					}
-				} else {
-					if child > start && child < end {
-						return true, nil
-					}
-				}
-			}
-		}
-	}
-	return false, nil
-}
-
-func (idoc *IdxDoc) exactSearch(term string) (bool, error) {
-	trie, err := decompressTrie(idoc.trie)
-	if err != nil {
-		return false, err
-	}
-	return trie.Accepts(term), nil
-}
-
-func (idoc *IdxDoc) regexSearch(reTerm string) (bool, error) {
-	z := strings.SplitN(reTerm, ":", 2)
-	key := fmt.Sprintf("%s:", z[0])
-	re := z[1]
-	/* Must add . before any * or ? in the regexp first. Taking the easy way
-	 * out and using strings.Replace. */
-	re = strings.Replace(re, ".", "\\.", -1)
-	re = strings.Replace(re, "*", ".*", -1)
-	re = strings.Replace(re, "?", ".?", -1)
-	reComp, err := regexp.Compile(re)
-	if err != nil {
-		return false, err
-	}
-	/* What would be better would be to fetch all of the parts of the key
-	 * before the regexp part starts. Hmmm. */
-	trie, err := decompressTrie(idoc.trie)
-	if err != nil {
-		return false, err
-	}
-	if n, _ := trie.HasPrefix(key); n != nil {
-		kids := n.ChildKeys()
-		for _, c := range kids {
-			if reComp.MatchString(c) {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
-}
-
-var indexMap = initializeIndex()
-
-func initializeIndex() *Index {
-	/* We always want these indices at least. */
-	im := new(Index)
-	im.makeDefaultCollections()
-
-	return im
-}
-
-func (i *Index) makeDefaultCollections() {
-	defaults := [...]string{"client", "environment", "node", "role"}
-	i.m.Lock()
-	defer i.m.Unlock()
-	i.updated = true
-	i.idxmap = make(map[string]*IdxCollection)
-	for _, d := range defaults {
-		i.createCollection(d)
-	}
 }
 
 // IndexObj processes and adds an object to the index.
 func IndexObj(object Indexable) {
-	go indexMap.saveIndex(object)
+	go indexMap.SaveItem(object)
 }
 
 // SearchIndex searches for a string in the given index. Returns a slice of
 // names of matching objects, or an error on failure.
-func SearchIndex(idxName string, term string, notop bool) (map[string]*IdxDoc, error) {
-	res, err := indexMap.search(idxName, term, notop)
+func SearchIndex(idxName string, term string, notop bool) (map[string]*Document, error) {
+	res, err := indexMap.Search(idxName, term, notop)
 	return res, err
 }
 
 // SearchText performs a full-ish text search of the index.
-func SearchText(idxName string, term string, notop bool) (map[string]*IdxDoc, error) {
-	res, err := indexMap.searchText(idxName, term, notop)
+func SearchText(idxName string, term string, notop bool) (map[string]*Document, error) {
+	res, err := indexMap.SearchText(idxName, term, notop)
 	return res, err
 }
 
 // SearchRange performs a range search on the given index.
-func SearchRange(idxName string, field string, start string, end string, inclusive bool) (map[string]*IdxDoc, error) {
-	res, err := indexMap.searchRange(idxName, field, start, end, inclusive)
+func SearchRange(idxName string, field string, start string, end string, inclusive bool) (map[string]*Document, error) {
+	res, err := indexMap.SearchRange(idxName, field, start, end, inclusive)
 	return res, err
 }
 
@@ -601,208 +153,32 @@ func SearchResultsText(term string, notop bool, docs map[string]*IdxDoc) (map[st
 
 // Endpoints returns a list of currently indexed endpoints.
 func Endpoints() []string {
-	endpoints := indexMap.endpoints()
+	endpoints := indexMap.Endpoints()
 	return endpoints
 }
 
 // SaveIndex saves the index files to disk.
-func SaveIndex(idxFile string) error {
-	return indexMap.save(idxFile)
+func SaveIndex() error {
+	return indexMap.Save()
 }
 
 // LoadIndex loads index files from disk.
-func LoadIndex(idxFile string) error {
-	return indexMap.load(idxFile)
-}
-
-/* gob encoding functions for the index */
-
-func (i *Index) GobEncode() ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	i.m.RLock()
-	defer i.m.RUnlock()
-	err := encoder.Encode(i.idxmap)
-	if err != nil {
-		return nil, err
-	}
-	return w.Bytes(), nil
-}
-
-func (i *Index) GobDecode(buf []byte) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-	return decoder.Decode(&i.idxmap)
-}
-
-func (ic *IdxCollection) GobEncode() ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	ic.m.RLock()
-	defer ic.m.RUnlock()
-	err := encoder.Encode(ic.docs)
-	if err != nil {
-		return nil, err
-	}
-	return w.Bytes(), nil
-}
-
-func (ic *IdxCollection) GobDecode(buf []byte) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-	return decoder.Decode(&ic.docs)
-}
-
-func (idoc *IdxDoc) GobEncode() ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	idoc.m.RLock()
-	defer idoc.m.RUnlock()
-	err := encoder.Encode(idoc.trie)
-	if err != nil {
-		return nil, err
-	}
-	err = encoder.Encode(idoc.docText)
-	if err != nil {
-		return nil, err
-	}
-	return w.Bytes(), nil
-}
-
-func (idoc *IdxDoc) GobDecode(buf []byte) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-	err := decoder.Decode(&idoc.trie)
-	if err != nil {
-		return err
-	}
-	return decoder.Decode(&idoc.docText)
-}
-
-func (i *Index) save(idxFile string) error {
-	if idxFile == "" {
-		err := fmt.Errorf("Yikes! Cannot save index to disk because no file was specified.")
-		return err
-	}
-	if !i.updated {
-		return nil
-	}
-	logger.Infof("Index has changed, saving to disk")
-	fp, err := ioutil.TempFile(path.Dir(idxFile), "idx-build")
-	if err != nil {
-		return err
-	}
-	zfp := zlib.NewWriter(fp)
-	i.m.RLock()
-	defer i.m.RUnlock()
-	i.updated = false
-	enc := gob.NewEncoder(zfp)
-	err = enc.Encode(i)
-	zfp.Close()
-	if err != nil {
-		fp.Close()
-		return err
-	}
-	err = fp.Close()
-	if err != nil {
-		return err
-	}
-	return os.Rename(fp.Name(), idxFile)
-}
-
-func (i *Index) load(idxFile string) error {
-	if idxFile == "" {
-		err := fmt.Errorf("Yikes! Cannot load index from disk because no file was specified.")
-		return err
-	}
-	fp, err := os.Open(idxFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	zfp, zerr := zlib.NewReader(fp)
-	if zerr != nil {
-		fp.Close()
-		return zerr
-	}
-	dec := gob.NewDecoder(zfp)
-	err = dec.Decode(&i)
-	zfp.Close()
-	if err != nil {
-		fp.Close()
-		return err
-	}
-	return fp.Close()
+func LoadIndex() error {
+	return indexMap.Load()
 }
 
 // ClearIndex of all collections and documents
 func ClearIndex() {
-	indexMap.makeDefaultCollections()
+	indexMap.Clear()
 	return
 }
 
 // ReIndex rebuilds the search index from scratch
 func ReIndex(objects []Indexable) error {
 	for _, o := range objects {
-		indexMap.saveIndex(o)
+		indexMap.SaveItem(o)
 	}
 	// We really ought to be able to return from an error, but at the moment
 	// there aren't any ways it does so in the index save bits.
 	return nil
-}
-
-func compressTrie(t *gtrie.Node) ([]byte, error) {
-	b := new(bytes.Buffer)
-	z := zlib.NewWriter(b)
-	err := msgp.Encode(z, t)
-	z.Close()
-	if err != nil {
-		return nil, err
-	}
-	return b.Bytes(), nil
-}
-
-func decompressTrie(buf []byte) (*gtrie.Node, error) {
-	b := bytes.NewBuffer(buf)
-	z, err := zlib.NewReader(b)
-	if err != nil {
-		return nil, err
-	}
-	t := new(gtrie.Node)
-	err = msgp.Decode(z, t)
-	err2 := z.Close()
-	if err != nil {
-		return nil, err
-	}
-	if err2 != nil {
-		return nil, err2
-	}
-	return t, nil
-}
-
-func compressText(t string) ([]byte, error) {
-	b := new(bytes.Buffer)
-	z := zlib.NewWriter(b)
-	_, err := z.Write([]byte(t))
-	z.Close()
-	if err != nil {
-		return nil, err
-	}
-	return b.Bytes(), nil
-}
-
-func decompressText(buf []byte) (string, error) {
-	b := bytes.NewBuffer(buf)
-	z, err := zlib.NewReader(b)
-	if err != nil {
-		return "", err
-	}
-	t, err := ioutil.ReadAll(z)
-	z.Close()
-	if err != nil {
-		return "", err
-	}
-	return string(t), nil
 }

@@ -152,10 +152,10 @@ type Queryable interface {
 
 type groupQueryHolder struct {
 	op  Op
-	res map[string]*indexer.IdxDoc
+	res map[string]*indexer.Document
 }
 
-func (q *BasicQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
+func (q *BasicQuery) SearchIndex(idxName string) (map[string]*indexer.Document, error) {
 	notop := false
 	if (q.term.mod == OpUnaryNot) || (q.term.mod == OpUnaryPro) {
 		notop = true
@@ -330,7 +330,7 @@ func (q *RangeQuery) AddFuzzParam(s string) {
 
 }
 
-func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
+func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.Document, error) {
 	tmpRes := make([]groupQueryHolder, len(q.terms))
 	for i, v := range q.terms {
 		tmpRes[i].op = v.mod
@@ -351,8 +351,8 @@ func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, 
 
 func mergeResults(tmpRes []groupQueryHolder) (map[string]*indexer.IdxDoc, error) {
 	reqOp := false
-	res := make(map[string]*indexer.IdxDoc)
-	var req map[string]*indexer.IdxDoc
+	res := make(map[string]*indexer.Document)
+	var req map[string]*indexer.Document
 
 	// Merge the results, taking into account any + operators lurking about
 	for _, t := range tmpRes {
@@ -379,12 +379,12 @@ func mergeResults(tmpRes []groupQueryHolder) (map[string]*indexer.IdxDoc, error)
 	return res, nil
 }
 
-func (q *RangeQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
+func (q *RangeQuery) SearchIndex(idxName string) (map[string]*indexer.Document, error) {
 	res, err := indexer.SearchRange(idxName, string(q.field), string(q.start), string(q.end), q.inclusive)
 	return res, err
 }
 
-func (q *SubQuery) SearchIndex(idxName string) (map[string]*indexer.IdxDoc, error) {
+func (q *SubQuery) SearchIndex(idxName string) (map[string]*indexer.Document, error) {
 	return nil, nil
 }
 

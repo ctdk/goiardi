@@ -80,7 +80,7 @@ func (r results) Less(i, j int) bool {
 type SolrQuery struct {
 	queryChain Queryable
 	idxName    string
-	docs       map[string]*indexer.IdxDoc
+	docs       map[string]*indexer.Document
 }
 
 type TrieSearch struct{
@@ -97,7 +97,7 @@ func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string
 	}
 	qq.Execute()
 	qchain := qq.Evaluate()
-	d := make(map[string]*indexer.IdxDoc)
+	d := make(map[string]*indexer.Document)
 	solrQ := &SolrQuery{queryChain: qchain, idxName: idx, docs: d}
 
 	_, err := solrQ.execute()
@@ -160,11 +160,11 @@ func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string
 	return res, nil
 }
 
-func (sq *SolrQuery) execute() (map[string]*indexer.IdxDoc, error) {
+func (sq *SolrQuery) execute() (map[string]*indexer.Document, error) {
 	s := sq.queryChain
 	curOp := OpNotAnOp
 	for s != nil {
-		var r map[string]*indexer.IdxDoc
+		var r map[string]*indexer.Document
 		var err error
 		switch c := s.(type) {
 		case *SubQuery:
