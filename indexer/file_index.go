@@ -146,6 +146,44 @@ func (i *FileIndex) SearchRange(idx string, field string, start string, end stri
 	return results, err
 }
 
+// SearchResults does a basic search from an existing collection of documents,
+// rather than the full index.
+func (i *FileIndex) SearchResults(term string, notop bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
+	i.m.RLock()
+	defer i.m.RUnlock()
+	idc := &IdxCollection{docs: docs}
+	if term == "*:*" {
+		if notop {
+			d := make(map[string]*IdxDoc)
+			return d, nil
+		} else {
+			return docs, nil
+		}
+	}
+	res, err := idc.searchCollection(term, notop)
+	return res, err
+}
+
+// SearchResultsRange does a range search on a collection of search results,
+// rather than the full index.
+func (i *FileIndex) SearchResultsRange(field string, start string, end string, inclusive bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
+	i.m.RLock()
+	defer i.m.RUnlock()
+	idc := &IdxCollection{docs: docs}
+	res, err := idc.searchRange(field, start, end, inclusive)
+	return res, err
+}
+
+// SearchResultsText does a text searc on a collection of search results,
+// rather than the full index.
+func (i *FileIndex) SearchResultsText(term string, notop bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
+	i.m.RLock()
+	defer i.m.RUnlock()
+	idc := &IdxCollection{docs: docs}
+	res, err := idc.searchTextCollection(term, notop)
+	return res, err
+}
+
 func (i *FileIndex) Endpoints() []string {
 	i.m.RLock()
 	defer i.m.RUnlock()

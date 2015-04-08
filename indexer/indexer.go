@@ -48,6 +48,10 @@ type Index interface {
 	Load() error
 }
 
+type ObjIndexer interface {
+	SaveItem(Indexable)
+}
+
 type Document interface {
 }
 
@@ -115,39 +119,22 @@ func SearchRange(idxName string, field string, start string, end string, inclusi
 
 // SearchResults does a basic search from an existing collection of documents,
 // rather than the full index.
-func SearchResults(term string, notop bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
-	indexMap.m.RLock()
-	defer indexMap.m.RUnlock()
-	idc := &IdxCollection{docs: docs}
-	if term == "*:*" {
-		if notop {
-			d := make(map[string]*IdxDoc)
-			return d, nil
-		} else {
-			return docs, nil
-		}
-	}
-	res, err := idc.searchCollection(term, notop)
+func SearchResults(term string, notop bool, docs map[string]*Document) (map[string]*Document, error) {
+	res, err := indexMap.SearchRange(term, notop, docs)
 	return res, err
 }
 
 // SearchResultsRange does a range search on a collection of search results,
 // rather than the full index.
-func SearchResultsRange(field string, start string, end string, inclusive bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
-	indexMap.m.RLock()
-	defer indexMap.m.RUnlock()
-	idc := &IdxCollection{docs: docs}
-	res, err := idc.searchRange(field, start, end, inclusive)
+func SearchResultsRange(field string, start string, end string, inclusive bool, docs map[string]*Document) (map[string]*Document, error) {
+	res, err := indexMap.SearchResultsRange(field, start, end, inclusive, docs)
 	return res, err
 }
 
 // SearchResultsText does a text searc on a collection of search results,
 // rather than the full index.
 func SearchResultsText(term string, notop bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
-	indexMap.m.RLock()
-	defer indexMap.m.RUnlock()
-	idc := &IdxCollection{docs: docs}
-	res, err := idc.searchTextCollection(term, notop)
+	res, err := indexMap.SearchResultsText(term, notop, docs)
 	return res, err
 }
 
