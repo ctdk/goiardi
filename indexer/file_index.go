@@ -174,8 +174,7 @@ func (i *FileIndex) SearchResults(term string, notop bool, docs map[string]*Docu
 func docToIdxDoc(docs map[string]*Document) map[string]*IdxDoc {
 	d := make(map[string]*IdxDoc, len(docs))
 	for k, v := range docs {
-		z := IdxDoc(*v.(Document))
-		d[k] = &z
+		d[k] = interface{}(v).(*IdxDoc)
 	}
 	return d
 }

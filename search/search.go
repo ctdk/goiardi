@@ -174,11 +174,11 @@ func (sq *SolrQuery) execute() (map[string]*indexer.Document, error) {
 				return nil, err
 			}
 			s = nend
-			var d map[string]*indexer.IdxDoc
+			var d map[string]*indexer.Document
 			if curOp == OpBinAnd {
 				d = sq.docs
 			} else {
-				d = make(map[string]*indexer.IdxDoc)
+				d = make(map[string]*indexer.Document)
 			}
 			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d}
 			r, err = nsq.execute()

@@ -160,12 +160,12 @@ func (q *BasicQuery) SearchIndex(idxName string) (map[string]*indexer.Document, 
 	if (q.term.mod == OpUnaryNot) || (q.term.mod == OpUnaryPro) {
 		notop = true
 	}
+	i := indexer.GetIndex()
 	if q.field == "" {
-		res, err := indexer.SearchText(idxName, string(q.term.term), notop)
+		res, err := i.SearchText(idxName, string(q.term.term), notop)
 		return res, err
 	}
 	searchTerm := fmt.Sprintf("%s:%s", q.field, q.term.term)
-	i := indexer.GetIndex()
 	res, err := i.Search(idxName, searchTerm, notop)
 
 	return res, err
@@ -341,8 +341,8 @@ func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.Document
 			notop = true
 		}
 		searchTerm := fmt.Sprintf("%s:%s", q.field, v.term)
-		i := indexer.GetIndex()
-		r, err := i.Search(idxName, searchTerm, notop)
+		ix := indexer.GetIndex()
+		r, err := ix.Search(idxName, searchTerm, notop)
 		if err != nil {
 			return nil, err
 		}
@@ -401,8 +401,8 @@ func (q *GroupedQuery) SearchResults(curRes map[string]*indexer.Document) (map[s
 			notop = true
 		}
 		searchTerm := fmt.Sprintf("%s:%s", q.field, v.term)
-		i := indexer.GetIndex()
-		r, err := i.SearchResults(searchTerm, notop, curRes)
+		ix := indexer.GetIndex()
+		r, err := ix.SearchResults(searchTerm, notop, curRes)
 		if err != nil {
 			return nil, err
 		}

@@ -20,6 +20,7 @@
 package indexer
 
 import (
+	"fmt"
 	"github.com/ctdk/goiardi/config"
 )
 
@@ -34,18 +35,21 @@ type Indexable interface {
 // Index holds a map of document collections.
 type Index interface {
 	Initialize()
-	CreateCollection(string)
-	DeleteCollection(string) error
-	DeleteItem(string, string) error
 	Search(string, string, bool) (map[string]*Document, error)
 	SearchText(string, string, bool) (map[string]*Document, error)
 	SearchRange(string, string, string, string, bool) (map[string]*Document, error)
+	SearchResults(string, bool, map[string]*Document) (map[string]*Document, error)
+	SearchResultsRange(string, string, string, bool, map[string]*Document) (map[string]*Document, error)
+	SearchResultsText(string, bool, map[string]*Document) (map[string]*Document, error)
 	Save() error
 	Load() error
 	ObjIndexer
 }
 
 type ObjIndexer interface {
+	CreateCollection(string)
+	DeleteCollection(string) error
+	DeleteItem(string, string) error
 	SaveItem(Indexable)
 	Endpoints() []string
 	Clear()
@@ -73,6 +77,30 @@ func GetIndex() Index {
 	// right now just return the index map
 	return indexMap
 }
+
+// CreateNewCollection creates an index for data bags when they are created,
+// rather than when the first data bag item is uploaded
+func CreateNewCollection(idxName string) {
+	objIndex.CreateCollection(idxName)
+}
+
+// DeleteCollection deletes a collection from the index. Useful only for data
+// bags.
+func DeleteCollection(idxName string) error {
+	/* Don't try and delete built-in indexes */
+	if idxName == "node" || idxName == "client" || idxName == "environment" || idxName == "role" {
+		err := fmt.Errorf("%s is a default search index, cannot be deleted.", idxName)
+		return err
+	}
+	return objIndex.DeleteCollection(idxName)
+}
+
+// DeleteItemFromCollection deletes an item from a collection
+func DeleteItemFromCollection(idxName string, doc string) error {
+	err := objIndex.DeleteItem(idxName, doc)
+	return err
+}
+
 
 // IndexObj processes and adds an object to the index.
 func IndexObj(object Indexable) {
