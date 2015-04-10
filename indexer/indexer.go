@@ -20,7 +20,6 @@
 package indexer
 
 import (
-	"fmt"
 	"github.com/ctdk/goiardi/config"
 )
 
@@ -36,26 +35,28 @@ type Indexable interface {
 type Index interface {
 	Initialize()
 	CreateCollection(string)
-	DeleteCollection(string)
-	SaveItem(Indexable)
+	DeleteCollection(string) error
 	DeleteItem(string, string) error
 	Search(string, string, bool) (map[string]*Document, error)
 	SearchText(string, string, bool) (map[string]*Document, error)
 	SearchRange(string, string, string, string, bool) (map[string]*Document, error)
-	Endpoints() []string
-	Clear()
 	Save() error
 	Load() error
+	ObjIndexer
 }
 
 type ObjIndexer interface {
 	SaveItem(Indexable)
+	Endpoints() []string
+	Clear()
+
 }
 
 type Document interface {
 }
 
 var indexMap Index
+var objIndex ObjIndexer
 
 func Initialize(config *config.Conf) {
 	fileindex := new(FileIndex)
@@ -65,82 +66,22 @@ func Initialize(config *config.Conf) {
 	im.Initialize()
 
 	indexMap = im
+	objIndex = im
 }
 
-// Create a new index collection.
-
-// CreateNewCollection creates an index for data bags when they are created,
-// rather than when the first data bag item is uploaded
-func CreateNewCollection(idxName string) {
-	indexMap.CreateCollection(idxName)
-}
-
-// DeleteCollection deletes a collection from the index. Useful only for data
-// bags.
-func DeleteCollection(idxName string) error {
-	/* Don't try and delete built-in indexes */
-	if idxName == "node" || idxName == "client" || idxName == "environment" || idxName == "role" {
-		err := fmt.Errorf("%s is a default search index, cannot be deleted.", idxName)
-		return err
-	}
-	indexMap.DeleteCollection(idxName)
-	return nil
-}
-
-// DeleteItemFromCollection deletes an item from a collection
-func DeleteItemFromCollection(idxName string, doc string) error {
-	err := indexMap.DeleteItem(idxName, doc)
-	return err
+func GetIndex() Index {
+	// right now just return the index map
+	return indexMap
 }
 
 // IndexObj processes and adds an object to the index.
 func IndexObj(object Indexable) {
-	go indexMap.SaveItem(object)
-}
-
-// SearchIndex searches for a string in the given index. Returns a slice of
-// names of matching objects, or an error on failure.
-func SearchIndex(idxName string, term string, notop bool) (map[string]*Document, error) {
-	res, err := indexMap.Search(idxName, term, notop)
-	return res, err
-}
-
-// SearchText performs a full-ish text search of the index.
-func SearchText(idxName string, term string, notop bool) (map[string]*Document, error) {
-	res, err := indexMap.SearchText(idxName, term, notop)
-	return res, err
-}
-
-// SearchRange performs a range search on the given index.
-func SearchRange(idxName string, field string, start string, end string, inclusive bool) (map[string]*Document, error) {
-	res, err := indexMap.SearchRange(idxName, field, start, end, inclusive)
-	return res, err
-}
-
-// SearchResults does a basic search from an existing collection of documents,
-// rather than the full index.
-func SearchResults(term string, notop bool, docs map[string]*Document) (map[string]*Document, error) {
-	res, err := indexMap.SearchRange(term, notop, docs)
-	return res, err
-}
-
-// SearchResultsRange does a range search on a collection of search results,
-// rather than the full index.
-func SearchResultsRange(field string, start string, end string, inclusive bool, docs map[string]*Document) (map[string]*Document, error) {
-	res, err := indexMap.SearchResultsRange(field, start, end, inclusive, docs)
-	return res, err
-}
-
-// SearchResultsText does a text searc on a collection of search results,
-// rather than the full index.
-func SearchResultsText(term string, notop bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
-	res, err := indexMap.SearchResultsText(term, notop, docs)
-	return res, err
+	go objIndex.SaveItem(object)
 }
 
 // Endpoints returns a list of currently indexed endpoints.
 func Endpoints() []string {
-	endpoints := indexMap.Endpoints()
+	endpoints := objIndex.Endpoints()
 	return endpoints
 }
 
@@ -156,14 +97,14 @@ func LoadIndex() error {
 
 // ClearIndex of all collections and documents
 func ClearIndex() {
-	indexMap.Clear()
+	objIndex.Clear()
 	return
 }
 
 // ReIndex rebuilds the search index from scratch
 func ReIndex(objects []Indexable) error {
 	for _, o := range objects {
-		indexMap.SaveItem(o)
+		objIndex.SaveItem(o)
 	}
 	// We really ought to be able to return from an error, but at the moment
 	// there aren't any ways it does so in the index save bits.

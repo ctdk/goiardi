@@ -123,9 +123,9 @@ type SubQuery struct {
 // be able to implement to search the index.
 type Queryable interface {
 	// Search the index for the given term.
-	SearchIndex(string) (map[string]*indexer.IdxDoc, error)
+	SearchIndex(string) (map[string]*indexer.Document, error)
 	// Search for the given term from already gathered search results
-	SearchResults(map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error)
+	SearchResults(map[string]*indexer.Document) (map[string]*indexer.Document, error)
 	// Add an operator to this query chain link.
 	AddOp(Op)
 	// Get this query chain link's op.
@@ -165,12 +165,13 @@ func (q *BasicQuery) SearchIndex(idxName string) (map[string]*indexer.Document, 
 		return res, err
 	}
 	searchTerm := fmt.Sprintf("%s:%s", q.field, q.term.term)
-	res, err := indexer.SearchIndex(idxName, searchTerm, notop)
+	i := indexer.GetIndex()
+	res, err := i.Search(idxName, searchTerm, notop)
 
 	return res, err
 }
 
-func (q *BasicQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error) {
+func (q *BasicQuery) SearchResults(curRes map[string]*indexer.Document) (map[string]*indexer.Document, error) {
 	notop := false
 	if (q.term.mod == OpUnaryNot) || (q.term.mod == OpUnaryPro) {
 		notop = true
@@ -178,7 +179,8 @@ func (q *BasicQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[strin
 	// TODO: add field == ""
 
 	searchTerm := fmt.Sprintf("%s:%s", q.field, q.term.term)
-	res, err := indexer.SearchResults(searchTerm, notop, curRes)
+	i := indexer.GetIndex()
+	res, err := i.SearchResults(searchTerm, notop, curRes)
 
 	return res, err
 }
@@ -339,7 +341,8 @@ func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.Document
 			notop = true
 		}
 		searchTerm := fmt.Sprintf("%s:%s", q.field, v.term)
-		r, err := indexer.SearchIndex(idxName, searchTerm, notop)
+		i := indexer.GetIndex()
+		r, err := i.Search(idxName, searchTerm, notop)
 		if err != nil {
 			return nil, err
 		}
@@ -349,7 +352,7 @@ func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.Document
 	return res, err
 }
 
-func mergeResults(tmpRes []groupQueryHolder) (map[string]*indexer.IdxDoc, error) {
+func mergeResults(tmpRes []groupQueryHolder) (map[string]*indexer.Document, error) {
 	reqOp := false
 	res := make(map[string]*indexer.Document)
 	var req map[string]*indexer.Document
@@ -380,7 +383,8 @@ func mergeResults(tmpRes []groupQueryHolder) (map[string]*indexer.IdxDoc, error)
 }
 
 func (q *RangeQuery) SearchIndex(idxName string) (map[string]*indexer.Document, error) {
-	res, err := indexer.SearchRange(idxName, string(q.field), string(q.start), string(q.end), q.inclusive)
+	i := indexer.GetIndex()
+	res, err := i.SearchRange(idxName, string(q.field), string(q.start), string(q.end), q.inclusive)
 	return res, err
 }
 
@@ -388,7 +392,7 @@ func (q *SubQuery) SearchIndex(idxName string) (map[string]*indexer.Document, er
 	return nil, nil
 }
 
-func (q *GroupedQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error) {
+func (q *GroupedQuery) SearchResults(curRes map[string]*indexer.Document) (map[string]*indexer.Document, error) {
 	tmpRes := make([]groupQueryHolder, len(q.terms))
 	for i, v := range q.terms {
 		tmpRes[i].op = v.mod
@@ -397,7 +401,8 @@ func (q *GroupedQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[str
 			notop = true
 		}
 		searchTerm := fmt.Sprintf("%s:%s", q.field, v.term)
-		r, err := indexer.SearchResults(searchTerm, notop, curRes)
+		i := indexer.GetIndex()
+		r, err := i.SearchResults(searchTerm, notop, curRes)
 		if err != nil {
 			return nil, err
 		}
@@ -407,12 +412,13 @@ func (q *GroupedQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[str
 	return res, err
 }
 
-func (q *RangeQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error) {
-	res, err := indexer.SearchResultsRange(string(q.field), string(q.start), string(q.end), q.inclusive, curRes)
+func (q *RangeQuery) SearchResults(curRes map[string]*indexer.Document) (map[string]*indexer.Document, error) {
+	i := indexer.GetIndex()
+	res, err := i.SearchResultsRange(string(q.field), string(q.start), string(q.end), q.inclusive, curRes)
 	return res, err
 }
 
-func (q *SubQuery) SearchResults(curRes map[string]*indexer.IdxDoc) (map[string]*indexer.IdxDoc, error) {
+func (q *SubQuery) SearchResults(curRes map[string]*indexer.Document) (map[string]*indexer.Document, error) {
 	return nil, nil
 }
 

@@ -76,11 +76,17 @@ func (i *FileIndex) CreateCollection(idxName string) {
 	}
 }
 
-func (i *FileIndex) DeleteCollection(idxName string) {
+func (i *FileIndex) DeleteCollection(idxName string) error {
 	i.m.Lock()
 	defer i.m.Unlock()
+	/* Don't try and delete built-in indexes */
+	if idxName == "node" || idxName == "client" || idxName == "environment" || idxName == "role" {
+		err := fmt.Errorf("%s is a default search index, cannot be deleted.", idxName)
+		return err
+	}
 	i.updated = true
 	delete(i.idxmap, idxName)
+	return nil
 }
 
 func (i *FileIndex) SaveItem(object Indexable) {
@@ -148,13 +154,14 @@ func (i *FileIndex) SearchRange(idx string, field string, start string, end stri
 
 // SearchResults does a basic search from an existing collection of documents,
 // rather than the full index.
-func (i *FileIndex) SearchResults(term string, notop bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
+func (i *FileIndex) SearchResults(term string, notop bool, docs map[string]*Document) (map[string]*Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
-	idc := &IdxCollection{docs: docs}
+	d := docToIdxDoc(docs)
+	idc := &IdxCollection{docs: d}
 	if term == "*:*" {
 		if notop {
-			d := make(map[string]*IdxDoc)
+			d := make(map[string]*Document)
 			return d, nil
 		} else {
 			return docs, nil
@@ -164,26 +171,38 @@ func (i *FileIndex) SearchResults(term string, notop bool, docs map[string]*IdxD
 	return res, err
 }
 
+func docToIdxDoc(docs map[string]*Document) map[string]*IdxDoc {
+	d := make(map[string]*IdxDoc, len(docs))
+	for k, v := range docs {
+		z := IdxDoc(*v.(Document))
+		d[k] = &z
+	}
+	return d
+}
+
 // SearchResultsRange does a range search on a collection of search results,
 // rather than the full index.
-func (i *FileIndex) SearchResultsRange(field string, start string, end string, inclusive bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
+func (i *FileIndex) SearchResultsRange(field string, start string, end string, inclusive bool, docs map[string]*Document) (map[string]*Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
-	idc := &IdxCollection{docs: docs}
+	d := docToIdxDoc(docs)
+	idc := &IdxCollection{docs: d}
 	res, err := idc.searchRange(field, start, end, inclusive)
 	return res, err
 }
 
 // SearchResultsText does a text searc on a collection of search results,
 // rather than the full index.
-func (i *FileIndex) SearchResultsText(term string, notop bool, docs map[string]*IdxDoc) (map[string]*IdxDoc, error) {
+func (i *FileIndex) SearchResultsText(term string, notop bool, docs map[string]*Document) (map[string]*Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
-	idc := &IdxCollection{docs: docs}
+	d := docToIdxDoc(docs)
+	idc := &IdxCollection{docs: d}
 	res, err := idc.searchTextCollection(term, notop)
 	return res, err
 }
 
+// Endpoints returns a list of currently indexed endpoints.
 func (i *FileIndex) Endpoints() []string {
 	i.m.RLock()
 	defer i.m.RUnlock()
