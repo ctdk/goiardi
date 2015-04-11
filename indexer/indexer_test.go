@@ -33,6 +33,7 @@ type testObj struct {
 }
 
 var conf *config.Conf
+
 func init() {
 	conf = &config.Conf{}
 	idxTmpDir = idxTmpGen()
@@ -58,7 +59,7 @@ func TestIndexObj(t *testing.T) {
 	IndexObj(obj)
 }
 
-var idxTmpDir string 
+var idxTmpDir string
 
 func idxTmpGen() string {
 	tm, err := ioutil.TempDir("", "idx-test")
@@ -99,7 +100,7 @@ func TestSearchObjLoad(t *testing.T) {
 	conf.IndexFile = fmt.Sprintf("%s/idx2.bin", idxTmpDir)
 	Initialize(conf)
 	IndexObj(obj)
-	
+
 	SaveIndex()
 	LoadIndex()
 	_, err := SearchIndex("client", "name:foo", false)

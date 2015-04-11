@@ -4,18 +4,18 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/gob"
+	"fmt"
 	"github.com/ctdk/go-trie/gtrie"
 	"github.com/ctdk/goas/v2/logger"
-	"github.com/philhofer/msgp/msgp"
 	"github.com/ctdk/goiardi/util"
+	"github.com/philhofer/msgp/msgp"
+	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
-	"fmt"
-	"sort"
-	"io/ioutil"
 )
 
 type FileIndex struct {
@@ -396,7 +396,6 @@ func (ic *IdxCollection) allDocs() map[string]Document {
 	return docs
 }
 
-
 /* IdxDoc methods */
 
 func (idoc *IdxDoc) update(object Indexable) {
@@ -567,8 +566,6 @@ func (idoc *IdxDoc) regexSearch(reTerm string) (bool, error) {
 	}
 	return false, nil
 }
-
-
 
 /* gob encoding functions for the index */
 
@@ -747,4 +744,3 @@ func decompressText(buf []byte) (string, error) {
 	}
 	return string(t), nil
 }
-

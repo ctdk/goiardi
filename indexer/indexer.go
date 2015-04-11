@@ -53,7 +53,6 @@ type ObjIndexer interface {
 	SaveItem(Indexable)
 	Endpoints() []string
 	Clear()
-
 }
 
 type Document interface {
@@ -100,7 +99,6 @@ func DeleteItemFromCollection(idxName string, doc string) error {
 	err := objIndex.DeleteItem(idxName, doc)
 	return err
 }
-
 
 // IndexObj processes and adds an object to the index.
 func IndexObj(object Indexable) {

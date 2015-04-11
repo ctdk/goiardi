@@ -83,8 +83,7 @@ type SolrQuery struct {
 	docs       map[string]indexer.Document
 }
 
-type TrieSearch struct{
-
+type TrieSearch struct {
 }
 
 // Search parses the given query string and search the given index for any

@@ -16,12 +16,9 @@
 
 package search
 
-import (
-	
-)
+import ()
 
 type PostgresSearch struct {
-
 }
 
 func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {

@@ -96,8 +96,6 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		start = 0
 	}
 
-	
-	
 	searcher := &search.TrieSearch{}
 
 	if pathArrayLen == 1 {
@@ -129,7 +127,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, qerr.Error(), http.StatusBadRequest)
 				return
 			}
-			// if we're using dot syntax for search and changing _ 
+			// if we're using dot syntax for search and changing _
 			// to ., change the query.
 			if config.Config.ConvertSearch {
 				z := strings.SplitN(paramQuery, ":", 2)
