@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>), Zsolt Takács
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package indexer
 
 import (
@@ -54,7 +70,7 @@ type searchRes struct {
 
 /* Index methods */
 
-func (i *FileIndex) Initialize() {
+func (i *FileIndex) Initialize() error {
 	in := new(FileIndex)
 	ic := new(IdxCollection)
 	id := new(IdxDoc)
@@ -63,9 +79,10 @@ func (i *FileIndex) Initialize() {
 	gob.Register(id)
 
 	i.makeDefaultCollections()
+	return nil
 }
 
-func (i *FileIndex) CreateCollection(idxName string) {
+func (i *FileIndex) CreateCollection(idxName string) error {
 	i.updated = true
 
 	if _, ok := i.idxmap[idxName]; !ok {
@@ -74,6 +91,7 @@ func (i *FileIndex) CreateCollection(idxName string) {
 		casted := IndexCollection(coll)
 		i.idxmap[idxName] = casted
 	}
+	return nil
 }
 
 func (i *FileIndex) DeleteCollection(idxName string) error {
@@ -89,7 +107,7 @@ func (i *FileIndex) DeleteCollection(idxName string) error {
 	return nil
 }
 
-func (i *FileIndex) SaveItem(object Indexable) {
+func (i *FileIndex) SaveItem(object Indexable) error {
 	/* Have to check to see if data bag indexes exist */
 	i.m.Lock()
 	defer i.m.Unlock()
@@ -98,6 +116,7 @@ func (i *FileIndex) SaveItem(object Indexable) {
 		i.CreateCollection(object.Index())
 	}
 	i.idxmap[object.Index()].addDoc(object)
+	return nil
 }
 
 func (i *FileIndex) DeleteItem(idxName string, doc string) error {
@@ -217,8 +236,9 @@ func (i *FileIndex) Endpoints() []string {
 	return endpoints
 }
 
-func (i *FileIndex) Clear() {
+func (i *FileIndex) Clear() error {
 	i.makeDefaultCollections()
+	return nil
 }
 
 func (i *FileIndex) makeDefaultCollections() {

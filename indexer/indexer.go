@@ -34,7 +34,6 @@ type Indexable interface {
 
 // Index holds a map of document collections.
 type Index interface {
-	Initialize()
 	Search(string, string, bool) (map[string]Document, error)
 	SearchText(string, string, bool) (map[string]Document, error)
 	SearchRange(string, string, string, string, bool) (map[string]Document, error)
@@ -47,12 +46,13 @@ type Index interface {
 }
 
 type ObjIndexer interface {
-	CreateCollection(string)
+	Initialize() error
+	CreateCollection(string) error
 	DeleteCollection(string) error
 	DeleteItem(string, string) error
-	SaveItem(Indexable)
+	SaveItem(Indexable) error
 	Endpoints() []string
-	Clear()
+	Clear() error
 }
 
 type Document interface {
