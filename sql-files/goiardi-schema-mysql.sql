@@ -646,7 +646,6 @@ UNLOCK TABLES;
 /*!50001 SET character_set_results     = utf8 */;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
 /*!50001 VIEW `joined_cookbook_version` AS select `v`.`major_ver` AS `major_ver`,`v`.`minor_ver` AS `minor_ver`,`v`.`patch_ver` AS `patch_ver`,concat(`v`.`major_ver`,'.',`v`.`minor_ver`,'.',`v`.`patch_ver`) AS `version`,`v`.`id` AS `id`,`v`.`metadata` AS `metadata`,`v`.`recipes` AS `recipes`,`c`.`organization_id` AS `organization_id`,`c`.`name` AS `name` from (`cookbooks` `c` join `cookbook_versions` `v` on((`c`.`id` = `v`.`cookbook_id`))) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
@@ -665,7 +664,6 @@ UNLOCK TABLES;
 /*!50001 SET character_set_results     = utf8 */;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
 /*!50001 VIEW `node_latest_statuses` AS select distinct `n`.`id` AS `id`,`n`.`name` AS `name`,`n`.`chef_environment` AS `chef_environment`,`n`.`run_list` AS `run_list`,`n`.`automatic_attr` AS `automatic_attr`,`n`.`normal_attr` AS `normal_attr`,`n`.`default_attr` AS `default_attr`,`n`.`override_attr` AS `override_attr`,`n`.`is_down` AS `is_down`,`ns`.`status` AS `status`,`ns`.`updated_at` AS `updated_at` from (`nodes` `n` join `node_statuses` `ns` on((`n`.`id` = `ns`.`node_id`))) where `ns`.`id` in (select max(`node_statuses`.`id`) from `node_statuses` group by `node_statuses`.`node_id`) order by `n`.`id` */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
