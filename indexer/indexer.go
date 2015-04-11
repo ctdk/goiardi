@@ -35,12 +35,12 @@ type Indexable interface {
 // Index holds a map of document collections.
 type Index interface {
 	Initialize()
-	Search(string, string, bool) (map[string]*Document, error)
-	SearchText(string, string, bool) (map[string]*Document, error)
-	SearchRange(string, string, string, string, bool) (map[string]*Document, error)
-	SearchResults(string, bool, map[string]*Document) (map[string]*Document, error)
-	SearchResultsRange(string, string, string, bool, map[string]*Document) (map[string]*Document, error)
-	SearchResultsText(string, bool, map[string]*Document) (map[string]*Document, error)
+	Search(string, string, bool) (map[string]Document, error)
+	SearchText(string, string, bool) (map[string]Document, error)
+	SearchRange(string, string, string, string, bool) (map[string]Document, error)
+	SearchResults(string, bool, map[string]Document) (map[string]Document, error)
+	SearchResultsRange(string, string, string, bool, map[string]Document) (map[string]Document, error)
+	SearchResultsText(string, bool, map[string]Document) (map[string]Document, error)
 	Save() error
 	Load() error
 	ObjIndexer

@@ -28,10 +28,10 @@ type FileIndex struct {
 type IndexCollection interface {
 	addDoc(Indexable)
 	delDoc(string)
-	allDocs() map[string]*Document
-	searchCollection(string, bool) (map[string]*Document, error)
-	searchTextCollection(string, bool) (map[string]*Document, error)
-	searchRange(string, string, string, bool) (map[string]*Document, error)
+	allDocs() map[string]Document
+	searchCollection(string, bool) (map[string]Document, error)
+	searchTextCollection(string, bool) (map[string]Document, error)
+	searchRange(string, string, string, bool) (map[string]Document, error)
 }
 
 // IdxCollection holds a map of documents.
@@ -112,7 +112,7 @@ func (i *FileIndex) DeleteItem(idxName string, doc string) error {
 	return nil
 }
 
-func (i *FileIndex) Search(idx string, term string, notop bool) (map[string]*Document, error) {
+func (i *FileIndex) Search(idx string, term string, notop bool) (map[string]Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
 	idc, found := i.idxmap[idx]
@@ -128,7 +128,7 @@ func (i *FileIndex) Search(idx string, term string, notop bool) (map[string]*Doc
 	return results, err
 }
 
-func (i *FileIndex) SearchText(idx string, term string, notop bool) (map[string]*Document, error) {
+func (i *FileIndex) SearchText(idx string, term string, notop bool) (map[string]Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
 	idc, found := i.idxmap[idx]
@@ -140,7 +140,7 @@ func (i *FileIndex) SearchText(idx string, term string, notop bool) (map[string]
 	return results, err
 }
 
-func (i *FileIndex) SearchRange(idx string, field string, start string, end string, inclusive bool) (map[string]*Document, error) {
+func (i *FileIndex) SearchRange(idx string, field string, start string, end string, inclusive bool) (map[string]Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
 	idc, found := i.idxmap[idx]
@@ -154,14 +154,14 @@ func (i *FileIndex) SearchRange(idx string, field string, start string, end stri
 
 // SearchResults does a basic search from an existing collection of documents,
 // rather than the full index.
-func (i *FileIndex) SearchResults(term string, notop bool, docs map[string]*Document) (map[string]*Document, error) {
+func (i *FileIndex) SearchResults(term string, notop bool, docs map[string]Document) (map[string]Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
 	d := docToIdxDoc(docs)
 	idc := &IdxCollection{docs: d}
 	if term == "*:*" {
 		if notop {
-			d := make(map[string]*Document)
+			d := make(map[string]Document)
 			return d, nil
 		} else {
 			return docs, nil
@@ -171,17 +171,17 @@ func (i *FileIndex) SearchResults(term string, notop bool, docs map[string]*Docu
 	return res, err
 }
 
-func docToIdxDoc(docs map[string]*Document) map[string]*IdxDoc {
+func docToIdxDoc(docs map[string]Document) map[string]*IdxDoc {
 	d := make(map[string]*IdxDoc, len(docs))
 	for k, v := range docs {
-		d[k] = interface{}(v).(*IdxDoc)
+		d[k] = v.(*IdxDoc)
 	}
 	return d
 }
 
 // SearchResultsRange does a range search on a collection of search results,
 // rather than the full index.
-func (i *FileIndex) SearchResultsRange(field string, start string, end string, inclusive bool, docs map[string]*Document) (map[string]*Document, error) {
+func (i *FileIndex) SearchResultsRange(field string, start string, end string, inclusive bool, docs map[string]Document) (map[string]Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
 	d := docToIdxDoc(docs)
@@ -192,7 +192,7 @@ func (i *FileIndex) SearchResultsRange(field string, start string, end string, i
 
 // SearchResultsText does a text searc on a collection of search results,
 // rather than the full index.
-func (i *FileIndex) SearchResultsText(term string, notop bool, docs map[string]*Document) (map[string]*Document, error) {
+func (i *FileIndex) SearchResultsText(term string, notop bool, docs map[string]Document) (map[string]Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
 	d := docToIdxDoc(docs)
@@ -253,8 +253,8 @@ func (ic *IdxCollection) delDoc(doc string) {
 }
 
 /* Search for an exact key/value match */
-func (ic *IdxCollection) searchCollection(term string, notop bool) (map[string]*Document, error) {
-	results := make(map[string]*Document)
+func (ic *IdxCollection) searchCollection(term string, notop bool) (map[string]Document, error) {
+	results := make(map[string]Document)
 	ic.m.RLock()
 	defer ic.m.RUnlock()
 	l := len(ic.docs)
@@ -286,16 +286,15 @@ func (ic *IdxCollection) searchCollection(term string, notop bool) (map[string]*
 	for i := 0; i < l; i++ {
 		r := <-resCh
 		if r != nil {
-			doc := Document(r.doc)
-			results[r.key] = &doc
+			results[r.key] = Document(r.doc)
 		}
 	}
 	rsafe := safeSearchResults(results)
 	return rsafe, nil
 }
 
-func (ic *IdxCollection) searchTextCollection(term string, notop bool) (map[string]*Document, error) {
-	results := make(map[string]*Document)
+func (ic *IdxCollection) searchTextCollection(term string, notop bool) (map[string]Document, error) {
+	results := make(map[string]Document)
 	ic.m.RLock()
 	defer ic.m.RUnlock()
 	l := len(ic.docs)
@@ -329,16 +328,15 @@ func (ic *IdxCollection) searchTextCollection(term string, notop bool) (map[stri
 		r := <-resCh
 		if r != nil {
 			logger.Debugf("adding result")
-			doc := Document(r.doc)
-			results[r.key] = &doc
+			results[r.key] = Document(r.doc)
 		}
 	}
 	rsafe := safeSearchResults(results)
 	return rsafe, nil
 }
 
-func (ic *IdxCollection) searchRange(field string, start string, end string, inclusive bool) (map[string]*Document, error) {
-	results := make(map[string]*Document)
+func (ic *IdxCollection) searchRange(field string, start string, end string, inclusive bool) (map[string]Document, error) {
+	results := make(map[string]Document)
 	ic.m.RLock()
 	defer ic.m.RUnlock()
 	l := len(ic.docs)
@@ -372,16 +370,15 @@ func (ic *IdxCollection) searchRange(field string, start string, end string, inc
 		r := <-resCh
 		if r != nil {
 			logger.Debugf("adding result")
-			doc := Document(r.doc)
-			results[r.key] = &doc
+			results[r.key] = Document(r.doc)
 		}
 	}
 	rsafe := safeSearchResults(results)
 	return rsafe, nil
 }
 
-func safeSearchResults(results map[string]*Document) map[string]*Document {
-	rsafe := make(map[string]*Document, len(results))
+func safeSearchResults(results map[string]Document) map[string]Document {
+	rsafe := make(map[string]Document, len(results))
 	for k, v := range results {
 		j := &v
 		rsafe[k] = *j
@@ -389,12 +386,11 @@ func safeSearchResults(results map[string]*Document) map[string]*Document {
 	return rsafe
 }
 
-func (ic *IdxCollection) allDocs() map[string]*Document {
-	docs := make(map[string]*Document, len(ic.docs))
+func (ic *IdxCollection) allDocs() map[string]Document {
+	docs := make(map[string]Document, len(ic.docs))
 
 	for k, v := range ic.docs {
-		doc := Document(v)
-		docs[k] = &doc
+		docs[k] = Document(v)
 	}
 
 	return docs

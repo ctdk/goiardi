@@ -123,9 +123,9 @@ type SubQuery struct {
 // be able to implement to search the index.
 type Queryable interface {
 	// Search the index for the given term.
-	SearchIndex(string) (map[string]*indexer.Document, error)
+	SearchIndex(string) (map[string]indexer.Document, error)
 	// Search for the given term from already gathered search results
-	SearchResults(map[string]*indexer.Document) (map[string]*indexer.Document, error)
+	SearchResults(map[string]indexer.Document) (map[string]indexer.Document, error)
 	// Add an operator to this query chain link.
 	AddOp(Op)
 	// Get this query chain link's op.
@@ -152,10 +152,10 @@ type Queryable interface {
 
 type groupQueryHolder struct {
 	op  Op
-	res map[string]*indexer.Document
+	res map[string]indexer.Document
 }
 
-func (q *BasicQuery) SearchIndex(idxName string) (map[string]*indexer.Document, error) {
+func (q *BasicQuery) SearchIndex(idxName string) (map[string]indexer.Document, error) {
 	notop := false
 	if (q.term.mod == OpUnaryNot) || (q.term.mod == OpUnaryPro) {
 		notop = true
@@ -171,7 +171,7 @@ func (q *BasicQuery) SearchIndex(idxName string) (map[string]*indexer.Document, 
 	return res, err
 }
 
-func (q *BasicQuery) SearchResults(curRes map[string]*indexer.Document) (map[string]*indexer.Document, error) {
+func (q *BasicQuery) SearchResults(curRes map[string]indexer.Document) (map[string]indexer.Document, error) {
 	notop := false
 	if (q.term.mod == OpUnaryNot) || (q.term.mod == OpUnaryPro) {
 		notop = true
@@ -332,7 +332,7 @@ func (q *RangeQuery) AddFuzzParam(s string) {
 
 }
 
-func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.Document, error) {
+func (q *GroupedQuery) SearchIndex(idxName string) (map[string]indexer.Document, error) {
 	tmpRes := make([]groupQueryHolder, len(q.terms))
 	for i, v := range q.terms {
 		tmpRes[i].op = v.mod
@@ -352,10 +352,10 @@ func (q *GroupedQuery) SearchIndex(idxName string) (map[string]*indexer.Document
 	return res, err
 }
 
-func mergeResults(tmpRes []groupQueryHolder) (map[string]*indexer.Document, error) {
+func mergeResults(tmpRes []groupQueryHolder) (map[string]indexer.Document, error) {
 	reqOp := false
-	res := make(map[string]*indexer.Document)
-	var req map[string]*indexer.Document
+	res := make(map[string]indexer.Document)
+	var req map[string]indexer.Document
 
 	// Merge the results, taking into account any + operators lurking about
 	for _, t := range tmpRes {
@@ -382,17 +382,17 @@ func mergeResults(tmpRes []groupQueryHolder) (map[string]*indexer.Document, erro
 	return res, nil
 }
 
-func (q *RangeQuery) SearchIndex(idxName string) (map[string]*indexer.Document, error) {
+func (q *RangeQuery) SearchIndex(idxName string) (map[string]indexer.Document, error) {
 	i := indexer.GetIndex()
 	res, err := i.SearchRange(idxName, string(q.field), string(q.start), string(q.end), q.inclusive)
 	return res, err
 }
 
-func (q *SubQuery) SearchIndex(idxName string) (map[string]*indexer.Document, error) {
+func (q *SubQuery) SearchIndex(idxName string) (map[string]indexer.Document, error) {
 	return nil, nil
 }
 
-func (q *GroupedQuery) SearchResults(curRes map[string]*indexer.Document) (map[string]*indexer.Document, error) {
+func (q *GroupedQuery) SearchResults(curRes map[string]indexer.Document) (map[string]indexer.Document, error) {
 	tmpRes := make([]groupQueryHolder, len(q.terms))
 	for i, v := range q.terms {
 		tmpRes[i].op = v.mod
@@ -412,13 +412,13 @@ func (q *GroupedQuery) SearchResults(curRes map[string]*indexer.Document) (map[s
 	return res, err
 }
 
-func (q *RangeQuery) SearchResults(curRes map[string]*indexer.Document) (map[string]*indexer.Document, error) {
+func (q *RangeQuery) SearchResults(curRes map[string]indexer.Document) (map[string]indexer.Document, error) {
 	i := indexer.GetIndex()
 	res, err := i.SearchResultsRange(string(q.field), string(q.start), string(q.end), q.inclusive, curRes)
 	return res, err
 }
 
-func (q *SubQuery) SearchResults(curRes map[string]*indexer.Document) (map[string]*indexer.Document, error) {
+func (q *SubQuery) SearchResults(curRes map[string]indexer.Document) (map[string]indexer.Document, error) {
 	return nil, nil
 }
 

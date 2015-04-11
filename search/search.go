@@ -80,7 +80,7 @@ func (r results) Less(i, j int) bool {
 type SolrQuery struct {
 	queryChain Queryable
 	idxName    string
-	docs       map[string]*indexer.Document
+	docs       map[string]indexer.Document
 }
 
 type TrieSearch struct{
@@ -97,7 +97,7 @@ func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string
 	}
 	qq.Execute()
 	qchain := qq.Evaluate()
-	d := make(map[string]*indexer.Document)
+	d := make(map[string]indexer.Document)
 	solrQ := &SolrQuery{queryChain: qchain, idxName: idx, docs: d}
 
 	_, err := solrQ.execute()
@@ -160,11 +160,11 @@ func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string
 	return res, nil
 }
 
-func (sq *SolrQuery) execute() (map[string]*indexer.Document, error) {
+func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 	s := sq.queryChain
 	curOp := OpNotAnOp
 	for s != nil {
-		var r map[string]*indexer.Document
+		var r map[string]indexer.Document
 		var err error
 		switch c := s.(type) {
 		case *SubQuery:
@@ -174,11 +174,11 @@ func (sq *SolrQuery) execute() (map[string]*indexer.Document, error) {
 				return nil, err
 			}
 			s = nend
-			var d map[string]*indexer.Document
+			var d map[string]indexer.Document
 			if curOp == OpBinAnd {
 				d = sq.docs
 			} else {
-				d = make(map[string]*indexer.Document)
+				d = make(map[string]indexer.Document)
 			}
 			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d}
 			r, err = nsq.execute()
