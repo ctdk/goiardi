@@ -401,6 +401,7 @@ func (sr *ShoveyRun) addStreamOutSQL(output string, outputType string, seq int, 
 		} else {
 			gerr.SetStatus(http.StatusInternalServerError)
 		}
+		tx.Rollback()
 		return gerr
 	}
 	tx.Commit()
