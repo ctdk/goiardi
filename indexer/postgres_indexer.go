@@ -17,8 +17,10 @@
 package indexer
 
 import (
+	"fmt"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
+	"github.com/lib/pq"
 )
 
 type PostgresIndex struct {
@@ -74,7 +76,57 @@ func (p *PostgresIndex) DeleteItem(idxName string, doc string) error {
 }
 
 func (p *PostgresIndex) SaveItem(obj Indexable) error {
-
+	flat := obj.Flatten()
+	itemName := obj.DocID()
+	collectionName := obj.Index()
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	var scID int32
+	err = tx.QueryRow("SELECT id FROM goiardi.search_collections WHERE organization_id = $1 AND name = $2", 1, collectionName).Scan(&scID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	stmt, err := tx.Prepare(pq.CopyIn("goiardi.search_items", "organization_id", "search_collection_id", "item_name", "value", "path"))
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	defer stmt.Close()
+	for k, v := range flat {
+		// will the values need escaped like in file search?
+		switch v := v.(type) {
+		case string:
+			_, err = stmt.Exec(1, scID, itemName, v, k)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		case []string:
+			for _, w := range v {
+				_, err = stmt.Exec(1, scID, itemName, w, k)
+				if err != nil {
+					tx.Rollback()
+					return err
+				}
+			}
+		default:
+			err = fmt.Errorf("pg search should have never been able to reach this state. Key %s had a value %v of type %T", k, v, v)
+			tx.Rollback()
+			return err
+		}
+	}
+	_, err = stmt.Exec()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
