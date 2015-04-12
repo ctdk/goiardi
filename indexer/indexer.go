@@ -51,7 +51,7 @@ type ObjIndexer interface {
 	DeleteCollection(string) error
 	DeleteItem(string, string) error
 	SaveItem(Indexable) error
-	Endpoints() []string
+	Endpoints() ([]string, error)
 	Clear() error
 }
 
@@ -106,9 +106,9 @@ func IndexObj(object Indexable) {
 }
 
 // Endpoints returns a list of currently indexed endpoints.
-func Endpoints() []string {
-	endpoints := objIndex.Endpoints()
-	return endpoints
+func Endpoints() ([]string, error) {
+	endpoints, err := objIndex.Endpoints()
+	return endpoints, err
 }
 
 // SaveIndex saves the index files to disk.

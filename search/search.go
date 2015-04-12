@@ -250,7 +250,8 @@ func (sq *SolrQuery) results() []string {
 // search, namely the defaults (node, role, client, environment) and any data
 // bags.
 func (t *TrieSearch) GetEndpoints() []string {
-	endpoints := indexer.Endpoints()
+	// TODO: deal with possible errors
+	endpoints, _ := indexer.Endpoints()
 	return endpoints
 }
 

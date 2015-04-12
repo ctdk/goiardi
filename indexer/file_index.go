@@ -221,7 +221,7 @@ func (i *FileIndex) SearchResultsText(term string, notop bool, docs map[string]D
 }
 
 // Endpoints returns a list of currently indexed endpoints.
-func (i *FileIndex) Endpoints() []string {
+func (i *FileIndex) Endpoints() ([]string, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
 
@@ -233,7 +233,7 @@ func (i *FileIndex) Endpoints() []string {
 	}
 
 	sort.Strings(endpoints)
-	return endpoints
+	return endpoints, nil
 }
 
 func (i *FileIndex) Clear() error {
