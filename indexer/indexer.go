@@ -62,14 +62,18 @@ var indexMap Index
 var objIndex ObjIndexer
 
 func Initialize(config *config.Conf) {
-	fileindex := new(FileIndex)
-	fileindex.file = config.IndexFile
+	if config.UsePostgreSQL {
+		objIndex = new(PostgresIndex)
+		objIndex.Initialize()
+	} else {
+		fileindex := new(FileIndex)
+		fileindex.file = config.IndexFile
+		im := Index(fileindex)
+		im.Initialize()
 
-	im := Index(fileindex)
-	im.Initialize()
-
-	indexMap = im
-	objIndex = im
+		indexMap = im
+		objIndex = im
+	}
 }
 
 func GetIndex() Index {
@@ -113,11 +117,18 @@ func Endpoints() ([]string, error) {
 
 // SaveIndex saves the index files to disk.
 func SaveIndex() error {
+	// TODO: do better
+	if config.Config.UsePostgreSQL {
+		return nil
+	}
 	return indexMap.Save()
 }
 
 // LoadIndex loads index files from disk.
 func LoadIndex() error {
+	if config.Config.UsePostgreSQL {
+		return nil
+	}
 	return indexMap.Load()
 }
 
