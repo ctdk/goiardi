@@ -24,7 +24,6 @@ import (
 )
 
 type PostgresIndex struct {
-
 }
 
 func (p *PostgresIndex) Initialize() error {
@@ -89,7 +88,8 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 		tx.Rollback()
 		return err
 	}
-	stmt, err := tx.Prepare(pq.CopyIn("goiardi.search_items", "organization_id", "search_collection_id", "item_name", "value", "path"))
+	_, _ = tx.Exec("SET search_path TO goiardi")
+	stmt, err := tx.Prepare(pq.CopyIn("search_items", "organization_id", "search_collection_id", "item_name", "value", "path"))
 	if err != nil {
 		tx.Rollback()
 		return err
