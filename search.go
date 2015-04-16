@@ -96,7 +96,12 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		start = 0
 	}
 
-	searcher := &search.TrieSearch{}
+	var searcher search.Searcher
+	if config.Config.UsePostgreSQL {
+		searcher = &search.PostgresSearch{}
+	} else {
+		searcher = &search.TrieSearch{}
+	}
 
 	if pathArrayLen == 1 {
 		/* base end points */

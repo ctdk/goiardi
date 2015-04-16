@@ -16,7 +16,10 @@
 
 package search
 
-import ()
+import (
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/util"
+)
 
 type PostgresSearch struct {
 }
@@ -26,5 +29,15 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 }
 
 func (p *PostgresSearch) GetEndpoints() []string {
-	return nil
+	var endpoints util.StringSlice
+	stmt, err := datastore.Dbh.Prepare("SELECT ARRAY_AGG(name) FROM goiardi.search_collections WHERE organization_id = $1")
+	if err != nil {
+		panic(err)
+	}
+	defer stmt.Close()
+	err = stmt.QueryRow(1).Scan(&endpoints)
+	if err != nil {
+		panic(err)
+	}
+	return endpoints
 }
