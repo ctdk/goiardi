@@ -17,25 +17,34 @@
 package search
 
 import (
-	"github.com/ctdk/goiardi/datastore"
-	"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/indexer"
 )
 
 type PostgresSearch struct {
 }
 
 func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
-	return nil, nil
+	// keep up with the ersatz solr.
+	qq := &Tokenizer{Buffer: q}
+	qq.Init()
+	if err := qq.Parse(); err != nil {
+		return nil, err
+	}
+	qq.Execute()
+	qchain := qq.Evaluate()
+
+	logger.Debugf("what on earth is the chain? %q", qchain)
+
+	// dummy
+	dres := make([]map[string]interface{}, 0)
+	return dres, nil
 }
 
 func (p *PostgresSearch) GetEndpoints() []string {
-	var endpoints util.StringSlice
-	stmt, err := datastore.Dbh.Prepare("SELECT ARRAY_AGG(name) FROM goiardi.search_collections WHERE organization_id = $1")
-	if err != nil {
-		panic(err)
-	}
-	defer stmt.Close()
-	err = stmt.QueryRow(1).Scan(&endpoints)
+	// TODO: deal with possible errors
+	endpoints, err := indexer.Endpoints()
+	return endpoints
 	if err != nil {
 		panic(err)
 	}
