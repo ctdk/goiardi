@@ -65,7 +65,7 @@ func (p *PostgresIndex) DeleteItem(idxName string, doc string) error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("SELECT goiardi.delete_search_item($1, $2)", idxName, doc, 1)
+	_, err = tx.Exec("SELECT goiardi.delete_search_item($1, $2, $3)", idxName, doc, 1)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -84,6 +84,11 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 	}
 	var scID int32
 	err = tx.QueryRow("SELECT id FROM goiardi.search_collections WHERE organization_id = $1 AND name = $2", 1, collectionName).Scan(&scID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	_, err = tx.Exec("SELECT goiardi.delete_search_item($1, $2, $3)", collectionName, itemName, 1)
 	if err != nil {
 		tx.Rollback()
 		return err
