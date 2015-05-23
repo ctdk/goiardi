@@ -101,6 +101,7 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 	}
 	defer stmt.Close()
 	for k, v := range flat {
+		k = util.PgSearchKey(k)
 		// will the values need escaped like in file search?
 		switch v := v.(type) {
 		case string:

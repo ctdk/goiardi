@@ -320,3 +320,23 @@ func stringify(source interface{}) string {
 		return str
 	}
 }
+
+// PgSearchKey removes characters from search term fields that make the ltree
+// data type unhappy. This leads to the postgres-based search being, perhaps,
+// somewhat less precise than the solr (or ersatz solr) based search, but at the
+// same time one that's less resource demanding and covers almost all known use
+// cases. Potential bug: Postgres considers some, but not all, unicode letters
+// as being alphanumeric; i.e. golang and postgres both consider 'ü' to be a
+// letter, but golang accepts 'ሀ' as a letter while postgres does not. This is
+// reasonably unlikely to be an issue, but if you're using lots of non-European
+// characters in your attributes this could be a problem. We're accepting more
+// than raw ASCII alnum however because it's better behavior and because 
+// Postgres does accept at least some other alphabets as being alphanumeric.
+func PgSearchKey(key string) string {
+	re := regexp.MustCompile(`[^\pL\pN_]`)
+	bs := regexp.MustCompile(`_{2,}`)
+	k := re.ReplaceAllString(key, "_")
+	k = bs.ReplaceAllString(k, "_")
+	k = strings.Trim(k, "_")
+	return k
+}

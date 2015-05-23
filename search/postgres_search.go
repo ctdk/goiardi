@@ -19,6 +19,7 @@ package search
 import (
 	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/indexer"
+	//"github.com/ctdk/goiardi/util"
 )
 
 type PostgresSearch struct {
