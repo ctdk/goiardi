@@ -333,7 +333,7 @@ func stringify(source interface{}) string {
 // than raw ASCII alnum however because it's better behavior and because 
 // Postgres does accept at least some other alphabets as being alphanumeric.
 func PgSearchKey(key string) string {
-	re := regexp.MustCompile(`[^\pL\pN_]`)
+	re := regexp.MustCompile(`[^\pL\pN_\.]`)
 	bs := regexp.MustCompile(`_{2,}`)
 	k := re.ReplaceAllString(key, "_")
 	k = bs.ReplaceAllString(k, "_")
