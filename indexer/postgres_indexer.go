@@ -28,6 +28,33 @@ type PostgresIndex struct {
 
 func (p *PostgresIndex) Initialize() error {
 	// check if the default indexes exist yet, and if not create them
+	var c int
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	// organization_id will obviously not always be 1
+	err = tx.QueryRow("SELECT count(*) FROM goiardi.search_collections WHERE organization_id = $1 AND name IN ('node', 'client', 'environment', 'role')", 1).Scan(&c)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	if c != 0 {
+		if c != 4 {
+			err = fmt.Errorf("Aiiie! We were going to initialize the database, but while we expected there to be either 0 or 4 of the basic search types to be in place, there were only %d. Aborting.", c)
+			tx.Rollback()
+			return err
+		}
+		// otherwise everything's good.
+	} else {
+		sqlStmt := "INSERT INTO goiardi.search_collections (name, organization_id) VALUES ('client', $1), ('environment', $1), ('node', $1), ('role', $1)"
+		_, err = tx.Exec(sqlStmt, 1)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	tx.Commit()
 	return nil
 }
 
