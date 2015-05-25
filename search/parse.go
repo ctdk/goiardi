@@ -47,6 +47,10 @@ func (f Field) String() string {
 	return string(f)
 }
 
+func (r RangeTerm) String() string {
+	return string(r)
+}
+
 // Define the various search operations.
 const (
 	OpNotAnOp Op = iota
