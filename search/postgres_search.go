@@ -22,6 +22,7 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 	//"github.com/ctdk/goiardi/util"
 	"regexp"
+	"strings"
 )
 
 type PostgresSearch struct {
@@ -152,6 +153,47 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, s
 		args = append(args, string(term.term))
 	}
 
+	return args, q
+}
+
+func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]string, string) {
+	opStr := binOp(op)
+
+	var q string
+	args := []string{ string(field) }
+	var grouped []string
+
+}
+
+func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool, tNum *int, op Op) ([]string, string) {
+	if start > end {
+		start, end = end, start
+	}
+
+	var q string
+	args := []string{ string(field) }
+
+	opStr := binOp(op)
+	var equals string
+	if inclusive {
+		equals = "="
+	}
+	var range []string
+	if string(start) != "*" {
+		s := fmt.Sprintf("f%d.value >%s _ARG_", *tNum, start)
+		range = append(range, s)
+		args = append(args, start)
+	}
+	if string(end) != "*" {
+		e := fmt.Sprintf("f%d.value <%s _ARG_", *tNum, end)
+		range = append(range, e)
+		args = append(args, end)
+	}
+	var rangeStr string
+	if len(range != 0) {
+		rangeStr = fmt.Sprintf("AND (%s)", strings.Join(range, " AND "))
+	}
+	q = fmt.Sprintf("%s(f%d.path ~ _ARG_%s)", opStr, *tNum, rangeStr)
 	return args, q
 }
 
