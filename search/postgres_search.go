@@ -98,8 +98,9 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 		case *BasicQuery:
 			pq.paths = append(pq.paths, string(c.field))
 			logger.Debugf("basic t%d: field: %s op: %s term: %+v complete %v", *t, c.field, opMap[c.op], c.term, c.complete)
-			args, qstr := buildBasicQuery(c.field, c.term, t)
-			pq.args = append(pq.args, args...)
+			args, qstr := buildBasicQuery(c.field, c.term, t, curOp)
+			logger.Debugf("qstr: %s", qstr)
+			pq.arguments = append(pq.arguments, args...)
 			pq.queryStrs = append(pq.queryStrs, qstr)
 			*t++
 		case *GroupedQuery:
@@ -129,22 +130,51 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 			err := fmt.Errorf("Unknown type %T for query", c)
 			return err
 		}
-		//curOp = p.Op()
+		curOp = p.Op()
 		p = p.Next()
 	}
 	logger.Debugf("paths: %v", pq.paths)
+	logger.Debugf("arguments: %v", pq.arguments)
 	logger.Debugf("number of tables: %d", *t)
 	return nil
 }
 
 func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, string) {
-	var cop string
-	r := regex.MustCompile(`\*|\?`)
-	if r.MatchString(term) {
-		cop = "LIKE"
+	opStr := binOp(op)
+	cop := matchOp(op, term)
+
+	var q string
+	args := []string{ string(field) }
+	if term.term == "*" {
+		q = fmt.Sprintf("%s(f%d.path ~ _ARG_)", opStr, *tNum)
 	} else {
-		cop = "="
+		q = fmt.Sprintf("%s(f%d.path ~ _ARG_ AND f%d.value %s _ARG_)", opStr, *tNum, *tNum, cop)
+		args = append(args, string(term.term))
 	}
+
+	return args, q
+}
+
+func matchOp(op Op, term QueryTerm) string {
+	r := regexp.MustCompile(`\*|\?`)
+	var cop string
+	if r.MatchString(string(term.term)) {
+		if term.mod == OpUnaryNot {
+			cop = "NOT LIKE"
+		} else {
+			cop = "LIKE"
+		}
+	} else {
+		if term.mod == OpUnaryNot {
+			cop = "<>"
+		} else {
+			cop = "="
+		}
+	}
+	return cop
+}
+
+func binOp(op Op) string {
 	var opStr string
 	if op != OpNotAnOp {
 		if op == OpBinAnd {
@@ -153,17 +183,5 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, s
 			opStr = " OR "
 		}
 	}
-	var unaryOp string
-
-
-	var q string
-	args := []string{ field }
-	if term == "*" {
-		q = fmt.Sprintf("(f%d.path ~ _ARG_)", tNum)
-	} else {
-		q = fmt.Sprintf("(f%d.path ~ _ARG_ AND f%d.value %s _ARG_)", tNum, tNum, cop)
-		args = append(args, term.term)
-	}
-
-	return args, q
+	return opStr
 }
