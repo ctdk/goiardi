@@ -69,7 +69,7 @@ func (p *PostgresSearch) GetEndpoints() []string {
 
 func (pq *PgQuery) execute(startTableID ...*int) error {
 	p := pq.queryChain
-	//curOp := OpNotAnOp
+	curOp := OpNotAnOp
 	opMap := map[Op]string{
 		OpNotAnOp: "(not an op)",
 		OpUnaryNot: "not",
@@ -137,21 +137,32 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 	return nil
 }
 
-func buildBasicQuery(field Field, term Term, tNum *int) ([]string, string) {
-	var op string
+func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, string) {
+	var cop string
 	r := regex.MustCompile(`\*|\?`)
 	if r.MatchString(term) {
-		op = "LIKE"
+		cop = "LIKE"
 	} else {
-		op = "="
+		cop = "="
 	}
+	var opStr string
+	if op != OpNotAnOp {
+		if op == OpBinAnd {
+			opStr = " AND "
+		} else {
+			opStr = " OR "
+		}
+	}
+	var unaryOp string
+
+
 	var q string
 	args := []string{ field }
 	if term == "*" {
-		q = fmt.Sprintf("f%d.path ~ _ARG_")
+		q = fmt.Sprintf("(f%d.path ~ _ARG_)", tNum)
 	} else {
-		q = fmt.Sprintf("f%d.path ~ _ARG_ AND f%d.value %s _ARG_", tNum, tNum, op)
-		args = append(args, term)
+		q = fmt.Sprintf("(f%d.path ~ _ARG_ AND f%d.value %s _ARG_)", tNum, tNum, cop)
+		args = append(args, term.term)
 	}
 
 	return args, q
