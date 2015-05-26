@@ -35,6 +35,11 @@ type PgQuery struct {
 	arguments []string
 }
 
+type gClause struct {
+	clause string
+	op Op
+}
+
 func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
 	// keep up with the ersatz solr.
 	qq := &Tokenizer{Buffer: q}
@@ -107,10 +112,18 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 		case *GroupedQuery:
 			pq.paths = append(pq.paths, string(c.field))
 			logger.Debugf("grouped t%d: field: %s op: %s terms: %+v complete %v", *t, c.field, opMap[c.op], c.terms, c.complete)
+			args, qstr := buildGroupedQuery(c.field, c.terms, t, curOp)
+			logger.Debugf("qstr: %s", qstr)
+			pq.arguments = append(pq.arguments, args...)
+			pq.queryStrs = append(pq.queryStrs, qstr)
 			*t++
 		case *RangeQuery:
 			pq.paths = append(pq.paths, string(c.field))
 			logger.Debugf("range t%d: field %s op %s start %s end %s inclusive %v complete %v", *t, c.field, opMap[c.op], c.start, c.end, c.inclusive, c.complete)
+			args, qstr := buildRangeQuery(c.field, c.start, c.end, c.inclusive, t, curOp)
+			logger.Debugf("qstr: %s", qstr)
+			pq.arguments = append(pq.arguments, args...)
+			pq.queryStrs = append(pq.queryStrs, qstr)
 			*t++
 		case *SubQuery:
 			logger.Debugf("STARTING SUBQUERY: op %s complete %v", opMap[c.op], c.complete)
@@ -125,7 +138,12 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 			if err != nil {
 				return err
 			}
+			logger.Debugf("subquery paths: %v", np.paths)
+			logger.Debugf("subquery args: %v", np.arguments)
+			logger.Debugf("subquery qstrs: %v", np.queryStrs)
 			pq.paths = append(pq.paths, np.paths...)
+			pq.arguments = append(pq.arguments, np.arguments...)
+			pq.queryStrs = append(pq.queryStrs, fmt.Sprintf("%s(%s)", binOp(curOp), strings.Join(np.queryStrs, " ")))
 			logger.Debugf("ENDING SUBQUERY")
 		default:
 			err := fmt.Errorf("Unknown type %T for query", c)
@@ -136,13 +154,14 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 	}
 	logger.Debugf("paths: %v", pq.paths)
 	logger.Debugf("arguments: %v", pq.arguments)
+	logger.Debugf("query strings: %v", pq.queryStrs)
 	logger.Debugf("number of tables: %d", *t)
 	return nil
 }
 
 func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, string) {
 	opStr := binOp(op)
-	cop := matchOp(op, term)
+	cop := matchOp(term.mod, term)
 
 	var q string
 	args := []string{ string(field) }
@@ -161,8 +180,31 @@ func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]stri
 
 	var q string
 	args := []string{ string(field) }
-	var grouped []string
+	var grouped []*gClause
 
+	for _, v := range terms {
+		cop := matchOp(op, v)
+		
+		clause := fmt.Sprintf("f%d.value %s _ARG_", *tNum, cop)
+		g := &gClause{ clause, v.mod }
+		grouped = append(grouped, g)
+		args = append(args, string(v.term))
+	}
+	var clauseArr []string
+	for i, g := range grouped {
+		var j string
+		if i != 0 {
+			if g.op == OpUnaryPro || g.op == OpUnaryReq || g.op == OpUnaryNot {
+				j = " AND "
+			} else {
+				j = " OR "
+			}
+		}
+		clauseArr = append(clauseArr, fmt.Sprintf("%s%s", j, g.clause))
+	}
+	clauses := strings.Join(clauseArr, " ")
+	q = fmt.Sprintf("%s(f%d.path ~ _ARG_ AND (%s))", opStr, *tNum, clauses)
+	return args, q
 }
 
 func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool, tNum *int, op Op) ([]string, string) {
@@ -178,20 +220,20 @@ func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool
 	if inclusive {
 		equals = "="
 	}
-	var range []string
+	var ranges []string
 	if string(start) != "*" {
-		s := fmt.Sprintf("f%d.value >%s _ARG_", *tNum, start)
-		range = append(range, s)
-		args = append(args, start)
+		s := fmt.Sprintf("f%d.value >%s _ARG_", *tNum, equals)
+		ranges = append(ranges, s)
+		args = append(args, string(start))
 	}
 	if string(end) != "*" {
-		e := fmt.Sprintf("f%d.value <%s _ARG_", *tNum, end)
-		range = append(range, e)
-		args = append(args, end)
+		e := fmt.Sprintf("f%d.value <%s _ARG_", *tNum, equals)
+		ranges = append(ranges, e)
+		args = append(args, string(end))
 	}
 	var rangeStr string
-	if len(range != 0) {
-		rangeStr = fmt.Sprintf("AND (%s)", strings.Join(range, " AND "))
+	if len(ranges) != 0 {
+		rangeStr = fmt.Sprintf(" AND (%s)", strings.Join(ranges, " AND "))
 	}
 	q = fmt.Sprintf("%s(f%d.path ~ _ARG_%s)", opStr, *tNum, rangeStr)
 	return args, q
@@ -201,13 +243,13 @@ func matchOp(op Op, term QueryTerm) string {
 	r := regexp.MustCompile(`\*|\?`)
 	var cop string
 	if r.MatchString(string(term.term)) {
-		if term.mod == OpUnaryNot {
+		if term.mod == OpUnaryNot || term.mod == OpUnaryPro {
 			cop = "NOT LIKE"
 		} else {
 			cop = "LIKE"
 		}
 	} else {
-		if term.mod == OpUnaryNot {
+		if term.mod == OpUnaryNot || term.mod == OpUnaryPro {
 			cop = "<>"
 		} else {
 			cop = "="
