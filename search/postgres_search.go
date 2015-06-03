@@ -29,6 +29,7 @@ type PostgresSearch struct {
 }
 
 type PgQuery struct {
+	idx string
 	queryChain Queryable
 	paths []string
 	queryStrs []string
@@ -50,7 +51,7 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 	qq.Execute()
 	qchain := qq.Evaluate()
 
-	pgQ := &PgQuery{ queryChain: qchain }
+	pgQ := &PgQuery{ idx: idx, queryChain: qchain }
 
 	logger.Debugf("what on earth is the chain? %q", qchain)
 	err := pgQ.execute()
@@ -156,6 +157,9 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 	logger.Debugf("arguments: %v", pq.arguments)
 	logger.Debugf("query strings: %v", pq.queryStrs)
 	logger.Debugf("number of tables: %d", *t)
+	fullQ, allArgs := craftFullQuery(1, pq.idx, pq.paths, pq.arguments, pq.queryStrs, t)
+	logger.Debugf("full query: %s", fullQ)
+	logger.Debugf("all %d args: %v", len(allArgs), allArgs)
 	return nil
 }
 
@@ -268,4 +272,46 @@ func binOp(op Op) string {
 		}
 	}
 	return opStr
+}
+
+func craftFullQuery(orgID int, idx string, paths []string, arguments []string, queryStrs []string, tNum *int) (string, []interface{}) {
+	// TODO: FIX
+	allArgs := make([]interface{}, 0, len(paths) + len(arguments) + 2)
+	allArgs = append(allArgs, orgID)
+	allArgs = append(allArgs, idx)
+	for _, v := range paths {
+		allArgs = append(allArgs, v)
+	}
+	for _, v := range arguments {
+		allArgs = append(allArgs, v)
+	}
+
+	pcount := 3
+	params := make([]string, 0, len(paths))
+	for range paths {
+		params = append(params, fmt.Sprintf("$%d", pcount))
+		pcount++
+	}
+	withStatement := fmt.Sprintf("WITH found_items AS (SELECT item_name, path, value FROM goiardi.search_items si JOIN goiardi.search_collections sc ON si.search_collection_id = sc.id WHERE si.organization_id = $1 AND sc.name = $2 AND path ? ARRAY[%s]::lquery[]), items AS (SELECT DISTINCT item_name FROM found_items)", strings.Join(params, ", "))
+	var selectStmt string
+	if *tNum == 1 {
+		selectStmt = fmt.Sprintf("SELECT DISTINCT item_name FROM found_items f0 WHERE %s", queryStrs[0])
+	} else {
+		joins := make([]string, 0, *tNum)
+		for i := 0; i < *tNum; i++ {
+			j := fmt.Sprintf("INNER JOIN found_items AS f%d ON i.item_name = f%d.item_name", i, i)
+			joins = append(joins, j)
+		}
+		selectStmt = fmt.Sprintf("SELECT i.item_name FROM items i %s WHERE %s", strings.Join(joins, " "), strings.Join(queryStrs, " "))
+	}
+	fullQuery := strings.Join([]string{ withStatement, selectStmt }, " ")
+	re := regexp.MustCompile("_ARG_")
+	rfunc := func([]byte) []byte {
+		r := []byte(fmt.Sprintf("$%d", pcount))
+		pcount++
+		return r
+	}
+	fullQuery = string(re.ReplaceAllFunc([]byte(fullQuery), rfunc))
+
+	return fullQuery, allArgs
 }
