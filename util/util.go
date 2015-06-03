@@ -171,12 +171,12 @@ func Indexify(flattened map[string]interface{}) []string {
 	for k, v := range flattened {
 		switch v := v.(type) {
 		case string:
-			v = escapeStr(v)
+			v = IndexEscapeStr(v)
 			line := fmt.Sprintf("%s:%s", k, v)
 			readyToIndex = append(readyToIndex, line)
 		case []string:
 			for _, w := range v {
-				w = escapeStr(w)
+				w = IndexEscapeStr(w)
 				line := fmt.Sprintf("%s:%s", k, w)
 				readyToIndex = append(readyToIndex, line)
 			}
@@ -189,7 +189,10 @@ func Indexify(flattened map[string]interface{}) []string {
 	return readyToIndex
 }
 
-func escapeStr(s string) string {
+// IndexEscapeStr escapes values to index in the database, so characters that
+// need to be escaped for Solr are properly found when using the trie or
+// postgres based searches.
+func IndexEscapeStr(s string) string {
 	s = strings.Replace(s, "[", "\\[", -1)
 	s = strings.Replace(s, "]", "\\]", -1)
 	s = strings.Replace(s, "::", "\\:\\:", -1)
@@ -335,10 +338,16 @@ func stringify(source interface{}) string {
 func PgSearchKey(key string) string {
 	re := regexp.MustCompile(`[^\pL\pN_\.]`)
 	bs := regexp.MustCompile(`_{2,}`)
+	ps := regexp.MustCompile(`\.{2,}`) // repeated . will cause trouble too
 	k := re.ReplaceAllString(key, "_")
 	k = bs.ReplaceAllString(k, "_")
+	k = ps.ReplaceAllString(k, ".")
 	k = strings.Trim(k, "_")
 	// on the off hand chance we get leading or trailing dots
 	k = strings.Trim(k, ".")
+	// finally, if converting search query syntax, convert all _ to '.'. 
+	// This may need to be revisited in more detail if we find ourselves
+	// needing more finesse with escaping underscores.
+	k = strings.Replace(k, "_", ".", -1)
 	return k
 }

@@ -132,6 +132,7 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 		// will the values need escaped like in file search?
 		switch v := v.(type) {
 		case string:
+			v = util.IndexEscapeStr(v)
 			_, err = stmt.Exec(1, scID, itemName, v, k)
 			if err != nil {
 				tx.Rollback()
@@ -139,6 +140,7 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 			}
 		case []string:
 			for _, w := range v {
+				w = util.IndexEscapeStr(w)
 				_, err = stmt.Exec(1, scID, itemName, w, k)
 				if err != nil {
 					tx.Rollback()

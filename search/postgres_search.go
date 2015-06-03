@@ -48,6 +48,22 @@ type gClause struct {
 }
 
 func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
+	// check that the endpoint actually exists
+	sqlStmt := "SELECT 1 FROM goiardi.search_collections WHERE organization_id = $1 AND name = $2"
+	stmt, serr := datastore.Dbh.Prepare(sqlStmt)
+	if serr != nil {
+		return nil, serr
+	}
+	defer stmt.Close()
+	var zzz int
+	serr = stmt.QueryRow(1, idx).Scan(&zzz) // don't care about zzz
+	if serr != nil {
+		if serr == sql.ErrNoRows {
+			serr = fmt.Errorf("I don't know how to search for %s data objects.", idx)
+		}
+		return nil, serr
+	}
+
 	// keep up with the ersatz solr.
 	qq := &Tokenizer{Buffer: q}
 	qq.Init()
@@ -164,7 +180,10 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 	for p != nil {
 		switch c := p.(type) {
 		case *BasicQuery:
-			pq.paths = append(pq.paths, string(c.field))
+			// an empty field can only happen up here
+			if c.field != "" {
+				pq.paths = append(pq.paths, string(c.field))
+			}
 			logger.Debugf("basic t%d: field: %s op: %s term: %+v complete %v", *t, c.field, opMap[c.op], c.term, c.complete)
 			args, qstr := buildBasicQuery(c.field, c.term, t, curOp)
 			logger.Debugf("qstr: %s", qstr)
@@ -243,12 +262,17 @@ func (pq *PgQuery) results() ([]string, error) {
 
 func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, string) {
 	opStr := binOp(op)
+	originalTerm := term.term
 	cop := matchOp(term.mod, &term)
 
 	var q string
 	args := []string{ string(field) }
-	if term.term == "*" {
+	if originalTerm == "*" || originalTerm == "" {
 		q = fmt.Sprintf("%s(f%d.path ~ _ARG_)", opStr, *tNum)
+	} else if field == "" { // feeling REALLY iffy about this one, but it
+				// duplicates the previous behavior.
+		q = fmt.Sprintf("%s(f%d.value %s _ARG_)", opStr, *tNum, cop)
+		args = []string{ string(term.term) }
 	} else {
 		q = fmt.Sprintf("%s(f%d.path ~ _ARG_ AND f%d.value %s _ARG_)", opStr, *tNum, *tNum, cop)
 		args = append(args, string(term.term))
