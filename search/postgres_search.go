@@ -17,12 +17,16 @@
 package search
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
-	//"github.com/ctdk/goiardi/util"
+	"github.com/ctdk/goiardi/util"
 	"regexp"
+	"sort"
 	"strings"
+	"github.com/ctdk/goiardi/client"
 )
 
 type PostgresSearch struct {
@@ -34,6 +38,8 @@ type PgQuery struct {
 	paths []string
 	queryStrs []string
 	arguments []string
+	fullQuery string
+	allArgs []interface{}
 }
 
 type gClause struct {
@@ -59,9 +65,64 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 		return nil, err
 	}
 
-	// dummy
-	dres := make([]map[string]interface{}, 0)
-	return dres, nil
+	qresults, err := pgQ.results()
+	if err != nil {
+		return nil, err
+	}
+	// THE WRONG WAY:
+	objs := getResults(idx, qresults)
+	res := make([]map[string]interface{}, len(objs))
+	for i, r := range objs {
+		switch r := r.(type) {
+		case *client.Client:
+			jc := map[string]interface{}{
+				"name":       r.Name,
+				"chef_type":  r.ChefType,
+				"json_class": r.JSONClass,
+				"admin":      r.Admin,
+				"public_key": r.PublicKey(),
+				"validator":  r.Validator,
+			}
+			res[i] = jc
+		default:
+			res[i] = util.MapifyObject(r)
+		}
+	}
+
+	/* If we're doing partial search, tease out the fields we want. */
+	if partialData != nil {
+		res, err = formatPartials(res, objs, partialData)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// and at long last, sort
+	ss := strings.Split(sortOrder, " ")
+	sortKey := ss[0]
+	if sortKey == "id" {
+		sortKey = "name"
+	}
+	var ordering string
+	if len(ss) > 1 {
+		ordering = strings.ToLower(ss[1])
+	} else {
+		ordering = "asc"
+	}
+	sortResults := results{res, sortKey}
+	if ordering == "desc" {
+		sort.Sort(sort.Reverse(sortResults))
+	} else {
+		sort.Sort(sortResults)
+	}
+	res = sortResults.res
+
+	end := start + rows
+	if end > len(res) {
+		end = len(res)
+	}
+	res = res[start:end]
+	return res, nil
 }
 
 func (p *PostgresSearch) GetEndpoints() []string {
@@ -160,7 +221,24 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 	fullQ, allArgs := craftFullQuery(1, pq.idx, pq.paths, pq.arguments, pq.queryStrs, t)
 	logger.Debugf("full query: %s", fullQ)
 	logger.Debugf("all %d args: %v", len(allArgs), allArgs)
+	pq.fullQuery = fullQ
+	pq.allArgs = allArgs
 	return nil
+}
+
+func (pq *PgQuery) results() ([]string, error) {
+	var res util.StringSlice
+	/* stmt, err := datastore.Dbh.Prepare(pq.fullQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	*/
+	err := datastore.Dbh.QueryRow(pq.fullQuery, pq.allArgs...).Scan(res)
+	if err != nil && err != sql.ErrNoRows{
+		return nil, err
+	}
+	return res, nil
 }
 
 func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, string) {
@@ -292,17 +370,17 @@ func craftFullQuery(orgID int, idx string, paths []string, arguments []string, q
 		params = append(params, fmt.Sprintf("$%d", pcount))
 		pcount++
 	}
-	withStatement := fmt.Sprintf("WITH found_items AS (SELECT item_name, path, value FROM goiardi.search_items si JOIN goiardi.search_collections sc ON si.search_collection_id = sc.id WHERE si.organization_id = $1 AND sc.name = $2 AND path ? ARRAY[%s]::lquery[]), items AS (SELECT DISTINCT item_name FROM found_items)", strings.Join(params, ", "))
+	withStatement := fmt.Sprintf("WITH found_items AS (SELECT item_name, path, value FROM goiardi.search_items si JOIN goiardi.search_collections sc ON si.search_collection_id = sc.id WHERE si.organization_id = $1 AND sc.name = $2 AND path ? ARRAY[ %s ]::lquery[]), items AS (SELECT DISTINCT item_name FROM found_items)", strings.Join(params, ", "))
 	var selectStmt string
 	if *tNum == 1 {
-		selectStmt = fmt.Sprintf("SELECT DISTINCT item_name FROM found_items f0 WHERE %s", queryStrs[0])
+		selectStmt = fmt.Sprintf("SELECT ARRAY_AGG(DISTINCT item_name) FROM found_items f0 WHERE %s", queryStrs[0])
 	} else {
 		joins := make([]string, 0, *tNum)
 		for i := 0; i < *tNum; i++ {
 			j := fmt.Sprintf("INNER JOIN found_items AS f%d ON i.item_name = f%d.item_name", i, i)
 			joins = append(joins, j)
 		}
-		selectStmt = fmt.Sprintf("SELECT i.item_name FROM items i %s WHERE %s", strings.Join(joins, " "), strings.Join(queryStrs, " "))
+		selectStmt = fmt.Sprintf("SELECT ARRAY_AGG(i.item_name) FROM items i %s WHERE %s", strings.Join(joins, " "), strings.Join(queryStrs, " "))
 	}
 	fullQuery := strings.Join([]string{ withStatement, selectStmt }, " ")
 	re := regexp.MustCompile("_ARG_")
