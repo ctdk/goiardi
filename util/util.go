@@ -338,5 +338,7 @@ func PgSearchKey(key string) string {
 	k := re.ReplaceAllString(key, "_")
 	k = bs.ReplaceAllString(k, "_")
 	k = strings.Trim(k, "_")
+	// on the off hand chance we get leading or trailing dots
+	k = strings.Trim(k, ".")
 	return k
 }

@@ -228,22 +228,22 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 
 func (pq *PgQuery) results() ([]string, error) {
 	var res util.StringSlice
-	/* stmt, err := datastore.Dbh.Prepare(pq.fullQuery)
+	stmt, err := datastore.Dbh.Prepare(pq.fullQuery)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	*/
-	err := datastore.Dbh.QueryRow(pq.fullQuery, pq.allArgs...).Scan(res)
+	err = stmt.QueryRow(pq.allArgs...).Scan(&res)
 	if err != nil && err != sql.ErrNoRows{
 		return nil, err
 	}
+	logger.Debugf("res? %v", res)
 	return res, nil
 }
 
 func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, string) {
 	opStr := binOp(op)
-	cop := matchOp(term.mod, term)
+	cop := matchOp(term.mod, &term)
 
 	var q string
 	args := []string{ string(field) }
@@ -265,7 +265,7 @@ func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]stri
 	var grouped []*gClause
 
 	for _, v := range terms {
-		cop := matchOp(op, v)
+		cop := matchOp(op, &v)
 		
 		clause := fmt.Sprintf("f%d.value %s _ARG_", *tNum, cop)
 		g := &gClause{ clause, v.mod }
@@ -321,7 +321,7 @@ func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool
 	return args, q
 }
 
-func matchOp(op Op, term QueryTerm) string {
+func matchOp(op Op, term *QueryTerm) string {
 	r := regexp.MustCompile(`\*|\?`)
 	var cop string
 	if r.MatchString(string(term.term)) {
@@ -330,6 +330,7 @@ func matchOp(op Op, term QueryTerm) string {
 		} else {
 			cop = "LIKE"
 		}
+		term.term = Term(escapeArg(string(term.term)))
 	} else {
 		if term.mod == OpUnaryNot || term.mod == OpUnaryPro {
 			cop = "<>"
@@ -370,17 +371,17 @@ func craftFullQuery(orgID int, idx string, paths []string, arguments []string, q
 		params = append(params, fmt.Sprintf("$%d", pcount))
 		pcount++
 	}
-	withStatement := fmt.Sprintf("WITH found_items AS (SELECT item_name, path, value FROM goiardi.search_items si JOIN goiardi.search_collections sc ON si.search_collection_id = sc.id WHERE si.organization_id = $1 AND sc.name = $2 AND path ? ARRAY[ %s ]::lquery[]), items AS (SELECT DISTINCT item_name FROM found_items)", strings.Join(params, ", "))
+	withStatement := fmt.Sprintf("WITH found_items AS (SELECT item_name, path, value FROM goiardi.search_items si JOIN goiardi.search_collections sc ON si.search_collection_id = sc.id WHERE si.organization_id = $1 AND sc.name = $2 AND path ? ARRAY[ %s ]::goiardi.lquery[]), items AS (SELECT DISTINCT item_name FROM found_items)", strings.Join(params, ", "))
 	var selectStmt string
 	if *tNum == 1 {
-		selectStmt = fmt.Sprintf("SELECT ARRAY_AGG(DISTINCT item_name) FROM found_items f0 WHERE %s", queryStrs[0])
+		selectStmt = fmt.Sprintf("SELECT COALESCE(ARRAY_AGG(DISTINCT item_name), '{}'::text[]) FROM found_items f0 WHERE %s", queryStrs[0])
 	} else {
 		joins := make([]string, 0, *tNum)
 		for i := 0; i < *tNum; i++ {
 			j := fmt.Sprintf("INNER JOIN found_items AS f%d ON i.item_name = f%d.item_name", i, i)
 			joins = append(joins, j)
 		}
-		selectStmt = fmt.Sprintf("SELECT ARRAY_AGG(i.item_name) FROM items i %s WHERE %s", strings.Join(joins, " "), strings.Join(queryStrs, " "))
+		selectStmt = fmt.Sprintf("SELECT COALESCE(ARRAY_AGG(i.item_name), '{}'::text[]) FROM items i %s WHERE %s", strings.Join(joins, " "), strings.Join(queryStrs, " "))
 	}
 	fullQuery := strings.Join([]string{ withStatement, selectStmt }, " ")
 	re := regexp.MustCompile("_ARG_")
@@ -392,4 +393,12 @@ func craftFullQuery(orgID int, idx string, paths []string, arguments []string, q
 	fullQuery = string(re.ReplaceAllFunc([]byte(fullQuery), rfunc))
 
 	return fullQuery, allArgs
+}
+
+func escapeArg(arg string) string {
+	arg = strings.Replace(arg, "%", "\\%", -1)
+	arg = strings.Replace(arg, "_", "\\_", -1)
+	arg = strings.Replace(arg, "*", "%", -1)
+	arg = strings.Replace(arg, "?", "_", -1)
+	return arg
 }
