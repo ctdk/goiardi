@@ -47,7 +47,7 @@ type Report struct {
 	RunList        string                 `json:"run_list"`
 	Resources      []interface{}          `json:"resources"`
 	Data           map[string]interface{} `json:"data"` // I think this is right
-	NodeName       string                 `json:"nodeName"`
+	NodeName       string                 `json:"node_name"`
 	organizationID int
 }
 
@@ -234,7 +234,11 @@ func (r *Report) UpdateFromJSON(jsonReport map[string]interface{}) util.Gerror {
 	}
 	status, ok := jsonReport["status"].(string)
 	if ok {
-		if status != "success" && status != "failure" {
+		// I received a report that the status may be "running".
+		// Although I've not actually found where that happens, it seems
+		// reasonable, so I'll allow it. "started" needs to be allowed
+		// too, for import from a json dump.
+		if status != "success" && status != "failure" && status != "running" && status != "started" {
 			err := util.Errorf("invalid status %s", status)
 			return err
 		}

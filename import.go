@@ -234,24 +234,31 @@ func importAll(fileName string) error {
 
 		// load reports
 		logger.Infof("Loading reports")
-		for _, v := range exportedData.Data["report"] {
-			nodeName := v.(map[string]interface{})["node_name"].(string)
-			v.(map[string]interface{})["action"] = "start"
-			if st, ok := v.(map[string]interface{})["start_time"].(string); ok {
+		for _, o := range exportedData.Data["report"] {
+			// handle data exported from a bugged report export
+			var nodeName string
+			v := o.(map[string]interface{})
+			if n, ok := v["node_name"]; ok {
+				nodeName = n.(string)
+			} else if n, ok := v["nodeName"]; ok {
+				nodeName = n.(string)
+			}
+			v["action"] = "start"
+			if st, ok := v["start_time"].(string); ok {
 				t, err := time.Parse(time.RFC3339, st)
 				if err != nil {
 					return err
 				}
-				v.(map[string]interface{})["start_time"] = t.Format(report.ReportTimeFormat)
+				v["start_time"] = t.Format(report.ReportTimeFormat)
 			}
-			if et, ok := v.(map[string]interface{})["end_time"].(string); ok {
+			if et, ok := v["end_time"].(string); ok {
 				t, err := time.Parse(time.RFC3339, et)
 				if err != nil {
 					return err
 				}
-				v.(map[string]interface{})["end_time"] = t.Format(report.ReportTimeFormat)
+				v["end_time"] = t.Format(report.ReportTimeFormat)
 			}
-			r, err := report.NewFromJSON(nodeName, v.(map[string]interface{}))
+			r, err := report.NewFromJSON(nodeName, v)
 			if err != nil {
 				return err
 			}
@@ -259,8 +266,8 @@ func importAll(fileName string) error {
 			if gerr != nil {
 				return gerr
 			}
-			v.(map[string]interface{})["action"] = "end"
-			if err := r.UpdateFromJSON(v.(map[string]interface{})); err != nil {
+			v["action"] = "end"
+			if err := r.UpdateFromJSON(v); err != nil {
 				return err
 			}
 			gerr = r.Save()
