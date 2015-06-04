@@ -1,3 +1,10 @@
+0.9.2
+-----
+* Fix broken import/export function with reports - bringing goiardi's variable
+  naming inline with golang conventions a while back inadvertently renamed a
+  reporting JSON field. The field was renamed, and the import code will now
+  handle both correct and incorrect names for the node reporting.
+
 0.9.1
 -----
 * Fix error where requests for zero byte cookbook files would crash.
