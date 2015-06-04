@@ -75,7 +75,6 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 
 	pgQ := &PgQuery{ idx: idx, queryChain: qchain }
 
-	logger.Debugf("what on earth is the chain? %q", qchain)
 	err := pgQ.execute()
 	if err != nil {
 		return nil, err
@@ -154,22 +153,6 @@ func (p *PostgresSearch) GetEndpoints() []string {
 func (pq *PgQuery) execute(startTableID ...*int) error {
 	p := pq.queryChain
 	curOp := OpNotAnOp
-	opMap := map[Op]string{
-		OpNotAnOp: "(not an op)",
-		OpUnaryNot: "not",
-		OpUnaryReq: "req",
-		OpUnaryPro: "pro",
-		OpBinAnd: "and",
-		OpBinOr: "or",
-		OpBoost: "boost",
-		OpFuzzy: "fuzzy",
-		OpStartGroup: "start group",
-		OpEndGroup: "end group",
-		OpStartIncl: "start inc",
-		OpEndIncl: "end inc",
-		OpStartExcl: "start exc",
-		OpEndExcl: "end exc",
-	}
 	var t *int
 	if len(startTableID) == 0 {
 		z := 0
@@ -184,48 +167,36 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 			if c.field != "" {
 				pq.paths = append(pq.paths, string(c.field))
 			}
-			logger.Debugf("basic t%d: field: %s op: %s term: %+v complete %v", *t, c.field, opMap[c.op], c.term, c.complete)
 			args, qstr := buildBasicQuery(c.field, c.term, t, curOp)
-			logger.Debugf("qstr: %s", qstr)
 			pq.arguments = append(pq.arguments, args...)
 			pq.queryStrs = append(pq.queryStrs, qstr)
 			*t++
 		case *GroupedQuery:
 			pq.paths = append(pq.paths, string(c.field))
-			logger.Debugf("grouped t%d: field: %s op: %s terms: %+v complete %v", *t, c.field, opMap[c.op], c.terms, c.complete)
 			args, qstr := buildGroupedQuery(c.field, c.terms, t, curOp)
-			logger.Debugf("qstr: %s", qstr)
 			pq.arguments = append(pq.arguments, args...)
 			pq.queryStrs = append(pq.queryStrs, qstr)
 			*t++
 		case *RangeQuery:
 			pq.paths = append(pq.paths, string(c.field))
-			logger.Debugf("range t%d: field %s op %s start %s end %s inclusive %v complete %v", *t, c.field, opMap[c.op], c.start, c.end, c.inclusive, c.complete)
 			args, qstr := buildRangeQuery(c.field, c.start, c.end, c.inclusive, t, curOp)
-			logger.Debugf("qstr: %s", qstr)
 			pq.arguments = append(pq.arguments, args...)
 			pq.queryStrs = append(pq.queryStrs, qstr)
 			*t++
 		case *SubQuery:
-			logger.Debugf("STARTING SUBQUERY: op %s complete %v", opMap[c.op], c.complete)
 			newq, nend, nerr := extractSubQuery(c)
 			if nerr != nil {
 				return nerr
 			}
 			p = nend
-			logger.Debugf("OP NOW: %s", opMap[p.Op()])
 			np := &PgQuery{ queryChain: newq }
 			err := np.execute(t)
 			if err != nil {
 				return err
 			}
-			logger.Debugf("subquery paths: %v", np.paths)
-			logger.Debugf("subquery args: %v", np.arguments)
-			logger.Debugf("subquery qstrs: %v", np.queryStrs)
 			pq.paths = append(pq.paths, np.paths...)
 			pq.arguments = append(pq.arguments, np.arguments...)
 			pq.queryStrs = append(pq.queryStrs, fmt.Sprintf("%s(%s)", binOp(curOp), strings.Join(np.queryStrs, " ")))
-			logger.Debugf("ENDING SUBQUERY")
 		default:
 			err := fmt.Errorf("Unknown type %T for query", c)
 			return err
@@ -233,11 +204,8 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 		curOp = p.Op()
 		p = p.Next()
 	}
-	logger.Debugf("paths: %v", pq.paths)
-	logger.Debugf("arguments: %v", pq.arguments)
-	logger.Debugf("query strings: %v", pq.queryStrs)
-	logger.Debugf("number of tables: %d", *t)
 	fullQ, allArgs := craftFullQuery(1, pq.idx, pq.paths, pq.arguments, pq.queryStrs, t)
+	logger.Debugf("pg search info:")
 	logger.Debugf("full query: %s", fullQ)
 	logger.Debugf("all %d args: %v", len(allArgs), allArgs)
 	pq.fullQuery = fullQ
@@ -256,7 +224,6 @@ func (pq *PgQuery) results() ([]string, error) {
 	if err != nil && err != sql.ErrNoRows{
 		return nil, err
 	}
-	logger.Debugf("res? %v", res)
 	return res, nil
 }
 
