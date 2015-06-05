@@ -362,7 +362,7 @@ func craftFullQuery(orgID int, idx string, paths []string, arguments []string, q
 		params = append(params, fmt.Sprintf("$%d", pcount))
 		pcount++
 	}
-	withStatement := fmt.Sprintf("WITH found_items AS (SELECT item_name, path, value FROM goiardi.search_items si JOIN goiardi.search_collections sc ON si.search_collection_id = sc.id WHERE si.organization_id = $1 AND sc.name = $2 AND path ? ARRAY[ %s ]::goiardi.lquery[]), items AS (SELECT DISTINCT item_name FROM found_items)", strings.Join(params, ", "))
+	withStatement := fmt.Sprintf("WITH found_items AS (SELECT item_name, path, value FROM goiardi.search_items si JOIN goiardi.search_collections sc ON si.search_collection_id = sc.id WHERE si.organization_id = $1 AND sc.name = $2 AND path OPERATOR(goiardi.?) ARRAY[ %s ]::goiardi.lquery[]), items AS (SELECT DISTINCT item_name FROM found_items)", strings.Join(params, ", "))
 	var selectStmt string
 	if *tNum == 1 {
 		selectStmt = fmt.Sprintf("SELECT COALESCE(ARRAY_AGG(DISTINCT item_name), '{}'::text[]) FROM found_items f0 WHERE %s", queryStrs[0])
