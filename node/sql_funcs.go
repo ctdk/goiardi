@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"log"
+	"strings"
 )
 
 func checkForNodeSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -102,6 +103,52 @@ func getSQL(nodeName string) (*Node, error) {
 		return nil, err
 	}
 	return node, nil
+}
+
+func getMultiSQL(nodeNames []string) ([]*Node, error) {
+	var sqlStmt string
+	bind := make([]string, len(nodeNames))
+	
+	if config.Config.UseMySQL {
+		for i := range nodeNames {
+			bind[i] = "?"
+		}
+		sqlStmt = fmt.Sprintf("select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n where n.name in (%s)", strings.Join(bind, ", "))
+	} else if config.Config.UsePostgreSQL {
+		for i := range nodeNames {
+			bind[i] = fmt.Sprintf("$%d", i+1)
+		}
+		sqlStmt = fmt.Sprintf("select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from goiardi.nodes n where n.name in (%s)", strings.Join(bind, ", "))
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	nameArgs := make([]interface{}, len(nodeNames))
+	for i, v := range nodeNames {
+		nameArgs[i] = v
+	}
+	rows, err := stmt.Query(nameArgs...)
+	if err != nil {
+		return nil, err
+	}
+	nodes := make([]*Node, 0, len(nodeNames))
+	for rows.Next() {
+		n := new(Node)
+		err = n.fillNodeFromSQL(rows)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+		nodes = append(nodes, n)
+	}
+
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return nodes, nil
 }
 
 func (n *Node) saveSQL() error {

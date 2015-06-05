@@ -348,6 +348,9 @@ func PgSearchKey(key string) string {
 	// finally, if converting search query syntax, convert all _ to '.'. 
 	// This may need to be revisited in more detail if we find ourselves
 	// needing more finesse with escaping underscores.
-	k = strings.Replace(k, "_", ".", -1)
+	if config.Config.ConvertSearch {
+		k = strings.Replace(k, "_", ".", -1)
+		k = ps.ReplaceAllString(k, ".")
+	}
 	return k
 }

@@ -259,10 +259,11 @@ func getResults(variety string, toGet []string) []indexer.Indexable {
 	var results []indexer.Indexable
 	switch variety {
 	case "node":
-		for _, n := range toGet {
-			if node, _ := node.Get(n); node != nil {
-				results = append(results, node)
-			}
+		ns, _ := node.GetMulti(toGet)
+		// ....
+		results = make([]indexer.Indexable, 0, len(ns))
+		for _, n := range ns {
+			results = append(results, n)
 		}
 	case "role":
 		for _, r := range toGet {
