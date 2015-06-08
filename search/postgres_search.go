@@ -241,7 +241,7 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, s
 		q = fmt.Sprintf("%s(f%d.value %s _ARG_)", opStr, *tNum, cop)
 		args = []string{ string(term.term) }
 	} else {
-		q = fmt.Sprintf("%s(f%d.path ~ _ARG_ AND f%d.value %s _ARG_)", opStr, *tNum, *tNum, cop)
+		q = fmt.Sprintf("%s(f%d.path OPERATOR(goiardi.~) _ARG_ AND f%d.value %s _ARG_)", opStr, *tNum, *tNum, cop)
 		args = append(args, string(term.term))
 	}
 
@@ -276,7 +276,7 @@ func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]stri
 		clauseArr = append(clauseArr, fmt.Sprintf("%s%s", j, g.clause))
 	}
 	clauses := strings.Join(clauseArr, " ")
-	q = fmt.Sprintf("%s(f%d.path ~ _ARG_ AND (%s))", opStr, *tNum, clauses)
+	q = fmt.Sprintf("%s(f%d.path OPERATOR(goiardi.~) _ARG_ AND (%s))", opStr, *tNum, clauses)
 	return args, q
 }
 
@@ -308,7 +308,7 @@ func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool
 	if len(ranges) != 0 {
 		rangeStr = fmt.Sprintf(" AND (%s)", strings.Join(ranges, " AND "))
 	}
-	q = fmt.Sprintf("%s(f%d.path ~ _ARG_%s)", opStr, *tNum, rangeStr)
+	q = fmt.Sprintf("%s(f%d.path OPERATOR(goiardi.~) _ARG_%s)", opStr, *tNum, rangeStr)
 	return args, q
 }
 
