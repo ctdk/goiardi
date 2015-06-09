@@ -234,11 +234,9 @@ func (r *Report) UpdateFromJSON(jsonReport map[string]interface{}) util.Gerror {
 	}
 	status, ok := jsonReport["status"].(string)
 	if ok {
-		// I received a report that the status may be "running".
-		// Although I've not actually found where that happens, it seems
-		// reasonable, so I'll allow it. "started" needs to be allowed
-		// too, for import from a json dump.
-		if status != "success" && status != "failure" && status != "running" && status != "started" {
+		// "Started" needs to be allowed too, for import from a json 
+		// dump.
+		if status != "success" && status != "failure" && status != "started" {
 			err := util.Errorf("invalid status %s", status)
 			return err
 		}
