@@ -22,6 +22,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"log"
+	"strings"
 )
 
 /* General SQL functions for environments */
@@ -53,8 +54,13 @@ func (e *ChefEnvironment) fillEnvFromSQL(row datastore.ResRow) error {
 	if err != nil {
 		return err
 	}
+	
 	e.ChefType = "environment"
 	e.JSONClass = "Chef::Environment"
+	if e.Name == "_default" {
+		return nil
+	}
+
 	err = datastore.DecodeBlob(da, &e.Default)
 	if err != nil {
 		return err
@@ -90,6 +96,52 @@ func getEnvironmentSQL(envName string) (*ChefEnvironment, error) {
 		return nil, err
 	}
 	return env, nil
+}
+
+func getMultiSQL(envNames []string) ([]*ChefEnvironment, error) {
+	var sqlStmt string
+	bind := make([]string, len(envNames))
+	
+	if config.Config.UseMySQL {
+		for i := range envNames {
+			bind[i] = "?"
+		}
+		sqlStmt = fmt.Sprintf("SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments WHERE name IN (%s)", strings.Join(bind, ", "))
+	} else if config.Config.UsePostgreSQL {
+		for i := range envNames {
+			bind[i] = fmt.Sprintf("$%d", i+1)
+		}
+		sqlStmt = fmt.Sprintf("SELECT name, description, default_attr, override_attr, cookbook_vers FROM goiardi.environments WHERE name IN (%s)", strings.Join(bind, ", "))
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	nameArgs := make([]interface{}, len(envNames))
+	for i, v := range envNames {
+		nameArgs[i] = v
+	}
+	rows, err := stmt.Query(nameArgs...)
+	if err != nil {
+		return nil, err
+	}
+	envs := make([]*ChefEnvironment, 0, len(envNames))
+	for rows.Next() {
+		e := new(ChefEnvironment)
+		err = e.fillEnvFromSQL(rows)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+		envs = append(envs, e)
+	}
+
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return envs, nil
 }
 
 func (e *ChefEnvironment) deleteEnvironmentSQL() error {

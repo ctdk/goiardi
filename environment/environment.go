@@ -245,6 +245,28 @@ func Get(envName string) (*ChefEnvironment, util.Gerror) {
 	return env, nil
 }
 
+// GetMulti gets multiple environmets from a given slice of environment names.
+func GetMulti(envNames []string) ([]*ChefEnvironment, util.Gerror) {
+	var envs []*ChefEnvironment
+	if config.UsingDB() {
+		var err error
+		envs, err = getMultiSQL(envNames)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, util.CastErr(err)
+		}
+	} else {
+		envs = make([]*ChefEnvironment, 0, len(envNames))
+		for _, e := range envNames {
+			eo, _ := Get(e)
+			if eo != nil {
+				envs = append(envs, eo)
+			}
+		}
+	}
+
+	return envs, nil
+}
+
 // MakeDefaultEnvironment creates the default environment on startup.
 func MakeDefaultEnvironment() {
 	var de *ChefEnvironment

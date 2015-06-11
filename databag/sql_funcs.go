@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
-	"log"
+	"strings"
 )
 
 // Functions for finding, saving, etc. data bags with an SQL database.
@@ -57,7 +57,7 @@ func getDataBagSQL(name string) (*DataBag, error) {
 	return dataBag, nil
 }
 
-func (dbi *DataBagItem) fillDBItemFromMySQL(row datastore.ResRow) error {
+func (dbi *DataBagItem) fillDBItemFromSQL(row datastore.ResRow) error {
 	var rawb []byte
 	err := row.Scan(&dbi.id, &dbi.dataBagID, &dbi.Name, &dbi.origName, &dbi.DataBagName, &rawb)
 	if err != nil {
@@ -87,11 +87,58 @@ func (db *DataBag) getDBItemSQL(dbItemName string) (*DataBagItem, error) {
 	}
 	defer stmt.Close()
 	row := stmt.QueryRow(dbItemName, db.id)
-	err = dbi.fillDBItemFromMySQL(row)
+	err = dbi.fillDBItemFromSQL(row)
 	if err != nil {
 		return nil, err
 	}
 	return dbi, nil
+}
+
+func (db *DataBag) getMultiDBItemSQL(dbItemNames []string) ([]*DataBagItem, error) {
+	var sqlStmt string
+	bind := make([]string, len(dbItemNames))
+	
+	if config.Config.UseMySQL {
+		for i := range dbItemNames {
+			bind[i] = "?"
+		}
+		sqlStmt = fmt.Sprintf("SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM data_bag_items dbi JOIN data_bags db on dbi.data_bag_id = db.id WHERE dbi.data_bag_id = ? AND dbi.orig_name IN (%s)", strings.Join(bind, ", "))
+	} else if config.Config.UsePostgreSQL {
+		for i := range dbItemNames {
+			bind[i] = fmt.Sprintf("$%d", i+2)
+		}
+		sqlStmt = fmt.Sprintf("SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM goiardi.data_bag_items dbi JOIN goiardi.data_bags db on dbi.data_bag_id = db.id WHERE dbi.data_bag_id = $1 AND dbi.orig_name IN (%s)", strings.Join(bind, ", "))
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	nameArgs := make([]interface{}, len(dbItemNames) + 1)
+	nameArgs[0] = db.id
+	for i, v := range dbItemNames {
+		nameArgs[i + 1] = v
+	}
+	rows, err := stmt.Query(nameArgs...)
+	if err != nil {
+		return nil, err
+	}
+	dbis := make([]*DataBagItem, 0, len(dbItemNames))
+	for rows.Next() {
+		d := new(DataBagItem)
+		err = d.fillDBItemFromSQL(rows)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+		dbis = append(dbis, d)
+	}
+
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return dbis, nil
 }
 
 func (dbi *DataBagItem) updateDBItemSQL() error {
@@ -162,7 +209,7 @@ func (db *DataBag) allDBItemsSQL() (map[string]*DataBagItem, error) {
 	}
 	for rows.Next() {
 		dbi := new(DataBagItem)
-		err = dbi.fillDBItemFromMySQL(rows)
+		err = dbi.fillDBItemFromSQL(rows)
 		if err != nil {
 			rows.Close()
 			return nil, err

@@ -154,6 +154,28 @@ func Get(clientname string) (*Client, util.Gerror) {
 	return client, nil
 }
 
+// GetMulti gets multiple clients from a given slice of client names.
+func GetMulti(clientNames []string) ([]*Client, util.Gerror) {
+	var clients []*Client
+	if config.UsingDB() {
+		var err error
+		clients, err = getMultiSQL(clientNames)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, util.CastErr(err)
+		}
+	} else {
+		clients = make([]*Client, 0, len(clientNames))
+		for _, c := range clientNames {
+			co, _ := Get(c)
+			if co != nil {
+				clients = append(clients, co)
+			}
+		}
+	}
+
+	return clients, nil
+}
+
 // Save the client. If a user with the same name as the client exists, returns
 // an error. Additionally, if running with MySQL it will return any DB error.
 func (c *Client) Save() util.Gerror {

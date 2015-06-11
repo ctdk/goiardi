@@ -30,6 +30,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"log"
 )
 
 // Searcher is an interface that any search backend needs to implement. It's
@@ -266,35 +267,31 @@ func getResults(variety string, toGet []string) []indexer.Indexable {
 			results = append(results, n)
 		}
 	case "role":
-		for _, r := range toGet {
-			if role, _ := role.Get(r); role != nil {
-				results = append(results, role)
-			}
+		rs, _ := role.GetMulti(toGet)
+		results = make([]indexer.Indexable, 0, len(rs))
+		for _, r := range rs {
+			results = append(results, r)
 		}
 	case "client":
-		for _, c := range toGet {
-			if client, _ := client.Get(c); client != nil {
-				results = append(results, client)
-			}
+		cs, _ := client.GetMulti(toGet)
+		results = make([]indexer.Indexable, 0, len(cs))
+		for _, c := range cs {
+			results = append(results, c)
 		}
 	case "environment":
-		for _, e := range toGet {
-			if environment, _ := environment.Get(e); environment != nil {
-				results = append(results, environment)
-			}
+		es, _ := environment.GetMulti(toGet)
+		results = make([]indexer.Indexable, 0, len(es))
+		for _, e := range es {
+			results = append(results, e)
 		}
 	default: // It's a data bag
 		/* These may require further processing later. */
 		dbag, _ := databag.Get(variety)
 		if dbag != nil {
-			for _, k := range toGet {
-				dbi, err := dbag.GetDBItem(k)
-				if err != nil {
-					// at least log the error for
-					// now
-					logger.Errorf(err.Error())
-				}
-				results = append(results, dbi)
+			ds, _ := dbag.GetMultiDBItems(toGet)
+			results = make([]indexer.Indexable, 0, len(ds))
+			for _, d := range ds {
+				results = append(results, d)
 			}
 		}
 	}

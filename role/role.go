@@ -215,6 +215,28 @@ func Get(roleName string) (*Role, error) {
 	return role, nil
 }
 
+// GetMulti gets multiple roles from a slice of role names.
+func GetMulti(roleNames []string) ([]*Role, util.Gerror) {
+	var roles []*Role
+	if config.UsingDB() {
+		var err error
+		roles, err = getMultiSQL(roleNames)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, util.CastErr(err)
+		}
+	} else {
+		roles = make([]*Role, 0, len(roleNames))
+		for _, r := range roleNames {
+			ro, _ := Get(r)
+			if ro != nil {
+				roles = append(roles, ro)
+			}
+		}
+	}
+
+	return roles, nil
+}
+
 // Save the role.
 func (r *Role) Save() error {
 	if config.Config.UseMySQL {

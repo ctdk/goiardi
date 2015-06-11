@@ -325,6 +325,27 @@ func (db *DataBag) GetDBItem(dbItemName string) (*DataBagItem, error) {
 	return dbi, nil
 }
 
+// GetMultiDBItems gets multiple data bag items from a slice of names.
+func (db *DataBag) GetMultiDBItems(dbItemNames []string) ([]*DataBagItem, util.Gerror) {
+	var dbis []*DataBagItem
+	if config.UsingDB() {
+		var err error
+		dbis, err = db.getMultiDBItemSQL(dbItemNames)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, util.CastErr(err)
+		}
+	} else {
+		dbis = make([]*DataBagItem, 0, len(dbItemNames))
+		for _, d := range dbItemNames {
+			do, _ := db.DataBagItems[d]
+			if do != nil {
+				dbis = append(dbis, do)
+			}
+		}
+	}
+	return dbis, nil
+}
+
 // AllDBItems returns a map of all the items in a data bag.
 func (db *DataBag) AllDBItems() (map[string]*DataBagItem, error) {
 	if config.UsingDB() {
