@@ -30,7 +30,6 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-	"log"
 )
 
 // Searcher is an interface that any search backend needs to implement. It's
