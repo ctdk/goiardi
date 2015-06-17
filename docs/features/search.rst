@@ -20,3 +20,5 @@ Starting with goiardi version 0.10.0, there is an optional PostgreSQL based sear
 In testing, goiardi with postgres search can handle 10,000 nodes without any problem. Simple queries complete very quickly, but more complex queries can take longer. TODO: more benchmarks
 
 The postgres search should be able to handle almost any query you throw at it, but it's definitely possible to craft a query that goiardi will fail to handle correctly. Particularly, if you're using fuzzy or distance searches, it will probably not return what you want. This postgres search should handle all normal cases, however.
+
+The biggest issue between the standard Solr search with Chef and the goiardi Postgres based search is that ltree indices in Postgres can only use alphanumeric characters (plus _), with "." as a path separator. Since attributes can have whatever arbitrary characters you want in them, goiardi strips those characters out when they're indexed and when searching. This is not usually a problem, but could lead to strange results if you had something like "/dev/xvda1" AND "dev_xvda1" as attribute names in a node.
