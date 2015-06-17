@@ -30,6 +30,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // Searcher is an interface that any search backend needs to implement. It's
@@ -84,11 +85,14 @@ type SolrQuery struct {
 }
 
 type TrieSearch struct {
+	m sync.Mutex
 }
 
 // Search parses the given query string and search the given index for any
 // matching results.
 func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
+	t.m.Lock()
+	defer t.m.Unlock()
 	qq := &Tokenizer{Buffer: query}
 	qq.Init()
 	if err := qq.Parse(); err != nil {

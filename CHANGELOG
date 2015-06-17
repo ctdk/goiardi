@@ -4,6 +4,10 @@
   oker1 for your work on that).
 * Postgres search is here at last! If you're using Postgres, instead of using
   the ersatz solr search, you can instead use Postgres to power your searches.
+* Add a mutex for the original goiardi search - multiple simple queries
+  executing simultaneously are not a problem, but multiple complex queries can 
+  eat up all the RAM on the machine and cause goiardi to crash. This mitigates
+  that situation.
 
 0.9.2
 -----
