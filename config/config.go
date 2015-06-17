@@ -167,10 +167,10 @@ type Options struct {
 }
 
 // The goiardi version.
-const Version = "0.9.2"
+const Version = "0.10.0"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
-const ChefVersion = "11.1.6"
+const ChefVersion = "11.1.7"
 
 /* The general plan is to read the command-line options, then parse the config
  * file, fill in the config struct with those values, then apply the
@@ -289,11 +289,11 @@ func ParseConfigOptions() error {
 	}
 
 	if (Config.UseMySQL || Config.UsePostgreSQL) && (Config.IndexFile == "" && !Config.PgSearch){
-		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend.")
+		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend. %v %v", Config.PgSearch, Config.ConvertSearch)
 		log.Println(err)
 		os.Exit(1)
 	}
-
+	
 	if Config.IndexFile != "" && (Config.DataStoreFile != "" || (Config.UseMySQL || Config.UsePostgreSQL)) {
 		Config.FreezeData = true
 	}
@@ -582,6 +582,9 @@ func ParseConfigOptions() error {
 		if opts.ConvertSearch {
 			Config.ConvertSearch = opts.ConvertSearch
 		}
+	}
+	if Config.IndexFile != "" && Config.PgSearch {
+		logger.Infof("Specifying an index file for search while using the postgres search isn't useful.")
 	}
 
 	return nil

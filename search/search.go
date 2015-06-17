@@ -257,40 +257,42 @@ func (t *TrieSearch) GetEndpoints() []string {
 
 func getResults(variety string, toGet []string) []indexer.Indexable {
 	var results []indexer.Indexable
-	switch variety {
-	case "node":
-		ns, _ := node.GetMulti(toGet)
-		// ....
-		results = make([]indexer.Indexable, 0, len(ns))
-		for _, n := range ns {
-			results = append(results, n)
-		}
-	case "role":
-		rs, _ := role.GetMulti(toGet)
-		results = make([]indexer.Indexable, 0, len(rs))
-		for _, r := range rs {
-			results = append(results, r)
-		}
-	case "client":
-		cs, _ := client.GetMulti(toGet)
-		results = make([]indexer.Indexable, 0, len(cs))
-		for _, c := range cs {
-			results = append(results, c)
-		}
-	case "environment":
-		es, _ := environment.GetMulti(toGet)
-		results = make([]indexer.Indexable, 0, len(es))
-		for _, e := range es {
-			results = append(results, e)
-		}
-	default: // It's a data bag
-		/* These may require further processing later. */
-		dbag, _ := databag.Get(variety)
-		if dbag != nil {
-			ds, _ := dbag.GetMultiDBItems(toGet)
-			results = make([]indexer.Indexable, 0, len(ds))
-			for _, d := range ds {
-				results = append(results, d)
+	if len(toGet) > 0 {
+		switch variety {
+		case "node":
+			ns, _ := node.GetMulti(toGet)
+			// ....
+			results = make([]indexer.Indexable, 0, len(ns))
+			for _, n := range ns {
+				results = append(results, n)
+			}
+		case "role":
+			rs, _ := role.GetMulti(toGet)
+			results = make([]indexer.Indexable, 0, len(rs))
+			for _, r := range rs {
+				results = append(results, r)
+			}
+		case "client":
+			cs, _ := client.GetMulti(toGet)
+			results = make([]indexer.Indexable, 0, len(cs))
+			for _, c := range cs {
+				results = append(results, c)
+			}
+		case "environment":
+			es, _ := environment.GetMulti(toGet)
+			results = make([]indexer.Indexable, 0, len(es))
+			for _, e := range es {
+				results = append(results, e)
+			}
+		default: // It's a data bag
+			/* These may require further processing later. */
+			dbag, _ := databag.Get(variety)
+			if dbag != nil {
+				ds, _ := dbag.GetMultiDBItems(toGet)
+				results = make([]indexer.Indexable, 0, len(ds))
+				for _, d := range ds {
+					results = append(results, d)
+				}
 			}
 		}
 	}

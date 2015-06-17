@@ -1,3 +1,10 @@
+0.10.0 (not released yet)
+------
+* Search architecture changed so different search backends can be used (thanks
+  oker1 for your work on that).
+* Postgres search is here at last! If you're using Postgres, instead of using
+  the ersatz solr search, you can instead use Postgres to power your searches.
+
 0.9.2
 -----
 * Fix broken import/export function with reports - bringing goiardi's variable
