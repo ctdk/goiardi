@@ -98,7 +98,7 @@ func (db *DataBag) getDBItemSQL(dbItemName string) (*DataBagItem, error) {
 func (db *DataBag) getMultiDBItemSQL(dbItemNames []string) ([]*DataBagItem, error) {
 	var sqlStmt string
 	bind := make([]string, len(dbItemNames))
-	
+
 	if config.Config.UseMySQL {
 		for i := range dbItemNames {
 			bind[i] = "?"
@@ -115,10 +115,10 @@ func (db *DataBag) getMultiDBItemSQL(dbItemNames []string) ([]*DataBagItem, erro
 		return nil, err
 	}
 	defer stmt.Close()
-	nameArgs := make([]interface{}, len(dbItemNames) + 1)
+	nameArgs := make([]interface{}, len(dbItemNames)+1)
 	nameArgs[0] = db.id
 	for i, v := range dbItemNames {
-		nameArgs[i + 1] = v
+		nameArgs[i+1] = v
 	}
 	rows, err := stmt.Query(nameArgs...)
 	if err != nil {

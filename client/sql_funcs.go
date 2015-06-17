@@ -70,7 +70,7 @@ func getClientSQL(name string) (*Client, error) {
 func getMultiSQL(clientNames []string) ([]*Client, error) {
 	var sqlStmt string
 	bind := make([]string, len(clientNames))
-	
+
 	if config.Config.UseMySQL {
 		for i := range clientNames {
 			bind[i] = "?"

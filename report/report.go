@@ -234,7 +234,7 @@ func (r *Report) UpdateFromJSON(jsonReport map[string]interface{}) util.Gerror {
 	}
 	status, ok := jsonReport["status"].(string)
 	if ok {
-		// "Started" needs to be allowed too, for import from a json 
+		// "Started" needs to be allowed too, for import from a json
 		// dump.
 		if status != "success" && status != "failure" && status != "started" {
 			err := util.Errorf("invalid status %s", status)

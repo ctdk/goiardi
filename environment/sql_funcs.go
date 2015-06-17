@@ -54,7 +54,7 @@ func (e *ChefEnvironment) fillEnvFromSQL(row datastore.ResRow) error {
 	if err != nil {
 		return err
 	}
-	
+
 	e.ChefType = "environment"
 	e.JSONClass = "Chef::Environment"
 	if e.Name == "_default" {
@@ -101,7 +101,7 @@ func getEnvironmentSQL(envName string) (*ChefEnvironment, error) {
 func getMultiSQL(envNames []string) ([]*ChefEnvironment, error) {
 	var sqlStmt string
 	bind := make([]string, len(envNames))
-	
+
 	if config.Config.UseMySQL {
 		for i := range envNames {
 			bind[i] = "?"

@@ -84,7 +84,7 @@ type Conf struct {
 	SignPrivKey       string `toml:"sign-priv-key"`
 	DotSearch         bool   `toml:"dot-search"`
 	ConvertSearch     bool   `toml:"convert-search"`
-	PgSearch 	  bool `toml:"pg-search"`
+	PgSearch          bool   `toml:"pg-search"`
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -163,7 +163,7 @@ type Options struct {
 	SignPrivKey       string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests."`
 	DotSearch         bool   `long:"dot-search" description:"If set, searches will use . to separate elements instead of _."`
 	ConvertSearch     bool   `long:"convert-search" description:"If set, convert _ syntax searches to . syntax. Only useful if --dot-search is set."`
-	PgSearch bool `long:"pg-search" description:"Use the new Postgres based search engine instead of the default ersatz Solr. Requires --use-postgresql, automatically turns on --dot-search. --convert-search is recommended, but not required."`
+	PgSearch          bool   `long:"pg-search" description:"Use the new Postgres based search engine instead of the default ersatz Solr. Requires --use-postgresql, automatically turns on --dot-search. --convert-search is recommended, but not required."`
 }
 
 // The goiardi version.
@@ -288,12 +288,12 @@ func ParseConfigOptions() error {
 		os.Exit(1)
 	}
 
-	if (Config.UseMySQL || Config.UsePostgreSQL) && (Config.IndexFile == "" && !Config.PgSearch){
+	if (Config.UseMySQL || Config.UsePostgreSQL) && (Config.IndexFile == "" && !Config.PgSearch) {
 		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend. %v %v", Config.PgSearch, Config.ConvertSearch)
 		log.Println(err)
 		os.Exit(1)
 	}
-	
+
 	if Config.IndexFile != "" && (Config.DataStoreFile != "" || (Config.UseMySQL || Config.UsePostgreSQL)) {
 		Config.FreezeData = true
 	}

@@ -108,7 +108,7 @@ func getSQL(nodeName string) (*Node, error) {
 func getMultiSQL(nodeNames []string) ([]*Node, error) {
 	var sqlStmt string
 	bind := make([]string, len(nodeNames))
-	
+
 	if config.Config.UseMySQL {
 		for i := range nodeNames {
 			bind[i] = "?"

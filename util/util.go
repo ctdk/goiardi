@@ -333,7 +333,7 @@ func stringify(source interface{}) string {
 // letter, but golang accepts 'ሀ' as a letter while postgres does not. This is
 // reasonably unlikely to be an issue, but if you're using lots of non-European
 // characters in your attributes this could be a problem. We're accepting more
-// than raw ASCII alnum however because it's better behavior and because 
+// than raw ASCII alnum however because it's better behavior and because
 // Postgres does accept at least some other alphabets as being alphanumeric.
 func PgSearchKey(key string) string {
 	re := regexp.MustCompile(`[^\pL\pN_\.]`)
@@ -345,7 +345,7 @@ func PgSearchKey(key string) string {
 	k = strings.Trim(k, "_")
 	// on the off hand chance we get leading or trailing dots
 	k = strings.Trim(k, ".")
-	// finally, if converting search query syntax, convert all _ to '.'. 
+	// finally, if converting search query syntax, convert all _ to '.'.
 	// This may need to be revisited in more detail if we find ourselves
 	// needing more finesse with escaping underscores.
 	if config.Config.ConvertSearch {

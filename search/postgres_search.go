@@ -20,31 +20,31 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/ctdk/goas/v2/logger"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 	"regexp"
 	"sort"
 	"strings"
-	"github.com/ctdk/goiardi/client"
 )
 
 type PostgresSearch struct {
 }
 
 type PgQuery struct {
-	idx string
+	idx        string
 	queryChain Queryable
-	paths []string
-	queryStrs []string
-	arguments []string
-	fullQuery string
-	allArgs []interface{}
+	paths      []string
+	queryStrs  []string
+	arguments  []string
+	fullQuery  string
+	allArgs    []interface{}
 }
 
 type gClause struct {
 	clause string
-	op Op
+	op     Op
 }
 
 func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
@@ -73,7 +73,7 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 	qq.Execute()
 	qchain := qq.Evaluate()
 
-	pgQ := &PgQuery{ idx: idx, queryChain: qchain }
+	pgQ := &PgQuery{idx: idx, queryChain: qchain}
 
 	err := pgQ.execute()
 	if err != nil {
@@ -189,7 +189,7 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 				return nerr
 			}
 			p = nend
-			np := &PgQuery{ queryChain: newq }
+			np := &PgQuery{queryChain: newq}
 			err := np.execute(t)
 			if err != nil {
 				return err
@@ -221,7 +221,7 @@ func (pq *PgQuery) results() ([]string, error) {
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(pq.allArgs...).Scan(&res)
-	if err != nil && err != sql.ErrNoRows{
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 	return res, nil
@@ -233,13 +233,13 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, s
 	cop := matchOp(term.mod, &term)
 
 	var q string
-	args := []string{ string(field) }
+	args := []string{string(field)}
 	if originalTerm == "*" || originalTerm == "" {
 		q = fmt.Sprintf("%s(f%d.path ~ _ARG_)", opStr, *tNum)
 	} else if field == "" { // feeling REALLY iffy about this one, but it
-				// duplicates the previous behavior.
+		// duplicates the previous behavior.
 		q = fmt.Sprintf("%s(f%d.value %s _ARG_)", opStr, *tNum, cop)
-		args = []string{ string(term.term) }
+		args = []string{string(term.term)}
 	} else {
 		q = fmt.Sprintf("%s(f%d.path OPERATOR(goiardi.~) _ARG_ AND f%d.value %s _ARG_)", opStr, *tNum, *tNum, cop)
 		args = append(args, string(term.term))
@@ -252,14 +252,14 @@ func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]stri
 	opStr := binOp(op)
 
 	var q string
-	args := []string{ string(field) }
+	args := []string{string(field)}
 	var grouped []*gClause
 
 	for _, v := range terms {
 		cop := matchOp(op, &v)
-		
+
 		clause := fmt.Sprintf("f%d.value %s _ARG_", *tNum, cop)
-		g := &gClause{ clause, v.mod }
+		g := &gClause{clause, v.mod}
 		grouped = append(grouped, g)
 		args = append(args, string(v.term))
 	}
@@ -286,7 +286,7 @@ func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool
 	}
 
 	var q string
-	args := []string{ string(field) }
+	args := []string{string(field)}
 
 	opStr := binOp(op)
 	var equals string
@@ -346,7 +346,7 @@ func binOp(op Op) string {
 
 func craftFullQuery(orgID int, idx string, paths []string, arguments []string, queryStrs []string, tNum *int) (string, []interface{}) {
 	// TODO: FIX
-	allArgs := make([]interface{}, 0, len(paths) + len(arguments) + 2)
+	allArgs := make([]interface{}, 0, len(paths)+len(arguments)+2)
 	allArgs = append(allArgs, orgID)
 	allArgs = append(allArgs, idx)
 	for _, v := range paths {
@@ -374,7 +374,7 @@ func craftFullQuery(orgID int, idx string, paths []string, arguments []string, q
 		}
 		selectStmt = fmt.Sprintf("SELECT COALESCE(ARRAY_AGG(i.item_name), '{}'::text[]) FROM items i %s WHERE %s", strings.Join(joins, " "), strings.Join(queryStrs, " "))
 	}
-	fullQuery := strings.Join([]string{ withStatement, selectStmt }, " ")
+	fullQuery := strings.Join([]string{withStatement, selectStmt}, " ")
 	re := regexp.MustCompile("_ARG_")
 	rfunc := func([]byte) []byte {
 		r := []byte(fmt.Sprintf("$%d", pcount))

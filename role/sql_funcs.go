@@ -96,7 +96,7 @@ func getSQL(roleName string) (*Role, error) {
 func getMultiSQL(roleNames []string) ([]*Role, error) {
 	var sqlStmt string
 	bind := make([]string, len(roleNames))
-	
+
 	if config.Config.UseMySQL {
 		for i := range roleNames {
 			bind[i] = "?"
