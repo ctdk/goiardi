@@ -84,15 +84,19 @@ type SolrQuery struct {
 	docs       map[string]indexer.Document
 }
 
+var m *sync.Mutex
+func init() {
+	m = new(sync.Mutex)
+}
+
 type TrieSearch struct {
-	m sync.Mutex
 }
 
 // Search parses the given query string and search the given index for any
 // matching results.
 func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
-	t.m.Lock()
-	defer t.m.Unlock()
+	m.Lock()
+	defer m.Unlock()
 	qq := &Tokenizer{Buffer: query}
 	qq.Init()
 	if err := qq.Parse(); err != nil {
