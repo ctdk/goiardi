@@ -130,6 +130,18 @@ use-mysql = false
 # mandatory for SQL mode.
 # local-filestore-dir = "/var/goiardi/file_checksums"
 
+# Postgres and advanced search options
+# dot-search = false # set to true to use . instead of _ to separate path items
+#                    # in the search key paths. Always true if pg-search is 
+#                    # true.
+# convert-search = true # Set to false to not convert searches with the old
+#                       # underscore separator to dots. Recommended to be set to
+#                       # true, at least for now. Only meaningful if dot-search
+#                       # is also true.
+# pg-search = false # Use the postgres search backend instead of the default
+#                   # in-memory search index. Not surprisingly, this requires
+#                   # using Postgres for the storage backend.
+
 [mysql]
 	username = "foo" # technically optional, although you probably want it
 	password = "s3kr1t" # optional, if you have no password set for MySQL
