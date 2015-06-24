@@ -85,6 +85,7 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 		return nil, err
 	}
 	// THE WRONG WAY:
+	// Eventually, ordering by the keys themselves would be awesome.
 	objs := getResults(idx, qresults)
 	res := make([]map[string]interface{}, len(objs))
 	for i, r := range objs {

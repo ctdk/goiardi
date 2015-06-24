@@ -23,7 +23,9 @@ package search
 
 import (
 	"fmt"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/util"
 )
 
 // Op is a search operator
@@ -198,6 +200,9 @@ func (q *BasicQuery) Op() Op {
 }
 
 func (q *BasicQuery) AddField(s Field) {
+	if config.Config.ConvertSearch {
+		s = Field(util.PgSearchKey(string(s)))
+	}
 	q.field = s
 }
 
@@ -242,6 +247,9 @@ func (q *GroupedQuery) Op() Op {
 }
 
 func (q *GroupedQuery) AddField(s Field) {
+	if config.Config.ConvertSearch {
+		s = Field(util.PgSearchKey(string(s)))
+	}
 	q.field = s
 }
 
@@ -293,6 +301,9 @@ func (q *RangeQuery) Op() Op {
 }
 
 func (q *RangeQuery) AddField(s Field) {
+	if config.Config.ConvertSearch {
+		s = Field(util.PgSearchKey(string(s)))
+	}
 	q.field = s
 }
 
