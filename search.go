@@ -97,7 +97,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var searcher search.Searcher
-	if config.Config.UsePostgreSQL {
+	if config.Config.PgSearch {
 		searcher = &search.PostgresSearch{}
 	} else {
 		searcher = &search.TrieSearch{}

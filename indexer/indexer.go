@@ -62,7 +62,7 @@ var indexMap Index
 var objIndex ObjIndexer
 
 func Initialize(config *config.Conf) {
-	if config.UsePostgreSQL {
+	if config.PgSearch {
 		objIndex = new(PostgresIndex)
 		objIndex.Initialize()
 	} else {
@@ -118,7 +118,7 @@ func Endpoints() ([]string, error) {
 // SaveIndex saves the index files to disk.
 func SaveIndex() error {
 	// TODO: do better
-	if config.Config.UsePostgreSQL {
+	if config.Config.PgSearch {
 		return nil
 	}
 	return indexMap.Save()
@@ -126,7 +126,7 @@ func SaveIndex() error {
 
 // LoadIndex loads index files from disk.
 func LoadIndex() error {
-	if config.Config.UsePostgreSQL {
+	if config.Config.PgSearch {
 		return nil
 	}
 	return indexMap.Load()

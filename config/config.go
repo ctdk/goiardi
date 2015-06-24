@@ -289,7 +289,7 @@ func ParseConfigOptions() error {
 	}
 
 	if (Config.UseMySQL || Config.UsePostgreSQL) && (Config.IndexFile == "" && !Config.PgSearch) {
-		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend. %v %v", Config.PgSearch, Config.ConvertSearch)
+		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend.")
 		log.Println(err)
 		os.Exit(1)
 	}
