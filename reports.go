@@ -30,7 +30,16 @@ import (
 func reportHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	r.ParseForm()
 	protocolVersion := r.Header.Get("X-Ops-Reporting-Protocol-Version")
+	if protocolVersion == "" {
+		// try a param (makes working with webui easier)
+		if p, f := r.Form["protocol-version"]; f {
+			if len(p) > 0 {
+				protocolVersion = p[0]
+			}
+		}
+	}
 	// someday there may be other protocol versions
 	if protocolVersion != "0.1.0" {
 		jsonErrorReport(w, r, "Unsupported reporting protocol version", http.StatusNotFound)
@@ -57,7 +66,6 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		var rows int
 		var from, until time.Time
 		var status string
-		r.ParseForm()
 		if fr, found := r.Form["rows"]; found {
 			if len(fr) < 0 {
 				jsonErrorReport(w, r, "invalid rows", http.StatusBadRequest)
