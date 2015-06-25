@@ -8,6 +8,9 @@
   executing simultaneously are not a problem, but multiple complex queries can 
   eat up all the RAM on the machine and cause goiardi to crash. This mitigates
   that situation.
+* Be a little more forgiving with reporting protocol versions - allow
+  specifying the protocol version as a query param instead of only as a
+  header. This is to make showing reports with the webui a little easier.
 
 0.9.2
 -----
