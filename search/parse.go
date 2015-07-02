@@ -201,7 +201,7 @@ func (q *BasicQuery) Op() Op {
 
 func (q *BasicQuery) AddField(s Field) {
 	if config.Config.ConvertSearch {
-		s = Field(util.PgSearchKey(string(s)))
+		s = Field(util.PgSearchQueryKey(string(s)))
 	}
 	q.field = s
 }
@@ -248,7 +248,7 @@ func (q *GroupedQuery) Op() Op {
 
 func (q *GroupedQuery) AddField(s Field) {
 	if config.Config.ConvertSearch {
-		s = Field(util.PgSearchKey(string(s)))
+		s = Field(util.PgSearchQueryKey(string(s)))
 	}
 	q.field = s
 }
@@ -302,7 +302,7 @@ func (q *RangeQuery) Op() Op {
 
 func (q *RangeQuery) AddField(s Field) {
 	if config.Config.ConvertSearch {
-		s = Field(util.PgSearchKey(string(s)))
+		s = Field(util.PgSearchQueryKey(string(s)))
 	}
 	q.field = s
 }

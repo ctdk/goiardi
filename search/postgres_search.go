@@ -64,25 +64,46 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 		return nil, serr
 	}
 
-	// keep up with the ersatz solr.
-	qq := &Tokenizer{Buffer: q}
-	qq.Init()
-	if err := qq.Parse(); err != nil {
-		return nil, err
-	}
-	qq.Execute()
-	qchain := qq.Evaluate()
+	// Special case "goodness". If the search term is "*:*" with no
+	// qualifiers, short circuit everything and just get a list of the
+	// distinct items.
+	var qresults []string
 
-	pgQ := &PgQuery{idx: idx, queryChain: qchain}
+	if q == "*:*" {
+		logger.Debugf("Searching '*:*' on %s, short circuiting", idx)
+		sqlStmt := "SELECT COALESCE(ARRAY_AGG(DISTINCT item_name), '{}'::text[]) FROM goiardi.search_items si JOIN goiardi.search_collections sc ON si.search_collection_id = sc.id WHERE si.organization_id = $1 AND sc.name = $2"
+		var res util.StringSlice
+		stmt, err := datastore.Dbh.Prepare(sqlStmt)
+		if err != nil {
+			return nil, err
+		}
+		defer stmt.Close()
+		err = stmt.QueryRow(1, idx).Scan(&res)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, err
+		}
+		qresults = res
+	} else {
+		// keep up with the ersatz solr.
+		qq := &Tokenizer{Buffer: q}
+		qq.Init()
+		if err := qq.Parse(); err != nil {
+			return nil, err
+		}
+		qq.Execute()
+		qchain := qq.Evaluate()
 
-	err := pgQ.execute()
-	if err != nil {
-		return nil, err
-	}
+		pgQ := &PgQuery{idx: idx, queryChain: qchain}
 
-	qresults, err := pgQ.results()
-	if err != nil {
-		return nil, err
+		err := pgQ.execute()
+		if err != nil {
+			return nil, err
+		}
+
+		qresults, err = pgQ.results()
+		if err != nil {
+			return nil, err
+		}
 	}
 	// THE WRONG WAY:
 	// Eventually, ordering by the keys themselves would be awesome.
@@ -107,6 +128,7 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 
 	/* If we're doing partial search, tease out the fields we want. */
 	if partialData != nil {
+		var err error
 		res, err = formatPartials(res, objs, partialData)
 		if err != nil {
 			return nil, err

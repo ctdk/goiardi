@@ -339,6 +339,19 @@ func PgSearchKey(key string) string {
 	re := regexp.MustCompile(`[^\pL\pN_\.]`)
 	bs := regexp.MustCompile(`_{2,}`)
 	ps := regexp.MustCompile(`\.{2,}`) // repeated . will cause trouble too
+	return pgKeyReplace(key, re, bs, ps)
+}
+
+// PgSearchQueryKey is very similar to PgSearchKey, except that it preserves the
+// Solr wildcard charactes '*' and '?' in the queries.
+func PgSearchQueryKey(key string) string {
+	re := regexp.MustCompile(`[^\pL\pN_\.\*\?]`)
+	bs := regexp.MustCompile(`_{2,}`)
+	ps := regexp.MustCompile(`\.{2,}`)
+	return pgKeyReplace(key, re, bs, ps)
+}
+
+func pgKeyReplace(key string, re, bs, ps *regexp.Regexp) string {
 	k := re.ReplaceAllString(key, "_")
 	k = bs.ReplaceAllString(k, "_")
 	k = ps.ReplaceAllString(k, ".")
