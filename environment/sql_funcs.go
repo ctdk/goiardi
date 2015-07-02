@@ -58,6 +58,9 @@ func (e *ChefEnvironment) fillEnvFromSQL(row datastore.ResRow) error {
 	e.ChefType = "environment"
 	e.JSONClass = "Chef::Environment"
 	if e.Name == "_default" {
+		e.Default = make(map[string]interface{})
+		e.Override = make(map[string]interface{})
+		e.CookbookVersions = make(map[string]string)
 		return nil
 	}
 

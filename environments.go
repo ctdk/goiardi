@@ -247,7 +247,8 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		env, err := environment.Get(envName)
 		if err != nil {
 			var errMsg string
-			if err.Status() == http.StatusNotFound {
+			// bleh, stupid errors
+			if err.Status() == http.StatusNotFound && (op != "recipes" && op != "cookbooks") {
 				errMsg = fmt.Sprintf("environment '%s' not found", envName)
 			} else {
 				errMsg = err.Error()
