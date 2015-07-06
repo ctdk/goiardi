@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -30,11 +31,15 @@ import (
 func reportHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	r.ParseForm()
 	protocolVersion := r.Header.Get("X-Ops-Reporting-Protocol-Version")
 	if protocolVersion == "" {
 		// try a param (makes working with webui easier)
-		if p, f := r.Form["protocol-version"]; f {
+		form, e := url.ParseQuery(r.URL.RawQuery)
+		if e != nil {
+			jsonErrorReport(w, r, e.Error(), http.StatusBadRequest)
+			return
+		}
+		if p, f := form["protocol-version"]; f {
 			if len(p) > 0 {
 				protocolVersion = p[0]
 			}
@@ -63,6 +68,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		// Making an informed guess that admin rights are needed
 		// to see the node run reports
+		r.ParseForm()
 		var rows int
 		var from, until time.Time
 		var status string
