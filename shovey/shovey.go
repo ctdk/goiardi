@@ -548,17 +548,17 @@ func AllShoveys() []*Shovey {
 	var shoveys []*Shovey
 	if config.UsingDB() {
 		return allShoveysSQL()
-	} else {
-		shoveList := GetList()
-		for _, s := range shoveList {
-			sh, err := Get(s)
-			if err != nil {
-				logger.Criticalf(err.Error())
-				os.Exit(1)
-			}
-			shoveys = append(shoveys, sh)
-		}
 	}
+	shoveList := GetList()
+	for _, s := range shoveList {
+		sh, err := Get(s)
+		if err != nil {
+			logger.Criticalf(err.Error())
+			os.Exit(1)
+		}
+		shoveys = append(shoveys, sh)
+	}
+
 	return shoveys
 }
 

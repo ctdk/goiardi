@@ -182,9 +182,8 @@ func (i *FileIndex) SearchResults(term string, notop bool, docs map[string]Docum
 		if notop {
 			d := make(map[string]Document)
 			return d, nil
-		} else {
-			return docs, nil
 		}
+		return docs, nil
 	}
 	res, err := idc.searchCollection(term, notop)
 	return res, err
