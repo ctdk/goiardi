@@ -85,6 +85,7 @@ type SolrQuery struct {
 }
 
 var m *sync.Mutex
+
 func init() {
 	m = new(sync.Mutex)
 }
