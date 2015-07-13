@@ -22,7 +22,12 @@ syslog = false
 log-level = "error"
 
 # If these two options are both set, goiardi will save the data store and index
-# data to disk. It will cause an error to only set one of the options
+# data to disk. It will cause an error to only set one of the options, unless
+# you are using MySQL or Postgres as your data store backend. In that case,
+# do not set data-file. Furthermore, if you are running postgres and using the
+# postgres-backed search instead of the default ersatz trie-based Solr search,
+# goiardi will print a non-fatal message warning you that setting index-file is
+# not very useful in that case.
 index-file = "/tmp/goiardi-index.bin"
 data-file = "/tmp/goiardi-data.bin"
 
