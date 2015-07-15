@@ -17,7 +17,7 @@ Postgres Search
 
 Starting with goiardi version 0.10.0, there is an optional PostgreSQL based search. It uses the same solr parser that the default search backend uses, but instead of using tries to search for objects, it uses ltree and trigrams to search for values stored in a separate table. The postgres search is able to use the same solr query parser the original search uses to create postgres queries from the solr queries.
 
-In testing, goiardi with postgres search can handle 10,000 nodes without any problem. Simple queries complete very quickly, but more complex queries can take longer. TODO: more benchmarks
+In testing, goiardi with postgres search can handle 10,000 nodes without any particular problem. Simple queries complete reasonably quickly, but more complex queries can take longer. In the most recent tests, on a 2014 MacBook Pro with 16GB of RAM and a totally untuned PostgreSQL installation, executing the search query equivalent to "data_center:Vagrantheim" directly into the database with 10,000 nodes consistently took about 40-50 milliseconds. The equivalent of "data_center:Vagrantheim AND name:(server2* OR server4*)" took about 15-19 seconds. It is expected that with proper tuning, and as this feature matures, these numbers will go down. It's also worth mentioning that when using knife search, the whole process takes considerably longer anyway.
 
 The postgres search should be able to handle almost any query you throw at it, but it's definitely possible to craft a query that goiardi will fail to handle correctly. Particularly, if you're using fuzzy or distance searches, it will probably not return what you want. This postgres search should handle all normal cases, however.
 

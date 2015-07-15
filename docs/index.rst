@@ -24,6 +24,7 @@ The goiardi manual is licensed under a Creative Commons Attribution 4.0 License 
    features/authentication
    features/persistence
    features/data
+   features/search
    features/event_logging
    features/reporting
    features/berks
