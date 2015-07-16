@@ -368,10 +368,12 @@ func binOp(op Op) string {
 }
 
 func craftFullQuery(orgID int, idx string, paths []string, arguments []string, queryStrs []string, tNum *int) (string, []interface{}) {
-	// TODO: FIX
 	allArgs := make([]interface{}, 0, len(paths)+len(arguments)+2)
 	allArgs = append(allArgs, orgID)
 	allArgs = append(allArgs, idx)
+
+	pcount := 3
+
 	for _, v := range paths {
 		allArgs = append(allArgs, v)
 	}
@@ -379,13 +381,21 @@ func craftFullQuery(orgID int, idx string, paths []string, arguments []string, q
 		allArgs = append(allArgs, v)
 	}
 
-	pcount := 3
+	var itemsStatement string
+	if idx == "node" || idx == "client" || idx == "environment" || idx == "role" {
+		itemsStatement = fmt.Sprintf("SELECT name AS item_name FROM goiardi.%ss", idx)
+	} else {
+		itemsStatement = fmt.Sprintf("SELECT orig_name AS item_name FROM goiardi.data_bag_items JOIN goiardi.data_bags ON goiardi.data_bag_items.data_bag_id = goiardi.data_bags.id WHERE goiardi.data_bags.name = $2")
+		pcount = 3
+	}
+	
 	params := make([]string, 0, len(paths))
 	for range paths {
 		params = append(params, fmt.Sprintf("$%d", pcount))
 		pcount++
 	}
-	withStatement := fmt.Sprintf("WITH found_items AS (SELECT item_name, path, value FROM goiardi.search_items si WHERE si.organization_id = $1 AND si.search_collection_id = (SELECT id FROM goiardi.search_collections WHERE name = $2) AND path OPERATOR(goiardi.?) ARRAY[ %s ]::goiardi.lquery[]), items AS (SELECT DISTINCT item_name FROM found_items)", strings.Join(params, ", "))
+	
+	withStatement := fmt.Sprintf("WITH found_items AS (SELECT item_name, path, value FROM goiardi.search_items si WHERE si.organization_id = $1 AND si.search_collection_id = (SELECT id FROM goiardi.search_collections WHERE name = $2) AND path OPERATOR(goiardi.?) ARRAY[ %s ]::goiardi.lquery[]), items AS (%s)", strings.Join(params, ", "), itemsStatement)
 	var selectStmt string
 	if *tNum == 1 {
 		selectStmt = fmt.Sprintf("SELECT COALESCE(ARRAY_AGG(DISTINCT item_name), '{}'::text[]) FROM found_items f0 WHERE %s", queryStrs[0])
