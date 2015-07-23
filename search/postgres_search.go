@@ -71,14 +71,26 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 
 	if q == "*:*" {
 		logger.Debugf("Searching '*:*' on %s, short circuiting", idx)
-		sqlStmt := "SELECT COALESCE(ARRAY_AGG(DISTINCT item_name), '{}'::text[]) FROM goiardi.search_items si JOIN goiardi.search_collections sc ON si.search_collection_id = sc.id WHERE si.organization_id = $1 AND sc.name = $2"
+
+		var builtinIdx bool
+		if idx == "node" || idx == "client" || idx == "environment" || idx == "role" {
+			builtinIdx = true
+			sqlStmt = fmt.Sprintf("SELECT COALESCE(ARRAY_AGG(name), '{}'::text[]) FROM goiardi.%ss WHERE organization_id = $1", idx)
+		} else {
+			sqlStmt = "SELECT COALESCE(ARRAY_AGG(orig_name), '{}'::text[]) FROM goiardi.data_bag_items JOIN goiardi.data_bags ON goiardi.data_bag_items.data_bag_id = goiardi.data_bags.id WHERE goiardi.data_bags.organization_id = $1 AND goiardi.data_bags.name = $2"
+		}
+
 		var res util.StringSlice
 		stmt, err := datastore.Dbh.Prepare(sqlStmt)
 		if err != nil {
 			return nil, err
 		}
 		defer stmt.Close()
-		err = stmt.QueryRow(1, idx).Scan(&res)
+		if builtinIdx {
+			err = stmt.QueryRow(1).Scan(&res)
+		} else {
+			err = stmt.QueryRow(1, idx).Scan(&res)
+		}
 		if err != nil && err != sql.ErrNoRows {
 			return nil, err
 		}
@@ -383,9 +395,9 @@ func craftFullQuery(orgID int, idx string, paths []string, arguments []string, q
 
 	var itemsStatement string
 	if idx == "node" || idx == "client" || idx == "environment" || idx == "role" {
-		itemsStatement = fmt.Sprintf("SELECT name AS item_name FROM goiardi.%ss", idx)
+		itemsStatement = fmt.Sprintf("SELECT name AS item_name FROM goiardi.%ss WHERE organization_id = $1", idx)
 	} else {
-		itemsStatement = fmt.Sprintf("SELECT orig_name AS item_name FROM goiardi.data_bag_items JOIN goiardi.data_bags ON goiardi.data_bag_items.data_bag_id = goiardi.data_bags.id WHERE goiardi.data_bags.name = $2")
+		itemsStatement = fmt.Sprintf("SELECT orig_name AS item_name FROM goiardi.data_bag_items JOIN goiardi.data_bags ON goiardi.data_bag_items.data_bag_id = goiardi.data_bags.id WHERE goiardi.data_bags.organization_id = $1 AND goiardi.data_bags.name = $2")
 		pcount = 3
 	}
 	
