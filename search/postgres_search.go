@@ -400,13 +400,13 @@ func craftFullQuery(orgID int, idx string, paths []string, arguments []string, q
 		itemsStatement = fmt.Sprintf("SELECT orig_name AS item_name FROM goiardi.data_bag_items JOIN goiardi.data_bags ON goiardi.data_bag_items.data_bag_id = goiardi.data_bags.id WHERE goiardi.data_bags.organization_id = $1 AND goiardi.data_bags.name = $2")
 		pcount = 3
 	}
-	
+
 	params := make([]string, 0, len(paths))
 	for range paths {
 		params = append(params, fmt.Sprintf("$%d", pcount))
 		pcount++
 	}
-	
+
 	withStatement := fmt.Sprintf("WITH found_items AS (SELECT item_name, path, value FROM goiardi.search_items si WHERE si.organization_id = $1 AND si.search_collection_id = (SELECT id FROM goiardi.search_collections WHERE name = $2) AND path OPERATOR(goiardi.?) ARRAY[ %s ]::goiardi.lquery[]), items AS (%s)", strings.Join(params, ", "), itemsStatement)
 	var selectStmt string
 	if *tNum == 1 {
