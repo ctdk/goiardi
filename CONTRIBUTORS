@@ -11,6 +11,8 @@
   - Better authentication documentation
   - Found bugs with serving zero byte files and cookbooks that depend on each
     other, and search performance issues with hundreds or thousands of nodes.
+  - Rewrote the indexer architecture to allow using different backends for 
+    search.
 * Matt Whiteley (whiteley)
   - Fix for client creation with cheffish
 * brimstone

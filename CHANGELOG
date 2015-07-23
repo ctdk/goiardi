@@ -1,4 +1,4 @@
-0.10.0 (not released yet)
+0.10.0
 ------
 * Search architecture changed so different search backends can be used (thanks
   oker1 for your work on that).
