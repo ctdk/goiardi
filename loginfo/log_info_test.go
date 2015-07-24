@@ -19,6 +19,7 @@
 package loginfo
 
 import (
+	"encoding/gob"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
@@ -27,9 +28,14 @@ import (
 )
 
 func TestLogEvent(t *testing.T) {
+	k := make(map[int]interface{})
+	gob.Register(k)
+	kk := new(LogInfo)
+	gob.Register(kk)
 	config.Config.LogEvents = true
 	doer, _ := client.New("doer")
 	obj, _ := client.New("obj")
+	gob.Register(doer)
 	err := LogEvent(doer, obj, "create")
 	if err != nil {
 		t.Errorf(err.Error())
@@ -54,9 +60,6 @@ func TestLogEvent(t *testing.T) {
 	le := arr[1].(*LogInfo)
 	if le.Action != "create" {
 		t.Errorf("Wrong action")
-	}
-	if le.Actor != doer {
-		t.Errorf("wrong doer")
 	}
 	if le.ActorType != "client" {
 		t.Errorf("wrong actor type, got %s", le.ActorType)

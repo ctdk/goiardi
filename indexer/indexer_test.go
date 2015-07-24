@@ -83,32 +83,6 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-// more extensive testing of actual search needs to be done in the search
-// lib. However, *that* may not be practical outside of chef-pedant.
-
-func TestSearchObj(t *testing.T) {
-	obj := &testObj{Name: "foo", URLType: "client"}
-	IndexObj(obj)
-	_, err := SearchIndex("client", "name:foo", false)
-	if err != nil {
-		t.Errorf("Failed to search index for test: %s", err)
-	}
-}
-
-func TestSearchObjLoad(t *testing.T) {
-	obj := &testObj{Name: "foo", URLType: "client"}
-	conf.IndexFile = fmt.Sprintf("%s/idx2.bin", idxTmpDir)
-	Initialize(conf)
-	IndexObj(obj)
-
-	SaveIndex()
-	LoadIndex()
-	_, err := SearchIndex("client", "name:foo", false)
-	if err != nil {
-		t.Errorf("Failed to search index for test: %s", err)
-	}
-}
-
 // clean up
 
 func TestCleanup(t *testing.T) {

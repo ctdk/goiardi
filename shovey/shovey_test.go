@@ -19,11 +19,14 @@ package shovey
 import (
 	"encoding/gob"
 	"fmt"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
 	"testing"
 )
 
 func TestShoveyCreation(t *testing.T) {
+	indexer.Initialize(config.Config)
 	nn := new(node.Node)
 	ns := new(node.NodeStatus)
 	gob.Register(nn)

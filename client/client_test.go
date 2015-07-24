@@ -21,10 +21,13 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/indexer"
 	"testing"
 )
 
 func TestGobEncodeDecode(t *testing.T) {
+	indexer.Initialize(config.Config)
 	c, _ := New("foo")
 	saved := new(bytes.Buffer)
 	var err error

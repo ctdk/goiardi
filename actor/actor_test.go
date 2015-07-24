@@ -21,12 +21,14 @@ import (
 	"encoding/gob"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/user"
 	"testing"
 )
 
 func TestActorClient(t *testing.T) {
 	config.Config.UseAuth = true
+	indexer.Initialize(config.Config)
 	c, _ := client.New("fooclient")
 	gob.Register(c)
 	c.Save()

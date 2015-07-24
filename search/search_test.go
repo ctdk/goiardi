@@ -20,8 +20,10 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
+	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"testing"
@@ -53,6 +55,7 @@ var dbag3 *databag.DataBag
 var dbag4 *databag.DataBag
 
 func makeSearchItems() int {
+	indexer.Initialize(config.Config)
 	/* Gotta populate the search index */
 	nodes := make([]*node.Node, 4)
 	roles := make([]*role.Role, 4)
