@@ -1,0 +1,15 @@
+test:
+  pre:
+    - gem install fpm
+    - go install github.com/mitchellh/gox
+    - go test ./...
+  post:
+    - cd packaging && /bin/sh packaging.sh
+general:
+  artifacts:
+    - pkg/artifacts
+deployment:
+  production:
+    branch: master
+    commands:
+      - packaging/deploy.sh
