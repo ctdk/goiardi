@@ -11,7 +11,7 @@ if [ -z ${PACKAGECLOUD_REPO} ] ; then
 fi
 
 # debian/raspbian
-package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/trusty ${DIR}/artifacts/goiardi-${VERSION}-${ITERATION}_*.deb
+package_cloud push ${PACKAGECLOUD_REPO}/debian/wheezy ${DIR}/artifacts/goiardi-${VERSION}-${ITERATION}_*.deb
 
 # ubuntu
 package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/trusty ${DIR}/artifacts/goiardi-${VERSION}-${ITERATION}ubuntu_*.deb
