@@ -134,7 +134,7 @@ func TestSearchNode(t *testing.T) {
 func TestSearchNodeAll(t *testing.T) {
 	n, _ := searcher.Search("node", "*:*", 1000, "id ASC", 0, nil)
 	if len(n) != 4 {
-		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
+		t.Errorf("Incorrect number of items returned, expected 4, got %d :: %v", len(n), n)
 	}
 }
 
