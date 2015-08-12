@@ -83,8 +83,6 @@ func (i *FileIndex) Initialize() error {
 }
 
 func (i *FileIndex) CreateCollection(idxName string) error {
-	i.updated = true
-
 	if _, ok := i.idxmap[idxName]; !ok {
 		coll := new(IdxCollection)
 		coll.docs = make(map[string]*IdxDoc)
@@ -92,6 +90,13 @@ func (i *FileIndex) CreateCollection(idxName string) error {
 		i.idxmap[idxName] = casted
 	}
 	return nil
+}
+
+func (i *FileIndex) CreateNewCollection(idxName string) error {
+	i.m.Lock()
+	defer i.m.Unlock()
+	i.updated = true
+	return i.CreateCollection(idxName)
 }
 
 func (i *FileIndex) DeleteCollection(idxName string) error {
@@ -651,6 +656,8 @@ func (idoc *IdxDoc) GobDecode(buf []byte) error {
 }
 
 func (i *FileIndex) Save() error {
+	i.m.RLock()
+	defer i.m.RUnlock()
 	idxFile := i.file
 	if idxFile == "" {
 		err := fmt.Errorf("Yikes! Cannot save index to disk because no file was specified.")
@@ -665,8 +672,7 @@ func (i *FileIndex) Save() error {
 		return err
 	}
 	zfp := zlib.NewWriter(fp)
-	i.m.RLock()
-	defer i.m.RUnlock()
+
 	i.updated = false
 	enc := gob.NewEncoder(zfp)
 	err = enc.Encode(i)

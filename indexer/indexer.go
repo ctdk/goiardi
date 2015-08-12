@@ -48,6 +48,7 @@ type Index interface {
 type ObjIndexer interface {
 	Initialize() error
 	CreateCollection(string) error
+	CreateNewCollection(string) error
 	DeleteCollection(string) error
 	DeleteItem(string, string) error
 	SaveItem(Indexable) error
@@ -84,7 +85,7 @@ func GetIndex() Index {
 // CreateNewCollection creates an index for data bags when they are created,
 // rather than when the first data bag item is uploaded
 func CreateNewCollection(idxName string) {
-	objIndex.CreateCollection(idxName)
+	objIndex.CreateNewCollection(idxName)
 }
 
 // DeleteCollection deletes a collection from the index. Useful only for data

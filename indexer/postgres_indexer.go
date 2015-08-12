@@ -73,6 +73,10 @@ func (p *PostgresIndex) CreateCollection(col string) error {
 	return nil
 }
 
+func (p *PostgresIndex) CreateNewCollection(col string) error {
+	return p.CreateCollection(col)
+}
+
 func (p *PostgresIndex) DeleteCollection(col string) error {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {

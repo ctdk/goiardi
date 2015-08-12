@@ -126,7 +126,7 @@ func TestFoo(t *testing.T) {
 
 func TestSearchNode(t *testing.T) {
 	n, _ := searcher.Search("node", "name:node1", 1000, "id ASC", 0, nil)
-	if n[0]["name"] != "node1" {
+	if len(n) == 0 || n[0]["name"] != "node1" {
 		t.Errorf("nothing returned from search")
 	}
 }
