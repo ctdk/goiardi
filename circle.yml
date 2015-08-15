@@ -2,7 +2,6 @@ test:
   pre:
     - gem install fpm
     - go get github.com/mitchellh/gox
-    - go test -v -race ./...
   post:
     - cd packaging && /bin/sh packaging.sh
 general:
