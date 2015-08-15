@@ -10,6 +10,6 @@ general:
     - pkg/artifacts
 deployment:
   production:
-    branch: master
+    branch: not-ready-yet
     commands:
       - packaging/deploy.sh
