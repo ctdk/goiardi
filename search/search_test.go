@@ -68,6 +68,10 @@ func makeSearchItems() int {
 	gob.Register(new(client.Client))
 	gob.Register(new(databag.DataBag))
 
+	// circleci is sometimes weird about the index having everything. This
+	// *never* comes up locally. ??? Could possibly be because the indexer
+	// hasn't had a chance to finish indexing?
+	reindexObjs := make([]indexer.Indexable, 0, 4 * 5)
 	for i := 0; i < 4; i++ {
 		nodes[i], _ = node.New(fmt.Sprintf("node%d", i))
 		nodes[i].Default["baz"] = fmt.Sprintf("borb")
@@ -85,6 +89,14 @@ func makeSearchItems() int {
 		dbi["id"] = fmt.Sprintf("dbi%d", i)
 		dbi["foo"] = fmt.Sprintf("dbag_item_%d", i)
 		dbags[i].NewDBItem(dbi)
+		reindexObjs = append(reindexObjs, nodes[i])
+		reindexObjs = append(reindexObjs, roles[i])
+		reindexObjs = append(reindexObjs, envs[i])
+		reindexObjs = append(reindexObjs, clients[i])
+		dbis, _ := dbags[i].AllDBItems()
+		for _, d := range dbis {
+			reindexObjs = append(reindexObjs, d)
+		}
 	}
 	node1 = nodes[0]
 	node2 = nodes[1]
@@ -106,6 +118,9 @@ func makeSearchItems() int {
 	dbag2 = dbags[1]
 	dbag3 = dbags[2]
 	dbag4 = dbags[3]
+
+	indexer.ClearIndex()
+	indexer.ReIndex(reindexObjs)
 
 	/* Make this function return something so the compiler's happy building
 	 * the tests. */
