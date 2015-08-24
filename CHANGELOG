@@ -1,3 +1,9 @@
+0.10.1 (unreleased)
+------
+* Fix some tests
+* Scripts, configuration files for more efficient packaging
+* circleci integration
+
 0.10.0
 ------
 * Search architecture changed so different search backends can be used (thanks
