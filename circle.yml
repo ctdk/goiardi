@@ -3,7 +3,7 @@ test:
     - gem install fpm
     - go get github.com/mitchellh/gox
   post:
-    - cd packaging && /bin/sh packaging.sh
+    - cd packaging && /bin/bash packaging.sh
 general:
   artifacts:
     - pkg/artifacts
