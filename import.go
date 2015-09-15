@@ -63,7 +63,10 @@ func importAll(fileName string) error {
 			if err != nil {
 				return err
 			}
-			c.SetPublicKey(v.(map[string]interface{})["public_key"])
+			pkerr := c.SetPublicKey(v.(map[string]interface{})["public_key"])
+			if pkerr != nil {
+				return pkerr
+			}
 			gerr := c.Save()
 			if gerr != nil {
 				return gerr
@@ -80,7 +83,10 @@ func importAll(fileName string) error {
 				return err
 			}
 			u.SetPasswdHash(pwhash)
-			u.SetPublicKey(v.(map[string]interface{})["public_key"])
+			pkerr := u.SetPublicKey(v.(map[string]interface{})["public_key"])
+			if pkerr != nil {
+				return pkerr
+			}
 			gerr := u.Save()
 			if gerr != nil {
 				return gerr
