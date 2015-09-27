@@ -190,6 +190,20 @@ func (p *PostgresIndex) Clear() error {
 	if err != nil {
 		return err
 	}
+	lockStmt := "LOCK TABLE goiardi.search_collections"
+	_, err = tx.Exec(lockStmt)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	lockStmt = "LOCK TABLE goiardi.search_items"
+	_, err = tx.Exec(lockStmt)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	sqlStmt := "DELETE FROM goiardi.search_items WHERE organization_id = $1"
 	_, err = tx.Exec(sqlStmt, 1)
 	if err != nil {

@@ -3,6 +3,9 @@
 * Fix some tests
 * Scripts, configuration files for more efficient packaging
 * circleci integration
+* Fix reindexing - databags were not being reindexed with the postgres search,
+  and the SaveItem calls were moved to goroutines; otherwise, the request
+  from knife would time out and knife would restart the reindex.
 
 0.10.0
 ------

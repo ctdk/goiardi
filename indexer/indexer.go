@@ -21,6 +21,7 @@ package indexer
 
 import (
 	"fmt"
+	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
 )
 
@@ -135,14 +136,17 @@ func LoadIndex() error {
 
 // ClearIndex of all collections and documents
 func ClearIndex() {
-	objIndex.Clear()
+	err := objIndex.Clear()
+	if err != nil {
+		logger.Errorf("Error clearing db for reindexing: %s", err.Error())
+	}
 	return
 }
 
 // ReIndex rebuilds the search index from scratch
 func ReIndex(objects []Indexable) error {
 	for _, o := range objects {
-		objIndex.SaveItem(o)
+		go objIndex.SaveItem(o)
 	}
 	// We really ought to be able to return from an error, but at the moment
 	// there aren't any ways it does so in the index save bits.
