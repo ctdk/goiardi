@@ -3,6 +3,9 @@
 * Fix some tests
 * Scripts, configuration files for more efficient packaging
 * circleci integration
+* Bomb on importing data if public keys don't validate.
+* Validate older PKCS#1 keys -- golang's stdlib pukes on them without some
+  massaging.
 * Fix reindexing - databags were not being reindexed with the postgres search,
   and the SaveItem calls were moved to goroutines; otherwise, the request
   from knife would time out and knife would restart the reindex.
