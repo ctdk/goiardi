@@ -25,9 +25,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/BurntSushi/toml"
-	"github.com/ctdk/goas/v2/logger"
-	"github.com/jessevdk/go-flags"
 	"io/ioutil"
 	"log"
 	"net"
@@ -37,6 +34,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/BurntSushi/toml"
+	"github.com/ctdk/goas/v2/logger"
+	"github.com/jessevdk/go-flags"
 )
 
 // Conf is the master struct for holding configuration options.
@@ -171,6 +172,10 @@ const Version = "0.10.0"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
 const ChefVersion = "11.1.7"
+
+// The default time difference allowed between the server's clock and the time
+// in the X-OPS-TIMESTAMP header.
+const DefaultTimeSlew = "15m"
 
 /* The general plan is to read the command-line options, then parse the config
  * file, fill in the config struct with those values, then apply the
@@ -457,7 +462,7 @@ func ParseConfigOptions() error {
 		}
 		Config.TimeSlewDur = d
 	} else {
-		Config.TimeSlewDur, _ = time.ParseDuration("15m")
+		Config.TimeSlewDur, _ = time.ParseDuration(DefaultTimeSlew)
 	}
 
 	if opts.UseAuth {
