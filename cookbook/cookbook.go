@@ -167,7 +167,7 @@ func (cbv *CookbookVersion) URLType() string {
 // New creates a new cookbook.
 func New(name string) (*Cookbook, util.Gerror) {
 	var found bool
-	if !util.ValidateEnvName(name) {
+	if !util.ValidateName(name) {
 		err := util.Errorf("Invalid cookbook name '%s' using regex: 'Malformed cookbook name. Must only contain A-Z, a-z, 0-9, _ or -'.", name)
 		return nil, err
 	}
