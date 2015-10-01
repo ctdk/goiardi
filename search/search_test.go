@@ -71,7 +71,7 @@ func makeSearchItems() int {
 	// circleci is sometimes weird about the index having everything. This
 	// *never* comes up locally. ??? Could possibly be because the indexer
 	// hasn't had a chance to finish indexing?
-	reindexObjs := make([]indexer.Indexable, 0, 4 * 5)
+	reindexObjs := make([]indexer.Indexable, 0, 4*5)
 	for i := 0; i < 4; i++ {
 		nodes[i], _ = node.New(fmt.Sprintf("node%d", i))
 		nodes[i].Default["baz"] = fmt.Sprintf("borb")
