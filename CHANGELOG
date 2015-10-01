@@ -6,6 +6,14 @@
 * Fix reindexing - databags were not being reindexed with the postgres search,
   and the SaveItem calls were moved to goroutines; otherwise, the request
   from knife would time out and knife would restart the reindex.
+* Allow '.' in cookbook names; despite what an error chef-pedant is looking
+  for, those are allowed.
+* Make the authentication lib more general (thanks theckman)
+* Output the version of golang used to build a particular goiardi binary
+  (again, thanks theckman)
+* The changed hostname in URLs to download bug didn't get fixed in 0.7.1 quite
+  all the way after all. It is now. (Thanks to oker1 for bringing that to my
+  attention.)
 
 0.10.0
 ------

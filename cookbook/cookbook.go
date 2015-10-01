@@ -1141,7 +1141,7 @@ func (cbv *CookbookVersion) ToJSON(method string) map[string]interface{} {
 	toJSON["frozen?"] = cbv.IsFrozen
 	// hmm.
 	if cbv.Recipes != nil {
-		toJSON["recipes"] = cbv.Recipes
+		toJSON["recipes"] = methodize(method, cbv.Recipes)
 	} else {
 		toJSON["recipes"] = make([]map[string]interface{}, 0)
 	}
