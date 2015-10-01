@@ -30,6 +30,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -206,7 +207,7 @@ func ParseConfigOptions() error {
 	}
 
 	if opts.Version {
-		fmt.Printf("goiardi version %s (aiming for compatibility with Chef Server version %s).\n", Version, ChefVersion)
+		fmt.Printf("goiardi version %s built with %s (aiming for compatibility with Chef Server version %s).\n", Version, runtime.Version(), ChefVersion)
 		os.Exit(0)
 	}
 
