@@ -27,7 +27,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"testing"
-	//"time"
+	"time"
 )
 
 // Most search testing can be handled fine with chef-pedant, but that's no
@@ -119,8 +119,10 @@ func makeSearchItems() int {
 	dbag3 = dbags[2]
 	dbag4 = dbags[3]
 
-	indexer.ClearIndex()
-	indexer.ReIndex(reindexObjs)
+	// Let the indexing functions catch up. This has not been a problem in
+	// The Real World™ (famous last words), but it's *definitely* a problem
+	// when running go test with GOMAXPROCS > 1.
+	time.Sleep(1 * time.Second)
 
 	/* Make this function return something so the compiler's happy building
 	 * the tests. */
@@ -190,7 +192,7 @@ func TestSearchNodeAttrAndNotExists(t *testing.T) {
 
 func TestSearchRole(t *testing.T) {
 	r, _ := searcher.Search("role", "name:role1", 1000, "id ASC", 0, nil)
-	if r[0]["name"] != "role1" {
+	if len(r) == 0 || r[0]["name"] != "role1" {
 		t.Errorf("nothing returned from search")
 	}
 }
@@ -204,7 +206,7 @@ func TestSearchRoleAll(t *testing.T) {
 
 func TestSearchEnv(t *testing.T) {
 	e, _ := searcher.Search("environment", "name:env1", 1000, "id ASC", 0, nil)
-	if e[0]["name"] != "env1" {
+	if len(e) == 0 ||  e[0]["name"] != "env1" {
 		t.Errorf("nothing returned from search")
 	}
 }
@@ -218,7 +220,7 @@ func TestSearchEnvAll(t *testing.T) {
 
 func TestSearchClient(t *testing.T) {
 	c, _ := searcher.Search("client", "name:client1", 1000, "id ASC", 0, nil)
-	if c[0]["name"] != "client1" {
+	if len(c) == 0 || c[0]["name"] != "client1" {
 		t.Errorf("nothing returned from search")
 	}
 }
