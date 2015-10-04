@@ -14,6 +14,14 @@
 * The changed hostname in URLs to download bug didn't get fixed in 0.7.1 quite
   all the way after all. It is now. (Thanks to oker1 for bringing that to my
   attention.)
+* Fixed search tests to pass when run using more than one processor. (Brought
+  to my attention by theckman.)
+* Fixed a deadlock that could happen when saving an in-mem index to disk at
+  the exact moment an object was being indexed. Seems to be specific to
+  go1.5.1 (or at least it never happened before that I saw), but needs fixed
+  anyway. (Also brought to my attention by theckman.)
+* Fixed broken pipe errors with too large requests when running chef-pedant
+  against goiardi built with go 1.5.1.
 
 0.10.0
 ------
