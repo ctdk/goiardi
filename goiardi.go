@@ -46,6 +46,8 @@ import (
 	"github.com/ctdk/goiardi/user"
 	serfclient "github.com/hashicorp/serf/client"
 	"net/http"
+	"io"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"path"
@@ -220,7 +222,14 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	/* Make configurable, I guess, but Chef wants it to be 1000000 */
 	if !strings.HasPrefix(r.URL.Path, "/file_store") && r.ContentLength > config.Config.JSONReqMaxSize {
+		logger.Debugf("Content length was too long for %s", r.URL.Path)
 		http.Error(w, "Content-length too long!", http.StatusRequestEntityTooLarge)
+		// hmm, with 1.5 it gets a broken pipe now if we don't do
+		// anything with the body they're trying to send. Try copying it
+		// to /dev/null. This seems crazy, but merely closing the body
+		// doesn't actually work.
+		io.Copy(ioutil.Discard, r.Body)
+		r.Body.Close()
 		return
 	} else if r.ContentLength > config.Config.ObjMaxSize {
 		http.Error(w, "Content-length waaaaaay too long!", http.StatusRequestEntityTooLarge)
