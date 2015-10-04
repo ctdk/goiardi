@@ -596,8 +596,6 @@ func (idoc *IdxDoc) regexSearch(reTerm string) (bool, error) {
 func (i *FileIndex) GobEncode() ([]byte, error) {
 	w := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w)
-	i.m.RLock()
-	defer i.m.RUnlock()
 	err := encoder.Encode(i.idxmap)
 	if err != nil {
 		return nil, err
