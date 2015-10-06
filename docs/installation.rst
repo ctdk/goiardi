@@ -119,3 +119,8 @@ Currently available command line and config file options::
 Options specified on the command line override options in the config file.
 
 For more documentation on Chef, see (http://docs.chef.io).
+
+Binaries and Packages
+=====================
+
+There are other options for installing goiardi, in case you don't want to build it from scratch. Binaries for several platforms are provided with each release, and there are .debs available as well at https://packagecloud.io/ct/goiardi. At the moment packages are only being built for Debian wheezy, Ubuntu 14.04, and raspbian (which is under Debian wheezy) for Raspberry Pi and Raspberry Pi 2. Other versions of Debian, Ubuntu, CentOS and friends, and perhaps others are on the roadmap.
