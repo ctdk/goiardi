@@ -56,6 +56,7 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, fileErr.Error(), http.StatusOK)
 			return
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, config.ObjMaxSize)
 		fileStore, err := filestore.New(chksum, r.Body, r.ContentLength)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
