@@ -22,6 +22,7 @@
   anyway. (Also brought to my attention by theckman.)
 * Fixed broken pipe errors with too large requests when running chef-pedant
   against goiardi built with go 1.5.1.
+* Update some docs.
 
 0.10.0
 ------

@@ -206,7 +206,7 @@ func TestSearchRoleAll(t *testing.T) {
 
 func TestSearchEnv(t *testing.T) {
 	e, _ := searcher.Search("environment", "name:env1", 1000, "id ASC", 0, nil)
-	if len(e) == 0 ||  e[0]["name"] != "env1" {
+	if len(e) == 0 || e[0]["name"] != "env1" {
 		t.Errorf("nothing returned from search")
 	}
 }
