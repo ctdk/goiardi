@@ -3,14 +3,16 @@
 * Fix some tests
 * Scripts, configuration files for more efficient packaging
 * circleci integration
-* Bomb on importing data if public keys don't validate.
+* Bomb on importing data if public keys don't validate. (thanks jordi and 
+  DQEbert for bringing this to my attention.)
 * Validate older PKCS#1 keys -- golang's stdlib pukes on them without some
-  massaging.
+  massaging. (thanks jordi and DQEbert for bringing this to my attention.)
 * Fix reindexing - databags were not being reindexed with the postgres search,
   and the SaveItem calls were moved to goroutines; otherwise, the request
   from knife would time out and knife would restart the reindex.
 * Allow '.' in cookbook names; despite what an error chef-pedant is looking
-  for, those are allowed.
+  for, those are allowed. (thanks jordi and DQEbert for bringing this to my 
+  attention.)
 * Make the authentication lib more general (thanks theckman)
 * Output the version of golang used to build a particular goiardi binary
   (again, thanks theckman)
