@@ -3,11 +3,12 @@
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 GOIARDI_VERSION="0.10.1"
-ITERATION=`date +%s`
+ITERATION=`cat $DIR/iteration`
 
 gem install package_cloud
 # if we're here, we're deploying. Unleash the tag
 git push --tags
+git tag -d "pkg-${GOIARDI_VERSION}-${ITERATION}"
 
 if [ -z ${PACKAGECLOUD_REPO} ] ; then
   echo "The environment variable PACKAGECLOUD_REPO must be set."
