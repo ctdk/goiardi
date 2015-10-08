@@ -4,18 +4,21 @@
 # Requires gox and fpm to be installed.
 
 # make more easily specified later
-GOIARDI_VERSION="0.10.0"
+GOIARDI_VERSION="0.10.1"
 ITERATION=`date +%s`
 
 mkdir -p artifacts
 git tag "pkg-${GOIARDI_VERSION}-${ITERATION}"
 #git push --tags
-
+CURDIR=`pwd`
 cd ..
 gox -osarch="linux/amd64" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}"
 
 cd packaging/ubuntu/trusty
 mkdir -p fs/usr/bin
+mkdir -p fs/usr/share/goiardi
+cp $CURDIR/../sql-files/*.sql fs/usr/share/goiardi
+cp $CURDIR/README_GOIARDI_SCHEMA.txt fs/usr/share/goiardi
 mkdir -p fs/var/lib/goiardi/lfs
 cp ../../../goiardi-$GOIARDI_VERSION-linux-amd64 fs/usr/bin/goiardi
 
@@ -23,6 +26,9 @@ fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION --iteration ${ITERATION}ubuntu 
 
 cd ../../debian/wheezy
 mkdir -p fs/usr/bin
+mkdir -p fs/usr/share/goiardi
+cp $CURDIR/../sql-files/*.sql fs/usr/share/goiardi
+cp $CURDIR/README_GOIARDI_SCHEMA.txt fs/usr/share/goiardi
 mkdir -p fs/var/lib/goiardi/lfs
 cp ../../../goiardi-$GOIARDI_VERSION-linux-amd64 fs/usr/bin/goiardi
 fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION --iteration $ITERATION -C ./fs/ -p ../../artifacts/goiardi-VERSION-ITERATION_ARCH.deb -a amd64 --description "a golang chef server" --after-install ./scripts/postinst.sh --after-remove ./scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
