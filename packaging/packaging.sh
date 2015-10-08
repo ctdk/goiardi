@@ -10,8 +10,6 @@ ITERATION=`date +%s`
 echo $ITERATION > $DIR/iteration
 
 mkdir -p artifacts
-git tag "pkg-${GOIARDI_VERSION}-${ITERATION}"
-#git push --tags
 CURDIR=`pwd`
 cd ..
 gox -osarch="linux/amd64" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}"

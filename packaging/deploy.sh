@@ -7,6 +7,7 @@ ITERATION=`cat $DIR/iteration`
 
 gem install package_cloud
 # if we're here, we're deploying. Unleash the tag
+git tag "pkg-${GOIARDI_VERSION}-${ITERATION}"
 git push --tags
 git tag -d "pkg-${GOIARDI_VERSION}-${ITERATION}"
 
