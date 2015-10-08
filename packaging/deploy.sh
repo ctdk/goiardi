@@ -5,6 +5,7 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 GOIARDI_VERSION="0.10.0"
 ITERATION=`date +%s`
 
+gem install package_cloud
 # if we're here, we're deploying. Unleash the tag
 git push --tags
 
