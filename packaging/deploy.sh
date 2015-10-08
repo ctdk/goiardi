@@ -2,7 +2,7 @@
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
-GOIARDI_VERSION="0.10.0"
+GOIARDI_VERSION="0.10.1"
 ITERATION=`date +%s`
 
 gem install package_cloud
@@ -15,7 +15,7 @@ if [ -z ${PACKAGECLOUD_REPO} ] ; then
 fi
 
 # debian/raspbian
-package_cloud push ${PACKAGECLOUD_REPO}/debian/wheezy ${DIR}/artifacts/goiardi-${VERSION}-${ITERATION}_*.deb
+package_cloud push ${PACKAGECLOUD_REPO}/debian/wheezy ${DIR}/artifacts/goiardi-${GOIARDI_VERSION}-${ITERATION}_*.deb
 
 # ubuntu
-package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/trusty ${DIR}/artifacts/goiardi-${VERSION}-${ITERATION}ubuntu_*.deb
+package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/trusty ${DIR}/artifacts/goiardi-${GOIARDI_VERSION}-${ITERATION}ubuntu_*.deb
