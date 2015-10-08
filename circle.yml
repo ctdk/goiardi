@@ -11,4 +11,4 @@ deployment:
   production:
     branch: releases
     commands:
-      - packaging/deploy.sh
+      - cd packaging && /bin/bash deploy.sh
