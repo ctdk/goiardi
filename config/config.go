@@ -403,7 +403,9 @@ func ParseConfigOptions() error {
 		}
 	}
 
-	Config.Ipaddress = opts.Ipaddress
+	if opts.Ipaddress != "" {
+		Config.Ipaddress = opts.Ipaddress
+	}
 	if Config.Ipaddress != "" {
 		ip := net.ParseIP(Config.Ipaddress)
 		if ip == nil {
