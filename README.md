@@ -62,6 +62,14 @@ COPYRIGHT
 
 Copyright 2013-2014, Jeremy Bingham
 
+CODE OF CONDUCT
+---------------
+
+This project adheres to the [Open Code of Conduct][code-of-conduct]. By participating, you are expected to honor this code.
+[code-of-conduct]: http://todogroup.org/opencodeofconduct/#Goiardi/abuse-coc@goiardi.gl
+
+This code of conduct can also be found in CONDUCT.md in this repository.
+
 LICENSE
 -------
 
