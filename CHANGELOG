@@ -1,3 +1,15 @@
+0.10.2
+------
+* Fix up packaging and deploy scripts a bit
+* Add sql schemas to the deb
+* Fixed a logic error when configuring the address to listen on where the
+  value specified in the config file was always ignored, and only an address
+  specified on the command line worked.
+* Added options to specify proxy hostname and port different than what goairdi
+  itself is listening on.
+* CoC
+* Added Debian wheezy to the list of distros we generate packages for.
+
 0.10.1
 ------
 * Fix some tests
