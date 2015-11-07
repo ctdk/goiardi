@@ -2,7 +2,8 @@
 
 set -e
 
-[ -f /etc/default/goiardi ] && . /etc/default/goiardi
+user=goiardi
+group=goiardi
 
 if ! getent group "$group" > /dev/null 2>&1 ; then
 	addgroup --system "$group" --quiet

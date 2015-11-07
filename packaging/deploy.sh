@@ -19,5 +19,8 @@ fi
 # debian/raspbian
 package_cloud push ${PACKAGECLOUD_REPO}/debian/wheezy ${DIR}/artifacts/goiardi-${GOIARDI_VERSION}-${ITERATION}_*.deb
 
+# debian/jessie
+package_cloud push ${PACKAGECLOUD_REPO}/debian/jessie ${DIR}/artifacts/goiardi-${GOIARDI_VERSION}-${ITERATION}_jessie_*.deb
+
 # ubuntu
 package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/trusty ${DIR}/artifacts/goiardi-${GOIARDI_VERSION}-${ITERATION}ubuntu_*.deb
