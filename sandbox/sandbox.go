@@ -26,13 +26,14 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+	"io"
+	"time"
+
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/util"
-	"io"
-	"time"
+	"github.com/tideland/golib/logger"
 )
 
 /* The structure of the sandbox responses is... inconsistent. */

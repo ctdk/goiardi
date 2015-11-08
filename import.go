@@ -21,7 +21,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+	"io/ioutil"
+	"os"
+	"time"
+
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/databag"
@@ -34,9 +37,7 @@ import (
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
-	"io/ioutil"
-	"os"
-	"time"
+	"github.com/tideland/golib/logger"
 )
 
 func importAll(fileName string) error {

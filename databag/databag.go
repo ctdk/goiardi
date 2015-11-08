@@ -24,14 +24,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+	"io"
+	"net/http"
+	"strings"
+
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
-	"io"
-	"net/http"
-	"strings"
+	"github.com/tideland/golib/logger"
 )
 
 // DataBag is the overall data bag.

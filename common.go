@@ -21,10 +21,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/tideland/golib/logger"
 )
 
 func parseObjJSON(data io.ReadCloser) (map[string]interface{}, error) {

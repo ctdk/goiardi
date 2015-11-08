@@ -21,7 +21,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+	"net/http"
+	"strings"
+
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/environment"
@@ -29,8 +31,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
-	"net/http"
-	"strings"
+	"github.com/tideland/golib/logger"
 )
 
 func environmentHandler(w http.ResponseWriter, r *http.Request) {

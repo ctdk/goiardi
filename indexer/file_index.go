@@ -21,10 +21,6 @@ import (
 	"compress/zlib"
 	"encoding/gob"
 	"fmt"
-	"github.com/ctdk/go-trie/gtrie"
-	"github.com/ctdk/goas/v2/logger"
-	"github.com/ctdk/goiardi/util"
-	"github.com/philhofer/msgp/msgp"
 	"io/ioutil"
 	"os"
 	"path"
@@ -32,6 +28,11 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/ctdk/go-trie/gtrie"
+	"github.com/ctdk/goiardi/util"
+	"github.com/philhofer/msgp/msgp"
+	"github.com/tideland/golib/logger"
 )
 
 type FileIndex struct {

@@ -31,12 +31,13 @@ import (
 	"crypto/md5"
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
 	"io"
 	"os"
 	"path"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/tideland/golib/logger"
 )
 
 /* Local filestorage struct. Add fields as needed. */

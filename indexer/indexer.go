@@ -21,8 +21,9 @@ package indexer
 
 import (
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+
 	"github.com/ctdk/goiardi/config"
+	"github.com/tideland/golib/logger"
 )
 
 // Indexable is an interface that provides all the information necessary to
