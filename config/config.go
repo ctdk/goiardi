@@ -37,7 +37,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/ctdk/goas/v2/logger"
+	"github.com/tideland/golib/logger"
 	"github.com/jessevdk/go-flags"
 )
 
@@ -102,7 +102,7 @@ var Key = &SigningKeys{}
 
 // LogLevelNames give convenient, easier to remember than number name for the
 // different levels of logging.
-var LogLevelNames = map[string]int{"debug": 4, "info": 3, "warning": 2, "error": 1, "critical": 0}
+var LogLevelNames = map[string]int{"debug": 5, "info": 4, "warning": 3, "error": 2, "critical": 1, "fatal": 0}
 
 // MySQLdb holds MySQL connection options.
 type MySQLdb struct {
@@ -337,13 +337,13 @@ func ParseConfigOptions() error {
 			Config.DebugLevel = lev
 		}
 	}
-	if Config.DebugLevel > 4 {
-		Config.DebugLevel = 4
+	if Config.DebugLevel > 5 {
+		Config.DebugLevel = 5
 	}
 
-	Config.DebugLevel = int(logger.LevelCritical) - Config.DebugLevel
+	Config.DebugLevel = int(logger.LevelFatal) - Config.DebugLevel
 	logger.SetLevel(logger.LogLevel(Config.DebugLevel))
-	debugLevel := map[int]string{0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical"}
+	debugLevel := map[int]string{0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical", 5: "fatal"}
 	log.Printf("Logging at %s level", debugLevel[Config.DebugLevel])
 	if Config.SysLog {
 		sl, err := logger.NewSysLogger("goiardi")
@@ -376,17 +376,17 @@ func ParseConfigOptions() error {
 		Config.LocalFstoreDir = opts.LocalFstoreDir
 	}
 	if Config.LocalFstoreDir == "" && (Config.UseMySQL || Config.UsePostgreSQL) {
-		logger.Criticalf("local-filestore-dir must be set when running goiardi in SQL mode")
+		logger.Fatalf("local-filestore-dir must be set when running goiardi in SQL mode")
 		os.Exit(1)
 	}
 	if Config.LocalFstoreDir != "" {
 		finfo, ferr := os.Stat(Config.LocalFstoreDir)
 		if ferr != nil {
-			logger.Criticalf("Error checking local filestore dir: %s", ferr.Error())
+			logger.Fatalf("Error checking local filestore dir: %s", ferr.Error())
 			os.Exit(1)
 		}
 		if !finfo.IsDir() {
-			logger.Criticalf("Local filestore dir %s is not a directory", Config.LocalFstoreDir)
+			logger.Fatalf("Local filestore dir %s is not a directory", Config.LocalFstoreDir)
 			os.Exit(1)
 		}
 	}
@@ -420,7 +420,7 @@ func ParseConfigOptions() error {
 	if Config.Ipaddress != "" {
 		ip := net.ParseIP(Config.Ipaddress)
 		if ip == nil {
-			logger.Criticalf("IP address '%s' is not valid", Config.Ipaddress)
+			logger.Fatalf("IP address '%s' is not valid", Config.Ipaddress)
 			os.Exit(1)
 		}
 	}
@@ -459,7 +459,7 @@ func ParseConfigOptions() error {
 	}
 	if Config.UseSSL {
 		if Config.SSLCert == "" || Config.SSLKey == "" {
-			logger.Criticalf("SSL mode requires specifying both a certificate and a key file.")
+			logger.Fatalf("SSL mode requires specifying both a certificate and a key file.")
 			os.Exit(1)
 		}
 		/* If the SSL cert and key are not absolute files, join them
@@ -478,7 +478,7 @@ func ParseConfigOptions() error {
 	if Config.TimeSlew != "" {
 		d, derr := time.ParseDuration(Config.TimeSlew)
 		if derr != nil {
-			logger.Criticalf("Error parsing time-slew: %s", derr.Error())
+			logger.Fatalf("Error parsing time-slew: %s", derr.Error())
 			os.Exit(1)
 		}
 		Config.TimeSlewDur = d
@@ -549,13 +549,13 @@ func ParseConfigOptions() error {
 		Config.SerfEventAnnounce = opts.SerfEventAnnounce
 	}
 	if Config.SerfEventAnnounce && !Config.UseSerf {
-		logger.Criticalf("--serf-event-announce requires --use-serf")
+		logger.Fatalf("--serf-event-announce requires --use-serf")
 		os.Exit(1)
 	}
 
 	if opts.UseShovey {
 		if !Config.UseSerf {
-			logger.Criticalf("--use-shovey requires --use-serf to be enabled")
+			logger.Fatalf("--use-shovey requires --use-serf to be enabled")
 			os.Exit(1)
 		}
 		Config.UseShovey = opts.UseShovey
@@ -576,22 +576,22 @@ func ParseConfigOptions() error {
 		}
 		privfp, err := os.Open(Config.SignPrivKey)
 		if err != nil {
-			logger.Criticalf("Private key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPrivKey)
+			logger.Fatalf("Private key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPrivKey)
 			os.Exit(1)
 		}
 		privPem, err := ioutil.ReadAll(privfp)
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Fatalf(err.Error())
 			os.Exit(1)
 		}
 		privBlock, _ := pem.Decode(privPem)
 		if privBlock == nil {
-			logger.Criticalf("Invalid block size for private key for shovey")
+			logger.Fatalf("Invalid block size for private key for shovey")
 			os.Exit(1)
 		}
 		privKey, err := x509.ParsePKCS1PrivateKey(privBlock.Bytes)
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Fatalf(err.Error())
 			os.Exit(1)
 		}
 		Key.Lock()

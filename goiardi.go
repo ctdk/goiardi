@@ -25,7 +25,16 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"os/signal"
+	"path"
+	"strings"
+	"syscall"
+	"time"
+
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/authentication"
 	"github.com/ctdk/goiardi/client"
@@ -45,15 +54,7 @@ import (
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
 	serfclient "github.com/hashicorp/serf/client"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"os/signal"
-	"path"
-	"strings"
-	"syscall"
-	"time"
+	"github.com/tideland/golib/logger"
 )
 
 type interceptHandler struct{} // Doesn't need to do anything, just sit there.
@@ -70,7 +71,7 @@ func main() {
 			datastore.Dbh, derr = datastore.ConnectDB("postgres", config.Config.PostgreSQL)
 		}
 		if derr != nil {
-			logger.Criticalf(derr.Error())
+			logger.Fatalf(derr.Error())
 			os.Exit(1)
 		}
 	}
@@ -82,13 +83,13 @@ func main() {
 		if config.Config.DataStoreFile != "" {
 			uerr := ds.Load(config.Config.DataStoreFile)
 			if uerr != nil {
-				logger.Criticalf(uerr.Error())
+				logger.Fatalf(uerr.Error())
 				os.Exit(1)
 			}
 		}
 		ierr := indexer.LoadIndex()
 		if ierr != nil {
-			logger.Criticalf(ierr.Error())
+			logger.Fatalf(ierr.Error())
 			os.Exit(1)
 		}
 	}
@@ -134,7 +135,7 @@ func main() {
 	if config.Config.UseSerf {
 		serferr := serfin.StartSerfin()
 		if serferr != nil {
-			logger.Criticalf(serferr.Error())
+			logger.Fatalf(serferr.Error())
 			os.Exit(1)
 		}
 		errch := make(chan error)
@@ -195,7 +196,7 @@ func main() {
 		err = srv.ListenAndServe()
 	}
 	if err != nil {
-		logger.Criticalf("ListenAndServe: %s", err.Error())
+		logger.Fatalf("ListenAndServe: %s", err.Error())
 		os.Exit(1)
 	}
 }

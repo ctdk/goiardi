@@ -21,17 +21,18 @@ package loginfo
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
-	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
-	"github.com/ctdk/goiardi/serfin"
-	"github.com/ctdk/goiardi/util"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/serfin"
+	"github.com/ctdk/goiardi/util"
+	"github.com/tideland/golib/logger"
 )
 
 // LogInfo holds log information about events.

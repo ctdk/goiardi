@@ -19,7 +19,11 @@ package search
 
 import (
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+	"reflect"
+	"sort"
+	"strings"
+	"sync"
+
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
@@ -27,10 +31,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
-	"reflect"
-	"sort"
-	"strings"
-	"sync"
+	"github.com/tideland/golib/logger"
 )
 
 // Searcher is an interface that any search backend needs to implement. It's

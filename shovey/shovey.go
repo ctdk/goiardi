@@ -22,15 +22,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/codeskyblue/go-uuid"
-	"github.com/ctdk/goas/v2/logger"
-	"github.com/ctdk/goiardi/chefcrypto"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
-	"github.com/ctdk/goiardi/node"
-	"github.com/ctdk/goiardi/serfin"
-	"github.com/ctdk/goiardi/util"
-	serfclient "github.com/hashicorp/serf/client"
 	"math"
 	"net/http"
 	"os"
@@ -40,6 +31,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/codeskyblue/go-uuid"
+	"github.com/ctdk/goiardi/chefcrypto"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/serfin"
+	"github.com/ctdk/goiardi/util"
+	serfclient "github.com/hashicorp/serf/client"
+	"github.com/tideland/golib/logger"
 )
 
 // Shovey holds all the overall information for a shovey run common to all nodes

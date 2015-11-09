@@ -17,8 +17,8 @@ log-file = "/tmp/goiardi.log"
 # both.
 syslog = false
 
-# Log level. Options are "debug", "info", "warning", "error", and "critical".
-# May be specified on the command line with one or more -V flags.
+# Log level. Options are "debug", "info", "warning", "error", "critical", and
+# "fatal". May be specified on the command line with one or more -V flags.
 log-level = "error"
 
 # If these two options are both set, goiardi will save the data store and index

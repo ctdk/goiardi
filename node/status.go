@@ -21,11 +21,12 @@ package node
 
 import (
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
 	"os"
 	"time"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/tideland/golib/logger"
 )
 
 // NodeStatus records a node's status at a particular time.

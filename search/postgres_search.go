@@ -19,14 +19,15 @@ package search
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+	"regexp"
+	"sort"
+	"strings"
+
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
-	"regexp"
-	"sort"
-	"strings"
+	"github.com/tideland/golib/logger"
 )
 
 type PostgresSearch struct {

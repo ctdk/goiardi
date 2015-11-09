@@ -21,7 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+	"github.com/tideland/golib/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
