@@ -37,8 +37,8 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/tideland/golib/logger"
 	"github.com/jessevdk/go-flags"
+	"github.com/tideland/golib/logger"
 )
 
 // Conf is the master struct for holding configuration options.
@@ -46,8 +46,8 @@ type Conf struct {
 	Ipaddress         string
 	Port              int
 	Hostname          string
-	ProxyHostname string `toml:"proxy-hostname"`
-	ProxyPort int `toml:"proxy-port"`
+	ProxyHostname     string `toml:"proxy-hostname"`
+	ProxyPort         int    `toml:"proxy-port"`
 	ConfFile          string `toml:"conf-file"`
 	IndexFile         string `toml:"index-file"`
 	DataStoreFile     string `toml:"data-file"`
@@ -135,8 +135,8 @@ type Options struct {
 	Ipaddress         string `short:"I" long:"ipaddress" description:"Listen on a specific IP address."`
 	Hostname          string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel."`
 	Port              int    `short:"P" long:"port" description:"Port to listen on. If port is set to 443, SSL will be activated. (default: 4545)"`
-	ProxyHostname string `short:"Z" long:"proxy-hostname" description:"Hostname to report to clients if this goiardi server is behind a proxy using a different hostname. See also --proxy-port. Can be used with --proxy-port or alone, or not at all."`
-	ProxyPort int `short:"W" long:"proxy-port" description:"Port to report to clients if this goiardi server is behind a proxy using a different port than the port goiardi is listening on. Can be used with --proxy-hostname or alone, or not at all."`
+	ProxyHostname     string `short:"Z" long:"proxy-hostname" description:"Hostname to report to clients if this goiardi server is behind a proxy using a different hostname. See also --proxy-port. Can be used with --proxy-port or alone, or not at all."`
+	ProxyPort         int    `short:"W" long:"proxy-port" description:"Port to report to clients if this goiardi server is behind a proxy using a different port than the port goiardi is listening on. Can be used with --proxy-hostname or alone, or not at all."`
 	IndexFile         string `short:"i" long:"index-file" description:"File to save search index data to."`
 	DataStoreFile     string `short:"D" long:"data-file" description:"File to save data store data to."`
 	FreezeInterval    int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk if there have been any changes (requires -i/--index-file and -D/--data-file options to be set). (Default 10 seconds.)"`

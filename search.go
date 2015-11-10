@@ -21,7 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tideland/golib/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
@@ -32,6 +31,7 @@ import (
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/search"
 	"github.com/ctdk/goiardi/util"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"net/url"
 	"regexp"

@@ -19,11 +19,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tideland/golib/logger"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/util"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"strconv"
 )
