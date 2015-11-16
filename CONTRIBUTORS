@@ -17,3 +17,8 @@
   - Fix for client creation with cheffish
 * brimstone
   - Test for the broken "foo:bar AND NOT foo:bar" search case.
+* Tim Heckman (theckman)
+  - make authentication lib more general
+  - output version of go used to build goiardi
+  - switched logging back to the upstream version after the dependencies of the
+    forked one went away when the original repo disappeared.  

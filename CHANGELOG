@@ -4,15 +4,17 @@
 * Add sql schemas to the deb
 * Fixed a logic error when configuring the address to listen on where the
   value specified in the config file was always ignored, and only an address
-  specified on the command line worked.
+  specified on the command line worked. (Thanks to jordi and DQEbert here for
+  bringing this to my attention.)
 * Added options to specify proxy hostname and port different than what goairdi
-  itself is listening on.
+  itself is listening on. (Thanks to jordi and DQEbert here as well.)
 * CoC
 * Added Debian wheezy to the list of distros we generate packages for.
 * The logging library goiardi used moved. It had been forked, but since the
   dependencies of said fork also moved, goiardi switched to the new version of
   that library. Happily the logger library had added logging to syslog as an
-  option, so we just went back to using upstream at the new location.
+  option, so we just went back to using upstream at the new location.  (Thanks
+  to theckman for providing a fix for this.)
 * In concert with the above, add a "fatal" log level.
 * Terraform removed the depgraph module, so that's been vendored into goiardi
   along with its digraph dependency.
