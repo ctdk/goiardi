@@ -60,7 +60,10 @@ Jeremy Bingham (<jeremy@goiardi.gl>)
 COPYRIGHT
 ---------
 
-Copyright 2013-2014, Jeremy Bingham
+Copyright 2013-2015, Jeremy Bingham
+
+The `depgraph` and `digraph` packages are vendored from terraform and are
+copyrighted by Hashicorp.
 
 CODE OF CONDUCT
 ---------------
@@ -81,6 +84,10 @@ Commons Attribution 4.0 International (CC-BY 4.0) License.
 
 Chef is copyright (c) 2008-2014 Chef Software (formerly Opscode, Inc.) and its
 various contributors.
+
+The `depgraph` and `digraph` packages are vendored from Hashicorp's terraform
+package, and is under the Mozilla Public License version 2.0. The MPL is
+included in those directories and applies only to those files.
 
 Thanks go out to the fine folks of Opscode and the Chef community for all their
 hard work.
