@@ -73,6 +73,12 @@ use-ssl = false
 # communicating with the proxy over HTTP.
 https-urls = false
 
+# Proxy hostname and proxy port: If goiardi is sitting behind a reverse proxy
+# that's listening on a different host or port than goiardi itself is using,
+# set these to the values the proxy is using so URLs are properly crafted.
+# proxy-hostname = "nginx.frontend.chef"
+# proxy-port = 80
+
 # Disable webui: If true, connections and logins from the webui interface will
 # not be allowed.
 disable-webui = false
