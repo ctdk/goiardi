@@ -15,7 +15,7 @@ To install them, run:
     go get github.com/BurntSushi/toml
     go get github.com/go-sql-driver/mysql
     go get github.com/lib/pq
-    go get github.com/ctdk/goas/v2/logger
+    go get github.com/tideland/golib/logger
     go get github.com/codeskyblue/go-uuid
     go get github.com/hashicorp/serf/client
     go get github.com/philhofer/msgp/msgp

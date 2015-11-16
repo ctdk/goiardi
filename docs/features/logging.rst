@@ -8,4 +8,4 @@ By default, goiardi logs to standard output. A log file may be specified with th
 Log levels
 ----------
 
-Log levels can be set in goiardi with either the ``log-level`` option in the configuration file, or with one to four -V flags on the command line. Log level options are "debug", "info", "warning", "error", and "critical". More ``-V`` on the command line means more spewing into the log.
+Log levels can be set in goiardi with either the ``log-level`` option in the configuration file, or with one to five -V flags on the command line. Log level options are "debug", "info", "warning", "error", "critical", and "fatal". More ``-V`` on the command line means more spewing into the log.

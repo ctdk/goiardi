@@ -3,8 +3,9 @@
 Installation
 ============
 
+To install goiardi from source:
 
-1. Install go. (http://golang.org/doc/install.html) You will need to use at least go 1.3 to compile goiardi, but go 1.4 works as well and is recommended.
+1. Install go. (http://golang.org/doc/install.html) You will need to use at least go 1.3 to compile goiardi, but go 1.4 and 1.5 work as well. At this time goiardi can be built with the latest version of Go, and this is recommended. Immediately after a minor release, of course, caution may be warranted.
 
 2. Make sure your ``$GOROOT`` and ``$PATH`` are set up correctly per the Go installation instructions.
 
@@ -39,6 +40,14 @@ Currently available command line and config file options::
                            reported by the kernel.
     -P, --port=            Port to listen on. If port is set to 443, SSL will be
                            activated. (default: 4545)
+    -Z, --proxy-hostname=  Hostname to report to clients if this goiardi
+                           server is behind a proxy using a different
+                           hostname. See also --proxy-port. Can be used with
+                           --proxy-port or alone, or not at all.
+    -W, --proxy-port=      Port to report to clients if this goiardi server
+                           is behind a proxy using a different port than the
+                           port goiardi is listening on. Can be used with
+                           --proxy-hostname or alone, or not at all.
     -i, --index-file=      File to save search index data to.
     -D, --data-file=       File to save data store data to.
     -F, --freeze-interval= Interval in seconds to freeze in-memory data
