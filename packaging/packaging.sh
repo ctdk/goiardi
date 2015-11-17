@@ -5,7 +5,7 @@
 
 # make more easily specified later
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-GOIARDI_VERSION="0.10.1"
+GOIARDI_VERSION="0.10.3"
 ITERATION=`date +%s`
 echo $ITERATION > $DIR/iteration
 
