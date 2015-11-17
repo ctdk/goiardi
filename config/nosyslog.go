@@ -19,11 +19,14 @@
 package config
 
 import (
+	"log"
 	"github.com/tideland/golib/logger"
 )
 
 func setLogger(useSyslog bool) error {
-	_ = useSyslog
+	if useSyslog {
+		log.Println("Syslog isn't actually supported in Windows - using regular logging.")
+	}
 	logger.SetLogger(logger.NewGoLogger())
 	return nil
 }
