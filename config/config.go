@@ -345,15 +345,12 @@ func ParseConfigOptions() error {
 	logger.SetLevel(logger.LogLevel(Config.DebugLevel))
 	debugLevel := map[int]string{0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical", 5: "fatal"}
 	log.Printf("Logging at %s level", debugLevel[Config.DebugLevel])
-	if Config.SysLog {
-		sl, err := logger.NewSysLogger("goiardi")
-		if err != nil {
-			log.Println(err.Error())
-			os.Exit(1)
-		}
-		logger.SetLogger(sl)
-	} else {
-		logger.SetLogger(logger.NewGoLogger())
+	// Tired of battling with syslog junk with the logger library. Deal
+	// with it ourselves.
+	lerr := setLogger(Config.SysLog)
+	if lerr != nil {
+		log.Println(lerr.Error())
+		os.Exit(1)
 	}
 
 	/* Database options */
