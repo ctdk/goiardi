@@ -1,3 +1,8 @@
+0.10.3
+------
+* Handle someone trying to use syslog on Windows ourselves, rather than
+  letting the logging library do it (it was causing trouble with gox).
+
 0.10.2
 ------
 * Fix up packaging and deploy scripts a bit
