@@ -16,6 +16,8 @@ fi
 chgrp goiardi /etc/goiardi
 chmod 775 /etc/goiardi
 chown -R $user:$group /var/lib/goiardi
+mkdir -p /var/log/goiardi
+chown $user:$group /var/log/goiardi
 
 if [ -x /bin/systemctl ]; then
 	/bin/systemctl daemon-reload
