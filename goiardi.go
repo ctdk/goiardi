@@ -55,6 +55,7 @@ import (
 	"github.com/ctdk/goiardi/user"
 	serfclient "github.com/hashicorp/serf/client"
 	"github.com/raintank/met/helper"
+	"github.com/raintank/met"
 	"github.com/tideland/golib/logger"
 )
 
@@ -100,6 +101,7 @@ func main() {
 		logger.Fatalf(merr.Error())
 		os.Exit(1)
 	}
+	initGauges(metricsBackend)
 	report.InitializeMetrics(metricsBackend)
 
 	setSaveTicker()
@@ -611,4 +613,18 @@ func startNodeMonitor() {
 		}
 	}()
 	return
+}
+
+func initGauges(metricsBackend met.Backend) {
+	// a count of the nodes on this server. Add other gauges later, but
+	// start with this one.
+	nodeCountGauge := metricsBackend.NewGauge("node.count", node.Count())
+
+	// update the gauges every 10 seconds. Make this configurable later?
+	go func() {
+		ticker := time.NewTicker(10 * time.Second) 
+		for _ = range ticker.C {
+			nodeCountGauge.Value(node.Count())
+		}
+	}()
 }

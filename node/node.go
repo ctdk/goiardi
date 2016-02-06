@@ -362,3 +362,13 @@ func AllNodes() []*Node {
 	}
 	return nodes
 }
+
+// Count returns a count of all nodes on this server.
+func Count() int64 {
+	if config.UsingDB() {
+		c, _ := countSQL()
+		return c
+	}
+	nl := GetList()
+	return int64(len(nl))
+}
