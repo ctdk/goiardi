@@ -89,6 +89,10 @@ type Conf struct {
 	DotSearch         bool   `toml:"dot-search"`
 	ConvertSearch     bool   `toml:"convert-search"`
 	PgSearch          bool   `toml:"pg-search"`
+	UseStatsd bool `toml:"use-statsd"`
+	StatsdAddr string `toml:"statsd-addr"`
+	StatsdType string `toml:"statsd-type"`
+	StatsdInstance string `toml:"statsd-instance"`
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -170,6 +174,10 @@ type Options struct {
 	DotSearch         bool   `long:"dot-search" description:"If set, searches will use . to separate elements instead of _."`
 	ConvertSearch     bool   `long:"convert-search" description:"If set, convert _ syntax searches to . syntax. Only useful if --dot-search is set."`
 	PgSearch          bool   `long:"pg-search" description:"Use the new Postgres based search engine instead of the default ersatz Solr. Requires --use-postgresql, automatically turns on --dot-search. --convert-search is recommended, but not required."`
+	UseStatsd bool `long:"use-statsd"`
+	StatsdAddr string `long:"statsd-addr"`
+	StatsdType string `long:"statsd-type"`
+	StatsdInstance string `long:"statsd-instance"`
 }
 
 // The goiardi version.
@@ -608,6 +616,29 @@ func ParseConfigOptions() error {
 	}
 	if Config.IndexFile != "" && Config.PgSearch {
 		logger.Infof("Specifying an index file for search while using the postgres search isn't useful.")
+	}
+
+	// statsd configuration
+	if opts.UseStatsd {
+		Config.UseStatsd = opts.UseStatsd
+	}
+	if opts.StatsdAddr != "" {
+		Config.StatsdAddr = opts.StatsdAddr
+	}
+	if opts.StatsdType != "" {
+		Config.StatsdType = opts.StatsdType
+	}
+	if opts.StatsdInstance != "" {
+		Config.StatsdInstance = opts.StatsdInstance
+	}
+	if Config.StatsdAddr == "" {
+		Config.StatsdAddr = "localhost:8125"
+	}
+	if Config.StatsdType == "" {
+		Config.StatsdType = "standard"
+	}
+	if Config.StatsdInstance == "" {
+		Config.StatsdInstance = strings.Replace(Config.Hostname, ".", "_", -1)
 	}
 
 	return nil

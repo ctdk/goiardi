@@ -54,6 +54,7 @@ import (
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
 	serfclient "github.com/hashicorp/serf/client"
+	"github.com/raintank/met/helper"
 	"github.com/tideland/golib/logger"
 )
 
@@ -93,6 +94,14 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	metricsBackend, merr := helper.New(config.Config.UseStatsd, config.Config.StatsdAddr, config.Config.StatsdType, "goiardi", config.Config.StatsdInstance)
+	if merr != nil {
+		logger.Fatalf(merr.Error())
+		os.Exit(1)
+	}
+	report.InitializeMetrics(metricsBackend)
+
 	setSaveTicker()
 	setLogEventPurgeTicker()
 

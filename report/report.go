@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
+	"github.com/raintank/met"
 	"net/http"
 	"strconv"
 	"time"
@@ -63,6 +64,14 @@ type privReport struct {
 	NodeName       *string
 	OrganizationID *int
 }
+
+// statsd metric holders
+var (
+	runsStarted met.Count
+	runsOK met.Count
+	runsFailed met.Count
+	runRunTime met.Timer
+)
 
 // New creates a new report.
 func New(runID string, nodeName string) (*Report, util.Gerror) {
@@ -141,6 +150,7 @@ func (r *Report) Save() error {
 		ds := datastore.New()
 		ds.Set("report", r.RunID, r)
 	}
+	r.registerMetrics()
 	return nil
 }
 
@@ -367,4 +377,28 @@ func AllReports() []*Report {
 		}
 	}
 	return reports
+}
+
+func InitializeMetrics(metrics met.Backend) {
+	runsStarted = metrics.NewCount("run.started")
+	runsOK = metrics.NewCount("run.success")
+	runsFailed = metrics.NewCount("run.failure")
+	runRunTime = metrics.NewTimer("run.run_time", 0)
+}
+
+func (r *Report) registerMetrics() {
+	if !config.Config.UseStatsd {
+		return
+	}
+	switch r.Status {
+	case "started":
+		runsStarted.Inc(1)
+	case "success":
+		runsOK.Inc(1)
+	case "failure":
+		runsFailed.Inc(1)
+	}
+	if r.Status != "started" {
+		runRunTime.Value(r.EndTime.Sub(r.StartTime))
+	}
 }
