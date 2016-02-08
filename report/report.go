@@ -142,13 +142,17 @@ func Get(runID string) (*Report, util.Gerror) {
 
 // Save a report.
 func (r *Report) Save() error {
+	var err error
 	if config.Config.UseMySQL {
-		return r.saveMySQL()
+		err = r.saveMySQL()
 	} else if config.Config.UsePostgreSQL {
-		return r.savePostgreSQL()
+		err = r.savePostgreSQL()
 	} else {
 		ds := datastore.New()
 		ds.Set("report", r.RunID, r)
+	}
+	if err != nil {
+		return err
 	}
 	r.registerMetrics()
 	return nil
