@@ -380,10 +380,10 @@ func AllReports() []*Report {
 }
 
 func InitializeMetrics(metrics met.Backend) {
-	runsStarted = metrics.NewCount("run.started")
-	runsOK = metrics.NewCount("run.success")
-	runsFailed = metrics.NewCount("run.failure")
-	runRunTime = metrics.NewTimer("run.run_time", 0)
+	runsStarted = metrics.NewCount("client.run.started")
+	runsOK = metrics.NewCount("client.run.success")
+	runsFailed = metrics.NewCount("client.run.failure")
+	runRunTime = metrics.NewTimer("client.run.run_time", 0)
 }
 
 func (r *Report) registerMetrics() {

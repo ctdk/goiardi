@@ -31,6 +31,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -101,7 +102,7 @@ func main() {
 		logger.Fatalf(merr.Error())
 		os.Exit(1)
 	}
-	initGauges(metricsBackend)
+	initGeneralStatsd(metricsBackend)
 	report.InitializeMetrics(metricsBackend)
 
 	setSaveTicker()
@@ -615,16 +616,80 @@ func startNodeMonitor() {
 	return
 }
 
-func initGauges(metricsBackend met.Backend) {
+func initGeneralStatsd(metricsBackend met.Backend) {
+	if !config.Config.UseStatsd {
+		return
+	}
 	// a count of the nodes on this server. Add other gauges later, but
 	// start with this one.
 	nodeCountGauge := metricsBackend.NewGauge("node.count", node.Count())
 
+	// Taking some inspiration from this page I found:
+	// http://zqpythonic.qiniucdn.com/data/20131112090955/index.html
+	// -- which does not seem to be the original source of it, but that
+	// seems to be gone -- we'll also take metrics of the golang runtime.
+	memStats := &runtime.MemStats{}
+	// initial reading in of memstat data
+	runtime.ReadMemStats(memStats)
+	lastSampleTime := time.Now()
+
+	numGoroutine := metricsBackend.NewGauge("runtime.goroutines", int64(runtime.NumGoroutine()))
+	allocated := metricsBackend.NewGauge("runtime.memory.allocated", int64(memStats.Alloc))
+	mallocs := metricsBackend.NewGauge("runtime.memory.mallocs", int64(memStats.Mallocs))
+	frees := metricsBackend.NewGauge("runtime.memory.frees", int64(memStats.Frees))
+	totalPause := metricsBackend.NewGauge("runtime.gc.total_pause", int64(memStats.PauseTotalNs))
+	heapAlloc := metricsBackend.NewGauge("runtime.memory.heap", int64(memStats.HeapAlloc))
+	stackInUse := metricsBackend.NewGauge("runtime.memory.stack", int64(memStats.StackInuse))
+	pausePerSec := metricsBackend.NewGauge("runtime.gc.pause_per_sec", 0)
+	numGCTotal := metricsBackend.NewGauge("runtime.gc.num_gc", int64(memStats.NumGC))
+	gcPerSec := metricsBackend.NewGauge("runtime.gc.gc_per_sec", 0)
+	gcPause := metricsBackend.NewTimer("runtime.gc.pause", 0)
+
+	lastPause := memStats.PauseTotalNs
+	lastGC := memStats.NumGC
+
+	statsdTickInt := 10
+
 	// update the gauges every 10 seconds. Make this configurable later?
 	go func() {
-		ticker := time.NewTicker(10 * time.Second) 
+		ticker := time.NewTicker(time.Duration(statsdTickInt) * time.Second) 
 		for _ = range ticker.C {
+			runtime.ReadMemStats(memStats)
+			now := time.Now()
+
 			nodeCountGauge.Value(node.Count())
+			numGoroutine.Value(int64(runtime.NumGoroutine()))
+			allocated.Value(int64(memStats.Alloc))
+			mallocs.Value(int64(memStats.Mallocs))
+			frees.Value(int64(memStats.Frees))
+			totalPause.Value(int64(memStats.PauseTotalNs))
+			heapAlloc.Value(int64(memStats.HeapAlloc))
+			stackInUse.Value(int64(memStats.StackInuse))
+			numGCTotal.Value(int64(memStats.NumGC))
+
+			p := int(memStats.PauseTotalNs - lastPause)
+			pausePerSec.Value(int64(p / statsdTickInt))
+
+			countGC := int64(memStats.NumGC - lastGC)
+			diffTime := int64(now.Sub(lastSampleTime).Seconds())
+			gcPerSec.Value(countGC / diffTime)
+
+			if countGC > 0 {
+				if countGC > 256 {
+					logger.Warningf("lost some gc pause times")
+					countGC = 256
+				}
+				var i int64
+				for i = 0; i < countGC; i++ {
+					idx := int((memStats.NumGC - uint32(i))+255) % 256
+					pause := time.Duration(memStats.PauseNs[idx])
+					gcPause.Value(pause)
+				}
+			}
+
+			lastPause = memStats.PauseTotalNs
+			lastGC = memStats.NumGC
+			lastSampleTime = now
 		}
 	}()
 }
