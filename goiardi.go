@@ -62,6 +62,14 @@ import (
 
 type interceptHandler struct{} // Doesn't need to do anything, just sit there.
 
+type apiTimerInfo struct {
+	elapsed time.Duration
+	path string
+	method string
+}
+
+var apiChan chan *apiTimerInfo
+
 func main() {
 	config.ParseConfigOptions()
 
@@ -104,6 +112,10 @@ func main() {
 	}
 	initGeneralStatsd(metricsBackend)
 	report.InitializeMetrics(metricsBackend)
+	apiChan = make(chan *apiTimerInfo, 10) // unbuffered shouldn't block
+					       // anything, but a little buffer
+					       // shouldn't hurt
+	go apiTimerMaster(apiChan, metricsBackend)
 
 	setSaveTicker()
 	setLogEventPurgeTicker()
@@ -218,10 +230,39 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func trackApiTiming(start time.Time, r *http.Request) {
+	elapsed := time.Since(start)
+	logger.Infof("%s took %d", r.URL.Path, elapsed / time.Microsecond)
+	apiChan <- &apiTimerInfo{ elapsed: elapsed, path: r.URL.Path, method: r.Method, }
+}
+
+func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
+	metrics := make(map[string]met.Timer)
+	for timeInfo := range apiChan {
+		p := path.Clean(timeInfo.path)
+		pathTmp := strings.Split(p, "/")
+		if len(pathTmp) > 1 {
+			p = pathTmp[1]
+		} else {
+			p = "root"
+		}
+		metricStr := fmt.Sprintf("api.timing.%s.%s", p, strings.ToLower(timeInfo.method))
+		if _, ok := metrics[metricStr]; !ok {
+			metrics[metricStr] = metricsBackend.NewTimer(metricStr, 0)
+		}
+		metrics[metricStr].Value(timeInfo.elapsed)
+		
+		logger.Infof("in apiChan %s: %d %s %s", metricStr, timeInfo.elapsed, timeInfo.path, timeInfo.method)
+	}
+}
+
 func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* knife sometimes sends URL paths that start with //. Redirecting
 	 * worked for GETs, but since it was breaking POSTs and screwing with
 	 * GETs with query params, we just clean up the path and move on. */
+
+	// experimental - track time of api requests
+	defer trackApiTiming(time.Now(), r)
 
 	/* log the URL */
 	// TODO: set this to verbosity level 4 or so
