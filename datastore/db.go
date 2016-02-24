@@ -131,6 +131,7 @@ func DecodeBlob(data []byte, obj interface{}) error {
 	// hmmm
 	dbuf := bytes.NewBuffer(data)
 	dec := json.NewDecoder(dbuf)
+	dec.UseNumber()
 	err := dec.Decode(obj)
 	if err != nil {
 		return err

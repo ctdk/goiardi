@@ -1,3 +1,9 @@
+0.10.4 (unreleased, may change version number)
+------
+* Add statsd metrics
+* Fix JSON decoding issue where very large numbers would suddenly turn into
+  floats.
+
 0.10.3
 ------
 * Handle someone trying to use syslog on Windows ourselves, rather than
