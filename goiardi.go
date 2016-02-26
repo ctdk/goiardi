@@ -231,12 +231,17 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func trackApiTiming(start time.Time, r *http.Request) {
+	if ! config.Config.UseStatsd {
+		return
+	}
 	elapsed := time.Since(start)
-	logger.Infof("%s took %d", r.URL.Path, elapsed/time.Microsecond)
 	apiChan <- &apiTimerInfo{elapsed: elapsed, path: r.URL.Path, method: r.Method}
 }
 
 func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
+	if ! config.Config.UseStatsd {
+		return
+	}
 	metrics := make(map[string]met.Timer)
 	for timeInfo := range apiChan {
 		p := path.Clean(timeInfo.path)
@@ -252,7 +257,7 @@ func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
 		}
 		metrics[metricStr].Value(timeInfo.elapsed)
 
-		logger.Infof("in apiChan %s: %d %s %s", metricStr, timeInfo.elapsed, timeInfo.path, timeInfo.method)
+		logger.Debugf("in apiChan %s: %d microseconds %s %s", metricStr, timeInfo.elapsed / time.Microsecond, timeInfo.path, timeInfo.method)
 	}
 }
 
