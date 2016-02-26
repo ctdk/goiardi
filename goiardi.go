@@ -231,7 +231,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func trackApiTiming(start time.Time, r *http.Request) {
-	if ! config.Config.UseStatsd {
+	if !config.Config.UseStatsd {
 		return
 	}
 	elapsed := time.Since(start)
@@ -239,7 +239,7 @@ func trackApiTiming(start time.Time, r *http.Request) {
 }
 
 func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
-	if ! config.Config.UseStatsd {
+	if !config.Config.UseStatsd {
 		return
 	}
 	metrics := make(map[string]met.Timer)
