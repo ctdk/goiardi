@@ -20,6 +20,7 @@ package loginfo
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -105,6 +106,13 @@ func Import(logData map[string]interface{}) error {
 	le.ObjectName = logData["object_name"].(string)
 	le.ExtendedInfo = logData["extended_info"].(string)
 	le.ID = int(logData["id"].(float64))
+	switch l := logData["id"].(type) {
+	case float64:
+		le.ID = int(l)
+	case json.Number:
+		k, _ := l.Int64()
+		le.ID = int(k)
+	}
 	t, err := time.Parse(time.RFC3339, logData["time"].(string))
 	if err != nil {
 		return nil

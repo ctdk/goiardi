@@ -31,6 +31,7 @@ import (
 func parseObjJSON(data io.ReadCloser) (map[string]interface{}, error) {
 	objData := make(map[string]interface{})
 	dec := json.NewDecoder(data)
+	dec.UseNumber()
 
 	if err := dec.Decode(&objData); err != nil {
 		return nil, err

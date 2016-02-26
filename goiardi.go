@@ -538,6 +538,8 @@ func gobRegister() {
 	gob.Register(ns)
 	msi := make(map[string][]int)
 	gob.Register(msi)
+	var jn json.Number
+	gob.Register(jn)
 }
 
 func setSaveTicker() {

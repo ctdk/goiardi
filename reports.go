@@ -180,6 +180,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		// than []interface{}.
 		jsonReport := make(map[string]interface{})
 		dec := json.NewDecoder(r.Body)
+		dec.UseNumber()
 		if jerr := dec.Decode(&jsonReport); jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return

@@ -47,6 +47,7 @@ func importAll(fileName string) error {
 	}
 	exportedData := &ExportData{}
 	dec := json.NewDecoder(fp)
+	dec.UseNumber()
 	if err := dec.Decode(&exportedData); err != nil {
 		return err
 	}

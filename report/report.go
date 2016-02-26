@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/gob"
+	"encoding/json"
 	"github.com/codeskyblue/go-uuid"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
@@ -233,6 +234,14 @@ func (r *Report) UpdateFromJSON(jsonReport map[string]interface{}) util.Gerror {
 	}
 	var trc int
 	switch t := jsonReport["total_res_count"].(type) {
+	// JSON NUMBER CASE
+	case json.Number:
+		tn, err := t.Int64()
+		if err != nil {
+			err := util.Errorf("Error converting %v to int: %s", jsonReport["total_res_count"], err.Error())
+			return err
+		}
+		trc = int(tn)
 	case string:
 		var err error
 		trc, err = strconv.Atoi(t)

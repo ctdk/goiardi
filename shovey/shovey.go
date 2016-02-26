@@ -607,7 +607,7 @@ func (sr *ShoveyRun) UpdateFromJSON(srData map[string]interface{}) util.Gerror {
 	if errorStr, ok := srData["error"].(string); ok {
 		sr.Error = errorStr
 	}
-	if exitStatus, ok := srData["exit_status"].(float64); ok {
+	if exitStatus, ok := intify(srData["exit_status"]); ok {
 		sr.ExitStatus = uint8(exitStatus)
 	}
 
@@ -783,7 +783,8 @@ func ImportShovey(shoveyJSON map[string]interface{}) error {
 		return nil
 	}
 	status := shoveyJSON["status"].(string)
-	timeout := time.Duration(shoveyJSON["timeout"].(float64))
+	ttmp, _ := intify(shoveyJSON["timeout"])
+	timeout := time.Duration(ttmp)
 	quorum := shoveyJSON["quorum"].(string)
 	s := &Shovey{RunID: runID, NodeNames: nodeNames, Command: command, CreatedAt: createdAt, UpdatedAt: updatedAt, Status: status, Timeout: timeout, Quorum: quorum}
 	return s.importSave()
@@ -808,7 +809,8 @@ func ImportShoveyRun(sRunJSON map[string]interface{}) error {
 		}
 	}
 	errMsg := sRunJSON["error"].(string)
-	exitStatus := uint8(sRunJSON["exit_status"].(float64))
+	extmp, _ := intify(sRunJSON["exit_status"])
+	exitStatus := uint8(extmp)
 	sr := &ShoveyRun{ShoveyUUID: shoveyUUID, NodeName: nodeName, Status: status, AckTime: ackTime, EndTime: endTime, Error: errMsg, ExitStatus: exitStatus}
 	// This can use the normal save function
 	return sr.save()
@@ -819,7 +821,8 @@ func ImportShoveyRun(sRunJSON map[string]interface{}) error {
 func ImportShoveyRunStream(srStreamJSON map[string]interface{}) error {
 	shoveyUUID := srStreamJSON["ShoveyUUID"].(string)
 	nodeName := srStreamJSON["NodeName"].(string)
-	seq := int(srStreamJSON["Seq"].(float64))
+	seqtmp, _ := intify(srStreamJSON["Seq"])
+	seq := int(seqtmp)
 	outputType := srStreamJSON["OutputType"].(string)
 	output := srStreamJSON["Output"].(string)
 	isLast := srStreamJSON["IsLast"].(bool)
@@ -854,3 +857,21 @@ func (srs *ShoveyRunStream) importSave() error {
 func (s BySeq) Len() int           { return len(s) }
 func (s BySeq) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s BySeq) Less(i, j int) bool { return s[i].Seq < s[j].Seq }
+
+func intify(i interface{}) (int64, bool) {
+	var retint int64 
+	var ok bool
+
+	switch i := i.(type) {
+	case json.Number:
+		j, err := i.Int64()
+		if err == nil {
+			retint = j
+			ok = true
+		}
+	case float64:
+		retint = int64(i)
+		ok = true
+	}
+	return retint, ok
+}

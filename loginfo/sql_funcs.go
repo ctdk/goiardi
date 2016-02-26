@@ -62,6 +62,7 @@ func (le *LogInfo) importEventSQL() error {
 	doer := make(map[string]interface{})
 
 	dec := json.NewDecoder(aiRC)
+	dec.UseNumber()
 	if err = dec.Decode(&doer); err != nil {
 		tx.Rollback()
 		return err

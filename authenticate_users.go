@@ -38,6 +38,7 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	dec := json.NewDecoder(r.Body)
+	dec.UseNumber()
 	authJSON := make(map[string]interface{})
 	if err := dec.Decode(&authJSON); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)

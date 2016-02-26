@@ -385,7 +385,10 @@ func (db *DataBag) fullDBItemName(dbItemName string) string {
 // it to the server.
 func RawDataBagJSON(data io.ReadCloser) map[string]interface{} {
 	rawDbagItem := make(map[string]interface{})
-	json.NewDecoder(data).Decode(&rawDbagItem)
+	dec := json.NewDecoder(data)
+	dec.UseNumber()
+
+	dec.Decode(&rawDbagItem)
 	var rawData map[string]interface{}
 
 	/* The way data can come from knife may
