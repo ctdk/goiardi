@@ -55,8 +55,8 @@ import (
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
 	serfclient "github.com/hashicorp/serf/client"
-	"github.com/raintank/met/helper"
 	"github.com/raintank/met"
+	"github.com/raintank/met/helper"
 	"github.com/tideland/golib/logger"
 )
 
@@ -64,8 +64,8 @@ type interceptHandler struct{} // Doesn't need to do anything, just sit there.
 
 type apiTimerInfo struct {
 	elapsed time.Duration
-	path string
-	method string
+	path    string
+	method  string
 }
 
 var apiChan chan *apiTimerInfo
@@ -113,8 +113,8 @@ func main() {
 	initGeneralStatsd(metricsBackend)
 	report.InitializeMetrics(metricsBackend)
 	apiChan = make(chan *apiTimerInfo, 10) // unbuffered shouldn't block
-					       // anything, but a little buffer
-					       // shouldn't hurt
+	// anything, but a little buffer
+	// shouldn't hurt
 	go apiTimerMaster(apiChan, metricsBackend)
 
 	setSaveTicker()
@@ -232,8 +232,8 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 
 func trackApiTiming(start time.Time, r *http.Request) {
 	elapsed := time.Since(start)
-	logger.Infof("%s took %d", r.URL.Path, elapsed / time.Microsecond)
-	apiChan <- &apiTimerInfo{ elapsed: elapsed, path: r.URL.Path, method: r.Method, }
+	logger.Infof("%s took %d", r.URL.Path, elapsed/time.Microsecond)
+	apiChan <- &apiTimerInfo{elapsed: elapsed, path: r.URL.Path, method: r.Method}
 }
 
 func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
@@ -251,7 +251,7 @@ func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
 			metrics[metricStr] = metricsBackend.NewTimer(metricStr, 0)
 		}
 		metrics[metricStr].Value(timeInfo.elapsed)
-		
+
 		logger.Infof("in apiChan %s: %d %s %s", metricStr, timeInfo.elapsed, timeInfo.path, timeInfo.method)
 	}
 }
@@ -695,7 +695,7 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 
 	// update the gauges every 10 seconds. Make this configurable later?
 	go func() {
-		ticker := time.NewTicker(time.Duration(statsdTickInt) * time.Second) 
+		ticker := time.NewTicker(time.Duration(statsdTickInt) * time.Second)
 		for _ = range ticker.C {
 			runtime.ReadMemStats(memStats)
 			now := time.Now()
@@ -724,7 +724,7 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 				}
 				var i int64
 				for i = 0; i < countGC; i++ {
-					idx := int((memStats.NumGC - uint32(i))+255) % 256
+					idx := int((memStats.NumGC-uint32(i))+255) % 256
 					pause := time.Duration(memStats.PauseNs[idx])
 					gcPause.Value(pause)
 				}

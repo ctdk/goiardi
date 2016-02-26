@@ -89,10 +89,10 @@ type Conf struct {
 	DotSearch         bool   `toml:"dot-search"`
 	ConvertSearch     bool   `toml:"convert-search"`
 	PgSearch          bool   `toml:"pg-search"`
-	UseStatsd bool `toml:"use-statsd"`
-	StatsdAddr string `toml:"statsd-addr"`
-	StatsdType string `toml:"statsd-type"`
-	StatsdInstance string `toml:"statsd-instance"`
+	UseStatsd         bool   `toml:"use-statsd"`
+	StatsdAddr        string `toml:"statsd-addr"`
+	StatsdType        string `toml:"statsd-type"`
+	StatsdInstance    string `toml:"statsd-instance"`
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -174,10 +174,10 @@ type Options struct {
 	DotSearch         bool   `long:"dot-search" description:"If set, searches will use . to separate elements instead of _."`
 	ConvertSearch     bool   `long:"convert-search" description:"If set, convert _ syntax searches to . syntax. Only useful if --dot-search is set."`
 	PgSearch          bool   `long:"pg-search" description:"Use the new Postgres based search engine instead of the default ersatz Solr. Requires --use-postgresql, automatically turns on --dot-search. --convert-search is recommended, but not required."`
-	UseStatsd bool `long:"use-statsd" description:"Whether or not to collect statistics about goiardi and send them to statsd."`
-	StatsdAddr string `long:"statsd-addr" description:"IP address and port of statsd instance to connect to. (default 'localhost:8125')"`
-	StatsdType string `long:"statsd-type" description:"statsd format, can be either 'standard' or 'datadog' (default 'standard')"`
-	StatsdInstance string `long:"statsd-instance" description:"Statsd instance name to use for this server. Defaults to the server's hostname, with '.' replaced by '_'."`
+	UseStatsd         bool   `long:"use-statsd" description:"Whether or not to collect statistics about goiardi and send them to statsd."`
+	StatsdAddr        string `long:"statsd-addr" description:"IP address and port of statsd instance to connect to. (default 'localhost:8125')"`
+	StatsdType        string `long:"statsd-type" description:"statsd format, can be either 'standard' or 'datadog' (default 'standard')"`
+	StatsdInstance    string `long:"statsd-instance" description:"Statsd instance name to use for this server. Defaults to the server's hostname, with '.' replaced by '_'."`
 }
 
 // The goiardi version.

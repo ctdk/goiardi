@@ -19,8 +19,8 @@
 package config
 
 import (
-	"log"
 	"github.com/tideland/golib/logger"
+	"log"
 )
 
 func setLogger(useSyslog bool) error {

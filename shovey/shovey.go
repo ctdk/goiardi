@@ -859,7 +859,7 @@ func (s BySeq) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s BySeq) Less(i, j int) bool { return s[i].Seq < s[j].Seq }
 
 func intify(i interface{}) (int64, bool) {
-	var retint int64 
+	var retint int64
 	var ok bool
 
 	switch i := i.(type) {

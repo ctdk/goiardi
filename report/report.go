@@ -68,12 +68,12 @@ type privReport struct {
 
 // statsd metric holders
 var (
-	runsStarted met.Count
-	runsOK met.Count
-	runsFailed met.Count
-	runRunTime met.Timer
+	runsStarted      met.Count
+	runsOK           met.Count
+	runsFailed       met.Count
+	runRunTime       met.Timer
 	runTotalResCount met.Gauge
-	runUpdatedRes met.Gauge
+	runUpdatedRes    met.Gauge
 )
 
 // New creates a new report.
