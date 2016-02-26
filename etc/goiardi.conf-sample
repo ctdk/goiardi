@@ -153,6 +153,19 @@ use-mysql = false
 #                   # in-memory search index. Not surprisingly, this requires
 #                   # using Postgres for the storage backend.
 
+# Statsd options
+# With this, you can send some metrics about goiardi to statsd, which can in
+# turn be sent on to graphite or similar and, when used with something like
+# grafana, can be visualized or if used with something like bosun you could set
+# alerts on it, like if the number of chef-client runs that fail suddenly jumps
+# dramatically.
+#
+# use-statsd = false
+# statsd-addr = "127.0.0.1:8125"
+# statsd-type = "standard" # can also be "datadog", for their statsd format
+# stastd-instance = "my_goiardi_server" # should be the hostname. "." will
+#      					# automatically be converted to "_".
+
 [mysql]
 	username = "foo" # technically optional, although you probably want it
 	password = "s3kr1t" # optional, if you have no password set for MySQL

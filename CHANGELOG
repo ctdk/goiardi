@@ -1,6 +1,9 @@
 0.10.4 (unreleased, may change version number)
 ------
-* Add statsd metrics
+* Add statsd metrics for things like chef-client run timings (requires
+  reporting) and started/succeeded/failed, number of nodes, API endpoint 
+  timings, various pieces of runtime info like GC pauses, RAM used, and number
+  of resources updated & total resources for client runs.
 * Fix JSON decoding issue where very large numbers would suddenly turn into
   floats.
 
