@@ -68,7 +68,7 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 
 	// Don't start timing searches until the existence of the index has
 	// been checked.
-	defer trackSearchTiming(time.Now(), pgSearchTimings)
+	defer trackSearchTiming(time.Now(), q, pgSearchTimings)
 
 	// Special case "goodness". If the search term is "*:*" with no
 	// qualifiers, short circuit everything and just get a list of the

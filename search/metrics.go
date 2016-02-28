@@ -16,11 +16,11 @@ func InitializeMetrics(metricsBackend met.Backend) {
 	pgSearchTimings = metricsBackend.NewTimer("search.pg", 0)
 }
 
-func trackSearchTiming(start time.Time, timing met.Timer) {
+func trackSearchTiming(start time.Time, query string, timing met.Timer) {
 	if !config.Config.UseStatsd {
 		return
 	}
 	elapsed := time.Since(start)
 	timing.Value(elapsed)
-	logger.Debugf("search took %d microseconds", elapsed/time.Microsecond)
+	logger.Debugf("search '%s' took %d microseconds", query, elapsed/time.Microsecond)
 }
