@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/datastore"
@@ -64,6 +65,10 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 		}
 		return nil, serr
 	}
+
+	// Don't start timing searches until the existence of the index has
+	// been checked.
+	defer trackSearchTiming(time.Now(), pgSearchTimings)
 
 	// Special case "goodness". If the search term is "*:*" with no
 	// qualifiers, short circuit everything and just get a list of the

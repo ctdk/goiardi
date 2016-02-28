@@ -53,6 +53,7 @@ import (
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
+	"github.com/ctdk/goiardi/search"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
@@ -114,6 +115,7 @@ func main() {
 	}
 	initGeneralStatsd(metricsBackend)
 	report.InitializeMetrics(metricsBackend)
+	search.InitializeMetrics(metricsBackend)
 	apiChan = make(chan *apiTimerInfo, 10) // unbuffered shouldn't block
 	// anything, but a little buffer
 	// shouldn't hurt
@@ -259,7 +261,7 @@ func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
 		}
 		metrics[metricStr].Value(timeInfo.elapsed)
 
-		logger.Debugf("in apiChan %s: %d microseconds %s %s", metricStr, timeInfo.elapsed / time.Microsecond, timeInfo.path, timeInfo.method)
+		logger.Debugf("in apiChan %s: %d microseconds %s %s", metricStr, timeInfo.elapsed/time.Microsecond, timeInfo.path, timeInfo.method)
 	}
 }
 
@@ -283,14 +285,14 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if rerr == nil {
 			var xForwarded string
 			if len(fwded) != 0 {
-				xForwarded = fwded[len(fwded) - 1]
+				xForwarded = fwded[len(fwded)-1]
 			}
-			logger.Debugf("remote ip candidates: ra: '%s', '%s'",remoteIP, xForwarded)
+			logger.Debugf("remote ip candidates: ra: '%s', '%s'", remoteIP, xForwarded)
 			rIP := net.ParseIP(remoteIP)
 			xFIP := net.ParseIP(xForwarded)
 			logger.Debugf("ips now: '%q' '%q'", rIP, xFIP)
 			logger.Debugf("local? '%q' '%q'", rIP.IsLoopback(), xFIP.IsLoopback())
-			if (!rIP.IsLoopback() && !xFIP.IsLoopback()) {
+			if !rIP.IsLoopback() && !xFIP.IsLoopback() {
 				logger.Debugf("blocked %s (x-forwarded-for: %s) from accessing /debug/pprof!", rIP.String(), xFIP.String())
 				block = true
 			}
