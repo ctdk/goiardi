@@ -72,8 +72,8 @@ var (
 	runsOK           met.Count
 	runsFailed       met.Count
 	runRunTime       met.Timer
-	runTotalResCount met.Gauge
-	runUpdatedRes    met.Gauge
+	runTotalResCount met.Count
+	runUpdatedRes    met.Count
 )
 
 // New creates a new report.
@@ -399,8 +399,8 @@ func InitializeMetrics(metrics met.Backend) {
 	runsOK = metrics.NewCount("client.run.success")
 	runsFailed = metrics.NewCount("client.run.failure")
 	runRunTime = metrics.NewTimer("client.run.run_time", 0)
-	runTotalResCount = metrics.NewCount("client.run.total_resource_count", 0)
-	runUpdatedRes = metrics.NewCount("client.run.updated_resources", 0)
+	runTotalResCount = metrics.NewCount("client.run.total_resource_count")
+	runUpdatedRes = metrics.NewCount("client.run.updated_resources")
 }
 
 func (r *Report) registerMetrics() {
@@ -417,7 +417,7 @@ func (r *Report) registerMetrics() {
 	}
 	if r.Status != "started" {
 		runRunTime.Value(r.EndTime.Sub(r.StartTime))
-		runTotalResCount.Value(int64(r.TotalResCount))
-		runUpdatedRes.Value(int64(len(r.Resources)))
+		runTotalResCount.Inc(int64(r.TotalResCount))
+		runUpdatedRes.Inc(int64(len(r.Resources)))
 	}
 }
