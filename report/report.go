@@ -399,8 +399,8 @@ func InitializeMetrics(metrics met.Backend) {
 	runsOK = metrics.NewCount("client.run.success")
 	runsFailed = metrics.NewCount("client.run.failure")
 	runRunTime = metrics.NewTimer("client.run.run_time", 0)
-	runTotalResCount = metrics.NewGauge("client.run.total_resource_count", 0)
-	runUpdatedRes = metrics.NewGauge("client.run.updated_resources", 0)
+	runTotalResCount = metrics.NewCount("client.run.total_resource_count", 0)
+	runUpdatedRes = metrics.NewCount("client.run.updated_resources", 0)
 }
 
 func (r *Report) registerMetrics() {
