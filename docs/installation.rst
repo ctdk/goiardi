@@ -124,6 +124,24 @@ Currently available command line and config file options::
                Requires --use-serf.
         --sign-priv-key=   Path to RSA private key used to sign shovey
                            requests.
+        --dot-search       If set, searches will use . to separate elements
+                           instead of _.
+        --convert-search   If set, convert _ syntax searches to . syntax.
+                           Only useful if --dot-search is set.
+        --pg-search        Use the new Postgres based search engine instead
+                           of the default ersatz Solr. Requires
+                           --use-postgresql, automatically turns on
+                           --dot-search. --convert-search is recommended,
+                           but not required.
+        --use-statsd       Whether or not to collect statistics about
+                           goiardi and send them to statsd.
+        --statsd-addr=     IP address and port of statsd instance to connect
+                           to. (default 'localhost:8125')
+        --statsd-type=     statsd format, can be either 'standard' or
+                           'datadog' (default 'standard')
+        --statsd-instance= Statsd instance name to use for this server.
+                           Defaults to the server's hostname, with '.'
+                           replaced by '_'.
 
 Options specified on the command line override options in the config file.
 
