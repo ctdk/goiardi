@@ -722,8 +722,10 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 	heapAlloc := metricsBackend.NewGauge("runtime.memory.heap", int64(memStats.HeapAlloc))
 	stackInUse := metricsBackend.NewGauge("runtime.memory.stack", int64(memStats.StackInuse))
 	pausePerSec := metricsBackend.NewGauge("runtime.gc.pause_per_sec", 0)
+	pausePerTick := metricsBackend.NewGauge("runtime.gc.pause_per_tick", 0)
 	numGCTotal := metricsBackend.NewGauge("runtime.gc.num_gc", int64(memStats.NumGC))
 	gcPerSec := metricsBackend.NewGauge("runtime.gc.gc_per_sec", 0)
+	gcPerTick := metricsBackend.NewGauge("runtime.gc.gc_per_tick", 0)
 	gcPause := metricsBackend.NewTimer("runtime.gc.pause", 0)
 
 	lastPause := memStats.PauseTotalNs
@@ -750,10 +752,12 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 
 			p := int(memStats.PauseTotalNs - lastPause)
 			pausePerSec.Value(int64(p / statsdTickInt))
+			pausePerTick.Value(int64(p))
 
 			countGC := int64(memStats.NumGC - lastGC)
 			diffTime := int64(now.Sub(lastSampleTime).Seconds())
 			gcPerSec.Value(countGC / diffTime)
+			gcPerTick.Value(countGC)
 
 			if countGC > 0 {
 				if countGC > 256 {
