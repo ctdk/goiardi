@@ -5,7 +5,7 @@ Installation
 
 To install goiardi from source:
 
-1. Install go. (http://golang.org/doc/install.html) You will need to use at least go 1.3 to compile goiardi, but go 1.4 and 1.5 work as well. At this time goiardi can be built with the latest version of Go, and this is recommended. Immediately after a minor release, of course, caution may be warranted.
+1. Install go. (http://golang.org/doc/install.html) You will need to use at least go 1.3 to compile goiardi, but go 1.4, 1.5, and 1.6 work as well. At this time goiardi can be built with the latest version of Go, and this is recommended. Immediately after a minor release, of course, caution may be warranted.
 
 2. Make sure your ``$GOROOT`` and ``$PATH`` are set up correctly per the Go installation instructions.
 
