@@ -32,6 +32,7 @@ The goiardi manual is licensed under a Creative Commons Attribution 4.0 License 
    features/shovey_api
    features/logging
    features/webui
+   features/metrics
 
 Indices and tables
 ==================
