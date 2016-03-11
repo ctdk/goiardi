@@ -20,6 +20,8 @@ package node
 import (
 	"encoding/gob"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/indexer"
 	"testing"
 )
 
@@ -29,6 +31,8 @@ func TestActionAtADistance(t *testing.T) {
 	gob.Register(new(organization.Organization))
 	org, _ = organization.New("default", "boo")
 	org.Save()
+	indexer.Initialize(config.Config)
+	
 	n, _ := New(org, "foo2")
 	gob.Register(n)
 	n.Normal["foo"] = "bar"

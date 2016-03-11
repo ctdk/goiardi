@@ -19,10 +19,11 @@ package serfin
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goas/v2/logger"
+	"os"
+
 	"github.com/ctdk/goiardi/config"
 	serfclient "github.com/hashicorp/serf/client"
-	"os"
+	"github.com/tideland/golib/logger"
 )
 
 // Serfer is the common serf client for goiardi.

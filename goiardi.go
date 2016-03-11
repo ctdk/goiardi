@@ -25,8 +25,17 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/acl"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"os/signal"
+	"path"
+	"strings"
+	"syscall"
+	"time"
+
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/authentication"
@@ -53,14 +62,8 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	serfclient "github.com/hashicorp/serf/client"
-	"net/http"
-	"os"
-	"os/signal"
-	"path"
 	"regexp"
-	"strings"
-	"syscall"
-	"time"
+	"github.com/tideland/golib/logger"
 )
 
 type interceptHandler struct {
@@ -79,24 +82,25 @@ func main() {
 			datastore.Dbh, derr = datastore.ConnectDB("postgres", config.Config.PostgreSQL)
 		}
 		if derr != nil {
-			logger.Criticalf(derr.Error())
+			logger.Fatalf(derr.Error())
 			os.Exit(1)
 		}
 	}
 
 	gobRegister()
 	ds := datastore.New()
+	indexer.Initialize(config.Config)
 	if config.Config.FreezeData {
 		if config.Config.DataStoreFile != "" {
 			uerr := ds.Load(config.Config.DataStoreFile)
 			if uerr != nil {
-				logger.Criticalf(uerr.Error())
+				logger.Fatalf(uerr.Error())
 				os.Exit(1)
 			}
 		}
-		ierr := indexer.LoadIndex(config.Config.IndexFile)
+		ierr := indexer.LoadIndex()
 		if ierr != nil {
-			logger.Criticalf(ierr.Error())
+			logger.Fatalf(ierr.Error())
 			os.Exit(1)
 		}
 	}
@@ -127,7 +131,7 @@ func main() {
 					logger.Errorf(err.Error())
 				}
 			}
-			if err := indexer.SaveIndex(config.Config.IndexFile); err != nil {
+			if err := indexer.SaveIndex(); err != nil {
 				logger.Errorf(err.Error())
 			}
 		}
@@ -142,7 +146,7 @@ func main() {
 	if config.Config.UseSerf {
 		serferr := serfin.StartSerfin()
 		if serferr != nil {
-			logger.Criticalf(serferr.Error())
+			logger.Fatalf(serferr.Error())
 			os.Exit(1)
 		}
 		errch := make(chan error)
@@ -271,7 +275,7 @@ func main() {
 		err = srv.ListenAndServe()
 	}
 	if err != nil {
-		logger.Criticalf("ListenAndServe: %s", err.Error())
+		logger.Fatalf("ListenAndServe: %s", err.Error())
 		os.Exit(1)
 	}
 }
@@ -304,7 +308,14 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fstorere := regexp.MustCompile(`^/organizations/[^/]*/file_store`)
 	/* Make configurable, I guess, but Chef wants it to be 1000000 */
 	if !fstorere.MatchString(r.URL.Path) && r.ContentLength > config.Config.JSONReqMaxSize {
+		logger.Debugf("Content length was too long for %s", r.URL.Path)
 		http.Error(w, "Content-length too long!", http.StatusRequestEntityTooLarge)
+		// hmm, with 1.5 it gets a broken pipe now if we don't do
+		// anything with the body they're trying to send. Try copying it
+		// to /dev/null. This seems crazy, but merely closing the body
+		// doesn't actually work.
+		io.Copy(ioutil.Discard, r.Body)
+		r.Body.Close()
 		return
 	} else if r.ContentLength > config.Config.ObjMaxSize {
 		http.Error(w, "Content-length waaaaaay too long!", http.StatusRequestEntityTooLarge)
@@ -528,7 +539,7 @@ func handleSignals() {
 							logger.Errorf(err.Error())
 						}
 					}
-					if err := indexer.SaveIndex(config.Config.IndexFile); err != nil {
+					if err := indexer.SaveIndex(); err != nil {
 						logger.Errorf(err.Error())
 					}
 				}
@@ -566,12 +577,6 @@ func gobRegister() {
 	gob.Register(m)
 	var si []interface{}
 	gob.Register(si)
-	i := new(indexer.Index)
-	ic := new(indexer.IdxCollection)
-	id := new(indexer.IdxDoc)
-	gob.Register(i)
-	gob.Register(ic)
-	gob.Register(id)
 	var ss []string
 	gob.Register(ss)
 	ms := make(map[string]string)
@@ -626,7 +631,7 @@ func setSaveTicker() {
 						logger.Errorf(uerr.Error())
 					}
 				}
-				ierr := indexer.SaveIndex(config.Config.IndexFile)
+				ierr := indexer.SaveIndex()
 				if ierr != nil {
 					logger.Errorf(ierr.Error())
 				}

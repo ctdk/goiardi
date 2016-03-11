@@ -17,12 +17,17 @@ log-file = "/tmp/goiardi.log"
 # both.
 syslog = false
 
-# Log level. Options are "debug", "info", "warning", "error", and "critical".
-# May be specified on the command line with one or more -V flags.
+# Log level. Options are "debug", "info", "warning", "error", "critical", and
+# "fatal". May be specified on the command line with one or more -V flags.
 log-level = "error"
 
 # If these two options are both set, goiardi will save the data store and index
-# data to disk. It will cause an error to only set one of the options
+# data to disk. It will cause an error to only set one of the options, unless
+# you are using MySQL or Postgres as your data store backend. In that case,
+# do not set data-file. Furthermore, if you are running postgres and using the
+# postgres-backed search instead of the default ersatz trie-based Solr search,
+# goiardi will print a non-fatal message warning you that setting index-file is
+# not very useful in that case.
 index-file = "/tmp/goiardi-index.bin"
 data-file = "/tmp/goiardi-data.bin"
 
@@ -67,6 +72,12 @@ use-ssl = false
 # when goiardi is sitting behind a reverse proxy that uses SSL, but is 
 # communicating with the proxy over HTTP.
 https-urls = false
+
+# Proxy hostname and proxy port: If goiardi is sitting behind a reverse proxy
+# that's listening on a different host or port than goiardi itself is using,
+# set these to the values the proxy is using so URLs are properly crafted.
+# proxy-hostname = "nginx.frontend.chef"
+# proxy-port = 80
 
 # Disable webui: If true, connections and logins from the webui interface will
 # not be allowed.
@@ -129,6 +140,18 @@ use-mysql = false
 # in-memory mode (standard behavior is to keep the files in memory), and
 # mandatory for SQL mode.
 # local-filestore-dir = "/var/goiardi/file_checksums"
+
+# Postgres and advanced search options
+# dot-search = false # set to true to use . instead of _ to separate path items
+#                    # in the search key paths. Always true if pg-search is 
+#                    # true.
+# convert-search = true # Set to false to not convert searches with the old
+#                       # underscore separator to dots. Recommended to be set to
+#                       # true, at least for now. Only meaningful if dot-search
+#                       # is also true.
+# pg-search = false # Use the postgres search backend instead of the default
+#                   # in-memory search index. Not surprisingly, this requires
+#                   # using Postgres for the storage backend.
 
 [mysql]
 	username = "foo" # technically optional, although you probably want it

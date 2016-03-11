@@ -30,9 +30,6 @@ import (
 	"compress/zlib"
 	"encoding/gob"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
-	"github.com/ctdk/goiardi/config"
-	"github.com/pmylund/go-cache"
 	"io/ioutil"
 	"log"
 	"os"
@@ -41,6 +38,10 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/pmylund/go-cache"
+	"github.com/tideland/golib/logger"
 )
 
 // DataStore is the main data store struct, holding the key/value store and list

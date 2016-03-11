@@ -138,6 +138,28 @@ func Get(org *organization.Organization, nodeName string) (*Node, util.Gerror) {
 	return node, nil
 }
 
+// GetMulti gets multiple nodes from a given slice of node names.
+func GetMulti(org *organization.Organization, nodeNames []string) ([]*Node, util.Gerror) {
+	var nodes []*Node
+	if config.UsingDB() {
+		var err error
+		nodes, err = getMultiSQL(nodeNames)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, util.CastErr(err)
+		}
+	} else {
+		nodes = make([]*Node, 0, len(nodeNames))
+		for _, n := range nodeNames {
+			no, _ := Get(org, n)
+			if no != nil {
+				nodes = append(nodes, no)
+			}
+		}
+	}
+
+	return nodes, nil
+}
+
 // UpdateFromJSON updates an existing node with the uploaded JSON.
 func (n *Node) UpdateFromJSON(jsonNode map[string]interface{}) util.Gerror {
 	/* It's actually totally legitimate to save a node with a different
@@ -336,10 +358,8 @@ func (n *Node) Index() string {
 }
 
 // Flatten a node for indexing.
-func (n *Node) Flatten() []string {
-	flatten := util.FlattenObj(n)
-	indexified := util.Indexify(flatten)
-	return indexified
+func (n *Node) Flatten() map[string]interface{} {
+	return util.FlattenObj(n)
 }
 
 // AllNodes returns all the nodes on the server

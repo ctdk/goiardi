@@ -22,6 +22,7 @@ import (
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/user"
 	"testing"
 )
@@ -34,6 +35,8 @@ func TestActorClient(t *testing.T) {
 	org.Save()
 
 	config.Config.UseAuth = true
+	indexer.Initialize(config.Config)
+
 	c, _ := client.New(org, "fooclient")
 	gob.Register(c)
 	c.Save()

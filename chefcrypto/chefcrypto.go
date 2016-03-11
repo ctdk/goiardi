@@ -31,6 +31,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"strings"
 )
 
 // GenerateRSAKeys creates a pair of private and public keys for a client.
@@ -72,10 +73,17 @@ func ValidatePublicKey(publicKey interface{}) (bool, error) {
 	switch publicKey := publicKey.(type) {
 	case string:
 		// at the moment we don't care about the pub interface
-		decPubKey, _ := pem.Decode([]byte(publicKey))
+
+		decPubKey, z := pem.Decode([]byte(publicKey))
 		if decPubKey == nil {
-			err := fmt.Errorf("Public key does not validate")
+			err := fmt.Errorf("Public key does not validate: %s", z)
 			return false, err
+		}
+		// Add the header to PKCS#1 public keys
+		if strings.HasPrefix(publicKey, "-----BEGIN RSA PUBLIC KEY-----") && len(decPubKey.Bytes) == 270 {
+			pkcs8head := []byte{0x30, 0x82, 0x01, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00, 0x03, 0x82, 0x01, 0x0f, 0x00}
+			pkcs8head = append(pkcs8head, decPubKey.Bytes...)
+			decPubKey.Bytes = pkcs8head
 		}
 		if _, err := x509.ParsePKIXPublicKey(decPubKey.Bytes); err != nil {
 			nerr := fmt.Errorf("Public key did not validate: %s", err.Error())

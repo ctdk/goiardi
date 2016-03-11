@@ -187,12 +187,12 @@ func Indexify(flattened map[string]interface{}) []string {
 	for k, v := range flattened {
 		switch v := v.(type) {
 		case string:
-			v = escapeStr(v)
+			v = IndexEscapeStr(v)
 			line := fmt.Sprintf("%s:%s", k, v)
 			readyToIndex = append(readyToIndex, line)
 		case []string:
 			for _, w := range v {
-				w = escapeStr(w)
+				w = IndexEscapeStr(w)
 				line := fmt.Sprintf("%s:%s", k, w)
 				readyToIndex = append(readyToIndex, line)
 			}
@@ -205,7 +205,10 @@ func Indexify(flattened map[string]interface{}) []string {
 	return readyToIndex
 }
 
-func escapeStr(s string) string {
+// IndexEscapeStr escapes values to index in the database, so characters that
+// need to be escaped for Solr are properly found when using the trie or
+// postgres based searches.
+func IndexEscapeStr(s string) string {
 	s = strings.Replace(s, "[", "\\[", -1)
 	s = strings.Replace(s, "]", "\\]", -1)
 	s = strings.Replace(s, "::", "\\:\\:", -1)
@@ -215,6 +218,12 @@ func escapeStr(s string) string {
 // DeepMerge merges disparate data structures into a flat hash.
 func DeepMerge(key string, source interface{}) map[string]interface{} {
 	merger := make(map[string]interface{})
+	var sep string
+	if config.Config.DotSearch {
+		sep = "."
+	} else {
+		sep = "_"
+	}
 	switch v := source.(type) {
 	case map[string]interface{}:
 		/* We also need to get things like
@@ -230,7 +239,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 			if key == "" {
 				nkey = k
 			} else {
-				nkey = fmt.Sprintf("%s_%s", key, k)
+				nkey = fmt.Sprintf("%s%s%s", key, sep, k)
 			}
 			nm := DeepMerge(nkey, u)
 			for j, q := range nm {
@@ -254,7 +263,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 			if key == "" {
 				nkey = k
 			} else {
-				nkey = fmt.Sprintf("%s_%s", key, k)
+				nkey = fmt.Sprintf("%s%s%s", key, k)
 			}
 			merger[nkey] = u
 		}
@@ -371,4 +380,48 @@ func sendErrorReport(w http.ResponseWriter, jsonError interface{}, status int) {
 
 func MakeAuthzID() string {
 	return fmt.Sprintf("%32x", []byte(uuid.NewRandom()))
+}
+
+// PgSearchKey removes characters from search term fields that make the ltree
+// data type unhappy. This leads to the postgres-based search being, perhaps,
+// somewhat less precise than the solr (or ersatz solr) based search, but at the
+// same time one that's less resource demanding and covers almost all known use
+// cases. Potential bug: Postgres considers some, but not all, unicode letters
+// as being alphanumeric; i.e. golang and postgres both consider 'ü' to be a
+// letter, but golang accepts 'ሀ' as a letter while postgres does not. This is
+// reasonably unlikely to be an issue, but if you're using lots of non-European
+// characters in your attributes this could be a problem. We're accepting more
+// than raw ASCII alnum however because it's better behavior and because
+// Postgres does accept at least some other alphabets as being alphanumeric.
+func PgSearchKey(key string) string {
+	re := regexp.MustCompile(`[^\pL\pN_\.]`)
+	bs := regexp.MustCompile(`_{2,}`)
+	ps := regexp.MustCompile(`\.{2,}`) // repeated . will cause trouble too
+	return pgKeyReplace(key, re, bs, ps)
+}
+
+// PgSearchQueryKey is very similar to PgSearchKey, except that it preserves the
+// Solr wildcard charactes '*' and '?' in the queries.
+func PgSearchQueryKey(key string) string {
+	re := regexp.MustCompile(`[^\pL\pN_\.\*\?]`)
+	bs := regexp.MustCompile(`_{2,}`)
+	ps := regexp.MustCompile(`\.{2,}`)
+	return pgKeyReplace(key, re, bs, ps)
+}
+
+func pgKeyReplace(key string, re, bs, ps *regexp.Regexp) string {
+	k := re.ReplaceAllString(key, "_")
+	k = bs.ReplaceAllString(k, "_")
+	k = ps.ReplaceAllString(k, ".")
+	k = strings.Trim(k, "_")
+	// on the off hand chance we get leading or trailing dots
+	k = strings.Trim(k, ".")
+	// finally, if converting search query syntax, convert all _ to '.'.
+	// This may need to be revisited in more detail if we find ourselves
+	// needing more finesse with escaping underscores.
+	if config.Config.ConvertSearch {
+		k = strings.Replace(k, "_", ".", -1)
+		k = ps.ReplaceAllString(k, ".")
+	}
+	return k
 }

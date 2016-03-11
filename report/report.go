@@ -40,16 +40,15 @@ const ReportTimeFormat = "2006-01-02 15:04:05 -0700"
 // resources changed, what recipes were in the run list, and whether the run was
 // successful or not.
 type Report struct {
-	RunID         string                 `json:"run_id"`
-	StartTime     time.Time              `json:"start_time"`
-	EndTime       time.Time              `json:"end_time"`
-	TotalResCount int                    `json:"total_res_count"`
-	Status        string                 `json:"status"`
-	RunList       string                 `json:"run_list"`
-	Resources     []interface{}          `json:"resources"`
-	Data          map[string]interface{} `json:"data"` // I think this is right
-	NodeName      string                 `json:"nodeName"`
-	// might be able to remove this
+	RunID          string                 `json:"run_id"`
+	StartTime      time.Time              `json:"start_time"`
+	EndTime        time.Time              `json:"end_time"`
+	TotalResCount  int                    `json:"total_res_count"`
+	Status         string                 `json:"status"`
+	RunList        string                 `json:"run_list"`
+	Resources      []interface{}          `json:"resources"`
+	Data           map[string]interface{} `json:"data"` // I think this is right
+	NodeName       string                 `json:"node_name"`
 	organizationID int
 	org            *organization.Organization
 }
@@ -239,7 +238,9 @@ func (r *Report) UpdateFromJSON(jsonReport map[string]interface{}) util.Gerror {
 	}
 	status, ok := jsonReport["status"].(string)
 	if ok {
-		if status != "success" && status != "failure" {
+		// "Started" needs to be allowed too, for import from a json
+		// dump.
+		if status != "success" && status != "failure" && status != "started" {
 			err := util.Errorf("invalid status %s", status)
 			return err
 		}

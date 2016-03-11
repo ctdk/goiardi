@@ -20,10 +20,11 @@ package filestore
 
 import (
 	"database/sql"
-	"github.com/ctdk/goas/v2/logger"
-	"github.com/ctdk/goiardi/datastore"
 	"log"
 	"strings"
+
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/tideland/golib/logger"
 )
 
 func (f *FileStore) saveMySQL() error {

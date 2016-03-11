@@ -4,6 +4,97 @@
   and whatnot.
 * Refactor of HTTP handling to use gorilla-mux.
 
+0.10.3
+------
+* Handle someone trying to use syslog on Windows ourselves, rather than
+  letting the logging library do it (it was causing trouble with gox).
+
+0.10.2
+------
+* Fix up packaging and deploy scripts a bit
+* Add sql schemas to the deb
+* Fixed a logic error when configuring the address to listen on where the
+  value specified in the config file was always ignored, and only an address
+  specified on the command line worked. (Thanks to jordi and DQEbert here for
+  bringing this to my attention.)
+* Added options to specify proxy hostname and port different than what goairdi
+  itself is listening on. (Thanks to jordi and DQEbert here as well.)
+* CoC
+* Added Debian wheezy to the list of distros we generate packages for.
+* The logging library goiardi used moved. It had been forked, but since the
+  dependencies of said fork also moved, goiardi switched to the new version of
+  that library. Happily the logger library had added logging to syslog as an
+  option, so we just went back to using upstream at the new location.  (Thanks
+  to theckman for providing a fix for this.)
+* In concert with the above, add a "fatal" log level.
+* Terraform removed the depgraph module, so that's been vendored into goiardi
+  along with its digraph dependency.
+
+0.10.1
+------
+* Fix some tests
+* Scripts, configuration files for more efficient packaging
+* circleci integration
+* Bomb on importing data if public keys don't validate. (thanks jordi and 
+  DQEbert for bringing this to my attention.)
+* Validate older PKCS#1 keys -- golang's stdlib pukes on them without some
+  massaging. (thanks jordi and DQEbert for bringing this to my attention.)
+* Fix reindexing - databags were not being reindexed with the postgres search,
+  and the SaveItem calls were moved to goroutines; otherwise, the request
+  from knife would time out and knife would restart the reindex.
+* Allow '.' in cookbook names; despite what an error chef-pedant is looking
+  for, those are allowed. (thanks jordi and DQEbert for bringing this to my 
+  attention.)
+* Make the authentication lib more general (thanks theckman)
+* Output the version of golang used to build a particular goiardi binary
+  (again, thanks theckman)
+* The changed hostname in URLs to download bug didn't get fixed in 0.7.1 quite
+  all the way after all. It is now. (Thanks to oker1 for bringing that to my
+  attention.)
+* Fixed search tests to pass when run using more than one processor. (Brought
+  to my attention by theckman.)
+* Fixed a deadlock that could happen when saving an in-mem index to disk at
+  the exact moment an object was being indexed. Seems to be specific to
+  go1.5.1 (or at least it never happened before that I saw), but needs fixed
+  anyway. (Also brought to my attention by theckman.)
+* Fixed broken pipe errors with too large requests when running chef-pedant
+  against goiardi built with go 1.5.1.
+* Update some docs.
+
+0.10.0
+------
+* Search architecture changed so different search backends can be used (thanks
+  oker1 for your work on that).
+* Postgres search is here at last! If you're using Postgres, instead of using
+  the ersatz solr search, you can instead use Postgres to power your searches.
+* Add a mutex for the original goiardi search - multiple simple queries
+  executing simultaneously are not a problem, but multiple complex queries can 
+  eat up all the RAM on the machine and cause goiardi to crash. This mitigates
+  that situation.
+* Be a little more forgiving with reporting protocol versions - allow
+  specifying the protocol version as a query param instead of only as a
+  header. This is to make showing reports with the webui a little easier.
+* Bump the Chef Server version we claim to be from 11.1.6 to 11.1.7.
+
+0.9.2
+-----
+* Fix broken import/export function with reports - bringing goiardi's variable
+  naming inline with golang conventions a while back inadvertently renamed a
+  reporting JSON field. The field was renamed, and the import code will now
+  handle both correct and incorrect names for the node reporting.
+
+0.9.1
+-----
+* Fix error where requests for zero byte cookbook files would crash.
+* Authentication docs improvments (thanks oker1!)
+* Rewritten and more robust cookbook depsolver.
+* Fix for client creation with cheffish (thanks whiteley!)
+* Fix for search where searching for something like "foo:bar AND NOT foo:bar"
+  was returning incorrect results. (brought to my attention and test provided
+  by brimstone, thanks!)
+* Fixed a bug where clients could be created with the same name as a user (or
+  vice versa) in in-memory mode.
+
 0.9.0
 -----
 * Validate IP address supplied on the command line or in the config file.

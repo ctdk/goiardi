@@ -1,0 +1,12 @@
+[Unit]
+Description=A chef server written in go
+ 
+[Service]
+Type=simple
+User=goiardi
+Group=goiardi
+ExecStart=/usr/bin/goiardi "-c" "/etc/goiardi/goiardi.conf"
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

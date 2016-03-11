@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"log"
+	"strings"
 )
 
 func checkForRoleSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -90,6 +91,52 @@ func getSQL(roleName string) (*Role, error) {
 		return nil, err
 	}
 	return role, nil
+}
+
+func getMultiSQL(roleNames []string) ([]*Role, error) {
+	var sqlStmt string
+	bind := make([]string, len(roleNames))
+
+	if config.Config.UseMySQL {
+		for i := range roleNames {
+			bind[i] = "?"
+		}
+		sqlStmt = fmt.Sprintf("SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM roles WHERE name IN (%s)", strings.Join(bind, ", "))
+	} else if config.Config.UsePostgreSQL {
+		for i := range roleNames {
+			bind[i] = fmt.Sprintf("$%d", i+1)
+		}
+		sqlStmt = fmt.Sprintf("SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM goiardi.roles WHERE name IN (%s)", strings.Join(bind, ", "))
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	nameArgs := make([]interface{}, len(roleNames))
+	for i, v := range roleNames {
+		nameArgs[i] = v
+	}
+	rows, err := stmt.Query(nameArgs...)
+	if err != nil {
+		return nil, err
+	}
+	roles := make([]*Role, 0, len(roleNames))
+	for rows.Next() {
+		r := new(Role)
+		err = r.fillRoleFromSQL(rows)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+		roles = append(roles, r)
+	}
+
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return roles, nil
 }
 
 func (r *Role) deleteSQL() error {

@@ -22,16 +22,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/codeskyblue/go-uuid"
-	"github.com/ctdk/goas/v2/logger"
-	"github.com/ctdk/goiardi/chefcrypto"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
-	"github.com/ctdk/goiardi/node"
-	"github.com/ctdk/goiardi/organization"
-	"github.com/ctdk/goiardi/serfin"
-	"github.com/ctdk/goiardi/util"
-	serfclient "github.com/hashicorp/serf/client"
 	"math"
 	"net/http"
 	"os"
@@ -41,6 +31,17 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/codeskyblue/go-uuid"
+	"github.com/ctdk/goiardi/chefcrypto"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/serfin"
+	"github.com/ctdk/goiardi/util"
+	serfclient "github.com/hashicorp/serf/client"
+	"github.com/tideland/golib/logger"
 )
 
 // Shovey holds all the overall information for a shovey run common to all nodes
@@ -554,18 +555,17 @@ func AllShoveys(org *organization.Organization) []*Shovey {
 	var shoveys []*Shovey
 	if config.UsingDB() {
 		return allShoveysSQL()
-	} else {
-		shoveList := GetList(org)
-		shoveys = make([]*Shovey, 0, len(shoveList))
-		for _, s := range shoveList {
-			sh, err := Get(org, s)
-			if err != nil {
-				logger.Criticalf(err.Error())
-				os.Exit(1)
-			}
-			shoveys = append(shoveys, sh)
-		}
 	}
+	shoveList := GetList(org)
+	for _, s := range shoveList {
+		sh, err := Get(org, s)
+		if err != nil {
+			logger.Criticalf(err.Error())
+			os.Exit(1)
+		}
+		shoveys = append(shoveys, sh)
+	}
+
 	return shoveys
 }
 

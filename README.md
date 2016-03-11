@@ -1,7 +1,9 @@
 Goiardi
 =======
 
-Goiardi is an implementation of the Chef server (http://www.opscode.com) written
+[![Circle CI](https://circleci.com/gh/ctdk/goiardi/tree/master.svg?style=svg&circle-token=849db1a2f08048be1253cfb876483949b4dc7d7e)](https://circleci.com/gh/ctdk/goiardi/tree/master)
+
+Goiardi is an implementation of the Chef server (http://www.chef.io) written
 in Go. It can either run entirely in memory with the option to save and load the
 in-memory data and search indexes to and from disk, drawing inspiration from
 chef-zero, or it can use MySQL or PostgreSQL as its storage backend.
@@ -16,9 +18,9 @@ found online at http://goiardi.readthedocs.org/en/latest/.
 
 In addition to the aforementioned Chef documentation at http://docs.opscode.com,
 more documentation specific to goiardi can be viewed with godoc. See
-http://godoc.org/code.google.com/p/go.tools/cmd/godoc for an explanation of how
+https://godoc.org/golang.org/x/tools/cmd/godoc for an explanation of how
 godoc works. The goiardi godocs can also be viewed online at
-http://godoc.org/github.com/ctdk/goiardi.
+https://godoc.org/github.com/ctdk/goiardi.
 
 TODO
 ----
@@ -58,7 +60,18 @@ Jeremy Bingham (<jeremy@goiardi.gl>)
 COPYRIGHT
 ---------
 
-Copyright 2013-2014, Jeremy Bingham
+Copyright 2013-2015, Jeremy Bingham
+
+The `depgraph` and `digraph` packages are vendored from terraform and are
+copyrighted by Hashicorp.
+
+CODE OF CONDUCT
+---------------
+
+This project adheres to the [Open Code of Conduct][code-of-conduct]. By participating, you are expected to honor this code.
+[code-of-conduct]: http://todogroup.org/opencodeofconduct/#Goiardi/abuse-coc@goiardi.gl
+
+This code of conduct can also be found in CONDUCT.md in this repository.
 
 LICENSE
 -------
@@ -71,6 +84,10 @@ Commons Attribution 4.0 International (CC-BY 4.0) License.
 
 Chef is copyright (c) 2008-2014 Chef Software (formerly Opscode, Inc.) and its
 various contributors.
+
+The `depgraph` and `digraph` packages are vendored from Hashicorp's terraform
+package, and is under the Mozilla Public License version 2.0. The MPL is
+included in those directories and applies only to those files.
 
 Thanks go out to the fine folks of Opscode and the Chef community for all their
 hard work.

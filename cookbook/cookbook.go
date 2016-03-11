@@ -23,18 +23,24 @@ package cookbook
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+	gversion "github.com/ctdk/go-version"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/depgraph"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 )
+
+// cookbook divisions, when resolving cookbook dependencies, that must be filled
+// with a zero length array (not nil) when they are returned.
+var chkDiv = [...]string{"definitions", "libraries", "attributes", "providers", "resources", "templates", "root_files", "files"}
 
 // VersionStrings is a type to make version strings with the format "x.y.z"
 // sortable.
@@ -75,6 +81,70 @@ type CookbookVersion struct {
 	id           int32
 	cookbookID   int32
 	org          *organization.Organization
+}
+
+const (
+	CookbookNotFound int = iota
+	CookbookNoVersion
+)
+
+var cookbookVerErr = map[int]string{CookbookNotFound: "not found", CookbookNoVersion: "no version"}
+
+type versionConstraint gversion.Constraints
+
+type versionConstraintError struct {
+	ViolationType    int
+	ParentCookbook   string
+	ParentConstraint string
+	ParentVersion    string
+	Cookbook         string
+	Constraint       string
+}
+
+func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
+	tMeta := tail.Meta.(*depMeta)
+	var headVersion string
+	var headConstraint string
+	if head.Meta != nil {
+		headVersion = head.Meta.(*depMeta).version
+		headConstraint = head.Meta.(*depMeta).constraint.String()
+	}
+
+	verr := &versionConstraintError{ParentCookbook: head.Name, ParentVersion: headVersion, ParentConstraint: headConstraint, Cookbook: tail.Name, Constraint: v.String()}
+
+	if tMeta.notFound {
+		verr.ViolationType = CookbookNotFound
+		return false, verr
+	}
+	if tMeta.version == "" {
+		verr.ViolationType = CookbookNoVersion
+		// but what constraint isn't met?
+		cb, _ := Get(tMeta.organization, tail.Name)
+		if cb != nil {
+			badver := cb.badConstraints(v)
+			verr.Constraint = strings.Join(badver, ",")
+		}
+		return false, verr
+	}
+
+	return true, nil
+}
+
+func (v versionConstraint) String() string {
+	return gversion.Constraints(v).String()
+}
+
+type depMeta struct {
+	version    string
+	constraint versionConstraint
+	notFound   bool
+	noVersion  bool
+	organization *organization.Organization
+}
+
+type DependsError struct {
+	depErr *depgraph.ConstraintError
+	organization *organization.Organization
 }
 
 /* Cookbook methods and functions */
@@ -128,7 +198,7 @@ func (cbv *CookbookVersion) OrgName() string {
 // New creates a new cookbook.
 func New(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 	var found bool
-	if !util.ValidateEnvName(name) {
+	if !util.ValidateName(name) {
 		err := util.Errorf("Invalid cookbook name '%s' using regex: 'Malformed cookbook name. Must only contain A-Z, a-z, 0-9, _ or -'.", name)
 		return nil, err
 	}
@@ -391,7 +461,7 @@ func (c *Cookbook) ConstrainedInfoHash(numResults interface{}, constraint string
 // DependsCookbooks will, for the given run list and environment constraints,
 // return the cookbook dependencies.
 func DependsCookbooks(org *organization.Organization, runList []string, envConstraints map[string]string) (map[string]interface{}, error) {
-	cdList := make(map[string][]string, len(runList))
+	nodes := make(map[string]*depgraph.Noun)
 	runListRef := make([]string, len(runList))
 
 	for i, cbV := range runList {
@@ -402,176 +472,211 @@ func DependsCookbooks(org *organization.Organization, runList []string, envConst
 		if len(cx) == 2 {
 			constraint = fmt.Sprintf("= %s", cx[1])
 		}
-		cdList[cbName] = []string{constraint}
-		/* There's a method to our madness. We need to modify the
-		 * cdList as we go along, but want the base list to remain the
-		 * same. Thus, we make an additional array of cookbook names to
-		 * range through. */
+		nodes[cbName] = &depgraph.Noun{Name: cbName}
+		meta := &depMeta{}
+		if constraint != "" {
+			q, _ := gversion.NewConstraint(constraint)
+			meta.constraint = versionConstraint(q)
+		}
+		meta.organization = org
+		nodes[cbName].Meta = meta
 		runListRef[i] = cbName
 	}
 
 	for k, ec := range envConstraints {
-		if _, found := cdList[k]; !found {
+		if _, found := nodes[k]; !found {
 			continue
-		} else {
-			/* Check if there's a constraint in the uploaded run
-			 * list. If not take the env one and move on. */
-			if cdList[k][0] == "" {
-				cdList[k] = []string{ec}
-				continue
-			}
-			/* Override if the environment is more restrictive */
-			_, orgver, _ := splitConstraint(cdList[k][0])
-			newop, newver, nerr := splitConstraint(ec)
-			if nerr != nil {
-				return nil, nerr
-			}
-			/* if the versions are equal, take the env one */
-			if orgver == newver {
-				cdList[k] = []string{ec}
-				continue /* and break out of this step */
-			}
-			switch newop {
-			case ">", ">=":
-				if versionLess(orgver, newver) {
-					cdList[k] = []string{ec}
-				}
-			case "<", "<=":
-				if !versionLess(orgver, newver) {
-					cdList[k] = []string{ec}
-				}
-			case "=":
-				if orgver != newver {
-					err := fmt.Errorf("This run list has a constraint '%s' for %s that conflicts with '%s' in the environment's cookbook versions.", cdList[k][0], k, ec)
-					return nil, err
-				}
-			case "~>":
-				if action := verConstraintCheck(orgver, newver, newop); action == "ok" {
-					cdList[k] = []string{ec}
-				} else {
-					err := fmt.Errorf("This run list has a constraint '%s' for %s that conflicts with '%s' in the environment's cookbook versions.", cdList[k][0], k, ec)
-					return nil, err
-				}
-			default:
-				err := fmt.Errorf("An unlikely occurance, but the constraint '%s' for cookbook %s in this environment is impossible.", ec, k)
-				return nil, err
-			}
 		}
+		appendConstraint(&nodes[k].Meta.(*depMeta).constraint, ec)
 	}
 
-	/* Build a slice holding all the needed cookbooks. */
-	// TODO: in SQL mode, at least, it's totally possible to fetch all of
-	// the cookbooks at once. We should do that.
+	graphRoot := &depgraph.Noun{Name: "^runlist_root^"}
+	g := &depgraph.Graph{Name: "runlist", Root: graphRoot}
+
+	// fill in constraints for runlist deps now
+	for k, n := range nodes {
+		d := &depgraph.Dependency{Name: fmt.Sprintf("%s-%s", g.Name, k), Source: graphRoot, Target: n, Constraints: []depgraph.Constraint{versionConstraint(n.Meta.(*depMeta).constraint)}}
+		graphRoot.Deps = append(graphRoot.Deps, d)
+	}
+
+	cbShelf := make(map[string]*Cookbook)
 	for _, cbName := range runListRef {
-		c, err := Get(org, cbName)
+		if _, found := cbShelf[cbName]; found || nodes[cbName].Meta.(*depMeta).notFound {
+			continue
+		}
+		cb, err := Get(org, cbName)
 		if err != nil {
-			return nil, err
+			nodes[cbName].Meta.(*depMeta).notFound = true
+			continue
 		}
-		cbv := c.LatestConstrained(cdList[cbName][0])
+		cbShelf[cbName] = cb
+		cbv := cb.latestMultiConstraint(nodes[cbName].Meta.(*depMeta).constraint)
 		if cbv == nil {
-			return nil, fmt.Errorf("No cookbook found for %s that satisfies constraint '%s'", c.Name, cdList[cbName][0])
+			nodes[cbName].Meta.(*depMeta).noVersion = true
+			continue
 		}
+		nodes[cbName].Meta.(*depMeta).version = cbv.Version
+		cbv.getDependencies(g, nodes, cbShelf)
+	}
+	nouns := make([]*depgraph.Noun, 1)
+	nouns[0] = graphRoot
+	g.Nouns = nouns
 
-		nerr := cbv.resolveDependencies(cdList)
-		if nerr != nil {
-			return nil, nerr
-		}
+	cerr := g.CheckConstraints()
+
+	if cerr != nil {
+		err := &DependsError{depErr: cerr.(*depgraph.ConstraintError), organization: org,}
+		return nil, err
 	}
 
-	cookbookDeps := make(map[string]interface{}, len(cdList))
-	for cname, traints := range cdList {
-		cb, err := Get(org, cname)
-		/* Although we would have already seen this, but being careful
-		 * rarely hurt. */
-		if err != nil {
+	cookbookDeps := make(map[string]interface{}, len(cbShelf))
+	for k, c := range cbShelf {
+		constraints := nodes[k].Meta.(*depMeta).constraint
+		cbv := c.latestMultiConstraint(constraints)
+		if cbv == nil {
+			err := fmt.Errorf("Somehow, and this shouldn't have beenable to happen at this stage, no versions of %s satisfied the constraints '%s'!", c.Name, constraints.String())
 			return nil, err
 		}
-		var gcbv *CookbookVersion
+		gcbvJSON := cbv.ToJSON("POST")
 
-		for _, cv := range cb.sortedVersions() {
-		Vers:
-			for _, ct := range traints {
-				if ct != "" { // no constraint
-					op, ver, err := splitConstraint(ct)
-					if err != nil {
-						return nil, err
-					}
-					if action := verConstraintCheck(cv.Version, ver, op); action != "ok" {
-						// BREAK THIS LOOP, BUT CONTINUE THE cv LOOP. HMM
-						continue Vers
-					}
-				}
-			}
-			/* If we pass the constraint tests, set gcbv to cv and
-			 * break. */
-			gcbv = cv
-			break
-		}
-		if gcbv == nil {
-			err := fmt.Errorf("Unfortunately no version of %s could satisfy the requested constraints: %s", cname, strings.Join(traints, ", "))
-			return nil, err
-		}
-		gcbvJSON := gcbv.ToJSON("POST")
-		/* Sigh. For some reason, *some* places want nothing
-		 * sent for cookbook information divisions like
-		 * attributes, libraries, providers, etc. However,
-		 * others will flip out if nothing is sent at all, and
-		 * environment/<env>/cookbook_versions is one of them.
-		 * Go through the list of possibly guilty divisions and
-		 * set them to an empty slice of maps if they're nil. */
-		chkDiv := []string{"definitions", "libraries", "attributes", "providers", "resources", "templates", "root_files", "files"}
 		for _, cd := range chkDiv {
 			if gcbvJSON[cd] == nil {
 				gcbvJSON[cd] = make([]map[string]interface{}, 0)
 			}
 		}
-		cookbookDeps[gcbv.CookbookName] = gcbvJSON
+		cookbookDeps[cbv.CookbookName] = gcbvJSON
 	}
-
 	return cookbookDeps, nil
 }
 
-func (cbv *CookbookVersion) resolveDependencies(cdList map[string][]string) error {
-	depList := cbv.Metadata["dependencies"].(map[string]interface{})
-
-	for r, c2 := range depList {
-		c := c2.(string)
-		depCb, err := Get(cbv.org, r)
-		if err != nil {
-			return err
-		}
-		debCbv := depCb.LatestConstrained(c)
-		if debCbv == nil {
-			err := fmt.Errorf("No cookbook version for %s satisfies constraint '%s'.", r, c)
-			return err
-		}
-
-		/* Do we satisfy the constraints we have? */
-		if constraints, found := cdList[r]; found {
-			for _, dcon := range constraints {
-				if dcon != "" {
-					op, ver, err := splitConstraint(dcon)
-					if err != nil {
-						return err
-					}
-					stat := verConstraintCheck(debCbv.Version, ver, op)
-					if stat != "ok" {
-						err := fmt.Errorf("Oh no! Cookbook %s (ver %s) depends on a version of cookbook %s matching the constraint '%s', but that constraint conflicts with the previous constraint of '%s'. Bailing, sorry.", cbv.CookbookName, cbv.Version, debCbv.CookbookName, c, dcon)
-						return err
-					}
+func (c *Cookbook) latestMultiConstraint(constraints versionConstraint) *CookbookVersion {
+	var cbv *CookbookVersion
+	if constraints == nil {
+		cbv = c.LatestVersion()
+	} else {
+		cbversions := c.sortedVersions()
+	Ver:
+		for _, cver := range cbversions {
+			v, _ := gversion.NewVersion(cver.Version)
+			for _, cs := range constraints {
+				if !cs.Check(v) {
+					continue Ver
 				}
+				cbv = cver
+				break Ver
 			}
-		} else {
-			/* Add our constraint */
-			cdList[r] = []string{c}
-		}
-
-		nerr := debCbv.resolveDependencies(cdList)
-		if nerr != nil {
-			return nerr
 		}
 	}
-	return nil
+	return cbv
+}
+
+func (c *Cookbook) badConstraints(constraints versionConstraint) []string {
+	bad := make([]string, 0, len(constraints))
+	if constraints == nil {
+		return bad
+	}
+	cbversions := c.sortedVersions()
+	for _, cs := range constraints {
+		for _, cver := range cbversions {
+			v, _ := gversion.NewVersion(cver.Version)
+			if !cs.Check(v) {
+				bad = append(bad, cs.String())
+				break
+			}
+		}
+	}
+	return bad
+}
+
+func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]*depgraph.Noun, cbShelf map[string]*Cookbook) {
+	depList := cbv.Metadata["dependencies"].(map[string]interface{})
+	for r, c2 := range depList {
+		if _, ok := nodes[r]; ok {
+			if nodes[r].Meta.(*depMeta).noVersion || nodes[r].Meta.(*depMeta).notFound {
+				continue
+			}
+		}
+		c := c2.(string)
+		var depCb *Cookbook
+		var err util.Gerror
+		var found bool
+
+		if _, ok := nodes[r]; !ok {
+			nodes[r] = &depgraph.Noun{Name: r, Meta: &depMeta{}}
+		}
+		dep, depPos, dt := checkDependency(nodes[cbv.CookbookName], r)
+		if dep == nil {
+			dep = &depgraph.Dependency{Name: fmt.Sprintf("%s-%s", cbv.CookbookName, r), Source: nodes[cbv.CookbookName], Target: nodes[r]}
+		}
+		depCons, _ := gversion.NewConstraint(c)
+		dep.Constraints = []depgraph.Constraint{versionConstraint(depCons)}
+		if !dt || nodes[cbv.CookbookName].Deps == nil {
+			nodes[cbv.CookbookName].Deps = append(nodes[cbv.CookbookName].Deps, dep)
+		} else {
+			nodes[cbv.CookbookName].Deps[depPos] = dep
+		}
+
+		if depCb, found = cbShelf[r]; !found {
+			depCb, err = Get(cbv.org, r)
+			if err != nil {
+				nodes[r].Meta.(*depMeta).notFound = true
+				appendConstraint(&nodes[r].Meta.(*depMeta).constraint, c)
+				continue
+			}
+		} else {
+			// see if this constraint and a dependency for this
+			// cookbook is already in place. If it is, go ahead and
+			// move along, we've already been here.
+			if dt && constraintPresent(nodes[r].Meta.(*depMeta).constraint, c) {
+				continue
+			}
+		}
+		appendConstraint(&nodes[r].Meta.(*depMeta).constraint, c)
+
+		cbShelf[r] = depCb
+		depCbv := depCb.latestMultiConstraint(nodes[r].Meta.(*depMeta).constraint)
+		if depCbv == nil {
+			nodes[r].Meta.(*depMeta).noVersion = true
+			continue
+		}
+		if nodes[r].Meta.(*depMeta).version != "" && nodes[r].Meta.(*depMeta).version != depCbv.Version {
+			// Remove any dependencies for this cookbook's node.
+			// They'll be filled in
+			nodes[r].Deps = make([]*depgraph.Dependency, 0)
+		}
+
+		nodes[r].Meta.(*depMeta).version = depCbv.Version
+
+		depCbv.getDependencies(g, nodes, cbShelf)
+	}
+}
+
+func constraintPresent(constraints versionConstraint, cons string) bool {
+	for _, c := range constraints {
+		if c.String() == cons {
+			// already in here, bail
+			return true
+		}
+	}
+	return false
+}
+
+func appendConstraint(constraints *versionConstraint, cons string) {
+	if constraintPresent(*constraints, cons) {
+		return
+	}
+	newcon, _ := gversion.NewConstraint(cons)
+	*constraints = append(*constraints, newcon...)
+}
+
+func checkDependency(node *depgraph.Noun, cbName string) (*depgraph.Dependency, int, bool) {
+	depName := fmt.Sprintf("%s-%s", node.Name, cbName)
+	for i, d := range node.Deps {
+		if depName == d.Name {
+			return d, i, true
+		}
+	}
+	return nil, -1, false
 }
 
 func splitConstraint(constraint string) (string, string, error) {
@@ -1076,7 +1181,7 @@ func (cbv *CookbookVersion) ToJSON(method string) map[string]interface{} {
 	toJSON["frozen?"] = cbv.IsFrozen
 	// hmm.
 	if cbv.Recipes != nil {
-		toJSON["recipes"] = cbv.Recipes
+		toJSON["recipes"] = methodize(cbv.org, method, cbv.Recipes)
 	} else {
 		toJSON["recipes"] = make([]map[string]interface{}, 0)
 	}
@@ -1314,4 +1419,107 @@ func verConstraintCheck(verA, verB, op string) string {
 	default:
 		return "invalid"
 	}
+}
+
+func (v *versionConstraintError) Error() string {
+	// assemble error message from what we have
+	msg := fmt.Sprintf("%s: %s %s %s %s", cookbookVerErr[v.ViolationType], v.ParentCookbook, v.ParentVersion, v.Cookbook, v.Constraint)
+	return msg
+}
+
+func (v *versionConstraintError) String() string {
+	return v.Error()
+}
+
+func (d *DependsError) Error() string {
+	errMap := d.ErrMap()
+	return errMap["message"].(string)
+}
+
+func (d *DependsError) String() string {
+	return d.Error()
+}
+
+func (d *DependsError) ErrMap() map[string]interface{} {
+	errMap := make(map[string]interface{})
+
+	allMsgs := make([]string, 0)
+	notFound := make([]string, 0)
+	mostConstrained := make([]string, 0)
+	noVersion := make([]string, 0)
+	unsatisfiable := make([]string, 0)
+
+	for _, ce := range d.depErr.Violations {
+		var vMsg string
+		verr := ce.Err.(*versionConstraintError)
+		var unsat bool
+		if verr.ParentCookbook != "^runlist_root^" {
+			unsat = true
+			unsatisfiable = append(unsatisfiable, fmt.Sprintf("(%s %s)", verr.ParentCookbook, verr.ParentConstraint))
+		}
+		if verr.ViolationType == CookbookNotFound {
+			notFound = append(notFound, verr.Cookbook)
+		} else {
+			if unsat {
+				cb, _ := Get(d.organization, verr.Cookbook)
+				var cbv *CookbookVersion
+				if cb != nil {
+					cbv = cb.LatestVersion()
+				}
+				var p, c string
+				if cbv != nil {
+					c = fmt.Sprintf("%s = %s", cbv.CookbookName, cbv.Version)
+					depList := cbv.Metadata["dependencies"].(map[string]interface{})
+					if dp, ok := depList[verr.ParentCookbook]; ok {
+						p = fmt.Sprintf("(%s %s)", verr.ParentCookbook, dp)
+					}
+				} else {
+					// something is very bad, try our best
+					// to recover
+					p = fmt.Sprintf("%s %s", verr.ParentCookbook, verr.ParentConstraint)
+					c = fmt.Sprintf("%s %s", verr.Cookbook, verr.Constraint)
+				}
+				mostConstrained = append(mostConstrained, fmt.Sprintf("%s -> [%s]", c, p))
+
+			} else {
+				noVersion = append(noVersion, fmt.Sprintf("(%s %s)", verr.Cookbook, verr.Constraint))
+			}
+		}
+		// craft our message:
+		if unsat {
+			var doesntExist string
+			if verr.ViolationType == CookbookNotFound {
+				doesntExist = ", which does not exist,"
+			}
+			vMsg = fmt.Sprintf("Unable to satisfy constraints on package %s%s due to solution constraint (%s %s). Solution constraints that may result in a constraint on %s: [(%s = %s) -> (%s %s)]", verr.Cookbook, doesntExist, verr.ParentCookbook, verr.ParentConstraint, verr.Cookbook, verr.ParentCookbook, verr.ParentVersion, verr.Cookbook, verr.Constraint)
+		} else {
+			vMsg = "Run list contains invalid items:"
+			if len(notFound) > 0 {
+				var werd string
+				if len(notFound) == 1 {
+					werd = "cookbook"
+				} else {
+					werd = "cookbooks"
+				}
+				vMsg = fmt.Sprintf("%s no such %s %s", vMsg, werd, strings.Join(notFound, ", "))
+			}
+			if len(noVersion) > 0 {
+				vMsg = fmt.Sprintf("%s no versions match the constraints on cookbook %s", vMsg, strings.Join(noVersion, ", "))
+			}
+			vMsg = fmt.Sprintf("%s.", vMsg)
+		}
+		allMsgs = append(allMsgs, vMsg)
+	}
+	msg := strings.Join(allMsgs, "\n")
+	errMap["message"] = msg
+
+	errMap["non_existent_cookbooks"] = notFound
+	if len(unsatisfiable) > 0 {
+		errMap["unsatisfiable_run_list_item"] = strings.Join(unsatisfiable, ", ")
+		errMap["most_constrained_cookbooks"] = mostConstrained
+	} else {
+		errMap["cookbooks_with_no_versions"] = noVersion
+	}
+
+	return errMap
 }

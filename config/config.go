@@ -25,18 +25,20 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/BurntSushi/toml"
-	"github.com/ctdk/goas/v2/logger"
-	"github.com/jessevdk/go-flags"
 	"io/ioutil"
 	"log"
 	"net"
 	"os"
 	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/BurntSushi/toml"
+	"github.com/jessevdk/go-flags"
+	"github.com/tideland/golib/logger"
 )
 
 // Conf is the master struct for holding configuration options.
@@ -44,6 +46,8 @@ type Conf struct {
 	Ipaddress         string
 	Port              int
 	Hostname          string
+	ProxyHostname     string `toml:"proxy-hostname"`
+	ProxyPort         int    `toml:"proxy-port"`
 	ConfFile          string `toml:"conf-file"`
 	IndexFile         string `toml:"index-file"`
 	DataStoreFile     string `toml:"data-file"`
@@ -82,6 +86,9 @@ type Conf struct {
 	SerfAddr          string `toml:"serf-addr"`
 	UseShovey         bool   `toml:"use-shovey"`
 	SignPrivKey       string `toml:"sign-priv-key"`
+	DotSearch         bool   `toml:"dot-search"`
+	ConvertSearch     bool   `toml:"convert-search"`
+	PgSearch          bool   `toml:"pg-search"`
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -95,7 +102,7 @@ var Key = &SigningKeys{}
 
 // LogLevelNames give convenient, easier to remember than number name for the
 // different levels of logging.
-var LogLevelNames = map[string]int{"debug": 4, "info": 3, "warning": 2, "error": 1, "critical": 0}
+var LogLevelNames = map[string]int{"debug": 5, "info": 4, "warning": 3, "error": 2, "critical": 1, "fatal": 0}
 
 // MySQLdb holds MySQL connection options.
 type MySQLdb struct {
@@ -128,6 +135,8 @@ type Options struct {
 	Ipaddress         string `short:"I" long:"ipaddress" description:"Listen on a specific IP address."`
 	Hostname          string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel."`
 	Port              int    `short:"P" long:"port" description:"Port to listen on. If port is set to 443, SSL will be activated. (default: 4545)"`
+	ProxyHostname     string `short:"Z" long:"proxy-hostname" description:"Hostname to report to clients if this goiardi server is behind a proxy using a different hostname. See also --proxy-port. Can be used with --proxy-port or alone, or not at all."`
+	ProxyPort         int    `short:"W" long:"proxy-port" description:"Port to report to clients if this goiardi server is behind a proxy using a different port than the port goiardi is listening on. Can be used with --proxy-hostname or alone, or not at all."`
 	IndexFile         string `short:"i" long:"index-file" description:"File to save search index data to."`
 	DataStoreFile     string `short:"D" long:"data-file" description:"File to save data store data to."`
 	FreezeInterval    int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk if there have been any changes (requires -i/--index-file and -D/--data-file options to be set). (Default 10 seconds.)"`
@@ -158,13 +167,20 @@ type Options struct {
 	SerfAddr          string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373."`
 	UseShovey         bool   `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes. Requires --use-serf."`
 	SignPrivKey       string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests."`
+	DotSearch         bool   `long:"dot-search" description:"If set, searches will use . to separate elements instead of _."`
+	ConvertSearch     bool   `long:"convert-search" description:"If set, convert _ syntax searches to . syntax. Only useful if --dot-search is set."`
+	PgSearch          bool   `long:"pg-search" description:"Use the new Postgres based search engine instead of the default ersatz Solr. Requires --use-postgresql, automatically turns on --dot-search. --convert-search is recommended, but not required."`
 }
 
 // The goiardi version.
-const Version = "0.9.0"
+const Version = "0.10.3"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
-const ChefVersion = "11.1.6"
+const ChefVersion = "11.1.7"
+
+// The default time difference allowed between the server's clock and the time
+// in the X-OPS-TIMESTAMP header.
+const DefaultTimeSlew = "15m"
 
 /* The general plan is to read the command-line options, then parse the config
  * file, fill in the config struct with those values, then apply the
@@ -195,7 +211,7 @@ func ParseConfigOptions() error {
 	}
 
 	if opts.Version {
-		fmt.Printf("goiardi version %s (aiming for compatibility with Chef Server version %s).\n", Version, ChefVersion)
+		fmt.Printf("goiardi version %s built with %s (aiming for compatibility with Chef Server version %s).\n", Version, runtime.Version(), ChefVersion)
 		os.Exit(0)
 	}
 
@@ -235,6 +251,13 @@ func ParseConfigOptions() error {
 		}
 	}
 
+	if opts.ProxyHostname != "" {
+		Config.ProxyHostname = opts.ProxyHostname
+	}
+	if Config.ProxyHostname == "" {
+		Config.ProxyHostname = Config.Hostname
+	}
+
 	if opts.DataStoreFile != "" {
 		Config.DataStoreFile = opts.DataStoreFile
 	}
@@ -259,6 +282,17 @@ func ParseConfigOptions() error {
 		os.Exit(1)
 	}
 
+	// Use Postgres search?
+	if opts.PgSearch {
+		// make sure postgres is enabled
+		if !Config.UsePostgreSQL {
+			err := fmt.Errorf("--pg-search requires --use-postgresql (which makes sense, really).")
+			log.Println(err)
+			os.Exit(1)
+		}
+		Config.PgSearch = opts.PgSearch
+	}
+
 	if Config.DataStoreFile != "" && (Config.UseMySQL || Config.UsePostgreSQL) {
 		err := fmt.Errorf("The MySQL or Postgres and data store options may not be specified together.")
 		log.Println(err)
@@ -271,7 +305,7 @@ func ParseConfigOptions() error {
 		os.Exit(1)
 	}
 
-	if (Config.UseMySQL || Config.UsePostgreSQL) && Config.IndexFile == "" {
+	if (Config.UseMySQL || Config.UsePostgreSQL) && (Config.IndexFile == "" && !Config.PgSearch) {
 		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend.")
 		log.Println(err)
 		os.Exit(1)
@@ -303,23 +337,20 @@ func ParseConfigOptions() error {
 			Config.DebugLevel = lev
 		}
 	}
-	if Config.DebugLevel > 4 {
-		Config.DebugLevel = 4
+	if Config.DebugLevel > 5 {
+		Config.DebugLevel = 5
 	}
 
-	Config.DebugLevel = int(logger.LevelCritical) - Config.DebugLevel
+	Config.DebugLevel = int(logger.LevelFatal) - Config.DebugLevel
 	logger.SetLevel(logger.LogLevel(Config.DebugLevel))
-	debugLevel := map[int]string{0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical"}
+	debugLevel := map[int]string{0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical", 5: "fatal"}
 	log.Printf("Logging at %s level", debugLevel[Config.DebugLevel])
-	if Config.SysLog {
-		sl, err := logger.NewSysLogger("goiardi")
-		if err != nil {
-			log.Println(err.Error())
-			os.Exit(1)
-		}
-		logger.SetLogger(sl)
-	} else {
-		logger.SetLogger(logger.NewGoLogger())
+	// Tired of battling with syslog junk with the logger library. Deal
+	// with it ourselves.
+	lerr := setLogger(Config.SysLog)
+	if lerr != nil {
+		log.Println(lerr.Error())
+		os.Exit(1)
 	}
 
 	/* Database options */
@@ -342,17 +373,17 @@ func ParseConfigOptions() error {
 		Config.LocalFstoreDir = opts.LocalFstoreDir
 	}
 	if Config.LocalFstoreDir == "" && (Config.UseMySQL || Config.UsePostgreSQL) {
-		logger.Criticalf("local-filestore-dir must be set when running goiardi in SQL mode")
+		logger.Fatalf("local-filestore-dir must be set when running goiardi in SQL mode")
 		os.Exit(1)
 	}
 	if Config.LocalFstoreDir != "" {
 		finfo, ferr := os.Stat(Config.LocalFstoreDir)
 		if ferr != nil {
-			logger.Criticalf("Error checking local filestore dir: %s", ferr.Error())
+			logger.Fatalf("Error checking local filestore dir: %s", ferr.Error())
 			os.Exit(1)
 		}
 		if !finfo.IsDir() {
-			logger.Criticalf("Local filestore dir %s is not a directory", Config.LocalFstoreDir)
+			logger.Fatalf("Local filestore dir %s is not a directory", Config.LocalFstoreDir)
 			os.Exit(1)
 		}
 	}
@@ -380,11 +411,13 @@ func ParseConfigOptions() error {
 		}
 	}
 
-	Config.Ipaddress = opts.Ipaddress
+	if opts.Ipaddress != "" {
+		Config.Ipaddress = opts.Ipaddress
+	}
 	if Config.Ipaddress != "" {
 		ip := net.ParseIP(Config.Ipaddress)
 		if ip == nil {
-			logger.Criticalf("IP address '%s' is not valid", Config.Ipaddress)
+			logger.Fatalf("IP address '%s' is not valid", Config.Ipaddress)
 			os.Exit(1)
 		}
 	}
@@ -394,6 +427,13 @@ func ParseConfigOptions() error {
 	}
 	if Config.Port == 0 {
 		Config.Port = 4545
+	}
+
+	if opts.ProxyPort != 0 {
+		Config.ProxyPort = opts.ProxyPort
+	}
+	if Config.ProxyPort == 0 {
+		Config.ProxyPort = Config.Port
 	}
 
 	if opts.UseSSL {
@@ -416,7 +456,7 @@ func ParseConfigOptions() error {
 	}
 	if Config.UseSSL {
 		if Config.SSLCert == "" || Config.SSLKey == "" {
-			logger.Criticalf("SSL mode requires specifying both a certificate and a key file.")
+			logger.Fatalf("SSL mode requires specifying both a certificate and a key file.")
 			os.Exit(1)
 		}
 		/* If the SSL cert and key are not absolute files, join them
@@ -435,12 +475,12 @@ func ParseConfigOptions() error {
 	if Config.TimeSlew != "" {
 		d, derr := time.ParseDuration(Config.TimeSlew)
 		if derr != nil {
-			logger.Criticalf("Error parsing time-slew: %s", derr.Error())
+			logger.Fatalf("Error parsing time-slew: %s", derr.Error())
 			os.Exit(1)
 		}
 		Config.TimeSlewDur = d
 	} else {
-		Config.TimeSlewDur, _ = time.ParseDuration("15m")
+		Config.TimeSlewDur, _ = time.ParseDuration(DefaultTimeSlew)
 	}
 
 	if opts.UseAuth {
@@ -506,13 +546,13 @@ func ParseConfigOptions() error {
 		Config.SerfEventAnnounce = opts.SerfEventAnnounce
 	}
 	if Config.SerfEventAnnounce && !Config.UseSerf {
-		logger.Criticalf("--serf-event-announce requires --use-serf")
+		logger.Fatalf("--serf-event-announce requires --use-serf")
 		os.Exit(1)
 	}
 
 	if opts.UseShovey {
 		if !Config.UseSerf {
-			logger.Criticalf("--use-shovey requires --use-serf to be enabled")
+			logger.Fatalf("--use-shovey requires --use-serf to be enabled")
 			os.Exit(1)
 		}
 		Config.UseShovey = opts.UseShovey
@@ -533,27 +573,41 @@ func ParseConfigOptions() error {
 		}
 		privfp, err := os.Open(Config.SignPrivKey)
 		if err != nil {
-			logger.Criticalf("Private key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPrivKey)
+			logger.Fatalf("Private key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPrivKey)
 			os.Exit(1)
 		}
 		privPem, err := ioutil.ReadAll(privfp)
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Fatalf(err.Error())
 			os.Exit(1)
 		}
 		privBlock, _ := pem.Decode(privPem)
 		if privBlock == nil {
-			logger.Criticalf("Invalid block size for private key for shovey")
+			logger.Fatalf("Invalid block size for private key for shovey")
 			os.Exit(1)
 		}
 		privKey, err := x509.ParsePKCS1PrivateKey(privBlock.Bytes)
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Fatalf(err.Error())
 			os.Exit(1)
 		}
 		Key.Lock()
 		defer Key.Unlock()
 		Key.PrivKey = privKey
+	}
+
+	if opts.DotSearch {
+		Config.DotSearch = opts.DotSearch
+	} else if Config.PgSearch {
+		Config.DotSearch = true
+	}
+	if Config.DotSearch {
+		if opts.ConvertSearch {
+			Config.ConvertSearch = opts.ConvertSearch
+		}
+	}
+	if Config.IndexFile != "" && Config.PgSearch {
+		logger.Infof("Specifying an index file for search while using the postgres search isn't useful.")
 	}
 
 	return nil
@@ -567,10 +621,10 @@ func ListenAddr() string {
 
 // ServerHostname returns the hostname and port goiardi is configured to use.
 func ServerHostname() string {
-	if !(Config.Port == 80 || Config.Port == 443) {
-		return net.JoinHostPort(Config.Hostname, strconv.Itoa(Config.Port))
+	if !(Config.ProxyPort == 80 || Config.ProxyPort == 443) {
+		return net.JoinHostPort(Config.ProxyHostname, strconv.Itoa(Config.ProxyPort))
 	}
-	return Config.Hostname
+	return Config.ProxyHostname
 }
 
 // ServerBaseURL returns the base scheme+hostname portion of a goiardi URL.

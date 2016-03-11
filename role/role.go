@@ -219,6 +219,28 @@ func Get(org *organization.Organization, roleName string) (*Role, util.Gerror) {
 	return role, nil
 }
 
+// GetMulti gets multiple roles from a slice of role names.
+func GetMulti(org *organization.Organization, roleNames []string) ([]*Role, util.Gerror) {
+	var roles []*Role
+	if config.UsingDB() {
+		var err error
+		roles, err = getMultiSQL(roleNames)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, util.CastErr(err)
+		}
+	} else {
+		roles = make([]*Role, 0, len(roleNames))
+		for _, r := range roleNames {
+			ro, _ := Get(org, r)
+			if ro != nil {
+				roles = append(roles, ro)
+			}
+		}
+	}
+
+	return roles, nil
+}
+
 // Save the role.
 func (r *Role) Save() util.Gerror {
 	if config.Config.UseMySQL {
@@ -297,10 +319,8 @@ func (r *Role) Index() string {
 }
 
 // Flatten a role so it's suitable for indexing.
-func (r *Role) Flatten() []string {
-	flatten := util.FlattenObj(r)
-	indexified := util.Indexify(flatten)
-	return indexified
+func (r *Role) Flatten() map[string]interface{} {
+	return util.FlattenObj(r)
 }
 
 // AllRoles returns all the roles on the server

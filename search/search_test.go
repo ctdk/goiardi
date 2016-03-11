@@ -20,8 +20,10 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
+	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
@@ -71,6 +73,7 @@ func orgInit() int {
 }
 
 func makeSearchItems() int {
+	indexer.Initialize(config.Config)
 	/* Gotta populate the search index */
 	nodes := make([]*node.Node, 4)
 	roles := make([]*role.Role, 4)
@@ -83,8 +86,14 @@ func makeSearchItems() int {
 	gob.Register(new(client.Client))
 	gob.Register(new(databag.DataBag))
 
+	// circleci is sometimes weird about the index having everything. This
+	// *never* comes up locally. ??? Could possibly be because the indexer
+	// hasn't had a chance to finish indexing?
+	reindexObjs := make([]indexer.Indexable, 0, 4*5)
 	for i := 0; i < 4; i++ {
 		nodes[i], _ = node.New(org, fmt.Sprintf("node%d", i))
+		nodes[i].Default["baz"] = fmt.Sprintf("borb")
+		nodes[i].Default["blurg"] = fmt.Sprintf("b%d", i)
 		nodes[i].Save()
 		roles[i], _ = role.New(org, fmt.Sprintf("role%d", i))
 		roles[i].Save()
@@ -98,6 +107,14 @@ func makeSearchItems() int {
 		dbi["id"] = fmt.Sprintf("dbi%d", i)
 		dbi["foo"] = fmt.Sprintf("dbag_item_%d", i)
 		dbags[i].NewDBItem(dbi)
+		reindexObjs = append(reindexObjs, nodes[i])
+		reindexObjs = append(reindexObjs, roles[i])
+		reindexObjs = append(reindexObjs, envs[i])
+		reindexObjs = append(reindexObjs, clients[i])
+		dbis, _ := dbags[i].AllDBItems()
+		for _, d := range dbis {
+			reindexObjs = append(reindexObjs, d)
+		}
 	}
 	node1 = nodes[0]
 	node2 = nodes[1]
@@ -120,6 +137,11 @@ func makeSearchItems() int {
 	dbag3 = dbags[2]
 	dbag4 = dbags[3]
 
+	// Let the indexing functions catch up. This has not been a problem in
+	// The Real World™ (famous last words), but it's *definitely* a problem
+	// when running go test with GOMAXPROCS > 1.
+	time.Sleep(1 * time.Second)
+
 	/* Make this function return something so the compiler's happy building
 	 * the tests. */
 	return 1
@@ -127,6 +149,8 @@ func makeSearchItems() int {
 
 var zz = orgInit()
 var v = makeSearchItems()
+
+var searcher = &TrieSearch{}
 
 func TestFoo(t *testing.T) {
 	return
@@ -137,70 +161,105 @@ func TestFoo(t *testing.T) {
  */
 
 func TestSearchNode(t *testing.T) {
-	n, _ := Search(org, "node", "name:node1")
-	if n[0].(*node.Node).Name != "node1" {
+	n, _ := searcher.Search(org, "node", "name:node1", 1000, "id ASC", 0, nil)
+	if len(n) == 0 || n[0]["name"] != "node1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchNodeAll(t *testing.T) {
-	n, _ := Search(org, "node", "*:*")
+	n, _ := searcher.Search(org, "node", "*:*", 1000, "id ASC", 0, nil)
 	if len(n) != 4 {
-		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
+		t.Errorf("Incorrect number of items returned, expected 4, got %d :: %v", len(n), n)
+	}
+}
+
+func TestSearchNodeFalse(t *testing.T) {
+	n, _ := searcher.Search(org, "node", "foo:bar AND NOT foo:bar", 1000, "id ASC", 0, nil)
+	if len(n) != 0 {
+		t.Errorf("Incorrect number of items returned, expected 0, got %d", len(n))
+	}
+}
+
+func TestSearchNodeAttr(t *testing.T) {
+	n, _ := searcher.Search(org, "node", "name:node1 AND NOT baz:urb", 1000, "id ASC", 0, nil)
+	if len(n) != 1 {
+		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(n))
+	}
+}
+
+func TestSearchNodeAttrExists(t *testing.T) {
+	n, _ := searcher.Search(org, "node", "name:node1 AND NOT baz:borb", 1000, "id ASC", 0, nil)
+	if len(n) != 0 {
+		t.Errorf("Incorrect number of items returned, expected 0, got %d", len(n))
+	}
+}
+
+func TestSearchNodeAttrAndExists(t *testing.T) {
+	n, _ := searcher.Search(org, "node", "name:node1 AND baz:borb", 1000, "id ASC", 0, nil)
+	if len(n) != 1 {
+		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(n))
+	}
+}
+
+func TestSearchNodeAttrAndNotExists(t *testing.T) {
+	n, _ := searcher.Search(org, "node", "name:node1 AND baz:urb", 1000, "id ASC", 0, nil)
+	if len(n) != 0 {
+		t.Errorf("Incorrect number of items returned, expected 0, got %d", len(n))
 	}
 }
 
 func TestSearchRole(t *testing.T) {
-	r, _ := Search(org, "role", "name:role1")
-	if r[0].(*role.Role).Name != "role1" {
+	r, _ := searcher.Search(org, "role", "name:role1", 1000, "id ASC", 0, nil)
+	if len(r) == 0 || r[0]["name"] != "role1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchRoleAll(t *testing.T) {
-	n, _ := Search(org, "role", "*:*")
+	n, _ := searcher.Search(org, "role", "*:*", 1000, "id ASC", 0, nil)
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
 func TestSearchEnv(t *testing.T) {
-	e, _ := Search(org, "environment", "name:env1")
-	if e[0].(*environment.ChefEnvironment).Name != "env1" {
+	e, _ := searcher.Search(org, "environment", "name:env1", 1000, "id ASC", 0, nil)
+	if len(e) == 0 || e[0]["name"] != "env1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchEnvAll(t *testing.T) {
-	n, _ := Search(org, "environment", "*:*")
+	n, _ := searcher.Search(org, "environment", "*:*", 1000, "id ASC", 0, nil)
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
 func TestSearchClient(t *testing.T) {
-	c, _ := Search(org, "client", "name:client1")
-	if c[0].(*client.Client).Name != "client1" {
+	c, _ := searcher.Search(org, "client", "name:client1", 1000, "id ASC", 0, nil)
+	if len(c) == 0 || c[0]["name"] != "client1" {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchClientAll(t *testing.T) {
-	n, _ := Search(org, "client", "*:*")
+	n, _ := searcher.Search(org, "client", "*:*", 1000, "id ASC", 0, nil)
 	if len(n) != 4 {
 		t.Errorf("Incorrect number of items returned, expected 4, got %d", len(n))
 	}
 }
 
 func TestSearchDbag(t *testing.T) {
-	d, _ := Search(org, "databag1", "foo:dbag_item_1")
+	d, _ := searcher.Search(org, "databag1", "foo:dbag_item_1", 1000, "id ASC", 0, nil)
 	if len(d) == 0 {
 		t.Errorf("nothing returned from search")
 	}
 }
 
 func TestSearchDbagAll(t *testing.T) {
-	d, _ := Search(org, "databag1", "*:*")
+	d, _ := searcher.Search(org, "databag1", "*:*", 1000, "id ASC", 0, nil)
 	if len(d) != 1 {
 		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(d))
 	}
@@ -218,19 +277,19 @@ func TestSecondOrg(t *testing.T) {
 	}
 	snode, _ := node.New(sorg, "snode1")
 	snode.Save()
-	n, _ := Search(sorg, "node", "*:*")
+	n, _ := searcher.Search(sorg, "node", "*:*", 1000, "id ASC", 0, nil)
 	if len(n) != 1 {
 		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(n))
 	}
-	n, _ = Search(sorg, "node", "name:snode1")
+	n, _ = searcher.Search(sorg, "node", "name:snode1", 1000, "id ASC", 0, nil)
 	if len(n) != 1 {
 		t.Errorf("Incorrect number of items returned with search by name, expected 1, got %d", len(n))
 	}
-	n, _ = Search(org, "node", "name:snode1")
+	n, _ = searcher.Search(org, "node", "name:snode1", 1000, "id ASC", 0, nil)
 	if len(n) != 0 {
 		t.Errorf("searching the main test org for snode1 unexpectedly returned a result")
 	}
-	n, _ = Search(sorg, "node", "name:node1")
+	n, _ = searcher.Search(sorg, "node", "name:node1", 1000, "id ASC", 0, nil)
 	if len(n) != 0 {
 		t.Errorf("searching the second test org for node1 unexpectedly returned a result")
 	}
@@ -256,15 +315,15 @@ func TestEmbiggenSearch(t *testing.T) {
 		d.NewDBItem(dbi)
 	}
 	time.Sleep(1 * time.Second)
-	n, _ := Search(orgName, "client", "*:*")
+	n, _ := searcher.Search(org, "client", "*:*", 1000, "id ASC", 0, nil)
 	if len(n) != 35000 {
 		t.Errorf("Incorrect number of items returned, expected 500, got %d", len(n))
 	}
-	c, _ := Search(orgName, "node", "*:*")
+	c, _ := searcher.Search(org, "node", "*:*", 1000, "id ASC", 0, nil)
 	if len(c) != 35000 {
 		t.Errorf("Incorrect number of nodes returned, expected 500, got %d", len(n))
 	}
-	e, _ := Search(orgName, "environment", "name:env11666")
+	e, _ := searcher.Search(org, "environment", "name:env11666", 1000, "id ASC", 0, nil)
 	if e[0].(*environment.ChefEnvironment).Name != "env11666" {
 		t.Errorf("nothing returned from search")
 	}

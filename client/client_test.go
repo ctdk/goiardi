@@ -22,6 +22,8 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/indexer"
 	"testing"
 )
 
@@ -31,7 +33,9 @@ func TestGobEncodeDecode(t *testing.T) {
 	gob.Register(new(organization.Organization))
 	org, _ = organization.New("default", "boo")
 	org.Save()
+	indexer.Initialize(config.Config)
 	c, _ := New(org, "foo")
+
 	saved := new(bytes.Buffer)
 	var err error
 	enc := gob.NewEncoder(saved)

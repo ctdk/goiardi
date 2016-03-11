@@ -22,6 +22,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/gorilla/mux"
@@ -64,6 +65,7 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, fileErr.Error(), http.StatusOK)
 			return
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, config.Config.ObjMaxSize)
 		fileStore, err := filestore.New(org.Name, chksum, r.Body, r.ContentLength)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)

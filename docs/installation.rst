@@ -3,8 +3,9 @@
 Installation
 ============
 
+To install goiardi from source:
 
-1. Install go. (http://golang.org/doc/install.html) You will need to use at least go 1.3 to compile goiardi, but go 1.4 works as well and is recommended.
+1. Install go. (http://golang.org/doc/install.html) You will need to use at least go 1.3 to compile goiardi, but go 1.4 and 1.5 work as well. At this time goiardi can be built with the latest version of Go, and this is recommended. Immediately after a minor release, of course, caution may be warranted.
 
 2. Make sure your ``$GOROOT`` and ``$PATH`` are set up correctly per the Go installation instructions.
 
@@ -39,6 +40,14 @@ Currently available command line and config file options::
                            reported by the kernel.
     -P, --port=            Port to listen on. If port is set to 443, SSL will be
                            activated. (default: 4545)
+    -Z, --proxy-hostname=  Hostname to report to clients if this goiardi
+                           server is behind a proxy using a different
+                           hostname. See also --proxy-port. Can be used with
+                           --proxy-port or alone, or not at all.
+    -W, --proxy-port=      Port to report to clients if this goiardi server
+                           is behind a proxy using a different port than the
+                           port goiardi is listening on. Can be used with
+                           --proxy-hostname or alone, or not at all.
     -i, --index-file=      File to save search index data to.
     -D, --data-file=       File to save data store data to.
     -F, --freeze-interval= Interval in seconds to freeze in-memory data
@@ -118,12 +127,9 @@ Currently available command line and config file options::
 
 Options specified on the command line override options in the config file.
 
-For more documentation on Chef, see (http://docs.opscode.com).
+For more documentation on Chef, see (http://docs.chef.io).
 
-If goiardi is not running in use-auth mode, it does not actually care about .pem files at all. You still need to have one to keep knife and chef-client happy. It's like chef-zero in that regard.
+Binaries and Packages
+=====================
 
-If goiardi is running in use-auth mode, then proper keys are needed. When goiardi is started, if the chef-webui and chef-validator clients, and the admin user, are not present, it will create new keys in the ``--conf-root`` directory. Use them as you would normally for validating clients, performing tasks with the admin user, or using chef-webui if webui will run in front of goiardi.
-
-In auth mode, goiardi supports versions 1.0, 1.1, and 1.2 of the Chef authentication protocol.
-
-*Note:* The admin user, when created on startup, does not have a password. This prevents logging in to the webui with the admin user, so a password will have to be set for admin before doing so.
+There are other options for installing goiardi, in case you don't want to build it from scratch. Binaries for several platforms are provided with each release, and there are .debs available as well at https://packagecloud.io/ct/goiardi. At the moment packages are only being built for Debian wheezy, Ubuntu 14.04, and raspbian (which is under Debian wheezy) for Raspberry Pi and Raspberry Pi 2. Other versions of Debian, Ubuntu, CentOS and friends, and perhaps others are on the roadmap.

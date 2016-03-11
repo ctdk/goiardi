@@ -31,13 +31,14 @@ import (
 	"crypto/md5"
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
 	"io"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/tideland/golib/logger"
 )
 
 /* Local filestorage struct. Add fields as needed. */
@@ -126,6 +127,12 @@ func Get(orgName string, chksum string) (*FileStore, error) {
 			return nil, err
 		}
 	}
+
+	if filestore.Data == nil {
+		d := make([]byte, 0)
+		filestore.Data = &d
+	}
+
 	return filestore, nil
 }
 

@@ -19,7 +19,11 @@ package search
 
 import (
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+	"reflect"
+	"sort"
+	"strings"
+	"sync"
+
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
@@ -27,26 +31,76 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
-	"net/url"
+	"github.com/ctdk/goiardi/util"
+	"github.com/tideland/golib/logger"
 )
+
+// Searcher is an interface that any search backend needs to implement. It's
+// up to the Searcher to use whatever backend it wants to return the desired
+// results.
+type Searcher interface {
+	Search(*organization.Organization, string, string, int, string, int, map[string]interface{}) ([]map[string]interface{}, error)
+	GetEndpoints(*organization.Organization) []string
+}
+
+type results struct {
+	res     []map[string]interface{}
+	sortKey string
+}
+
+func (r results) Len() int      { return len(r.res) }
+func (r results) Swap(i, j int) { r.res[i], r.res[j] = r.res[j], r.res[i] }
+func (r results) Less(i, j int) bool {
+	ibase := r.res[i][r.sortKey]
+	jbase := r.res[j][r.sortKey]
+	ival := reflect.ValueOf(ibase)
+	jval := reflect.ValueOf(jbase)
+	if (!ival.IsValid() && !jval.IsValid()) || ival.IsValid() && !jval.IsValid() {
+		return true
+	} else if !ival.IsValid() && jval.IsValid() {
+		return false
+	}
+	// don't try and compare different types for now. If this ever becomes
+	// an issue in practice, though, it should be revisited
+	if ival.Type() == jval.Type() {
+		switch ibase.(type) {
+		case int, int8, int32, int64:
+			return ival.Int() < jval.Int()
+		case uint, uint8, uint32, uint64:
+			return ival.Uint() < jval.Uint()
+		case float32, float64:
+			return ival.Float() < jval.Float()
+		case string:
+			return ival.String() < jval.String()
+		}
+	}
+
+	return false
+}
 
 // SolrQuery holds a parsed query and query chain to run against the index. It's
 // called SolrQuery because the search queries use a subset of Solr's syntax.
 type SolrQuery struct {
 	queryChain Queryable
 	idxName    string
-	docs       map[string]*indexer.IdxDoc
+	docs       map[string]indexer.Document
 	org        *organization.Organization
+}
+
+var m *sync.Mutex
+
+func init() {
+	m = new(sync.Mutex)
+}
+
+type TrieSearch struct {
 }
 
 // Search parses the given query string and search the given index for any
 // matching results.
-func Search(org *organization.Organization, idx string, q string) ([]indexer.Indexable, error) {
-	/* Eventually we'll want more prep. To start, look right in the index */
-	query, qerr := url.QueryUnescape(q)
-	if qerr != nil {
-		return nil, qerr
-	}
+func (t *TrieSearch) Search(org *organization.Organization, idx string, query string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
+	m.Lock()
+	defer m.Unlock()
 	qq := &Tokenizer{Buffer: query}
 	qq.Init()
 	if err := qq.Parse(); err != nil {
@@ -54,23 +108,74 @@ func Search(org *organization.Organization, idx string, q string) ([]indexer.Ind
 	}
 	qq.Execute()
 	qchain := qq.Evaluate()
-	d := make(map[string]*indexer.IdxDoc)
+	d := make(map[string]indexer.Document)
 	solrQ := &SolrQuery{queryChain: qchain, idxName: idx, docs: d, org: org}
 
 	_, err := solrQ.execute()
 	if err != nil {
 		return nil, err
 	}
-	results := solrQ.results()
-	objs := getResults(org, idx, results)
-	return objs, nil
+	qresults := solrQ.results()
+	objs := getResults(org, idx, qresults)
+	res := make([]map[string]interface{}, len(objs))
+	for i, r := range objs {
+		switch r := r.(type) {
+		case *client.Client:
+			jc := map[string]interface{}{
+				"name":       r.Name,
+				"chef_type":  r.ChefType,
+				"json_class": r.JSONClass,
+				"admin":      r.Admin,
+				"public_key": r.PublicKey(),
+				"validator":  r.Validator,
+			}
+			res[i] = jc
+		default:
+			res[i] = util.MapifyObject(r)
+		}
+	}
+
+	/* If we're doing partial search, tease out the fields we want. */
+	if partialData != nil {
+		res, err = formatPartials(res, objs, partialData)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// and at long last, sort
+	ss := strings.Split(sortOrder, " ")
+	sortKey := ss[0]
+	if sortKey == "id" {
+		sortKey = "name"
+	}
+	var ordering string
+	if len(ss) > 1 {
+		ordering = strings.ToLower(ss[1])
+	} else {
+		ordering = "asc"
+	}
+	sortResults := results{res, sortKey}
+	if ordering == "desc" {
+		sort.Sort(sort.Reverse(sortResults))
+	} else {
+		sort.Sort(sortResults)
+	}
+	res = sortResults.res
+
+	end := start + rows
+	if end > len(res) {
+		end = len(res)
+	}
+	res = res[start:end]
+	return res, nil
 }
 
-func (sq *SolrQuery) execute() (map[string]*indexer.IdxDoc, error) {
+func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 	s := sq.queryChain
 	curOp := OpNotAnOp
 	for s != nil {
-		var r map[string]*indexer.IdxDoc
+		var r map[string]indexer.Document
 		var err error
 		switch c := s.(type) {
 		case *SubQuery:
@@ -80,29 +185,30 @@ func (sq *SolrQuery) execute() (map[string]*indexer.IdxDoc, error) {
 				return nil, err
 			}
 			s = nend
-			d := make(map[string]*indexer.IdxDoc)
+			var d map[string]indexer.Document
+			if curOp == OpBinAnd {
+				d = sq.docs
+			} else {
+				d = make(map[string]indexer.Document)
+			}
 			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d, org: sq.org}
 			r, err = nsq.execute()
 		default:
-			r, err = s.SearchIndex(sq.org.Name, sq.idxName)
+			if curOp == OpBinAnd {
+				r, err = s.SearchResults(sq.docs)
+			} else {
+				r, err = s.SearchIndex(sq.org.Name, sq.idxName)
+			}
 		}
 		if err != nil {
 			return nil, err
 		}
-		if len(sq.docs) == 0 { // nothing in place yet
+		if len(sq.docs) == 0 || curOp == OpBinAnd { // nothing in place yet
 			sq.docs = r
 		} else if curOp == OpBinOr {
 			for k, v := range r {
 				sq.docs[k] = v
 			}
-		} else if curOp == OpBinAnd {
-			newRes := make(map[string]*indexer.IdxDoc, len(sq.docs)+len(r))
-			for k, v := range sq.docs {
-				if _, found := r[k]; found {
-					newRes[k] = v
-				}
-			}
-			sq.docs = newRes
 		} else {
 			logger.Debugf("Somehow we got to what should have been an impossible state with search")
 		}
@@ -155,52 +261,170 @@ func (sq *SolrQuery) results() []string {
 // GetEndpoints gets a list from the indexer of all the endpoints available to
 // search, namely the defaults (node, role, client, environment) and any data
 // bags.
-func GetEndpoints(org *organization.Organization) []string {
-	endpoints := indexer.Endpoints(org.Name)
+func (t *TrieSearch) GetEndpoints(org *organization.Organization) []string {
+	// TODO: deal with possible errors
+	endpoints, _ := indexer.Endpoints(org.Name)
 	return endpoints
 }
 
 func getResults(org *organization.Organization, variety string, toGet []string) []indexer.Indexable {
-	results := make([]indexer.Indexable, 0, len(toGet))
-	switch variety {
-	case "node":
-		for _, n := range toGet {
-			if node, _ := node.Get(org, n); node != nil {
-				results = append(results, node)
+	var results []indexer.Indexable
+	if len(toGet) > 0 {
+		switch variety {
+		case "node":
+			ns, _ := node.GetMulti(org, toGet)
+			// ....
+			results = make([]indexer.Indexable, 0, len(ns))
+			for _, n := range ns {
+				results = append(results, n)
 			}
-		}
-	case "role":
-		for _, r := range toGet {
-			if role, _ := role.Get(org, r); role != nil {
-				results = append(results, role)
+		case "role":
+			rs, _ := role.GetMulti(org, toGet)
+			results = make([]indexer.Indexable, 0, len(rs))
+			for _, r := range rs {
+				results = append(results, r)
 			}
-		}
-	case "client":
-		for _, c := range toGet {
-			if client, _ := client.Get(org, c); client != nil {
-				results = append(results, client)
+		case "client":
+			cs, _ := client.GetMulti(org, toGet)
+			results = make([]indexer.Indexable, 0, len(cs))
+			for _, c := range cs {
+				results = append(results, c)
 			}
-		}
-	case "environment":
-		for _, e := range toGet {
-			if environment, _ := environment.Get(org, e); environment != nil {
-				results = append(results, environment)
+		case "environment":
+			es, _ := environment.GetMulti(org, toGet)
+			results = make([]indexer.Indexable, 0, len(es))
+			for _, e := range es {
+				results = append(results, e)
 			}
-		}
-	default: // It's a data bag
-		/* These may require further processing later. */
-		dbag, _ := databag.Get(org, variety)
-		if dbag != nil {
-			for _, k := range toGet {
-				dbi, err := dbag.GetDBItem(k)
-				if err != nil {
-					// at least log the error for
-					// now
-					logger.Errorf(err.Error())
+		default: // It's a data bag
+			/* These may require further processing later. */
+			dbag, _ := databag.Get(org, variety)
+			if dbag != nil {
+				ds, _ := dbag.GetMultiDBItems(toGet)
+				results = make([]indexer.Indexable, 0, len(ds))
+				for _, d := range ds {
+					results = append(results, d)
 				}
-				results = append(results, dbi)
 			}
 		}
 	}
 	return results
+}
+
+func partialSearchFormat(results []map[string]interface{}, partialFormat map[string]interface{}) ([]map[string]interface{}, error) {
+	/* regularize partial search keys */
+	psearchKeys := make(map[string][]string, len(partialFormat))
+	for k, v := range partialFormat {
+		switch v := v.(type) {
+		case []interface{}:
+			psearchKeys[k] = make([]string, len(v))
+			for i, j := range v {
+				switch j := j.(type) {
+				case string:
+					psearchKeys[k][i] = j
+				default:
+					err := fmt.Errorf("Partial search key %s badly formatted: %T %v", k, j, j)
+					return nil, err
+				}
+			}
+		case []string:
+			psearchKeys[k] = make([]string, len(v))
+			for i, j := range v {
+				psearchKeys[k][i] = j
+			}
+		default:
+			err := fmt.Errorf("Partial search key %s badly formatted: %T %v", k, v, v)
+			return nil, err
+		}
+	}
+	newResults := make([]map[string]interface{}, len(results))
+
+	for i, j := range results {
+		newResults[i] = make(map[string]interface{})
+		for key, vals := range psearchKeys {
+			var pval interface{}
+			/* The first key can either be top or first level.
+			 * Annoying, but that's how it is. */
+			if len(vals) > 0 {
+				if step, found := j[vals[0]]; found {
+					if len(vals) > 1 {
+						pval = walk(step, vals[1:])
+					} else {
+						pval = step
+					}
+				} else {
+					if len(vals) > 0 {
+						// bear in mind precedence. We need to
+						// overwrite later values with earlier
+						// ones.
+						keyRange := []string{"raw_data", "default", "default_attributes", "normal", "override", "override_attributes", "automatic"}
+						for _, r := range keyRange {
+							tval := walk(j[r], vals[0:])
+							if tval != nil {
+								switch pv := pval.(type) {
+								case map[string]interface{}:
+									// only merge if tval is also a map[string]interface{}
+									switch tval := tval.(type) {
+									case map[string]interface{}:
+										for g, h := range tval {
+											pv[g] = h
+										}
+										pval = pv
+									}
+								default:
+									pval = tval
+								}
+							}
+						}
+					}
+				}
+			}
+			newResults[i][key] = pval
+		}
+	}
+	return newResults, nil
+}
+
+func walk(v interface{}, keys []string) interface{} {
+	switch v := v.(type) {
+	case map[string]interface{}:
+		if _, found := v[keys[0]]; found {
+			if len(keys) > 1 {
+				return walk(v[keys[0]], keys[1:])
+			}
+			return v[keys[0]]
+		}
+		return nil
+	case map[string]string:
+		return v[keys[0]]
+	case map[string][]string:
+		return v[keys[0]]
+	default:
+		if len(keys) == 1 {
+			return v
+		}
+		return nil
+	}
+}
+
+func formatPartials(results []map[string]interface{}, objs []indexer.Indexable, partialData map[string]interface{}) ([]map[string]interface{}, error) {
+	var err error
+	results, err = partialSearchFormat(results, partialData)
+	if err != nil {
+		return nil, err
+	}
+	for x, z := range results {
+		tmpRes := make(map[string]interface{})
+		switch ro := objs[x].(type) {
+		case *databag.DataBagItem:
+			dbiURL := fmt.Sprintf("/data/%s/%s", ro.DataBagName, ro.RawData["id"].(string))
+			tmpRes["url"] = util.CustomURL(dbiURL)
+		default:
+			tmpRes["url"] = util.ObjURL(objs[x].(util.GoiardiObj))
+		}
+		tmpRes["data"] = z
+
+		results[x] = tmpRes
+	}
+	return results, nil
 }

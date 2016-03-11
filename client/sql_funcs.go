@@ -18,11 +18,13 @@ package client
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func checkForClientSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -67,7 +69,53 @@ func getClientSQL(name string) (*Client, error) {
 	return client, nil
 }
 
-func (c *Client) deleteSQL() util.Gerror {
+func getMultiSQL(clientNames []string) ([]*Client, error) {
+	var sqlStmt string
+	bind := make([]string, len(clientNames))
+
+	if config.Config.UseMySQL {
+		for i := range clientNames {
+			bind[i] = "?"
+		}
+		sqlStmt = fmt.Sprintf("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o on c.organization_id = o.id WHERE c.name in (%s)", strings.Join(bind, ", "))
+	} else if config.Config.UsePostgreSQL {
+		for i := range clientNames {
+			bind[i] = fmt.Sprintf("$%d", i+1)
+		}
+		sqlStmt = fmt.Sprintf("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE c.name in (%s)", strings.Join(bind, ", "))
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	nameArgs := make([]interface{}, len(clientNames))
+	for i, v := range clientNames {
+		nameArgs[i] = v
+	}
+	rows, err := stmt.Query(nameArgs...)
+	if err != nil {
+		return nil, err
+	}
+	clients := make([]*Client, 0, len(clientNames))
+	for rows.Next() {
+		c := new(Client)
+		err = c.fillClientFromSQL(rows)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+		clients = append(clients, c)
+	}
+
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return clients, nil
+}
+
+func (c *Client) deleteSQL() error {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.CastErr(err)

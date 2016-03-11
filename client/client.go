@@ -162,9 +162,31 @@ func Get(org *organization.Organization, clientname string) (*Client, util.Gerro
 	return client, nil
 }
 
+// GetMulti gets multiple clients from a given slice of client names.
+func GetMulti(org *organization.Organization, clientNames []string) ([]*Client, util.Gerror) {
+	var clients []*Client
+	if config.UsingDB() {
+		var err error
+		clients, err = getMultiSQL(clientNames)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, util.CastErr(err)
+		}
+	} else {
+		clients = make([]*Client, 0, len(clientNames))
+		for _, c := range clientNames {
+			co, _ := Get(org, c)
+			if co != nil {
+				clients = append(clients, co)
+			}
+		}
+	}
+
+	return clients, nil
+}
+
 // Save the client. If a user with the same name as the client exists, returns
 // an error. Additionally, if running with MySQL it will return any DB error.
-func (c *Client) Save() error {
+func (c *Client) Save() util.Gerror {
 	if config.UsingDB() {
 		var err error
 		if config.Config.UseMySQL {
@@ -173,7 +195,7 @@ func (c *Client) Save() error {
 			err = c.savePostgreSQL()
 		}
 		if err != nil {
-			return err
+			return util.CastErr(err)
 		}
 	} else {
 		if err := chkInMemUser(c.Name); err != nil {
@@ -199,7 +221,7 @@ func (c *Client) Delete() util.Gerror {
 	if config.UsingDB() {
 		err := c.deleteSQL()
 		if err != nil {
-			return err
+			return util.CastErr(err)
 		}
 	} else {
 		ds := datastore.New()
@@ -315,7 +337,7 @@ func (c *Client) UpdateFromJSON(jsonActor map[string]interface{}) util.Gerror {
 
 	/* Validations. */
 	/* Invalid top level elements */
-	validElements := []string{"name", "json_class", "chef_type", "validator", "org_name", "orgname", "public_key", "private_key", "admin", "certificate", "password", "node_name"}
+	validElements := []string{"name", "json_class", "chef_type", "validator", "org_name", "orgname", "public_key", "private_key", "admin", "certificate", "password", "node_name", "clientname"}
 ValidElem:
 	for k := range jsonActor {
 		for _, i := range validElements {
@@ -470,10 +492,8 @@ func (c *Client) Index() string {
 }
 
 // Flatten out the client so it's suitable for indexing.
-func (c *Client) Flatten() []string {
-	flatten := util.FlattenObj(c.flatExport())
-	indexified := util.Indexify(flatten)
-	return indexified
+func (c *Client) Flatten() map[string]interface{} {
+	return util.FlattenObj(c.flatExport())
 }
 
 /* Permission functions. Later role-based perms may be implemented, but for now
@@ -622,14 +642,15 @@ func ExportAllClients(org *organization.Organization) []interface{} {
 	return export
 }
 
-func chkInMemUser(name string) error {
+func chkInMemUser(name string) util.Gerror {
 	// TODO: Come back. This has to check for users *attached to this
 	// organization*, but it might be OK to have clients with the name name
 	// as users in other organizations.
-	var err error
+	var err util.Gerror
 	ds := datastore.New()
-	if _, found := ds.Get("users", name); found {
-		err = fmt.Errorf("a user named %s was found that would conflict with this client", name)
+	if _, found := ds.Get("user", name); found {
+		err = util.Errorf("a user named %s was found that would conflict with this client", name)
+		err.SetStatus(http.StatusConflict)
 	}
 	return err
 }

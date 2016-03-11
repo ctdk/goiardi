@@ -257,7 +257,7 @@ func ValidateCookbookMetadata(mdata interface{}) (map[string]interface{}, Gerror
 			err := Errorf("Field 'metadata.%s' invalid", v)
 			switch sv := mdata[v].(type) {
 			case string:
-				if v == "name" && !ValidateEnvName(sv) {
+				if v == "name" && !ValidateName(sv) {
 					return nil, err
 				}
 				_ = sv // no-op

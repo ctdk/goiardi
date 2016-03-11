@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/acl"
+
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/environment"
@@ -33,6 +34,7 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"strings"
+	"github.com/tideland/golib/logger"
 )
 
 func environmentHandler(w http.ResponseWriter, r *http.Request) {
@@ -297,7 +299,14 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 
 		env, err := environment.Get(org, envName)
 		if err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			var errMsg string
+			// bleh, stupid errors
+			if err.Status() == http.StatusNotFound && (op != "recipes" && op != "cookbooks") {
+				errMsg = fmt.Sprintf("environment '%s' not found", envName)
+			} else {
+				errMsg = err.Error()
+			}
+			jsonErrorReport(w, r, errMsg, err.Status())
 			return
 		}
 
@@ -336,9 +345,24 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, "POSTed JSON badly formed.", http.StatusMethodNotAllowed)
 				return
 			}
-			deps, err := cookbook.DependsCookbooks(org, cbVer["run_list"].([]string), env.CookbookVersions)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), http.StatusPreconditionFailed)
+			deps, derr := cookbook.DependsCookbooks(org, cbVer["run_list"].([]string), env.CookbookVersions)
+			if derr != nil {
+				switch derr := derr.(type) {
+				case *cookbook.DependsError:
+					// In 1.0.0-dev, there's a
+					// JSONErrorMapReport function in util.
+					// Use that when moving this forward
+					errMap := make(map[string][]map[string]interface{})
+					errMap["error"] = make([]map[string]interface{}, 1)
+					errMap["error"][0] = derr.ErrMap()
+					w.WriteHeader(http.StatusPreconditionFailed)
+					enc := json.NewEncoder(w)
+					if jerr := enc.Encode(&errMap); jerr != nil {
+						logger.Errorf(jerr.Error())
+					}
+				default:
+					jsonErrorReport(w, r, derr.Error(), http.StatusPreconditionFailed)
+				}
 				return
 			}
 			/* Need our own encoding here too. */

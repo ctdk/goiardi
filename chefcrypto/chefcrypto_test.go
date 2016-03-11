@@ -42,6 +42,17 @@ var goodPubKey = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMI
 
 var badPubKey = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApXXeTEd6gq6sziqYt76U\n3W0zT9oBQTdiImrLypUuMTZ6+DBwT4iVLvL/JRydI3tyNRV/S/JZxjPDhaKgnOjZ\ndSVpE9U4ewrWsgB2zzH5mox1LRWTeu8KU3qkuyOTk3qaF3NUejCkkHxKlolLyabRt\npwoahbroE+Mr4GoY+gTyo9GSzOKdVoc/PlR+99BDD8AKMm4L705DE1SBHxCRqxfy\n3VLgXfX4GjQKZjH1bDoWSbfaAVOllfB5EDib2IQE58PJwW2milG+XUBbxO0Ee95A\niLx+abdhmVyx6Mysc1Fk9u6VT18pysIi0VwV7SEYu666HfuRT0yEpMZMPb1hFH97\nyQIDAQAB\n-----END PUBLIC KEY-----"
 
+var oldPubKey = `-----BEGIN RSA PUBLIC KEY-----
+MIIBCgKCAQEA61BjmfXGEvWmegnBGSuS+rU9soUg2FnODva32D1AqhwdziwHINFa
+D1MVlcrYG6XRKfkcxnaXGfFDWHLEvNBSEVCgJjtHAGZIm5GL/KA86KDp/CwDFMSw
+luowcXwDwoyinmeOY9eKyh6aY72xJh7noLBBq1N0bWi1e2i+83txOCg4yV2oVXhB
+o8pYEJ8LT3el6Smxol3C1oFMVdwPgc0vTl25XucMcG/ALE/KNY6pqC2AQ6R2ERlV
+gPiUWOPatVkt7+Bs3h5Ramxh7XjBOXeulmCpGSynXNcpZ/06+vofGi/2MlpQZNhH
+Ao8eayMp6FcvNucIpUndo1X8dKMv3Y26ZQIDAQAB
+-----END RSA PUBLIC KEY-----`
+
+var oldLabelPubKey = "-----BEGIN RSA PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApXXeTEd6gq6sziqYt76U\n3W0zT9oBQTdiImrLypUuMTZ6+DBwT4iVLvL/JRydI3tyNRV/S/JZxjPDhaKgnOjZ\ndSVpE9U41DewgB2zzH5mox1LRWTeu8KU3qkuyOTk3qaF3NUejCkkHxKlolLyabRt\npLwaSfQUE+Mr4GoY+gTyo9GSzOKdVoc/PlR+99BDD8AKMm4L705DE1SBHxCRqxfy\n3VLgXfX4GjQKZjH1bDoWSbfaAVOllfB5EDib2IQE58PJwW2milG+XUBbxO0Ee95A\niLx+abdhmVyx6Mysc1Fk9u6VT18pysIi0VwV7SEYu691HfuRT0yEpMZMPb1hFH97\nyQIDAQAB\n-----END PUBLIC KEY-----"
+
 var onePubKey = "1"
 var realBadPubKey = "-----BEGIN PUBLIC KEY-----\nI'm bad to the bone\n-----END PUBLIC KEY-----"
 var arrPubKey = []string{}
@@ -72,6 +83,20 @@ func TestRealBadPubKey(t *testing.T) {
 	ok, _ := ValidatePublicKey(realBadPubKey)
 	if ok {
 		t.Errorf("Well-formed but bogus public key validated when it should not have.")
+	}
+}
+
+func TestOldPubKey(t *testing.T) {
+	ok, err := ValidatePublicKey(oldPubKey)
+	if !ok {
+		t.Errorf("Old-timey public key did not validate when it should have: %s", err.Error())
+	}
+}
+
+func TestOldLabeledPubKey(t *testing.T) {
+	ok, err := ValidatePublicKey(oldLabelPubKey)
+	if !ok {
+		t.Errorf("Public key (PKCS#8 but labeled with BEGIN RSA PUBLIC KEY) did not validate when it should have: %s", err.Error())
 	}
 }
 

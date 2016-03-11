@@ -32,6 +32,7 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
+
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -42,7 +43,7 @@ import (
 	"time"
 )
 
-// CheckHeader checks the signed headers sent by the client against the expecte
+// CheckHeader checks the signed headers sent by the client against the expected
 // result assembled from the request headers to verify their authorization.
 func CheckHeader(userID string, r *http.Request) util.Gerror {
 	pathArray := strings.Split(r.URL.Path[1:], "/")
@@ -61,6 +62,31 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 		return gerr
 	}
 
+	auerr := AuthenticateHeader(u.PublicKey(), config.Config.TimeSlewDur, r)
+	if auerr != nil {
+		return auerr
+	}
+
+	// check association last of all?
+	if org != nil && u.IsUser() && !u.IsAdmin() {
+		_, aerr := association.GetAssoc(u.(*user.User), org)
+		if aerr != nil {
+			return aerr
+		}
+	}
+	return nil
+}
+
+// AuthenticateHeader authenticates the headers against the provided public key.
+// In addition, this function supports providing a timeSlew, which is how much
+// difference there can be between the host clock and the time in the request
+// header.
+func AuthenticateHeader(publicKey string, timeSlew time.Duration, r *http.Request) util.Gerror {
+	// if timeSlew is zero use the default from the config package
+	if timeSlew == time.Duration(0) {
+		timeSlew, _ = time.ParseDuration(config.DefaultTimeSlew)
+	}
+
 	contentHash := r.Header.Get("X-OPS-CONTENT-HASH")
 	if contentHash == "" {
 		gerr := util.Errorf("no content hash provided")
@@ -75,7 +101,7 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 	}
 
 	// check the time stamp w/ allowed slew
-	tok, terr := checkTimeStamp(authTimestamp, config.Config.TimeSlewDur)
+	tok, terr := checkTimeStamp(authTimestamp, timeSlew)
 	if !tok {
 		return terr
 	}
@@ -129,34 +155,26 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 	headToCheck := assembleHeaderToCheck(r, chkHash, apiVer)
 
 	if apiVer == "1.2" {
-		chkerr = checkAuth12Headers(u, r, headToCheck, signedHeaders)
+		chkerr = checkAuth12Headers(publicKey, r, headToCheck, signedHeaders)
 	} else {
-		chkerr = checkAuthHeaders(u, r, headToCheck, signedHeaders)
+		chkerr = checkAuthHeaders(publicKey, r, headToCheck, signedHeaders)
 	}
 
 	if chkerr != nil {
 		return chkerr
 	}
 
-	// maybe check association last of all?
-	if org != nil && u.IsUser() && !u.IsAdmin() {
-		_, aerr := association.GetAssoc(u.(*user.User), org)
-		if aerr != nil {
-			return aerr
-		}
-	}
-
 	return nil
 }
 
-func checkAuth12Headers(user actor.Actor, r *http.Request, headToCheck, signedHeaders string) util.Gerror {
+func checkAuth12Headers(publicKey string, r *http.Request, headToCheck, signedHeaders string) util.Gerror {
 	sig, err := base64.StdEncoding.DecodeString(signedHeaders)
 	if err != nil {
 		gerr := util.CastErr(err)
 		return gerr
 	}
 	sigSha := sha1.Sum([]byte(headToCheck))
-	err = chefcrypto.Auth12HeaderVerify(user.PublicKey(), sigSha[:], sig)
+	err = chefcrypto.Auth12HeaderVerify(publicKey, sigSha[:], sig)
 	if err != nil {
 		gerr := util.CastErr(err)
 		gerr.SetStatus(http.StatusUnauthorized)
@@ -165,8 +183,8 @@ func checkAuth12Headers(user actor.Actor, r *http.Request, headToCheck, signedHe
 	return nil
 }
 
-func checkAuthHeaders(user actor.Actor, r *http.Request, headToCheck, signedHeaders string) util.Gerror {
-	decHead, berr := chefcrypto.HeaderDecrypt(user.PublicKey(), signedHeaders)
+func checkAuthHeaders(publicKey string, r *http.Request, headToCheck, signedHeaders string) util.Gerror {
+	decHead, berr := chefcrypto.HeaderDecrypt(publicKey, signedHeaders)
 
 	if berr != nil {
 		gerr := util.Errorf(berr.Error())

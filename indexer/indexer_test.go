@@ -18,6 +18,7 @@ package indexer
 
 import (
 	"fmt"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/util"
 	"io/ioutil"
 	"os"
@@ -32,6 +33,15 @@ type testObj struct {
 	OName   string                 `json:"org_name"`
 }
 
+var conf *config.Conf
+
+func init() {
+	conf = &config.Conf{}
+	idxTmpDir = idxTmpGen()
+	conf.IndexFile = fmt.Sprintf("%s/idx.bin", idxTmpDir)
+	Initialize(conf)
+}
+
 func (to *testObj) DocID() string {
 	return to.Name
 }
@@ -40,10 +50,9 @@ func (to *testObj) Index() string {
 	return "test_obj"
 }
 
-func (to *testObj) Flatten() []string {
+func (to *testObj) Flatten() map[string]interface{} {
 	flatten := util.FlattenObj(to)
-	indexified := util.Indexify(flatten)
-	return indexified
+	return flatten
 }
 
 func (to *testObj) OrgName() string {
@@ -58,7 +67,7 @@ func TestIndexObj(t *testing.T) {
 	IndexObj(obj)
 }
 
-var idxTmpDir = idxTmpGen()
+var idxTmpDir string
 
 func idxTmpGen() string {
 	tm, err := ioutil.TempDir("", "idx-test")
@@ -69,16 +78,14 @@ func idxTmpGen() string {
 }
 
 func TestSave(t *testing.T) {
-	tmpfile := fmt.Sprintf("%s/idx.bin", idxTmpDir)
-	err := SaveIndex(tmpfile)
+	err := SaveIndex()
 	if err != nil {
 		t.Errorf("Save() gave an error: %s", err)
 	}
 }
 
 func TestLoad(t *testing.T) {
-	tmpfile := fmt.Sprintf("%s/idx.bin", idxTmpDir)
-	err := LoadIndex(tmpfile)
+	err := LoadIndex()
 	if err != nil {
 		t.Errorf("Load() save an error: %s", err)
 	}

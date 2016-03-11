@@ -19,6 +19,8 @@ package shovey
 import (
 	"encoding/gob"
 	"fmt"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"testing"
@@ -30,6 +32,7 @@ func TestShoveyCreation(t *testing.T) {
 	gob.Register(new(organization.Organization))
 	org, _ = organization.New("default", "boo")
 	org.Save()
+	indexer.Initialize(config.Config)
 	nn := new(node.Node)
 	ns := new(node.NodeStatus)
 	gob.Register(nn)

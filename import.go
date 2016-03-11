@@ -23,7 +23,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
+	"io/ioutil"
+	"os"
+	"time"
+
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/databag"
@@ -37,9 +40,7 @@ import (
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
-	"io/ioutil"
-	"os"
-	"time"
+	"github.com/tideland/golib/logger"
 )
 
 func importAll(fileName string) error {
@@ -93,7 +94,10 @@ func importAll(fileName string) error {
 				return err
 			}
 			u.SetPasswdHash(pwhash)
-			u.SetPublicKey(v.(map[string]interface{})["public_key"])
+			pkerr := u.SetPublicKey(v.(map[string]interface{})["public_key"])
+			if pkerr != nil {
+				return pkerr
+			}
 			gerr := u.Save()
 			if gerr != nil {
 				return gerr
@@ -239,6 +243,50 @@ func importAll(fileName string) error {
 				}
 			}
 
+			// load reports
+			logger.Infof("Loading reports")
+			for _, o := range data["report"] {
+				// handle data exported from a bugged report export
+				var nodeName string
+				v := o.(map[string]interface{})
+				if n, ok := v["node_name"]; ok {
+					nodeName = n.(string)
+				} else if n, ok := v["nodeName"]; ok {
+					nodeName = n.(string)
+				}
+				v["action"] = "start"
+				if st, ok := v["start_time"].(string); ok {
+					t, err := time.Parse(time.RFC3339, st)
+					if err != nil {
+						return err
+					}
+					v["start_time"] = t.Format(report.ReportTimeFormat)
+				}
+				if et, ok := v["end_time"].(string); ok {
+					t, err := time.Parse(time.RFC3339, et)
+					if err != nil {
+						return err
+					}
+					v["end_time"] = t.Format(report.ReportTimeFormat)
+				}
+				r, err := report.NewFromJSON(org, nodeName, v)
+				if err != nil {
+					return err
+				}
+				gerr := r.Save()
+				if gerr != nil {
+					return gerr
+				}
+				v["action"] = "end"
+				if err := r.UpdateFromJSON(v); err != nil {
+					return err
+				}
+				gerr = r.Save()
+				if gerr != nil {
+					return gerr
+				}
+			}
+
 			// load sandboxes
 			logger.Infof("Loading sandboxes")
 			for _, v := range data["sandbox"] {
@@ -265,43 +313,6 @@ func importAll(fileName string) error {
 			for _, v := range data["loginfo"] {
 				if err := loginfo.Import(org, v.(map[string]interface{})); err != nil {
 					return err
-				}
-			}
-
-			// load reports
-			logger.Infof("Loading reports")
-			for _, v := range data["report"] {
-				nodeName := v.(map[string]interface{})["node_name"].(string)
-				v.(map[string]interface{})["action"] = "start"
-				if st, ok := v.(map[string]interface{})["start_time"].(string); ok {
-					t, err := time.Parse(time.RFC3339, st)
-					if err != nil {
-						return err
-					}
-					v.(map[string]interface{})["start_time"] = t.Format(report.ReportTimeFormat)
-				}
-				if et, ok := v.(map[string]interface{})["end_time"].(string); ok {
-					t, err := time.Parse(time.RFC3339, et)
-					if err != nil {
-						return err
-					}
-					v.(map[string]interface{})["end_time"] = t.Format(report.ReportTimeFormat)
-				}
-				r, err := report.NewFromJSON(org, nodeName, v.(map[string]interface{}))
-				if err != nil {
-					return err
-				}
-				gerr := r.Save()
-				if gerr != nil {
-					return gerr
-				}
-				v.(map[string]interface{})["action"] = "end"
-				if err := r.UpdateFromJSON(v.(map[string]interface{})); err != nil {
-					return err
-				}
-				gerr = r.Save()
-				if gerr != nil {
-					return gerr
 				}
 			}
 
