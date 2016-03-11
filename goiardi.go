@@ -461,6 +461,7 @@ func createDefaultActors() {
 				os.Exit(1)
 			}
 			cworg = org
+			container.MakeDefaultContainers(cworg)
 			group.MakeDefaultGroups(cworg)
 		}
 	}
