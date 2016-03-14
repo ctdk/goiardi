@@ -417,7 +417,7 @@ func formatPartials(results []map[string]interface{}, objs []indexer.Indexable, 
 		tmpRes := make(map[string]interface{})
 		switch ro := objs[x].(type) {
 		case *databag.DataBagItem:
-			dbiURL := fmt.Sprintf("/data/%s/%s", ro.DataBagName, ro.RawData["id"].(string))
+			dbiURL := fmt.Sprintf("/organizations/%s/data/%s/%s", ro.OrgName(), ro.DataBagName, ro.RawData["id"].(string))
 			tmpRes["url"] = util.CustomURL(dbiURL)
 		default:
 			tmpRes["url"] = util.ObjURL(objs[x].(util.GoiardiObj))
