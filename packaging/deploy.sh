@@ -2,7 +2,8 @@
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
-GOIARDI_VERSION="0.10.3"
+CURDIR=`pwd`
+GOIARDI_VERSION=`head -n 1 $CURDIR/../CHANGELOG | cut -f 1 -d ' '`
 ITERATION=`cat $DIR/iteration`
 
 gem install package_cloud

@@ -5,12 +5,12 @@
 
 # make more easily specified later
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-GOIARDI_VERSION="0.10.3"
 ITERATION=`date +%s`
 echo $ITERATION > $DIR/iteration
 
 mkdir -p artifacts
 CURDIR=`pwd`
+GOIARDI_VERSION=`head -n 1 $CURDIR/../CHANGELOG | cut -f 1 -d ' '`
 cd ..
 gox -osarch="linux/amd64" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}"
 
