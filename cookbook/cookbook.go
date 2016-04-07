@@ -1189,7 +1189,7 @@ func methodize(method string, cbThing []map[string]interface{}) []map[string]int
 			if method == "PUT" && k == "url" {
 				continue
 			}
-			if k == "url" && r.MatchString(`/file_store/`) {
+			if k == "url" && r.MatchString(k) {
 				retHash[i][k] = baseURL + "/file_store/" + chkSum
 			} else {
 				retHash[i][k] = j
