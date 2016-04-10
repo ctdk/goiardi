@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/ctdk/goiardi/config"
+	"github.com/tideland/golib/logger"
 	"regexp"
 	"strconv"
 	"strings"
@@ -98,6 +99,28 @@ func CheckForObject(orgname string, checksum string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func S3DeleteHashes(fileHashes []string) {
+	// break this up in case we have more than 1000 hashes to delete.
+	objs := make([]*s3.ObjectIdentifier, len(fileHashes))
+	for i, k := range fileHashes {
+		objs[i] = &s3.ObjectIdentifier{ Key: aws.String(makeBukkitKey("default", k)) }
+	}
+	params := &s3.DeleteObjectsInput{
+		Bucket: aws.String(s3cli.bucket),
+		Delete: &s3.Delete{
+			Objects: objs,
+			Quiet: aws.Bool(true),
+		},
+	}
+	logger.Debugf("delete hash s3 params: %v", params)
+	r, err := s3cli.s3.DeleteObjects(params)
+	if err != nil {
+		logger.Errorf(err.Error())
+	} else {
+		logger.Debugf("%v", r)
+	}
 }
 
 func makeBukkitKey(orgname, checksum string) string {

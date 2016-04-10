@@ -921,7 +921,11 @@ func (c *Cookbook) deleteHashes(fhashes []string) {
 		}
 	}
 	/* And delete whatever file hashes we still have */
-	filestore.DeleteHashes(fhashes)
+	if config.Config.UseS3Upload {
+		util.S3DeleteHashes(fhashes)
+	} else {
+		filestore.DeleteHashes(fhashes)
+	}
 }
 
 // DeleteVersion deletes a particular version of a cookbook.
