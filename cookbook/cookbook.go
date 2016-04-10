@@ -1190,7 +1190,16 @@ func methodize(method string, cbThing []map[string]interface{}) []map[string]int
 				continue
 			}
 			if k == "url" && r.MatchString(k) {
-				retHash[i][k] = baseURL + "/file_store/" + chkSum
+				// s3uploads - generate new signed url
+				if config.Config.UseS3Upload {
+					var err error
+					retHash[i][k], err = util.S3GetURL("default", chkSum)
+					if err != nil {
+						logger.Errorf(err.Error())
+					}
+				} else {
+					retHash[i][k] = baseURL + "/file_store/" + chkSum
+				}
 			} else {
 				retHash[i][k] = j
 			}

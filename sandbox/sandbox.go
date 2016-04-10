@@ -199,8 +199,17 @@ func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 		if k != nil {
 			chksumStats[chk]["needs_upload"] = false
 		} else {
-			itemURL := fmt.Sprintf("/file_store/%s", chk)
-			chksumStats[chk]["url"] = util.CustomURL(itemURL)
+			// set signed s3 thingamajig here
+			if config.Config.UseS3Upload {
+				var err error
+				chksumStats[chk]["url"], err = util.S3GetURL("default", chk)
+				if err != nil {
+					logger.Errorf(err.Error())
+				}
+			} else {
+				itemURL := fmt.Sprintf("/file_store/%s", chk)
+				chksumStats[chk]["url"] = util.CustomURL(itemURL)
+			}
 			chksumStats[chk]["needs_upload"] = true
 		}
 
@@ -211,8 +220,20 @@ func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 // IsComplete returns true if the sandbox is complete.
 func (s *Sandbox) IsComplete() error {
 	for _, chk := range s.Checksums {
-		k, _ := filestore.Get(chk)
-		if k == nil {
+		var uploaded bool
+		if config.Config.UseS3Upload {
+			var err error
+			uploaded, err = util.CheckForObject("default", chk)
+			if err != nil {
+				return err
+			}
+		} else {
+			k, _ := filestore.Get(chk)
+			if k != nil {
+				uploaded = true
+			}
+		}
+		if !uploaded {
 			err := fmt.Errorf("Checksum %s not uploaded yet, %s not complete, cannot commit yet.", chk, s.ID)
 			return err
 		}

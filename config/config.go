@@ -93,6 +93,12 @@ type Conf struct {
 	StatsdAddr        string `toml:"statsd-addr"`
 	StatsdType        string `toml:"statsd-type"`
 	StatsdInstance    string `toml:"statsd-instance"`
+	UseS3Upload       bool   `toml:"use-s3-upload"`
+	AWSRegion         string `toml:"aws-region"`
+	S3Bucket          string `toml:"s3-bucket"`
+	AWSDisableSSL     bool   `toml:"aws-disable-ssl"`
+	S3Endpoint        string `toml:"s3-endpoint"`
+	S3FilePeriod      int    `toml:"s3-file-period"`
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -178,6 +184,12 @@ type Options struct {
 	StatsdAddr        string `long:"statsd-addr" description:"IP address and port of statsd instance to connect to. (default 'localhost:8125')"`
 	StatsdType        string `long:"statsd-type" description:"statsd format, can be either 'standard' or 'datadog' (default 'standard')"`
 	StatsdInstance    string `long:"statsd-instance" description:"Statsd instance name to use for this server. Defaults to the server's hostname, with '.' replaced by '_'."`
+	UseS3Upload       bool   `long:"use-s3-upload" description:"Store cookbook files in S3 rather than locally in memory or on disk."`
+	AWSRegion         string `long:"aws-region" description:"AWS region to use S3 uploads."`
+	S3Bucket          string `long:"s3-bucket" description:"The name of the S3 bucket storing the files."`
+	AWSDisableSSL     bool   `long:"aws-disable-ssl" description:"Set to disable SSSL for the endpoint. Mostly useful just for testing."`
+	S3Endpoint        string `long:"s3-endpoint" description:"Set a different endpoint than the default s3.amazonaws.com. Mostly useful for testing with a fake S3 service, or if using an S3-compatible service."`
+	S3FilePeriod      int    `long:"s3-file-period" description:"Length of time, in minutes, to allow files to be saved to or retrieved from S3 by the client. Defaults to 15 minutes."`
 }
 
 // The goiardi version.
@@ -639,6 +651,32 @@ func ParseConfigOptions() error {
 	}
 	if Config.StatsdInstance == "" {
 		Config.StatsdInstance = strings.Replace(Config.Hostname, ".", "_", -1)
+	}
+
+	// s3 upload conf
+	if opts.UseS3Upload {
+		Config.UseS3Upload = opts.UseS3Upload
+	}
+	if Config.UseS3Upload {
+		if opts.AWSRegion != "" {
+			Config.AWSRegion = opts.AWSRegion
+		}
+		if opts.S3Bucket != "" {
+			Config.S3Bucket = opts.S3Bucket
+		}
+		if opts.AWSDisableSSL {
+			Config.AWSDisableSSL = opts.AWSDisableSSL
+		}
+		if opts.S3Endpoint != "" {
+			Config.S3Endpoint = opts.S3Endpoint
+		}
+		if opts.S3FilePeriod != 0 {
+			Config.S3FilePeriod = opts.S3FilePeriod
+		}
+
+		if Config.S3FilePeriod == 0 {
+			Config.S3FilePeriod = 15
+		}
 	}
 
 	return nil

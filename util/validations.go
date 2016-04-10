@@ -18,7 +18,9 @@ package util
 
 import (
 	"fmt"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/filestore"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -152,8 +154,26 @@ func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]inter
 				 * in sandbox */
 				chksum, cherr := ValidateAsString(v["checksum"])
 				if cherr == nil {
-					if _, ferr := filestore.Get(chksum); ferr != nil {
-						var merr Gerror
+					var itemURL string
+					var uploaded bool
+					var ferr error
+
+					if config.Config.UseS3Upload {
+						uploaded, ferr = CheckForObject("default", chksum)
+						if ferr != nil {
+							uploaded = false
+							logger.Errorf(ferr.Error())
+						} else if uploaded {
+							itemURL, _ = S3GetURL("default", chksum)
+						}
+					} else {
+						if _, ferr = filestore.Get(chksum); ferr == nil {
+							uploaded = true
+							itemURL = CustomURL(fmt.Sprintf("/file_store/%s", chksum))
+						}
+					}
+					var merr Gerror
+					if !uploaded {
 						/* This is nuts. */
 						if dname == "recipes" {
 							merr = Errorf("Manifest has a checksum that hasn't been uploaded.")
@@ -162,8 +182,8 @@ func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]inter
 						}
 						return nil, merr
 					}
-					itemURL := fmt.Sprintf("/file_store/%s", chksum)
-					v["url"] = CustomURL(itemURL)
+
+					v["url"] = itemURL
 					d = append(d, v)
 				}
 			default:

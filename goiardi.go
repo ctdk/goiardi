@@ -57,6 +57,7 @@ import (
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/util"
 	serfclient "github.com/hashicorp/serf/client"
 	"github.com/raintank/met"
 	"github.com/raintank/met/helper"
@@ -113,6 +114,7 @@ func main() {
 		logger.Fatalf(merr.Error())
 		os.Exit(1)
 	}
+	util.InitS3(config.Config)
 	initGeneralStatsd(metricsBackend)
 	report.InitializeMetrics(metricsBackend)
 	search.InitializeMetrics(metricsBackend)

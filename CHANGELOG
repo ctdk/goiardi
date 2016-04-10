@@ -1,3 +1,7 @@
+0.10.5 (unreleased, may change)
+------
+* Ability to upload cookbooks to S3.
+
 0.10.4
 ------
 * Export pprof info over HTTP, but only accept connections from localhost for
