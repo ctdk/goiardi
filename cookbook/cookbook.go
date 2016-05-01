@@ -1193,7 +1193,8 @@ func methodize(method string, cbThing []map[string]interface{}) []map[string]int
 			if method == "PUT" && k == "url" {
 				continue
 			}
-			if k == "url" && r.MatchString(k) {
+			str, _ := j.(string)
+			if k == "url" && (r.MatchString(str) || str == "") {
 				// s3uploads - generate new signed url
 				if config.Config.UseS3Upload {
 					var err error

@@ -57,7 +57,6 @@ func S3GetURL(orgname string, checksum string) (string, error) {
 		Key:    aws.String(key),
 	})
 	req.HTTPRequest.URL.Host = s3cli.makeHostPort(req.HTTPRequest.URL.Host)
-	//req.HTTPRequest.Header.Set("Host", s3cli.makeHostPort(req.HTTPRequest.URL.Host))
 	urlStr, err := req.Presign(s3cli.filePeriod)
 	return urlStr, err
 }
@@ -83,7 +82,6 @@ func S3PutURL(orgname string, checksum string) (string, error) {
 	contentmd5 := base64.StdEncoding.EncodeToString(b)
 	req.HTTPRequest.Header.Set("Content-MD5", contentmd5)
 	req.HTTPRequest.URL.Host = s3cli.makeHostPort(req.HTTPRequest.URL.Host)
-	//req.HTTPRequest.Header.Set("Host", s3cli.makeHostPort(req.HTTPRequest.URL.Host))
 
 	urlStr, err := req.Presign(s3cli.filePeriod)
 	logger.Debugf("presign: %s %s", urlStr, contentmd5)
@@ -124,13 +122,6 @@ func S3DeleteHashes(fileHashes []string) {
 		},
 	}
 	logger.Debugf("delete hash s3 params: %v", params)
-	/* for _, d := range fileHashes {
-		param := &s3.DeleteObjectInput{
-			Bucket: aws.String(s3cli.bucket),
-			Key: aws.String(makeBukkitKey("default", d)),
-		}
-		s3cli.s3.DeleteObject(param)
-	} */
 
 	r, err := s3cli.s3.DeleteObjects(params)
 	if err != nil {
