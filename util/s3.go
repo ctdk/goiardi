@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/ctdk/goiardi/config"
 	"github.com/tideland/golib/logger"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -40,7 +41,6 @@ var s3cli *s3client
 
 // InitS3 sets up the session and whatnot for using goiardi with S3.
 func InitS3(conf *config.Conf) error {
-	// TODO: configure parameters
 	sess := session.New(&aws.Config{Region: aws.String(conf.AWSRegion), DisableSSL: aws.Bool(conf.AWSDisableSSL), Endpoint: aws.String(conf.S3Endpoint), S3ForcePathStyle: aws.Bool(false)})
 
 	s3cli = new(s3client)
@@ -56,6 +56,8 @@ func S3GetURL(orgname string, checksum string) (string, error) {
 		Bucket: aws.String(s3cli.bucket),
 		Key:    aws.String(key),
 	})
+	req.HTTPRequest.URL.Host = s3cli.makeHostPort(req.HTTPRequest.URL.Host)
+	//req.HTTPRequest.Header.Set("Host", s3cli.makeHostPort(req.HTTPRequest.URL.Host))
 	urlStr, err := req.Presign(s3cli.filePeriod)
 	return urlStr, err
 }
@@ -80,8 +82,11 @@ func S3PutURL(orgname string, checksum string) (string, error) {
 	}
 	contentmd5 := base64.StdEncoding.EncodeToString(b)
 	req.HTTPRequest.Header.Set("Content-MD5", contentmd5)
+	req.HTTPRequest.URL.Host = s3cli.makeHostPort(req.HTTPRequest.URL.Host)
+	//req.HTTPRequest.Header.Set("Host", s3cli.makeHostPort(req.HTTPRequest.URL.Host))
 
 	urlStr, err := req.Presign(s3cli.filePeriod)
+	logger.Debugf("presign: %s %s", urlStr, contentmd5)
 	return urlStr, err
 }
 
@@ -102,6 +107,10 @@ func CheckForObject(orgname string, checksum string) (bool, error) {
 }
 
 func S3DeleteHashes(fileHashes []string) {
+	// only do this if there are actually file hashes to delete.
+	if len(fileHashes) == 0 {
+		return
+	}
 	// break this up in case we have more than 1000 hashes to delete.
 	objs := make([]*s3.ObjectIdentifier, len(fileHashes))
 	for i, k := range fileHashes {
@@ -115,6 +124,14 @@ func S3DeleteHashes(fileHashes []string) {
 		},
 	}
 	logger.Debugf("delete hash s3 params: %v", params)
+	/* for _, d := range fileHashes {
+		param := &s3.DeleteObjectInput{
+			Bucket: aws.String(s3cli.bucket),
+			Key: aws.String(makeBukkitKey("default", d)),
+		}
+		s3cli.s3.DeleteObject(param)
+	} */
+
 	r, err := s3cli.s3.DeleteObjects(params)
 	if err != nil {
 		logger.Errorf(err.Error())
@@ -123,8 +140,41 @@ func S3DeleteHashes(fileHashes []string) {
 	}
 }
 
+func S3CheckFile(orgname, checksum string) bool {
+	params := &s3.HeadObjectInput{
+		Bucket: aws.String(s3cli.bucket),
+		Key: aws.String(makeBukkitKey(orgname, checksum)),
+	}
+	_, err := s3cli.s3.HeadObject(params)
+	var ret bool
+	if err == nil {
+		ret = true
+	}
+	return ret
+}
+
 func makeBukkitKey(orgname, checksum string) string {
 	dir := fmt.Sprintf("%c%c", checksum[0], checksum[1])
 	key := strings.Join([]string{orgname, "file_store", dir, checksum}, "/")
 	return key
+}
+
+// chef insists on putting the port number in the Host: header it sends to
+// amazon, even when using normal ports. ?!?!
+func (s3c *s3client) makeHostPort(host string) string {
+	z, _ := regexp.MatchString(`:\d+$`, host)
+	q := net.ParseIP(host)
+	var rethost string
+	if !z && q == nil {
+		var port string
+		if *s3c.s3.Config.DisableSSL {
+			port = "80"
+		} else {
+			port = "443"
+		}
+		rethost = net.JoinHostPort(host, port)
+	} else {
+		rethost = host
+	}
+	return rethost
 }
