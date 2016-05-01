@@ -247,7 +247,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 			if key == "" {
 				nkey = k
 			} else {
-				nkey = fmt.Sprintf("%s%s%s", key, k)
+				nkey = fmt.Sprintf("%s%s%s", key, sep, k)
 			}
 			merger[nkey] = u
 		}
