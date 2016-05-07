@@ -215,7 +215,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 		topLev := make([]string, len(v))
 		n := 0
 		for k, u := range v {
-			if key != "" {
+			if key != "" && !config.Config.UsePostgreSQL {
 				topLev[n] = k
 				n++
 			}
@@ -230,7 +230,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 				merger[j] = q
 			}
 		}
-		if key != "" {
+		if key != "" && !config.Config.UsePostgreSQL {
 			merger[key] = topLev
 		}
 	case map[string]string:
@@ -239,7 +239,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 		topLev := make([]string, len(v))
 		n := 0
 		for k, u := range v {
-			if key != "" {
+			if key != "" && !config.Config.UsePostgreSQL {
 				topLev[n] = k
 				n++
 			}
@@ -251,7 +251,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 			}
 			merger[nkey] = u
 		}
-		if key != "" {
+		if key != "" && !config.Config.UsePostgreSQL {
 			merger[key] = topLev
 		}
 
