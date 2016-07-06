@@ -21,6 +21,7 @@ package indexer
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/ctdk/goiardi/config"
 	"github.com/tideland/golib/logger"
@@ -146,9 +147,19 @@ func ClearIndex() {
 
 // ReIndex rebuilds the search index from scratch
 func ReIndex(objects []Indexable) error {
-	for _, o := range objects {
-		go objIndex.SaveItem(o)
-	}
+	go func() {
+		ch := make(chan struct{}, runtime.NumCPU())
+		for i := 0; i < runtime.NumCPU(); i++ {
+			ch <- struct{}{}
+		}
+		for _, o := range objects {
+			go func(obj Indexable){
+				<-ch
+				objIndex.SaveItem(obj)
+				ch <- struct{}{}
+			}(o)
+		}
+	}()
 	// We really ought to be able to return from an error, but at the moment
 	// there aren't any ways it does so in the index save bits.
 	return nil

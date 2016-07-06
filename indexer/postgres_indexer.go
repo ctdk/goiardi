@@ -21,6 +21,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"github.com/lib/pq"
+	"strings"
 )
 
 type PostgresIndex struct {
@@ -137,6 +138,8 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 		switch v := v.(type) {
 		case string:
 			v = util.IndexEscapeStr(v)
+			// try it with newlines too
+			v = strings.Replace(v, "\n", "\\n", -1)
 			_, err = stmt.Exec(1, scID, itemName, v, k)
 			if err != nil {
 				tx.Rollback()
@@ -145,6 +148,7 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 		case []string:
 			for _, w := range v {
 				w = util.IndexEscapeStr(w)
+				w = strings.Replace(w, "\n", "\\n", -1)
 				_, err = stmt.Exec(1, scID, itemName, w, k)
 				if err != nil {
 					tx.Rollback()
