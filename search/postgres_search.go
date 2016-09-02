@@ -321,13 +321,14 @@ func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]stri
 	return args, q
 }
 
-func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool, tNum *int, op Op) ([]string, string) {
+func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool, tNum *int, op Op) ([]string, string, string) {
 	if start > end {
 		start, end = end, start
 	}
 
 	var q string
 	args := []string{string(field)}
+	xtraPath := fmt.Sprintf("%s.*", string(field))
 
 	opStr := binOp(op)
 	var equals string
@@ -335,22 +336,28 @@ func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool
 		equals = "="
 	}
 	var ranges []string
+	var rangePaths []string
+	var rangeArgs []string // these need to be added to the args after
+
 	if string(start) != "*" {
 		s := fmt.Sprintf("f%d.value >%s _ARG_", *tNum, equals)
 		ranges = append(ranges, s)
 		args = append(args, string(start))
+		rangePaths = append(rangePaths, fmt.Sprintf("f%d.path >%s _ARG_", *tNum, equals)
+		rangeArgs = append(rangeArgs, fmt.Sprintf("%s
 	}
 	if string(end) != "*" {
 		e := fmt.Sprintf("f%d.value <%s _ARG_", *tNum, equals)
 		ranges = append(ranges, e)
 		args = append(args, string(end))
 	}
+
 	var rangeStr string
 	if len(ranges) != 0 {
 		rangeStr = fmt.Sprintf(" AND (%s)", strings.Join(ranges, " AND "))
 	}
 	q = fmt.Sprintf("%s(f%d.path OPERATOR(goiardi.~) _ARG_%s)", opStr, *tNum, rangeStr)
-	return args, q
+	return args, xtraPath, q
 }
 
 func matchOp(op Op, term *QueryTerm) string {
