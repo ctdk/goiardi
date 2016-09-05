@@ -217,7 +217,10 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 			*t++
 		case *GroupedQuery:
 			pq.paths = append(pq.paths, string(c.field))
-			args, qstr := buildGroupedQuery(c.field, c.terms, t, curOp)
+			args, xtraPath, qstr := buildGroupedQuery(c.field, c.terms, t, curOp)
+			if xtraPath != "" {
+				pq.paths = append(pq.paths, xtraPath)
+			}
 			pq.arguments = append(pq.arguments, args...)
 			pq.queryStrs = append(pq.queryStrs, qstr)
 			*t++
@@ -301,7 +304,7 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, s
 		// wildcard searches with * might not behave quite the way one
 		// expects (*maybe*). In practice it shouldn't be a huge
 		// problem.
-		altQueryPath = strings.Replace(altQueryPath, "%", "*", -1)
+		altQueryPath = util.PgSearchQueryKey(string(originalTerm))
 		q = fmt.Sprintf("%s((f%d.path OPERATOR(goiardi.~) _ARG_ AND f%d.value %s _ARG_) OR (f%d.path OPERATOR(goiardi.~) _ARG_))", opStr, *tNum, *tNum, cop, *tNum)
 		args = append(args, string(term.term))
 		args = append(args, altQueryPath)
@@ -311,22 +314,39 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, s
 	return args, xtraPath, q
 }
 
-func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]string, string) {
+func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]string, string, string) {
 	opStr := binOp(op)
 
 	var q string
 	args := []string{string(field)}
 	var grouped []*gClause
 
+	basePath := string(field)
+	xtraPath := fmt.Sprintf("%s.*", string(field))
+	var groupedPaths []*gClause
+	var groupedArgs []string
+	ltNum := *tNum
+
 	for _, v := range terms {
+		orgTerm := v.term
 		cop := matchOp(op, &v)
 
 		clause := fmt.Sprintf("f%d.value %s _ARG_", *tNum, cop)
 		g := &gClause{clause, v.mod}
 		grouped = append(grouped, g)
+
+		var ltreeNot string
+		if v.mod == OpUnaryNot {
+			ltreeNot = "!"
+		}
+		groupedArgs = append(groupedArgs, fmt.Sprintf("%s.%s%s", basePath, ltreeNot, util.PgSearchQueryKey(string(orgTerm))))
+		ltNum++
+		
+		groupedPaths = append(groupedPaths, &gClause{fmt.Sprintf("f%d.path OPERATOR(goiardi.~) _ARG_", ltNum), v.mod})
 		args = append(args, string(v.term))
 	}
 	var clauseArr []string
+	var ltClauseArr []string
 	for i, g := range grouped {
 		var j string
 		if i != 0 {
@@ -338,9 +358,23 @@ func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]stri
 		}
 		clauseArr = append(clauseArr, fmt.Sprintf("%s%s", j, g.clause))
 	}
+	for i, lc := range groupedPaths {
+		var j string
+		if i != 0 {
+			if lc.op == OpUnaryPro || lc.op == OpUnaryReq || lc.op == OpUnaryNot {
+				j = " AND "
+			} else {
+				j = " OR "
+			}
+		}
+		ltClauseArr = append(ltClauseArr, fmt.Sprintf("%s%s", j, lc.clause))
+	}
 	clauses := strings.Join(clauseArr, " ")
-	q = fmt.Sprintf("%s(f%d.path OPERATOR(goiardi.~) _ARG_ AND (%s))", opStr, *tNum, clauses)
-	return args, q
+	ltClauses := strings.Join(ltClauseArr, " ")
+	q = fmt.Sprintf("%s((f%d.path OPERATOR(goiardi.~) _ARG_ AND (%s)) OR (%s))", opStr, *tNum, clauses, ltClauses)
+	*tNum = ltNum
+	args = append(args, groupedArgs...)
+	return args, xtraPath, q
 }
 
 func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool, tNum *int, op Op) ([]string, string, string) {
@@ -366,14 +400,14 @@ func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool
 		ranges = append(ranges, s)
 		args = append(args, string(start))
 		rangePaths = append(rangePaths, fmt.Sprintf("f%d.path OPERATOR(goiardi.>%s) _ARG_", *tNum, equals))
-		rangeArgs = append(rangeArgs, fmt.Sprintf("%s.%s", string(field), string(start)))
+		rangeArgs = append(rangeArgs, fmt.Sprintf("%s.%s", string(field), util.PgSearchQueryKey(string(start))))
 	}
 	if string(end) != "*" {
 		e := fmt.Sprintf("f%d.value <%s _ARG_", *tNum, equals)
 		ranges = append(ranges, e)
 		args = append(args, string(end))
 		rangePaths = append(rangePaths, fmt.Sprintf("f%d.path OPERATOR(goiardi.<%s) _ARG_", *tNum, equals))
-		rangeArgs = append(rangeArgs, fmt.Sprintf("%s.%s", string(field), string(start)))
+		rangeArgs = append(rangeArgs, fmt.Sprintf("%s.%s", string(field), util.PgSearchQueryKey(string(end))))
 	}
 
 	args = append(args, xtraPath)
