@@ -363,7 +363,6 @@ func (t *tokens16) PrintSyntax() {
 
 func (t *tokens16) PrintSyntaxTree(buffer2 string) {
 	buffer := []rune(buffer2)
-	fmt.Printf("And the buffer here? '%s'\n", buffer)
 	tokens, _ := t.PreOrder()
 	for token := range tokens {
 		for c := 0; c < int(token.next); c++ {
@@ -594,7 +593,6 @@ func (t *tokens32) PrintSyntax() {
 }
 
 func (t *tokens32) PrintSyntaxTree(buffer string) {
-	fmt.Printf("And the buffer here? '%s'\n", buffer)
 	tokens, _ := t.PreOrder()
 	for token := range tokens {
 		for c := 0; c < int(token.next); c++ {
@@ -739,7 +737,6 @@ func isASCII(str string) bool {
 
 func (p *Tokenizer) Execute() {
 	buffer, begin, end := p.buffer, 0, 0
-	p.PrintSyntaxTree()
 	
 	for token := range p.TokenTree.Tokens() {
 		switch token.Rule {
@@ -793,13 +790,10 @@ func (p *Tokenizer) Execute() {
 }
 
 func (p *Tokenizer) Init() {
-	fmt.Printf("p.Buffer: %s\n", p.Buffer)
-	fmt.Printf("p.Buffer as rune array: %v\n", []rune(p.Buffer))
 	p.buffer = []rune(p.Buffer)
 	if len(p.buffer) == 0 || p.buffer[len(p.buffer)-1] != END_SYMBOL {
 		p.buffer = append(p.buffer, END_SYMBOL)
 	}
-	fmt.Printf("post-maul p.buffer: %v\n", p.buffer)
 
 	var tree TokenTree = &tokens16{tree: make([]token16, math.MaxInt16)}
 	position, depth, tokenIndex, buffer, rules := 0, 0, 0, p.buffer, p.rules
