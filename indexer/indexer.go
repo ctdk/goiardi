@@ -153,7 +153,7 @@ func ReIndex(objects []Indexable) error {
 			ch <- struct{}{}
 		}
 		for _, o := range objects {
-			go func(obj Indexable){
+			go func(obj Indexable) {
 				<-ch
 				objIndex.SaveItem(obj)
 				ch <- struct{}{}

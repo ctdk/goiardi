@@ -298,7 +298,7 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, s
 		// the same behavior as you would get with solr, but it only
 		// comes up in a few corner cases that should be unlikely in
 		// real world searching. (Famous last words.) It should only be
-		// queries like "foo:bar*" or "foo:bar?" where "foo.bar*" is a 
+		// queries like "foo:bar*" or "foo:bar?" where "foo.bar*" is a
 		// ltree path rather than a path and value, because searches
 		// with ? matching single characters won't work right, and
 		// wildcard searches with * might not behave quite the way one
@@ -341,7 +341,7 @@ func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]stri
 		}
 		groupedArgs = append(groupedArgs, fmt.Sprintf("%s.%s%s", basePath, ltreeNot, util.PgSearchQueryKey(string(orgTerm))))
 		ltNum++
-		
+
 		groupedPaths = append(groupedPaths, &gClause{fmt.Sprintf("f%d.path OPERATOR(goiardi.~) _ARG_", ltNum), v.mod})
 		args = append(args, string(v.term))
 	}

@@ -112,13 +112,13 @@ func S3DeleteHashes(fileHashes []string) {
 	// break this up in case we have more than 1000 hashes to delete.
 	objs := make([]*s3.ObjectIdentifier, len(fileHashes))
 	for i, k := range fileHashes {
-		objs[i] = &s3.ObjectIdentifier{ Key: aws.String(makeBukkitKey("default", k)) }
+		objs[i] = &s3.ObjectIdentifier{Key: aws.String(makeBukkitKey("default", k))}
 	}
 	params := &s3.DeleteObjectsInput{
 		Bucket: aws.String(s3cli.bucket),
 		Delete: &s3.Delete{
 			Objects: objs,
-			Quiet: aws.Bool(true),
+			Quiet:   aws.Bool(true),
 		},
 	}
 	logger.Debugf("delete hash s3 params: %v", params)
@@ -134,7 +134,7 @@ func S3DeleteHashes(fileHashes []string) {
 func S3CheckFile(orgname, checksum string) bool {
 	params := &s3.HeadObjectInput{
 		Bucket: aws.String(s3cli.bucket),
-		Key: aws.String(makeBukkitKey(orgname, checksum)),
+		Key:    aws.String(makeBukkitKey(orgname, checksum)),
 	}
 	_, err := s3cli.s3.HeadObject(params)
 	var ret bool

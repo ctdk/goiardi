@@ -737,7 +737,7 @@ func isASCII(str string) bool {
 
 func (p *Tokenizer) Execute() {
 	buffer, begin, end := p.buffer, 0, 0
-	
+
 	for token := range p.TokenTree.Tokens() {
 		switch token.Rule {
 		case RulePegText:
@@ -2221,17 +2221,17 @@ func (p *Tokenizer) Init() {
 								position++
 								break
 							case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
-							if c := buffer[position]; c < rune('A') || c > rune('Z') {
-								goto l189
-							}
-							position++
-							break
-						default:
-							if c := buffer[position]; !unicode.IsLetter(c) && !unicode.IsNumber(c) {
-								goto l189
-							}
-							position++
-							break
+								if c := buffer[position]; c < rune('A') || c > rune('Z') {
+									goto l189
+								}
+								position++
+								break
+							default:
+								if c := buffer[position]; !unicode.IsLetter(c) && !unicode.IsNumber(c) {
+									goto l189
+								}
+								position++
+								break
 							}
 						}
 
