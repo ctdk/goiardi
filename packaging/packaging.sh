@@ -5,12 +5,13 @@
 
 # make more easily specified later
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-ITERATION=`date +%s`
-echo $ITERATION > $DIR/iteration
 
-mkdir -p artifacts
+for VAR in trusty wheezy jessie; do
+	mkdir -p artifacts/$VAR
+done
+
 CURDIR=`pwd`
-GOIARDI_VERSION=`head -n 1 $CURDIR/../CHANGELOG | cut -f 1 -d ' '`
+GOIARDI_VERSION=`git describe --long --always`
 cd ..
 gox -osarch="linux/amd64" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}"
 
@@ -22,7 +23,7 @@ cp $CURDIR/README_GOIARDI_SCHEMA.txt fs/usr/share/goiardi
 mkdir -p fs/var/lib/goiardi/lfs
 cp ../../../goiardi-$GOIARDI_VERSION-linux-amd64 fs/usr/bin/goiardi
 
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION --iteration ${ITERATION}ubuntu -C ./fs/ -p ../../artifacts/goiardi-VERSION-ITERATION_ARCH.deb -a amd64 --description "a golang chef server" --after-install ./scripts/postinst.sh --after-remove ./scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C ./fs/ -p ../../artifacts/trusty/goiardi-VERSION_ARCH.deb -a amd64 --description "a golang chef server" --after-install ./scripts/postinst.sh --after-remove ./scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 cd ../../debian/wheezy
 mkdir -p fs/usr/bin
@@ -31,7 +32,7 @@ cp $CURDIR/../sql-files/*.sql fs/usr/share/goiardi
 cp $CURDIR/README_GOIARDI_SCHEMA.txt fs/usr/share/goiardi
 mkdir -p fs/var/lib/goiardi/lfs
 cp ../../../goiardi-$GOIARDI_VERSION-linux-amd64 fs/usr/bin/goiardi
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION --iteration $ITERATION -C ./fs/ -p ../../artifacts/goiardi-VERSION-ITERATION_ARCH.deb -a amd64 --description "a golang chef server" --after-install ./scripts/postinst.sh --after-remove ./scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C ./fs/ -p ../../artifacts/wheezy/goiardi-VERSION_ARCH.deb -a amd64 --description "a golang chef server" --after-install ./scripts/postinst.sh --after-remove ./scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 cd ../../debian/jessie
 mkdir -p fs/usr/bin
@@ -40,7 +41,7 @@ cp $CURDIR/../sql-files/*.sql fs/usr/share/goiardi
 cp $CURDIR/README_GOIARDI_SCHEMA.txt fs/usr/share/goiardi
 mkdir -p fs/var/lib/goiardi/lfs
 cp ../../../goiardi-$GOIARDI_VERSION-linux-amd64 fs/usr/bin/goiardi
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION --iteration ${ITERATION}jessie -C ./fs/ -p ../../artifacts/goiardi-VERSION-ITERATION_ARCH.deb -a amd64 --description "a golang chef server" --after-install ./scripts/postinst.sh --after-remove ./scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C ./fs/ -p ../../artifacts/jessie/goiardi-VERSION_ARCH.deb -a amd64 --description "a golang chef server" --after-install ./scripts/postinst.sh --after-remove ./scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 cd ../../..
 
@@ -49,9 +50,9 @@ GOARM=7 gox -osarch="linux/arm" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Ar
 
 cd packaging/debian/wheezy
 cp ../../../goiardi-$GOIARDI_VERSION-linux-arm6 fs/usr/bin/goiardi
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION --iteration $ITERATION -C ./fs/ -p ../../artifacts/goiardi-VERSION-ITERATION_ARCH.deb -a armel --description "a golang chef server" --after-install ./scripts/postinst.sh --after-remove ./scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C ./fs/ -p ../../artifacts/wheezy/goiardi-VERSION_ARCH.deb -a armel --description "a golang chef server" --after-install ./scripts/postinst.sh --after-remove ./scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 cp ../../../goiardi-$GOIARDI_VERSION-linux-arm7 fs/usr/bin/goiardi
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION --iteration $ITERATION -C ./fs/ -p ../../artifacts/goiardi-VERSION-ITERATION_ARCH.deb -a armhf --description "a golang chef server" --after-install ./scripts/postinst.sh --after-remove ./scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C ./fs/ -p ../../artifacts/wheezy/goiardi-VERSION_ARCH.deb -a armhf --description "a golang chef server" --after-install ./scripts/postinst.sh --after-remove ./scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 cd ../..
