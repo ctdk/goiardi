@@ -12,8 +12,9 @@ done
 
 CURDIR=`pwd`
 GOIARDI_VERSION=`git describe --long --always`
+GIT_HASH=`git rev-parse --short HEAD`
 cd ..
-gox -osarch="linux/amd64" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}"
+gox -osarch="linux/amd64" -ldflags "-X github.com/ctdk/goiardi/config.GitHash=$GIT_HASH" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}"
 
 cd packaging/ubuntu/trusty
 mkdir -p fs/usr/bin
@@ -45,8 +46,8 @@ fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C ./fs/ -p ../../artifacts/jes
 
 cd ../../..
 
-GOARM=6 gox -osarch="linux/arm" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}6"
-GOARM=7 gox -osarch="linux/arm" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}7"
+GOARM=6 gox -osarch="linux/arm" -ldflags "-X github.com/ctdk/goiardi/config.GitHash=$GIT_HASH" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}6"
+GOARM=7 gox -osarch="linux/arm" -ldflags "-X github.com/ctdk/goiardi/config.GitHash=$GIT_HASH" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}7"
 
 cd packaging/debian/wheezy
 cp ../../../goiardi-$GOIARDI_VERSION-linux-arm6 fs/usr/bin/goiardi

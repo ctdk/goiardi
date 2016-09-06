@@ -1,9 +1,11 @@
-0.10.5 (unreleased, may change)
+0.11.0 (unreleased)
 ------
 * Ability to upload cookbooks to S3.
 * Change how items are indexed with the postgres indexer, to reduce the number
   of rows in the search_items table substantially (at the cost of possible
   differences in search results in a few weird corner cases).
+* Use vendoring.
+* Rejigger the package building process a bit.
 
 0.10.4
 ------

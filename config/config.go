@@ -110,6 +110,10 @@ type SigningKeys struct {
 // Key is the initialized shovey public and private keys.
 var Key = &SigningKeys{}
 
+// GitHash is the git hash (supplied with '-ldflags "-X config.GitHash=<hash>"')
+// of goiardi when it was compiled.
+var GitHash = "unknown"
+
 // LogLevelNames give convenient, easier to remember than number name for the
 // different levels of logging.
 var LogLevelNames = map[string]int{"debug": 5, "info": 4, "warning": 3, "error": 2, "critical": 1, "fatal": 0}
@@ -193,7 +197,7 @@ type Options struct {
 }
 
 // The goiardi version.
-const Version = "0.10.4"
+const Version = "0.11.0-pre1"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
 const ChefVersion = "11.1.7"
@@ -231,7 +235,7 @@ func ParseConfigOptions() error {
 	}
 
 	if opts.Version {
-		fmt.Printf("goiardi version %s built with %s (aiming for compatibility with Chef Server version %s).\n", Version, runtime.Version(), ChefVersion)
+		fmt.Printf("goiardi version %s (git hash: %s) built with %s (aiming for compatibility with Chef Server version %s).\n", Version, GitHash, runtime.Version(), ChefVersion)
 		os.Exit(0)
 	}
 
