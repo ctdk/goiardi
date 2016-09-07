@@ -191,7 +191,7 @@ type Options struct {
 	UseS3Upload       bool   `long:"use-s3-upload" description:"Store cookbook files in S3 rather than locally in memory or on disk."`
 	AWSRegion         string `long:"aws-region" description:"AWS region to use S3 uploads."`
 	S3Bucket          string `long:"s3-bucket" description:"The name of the S3 bucket storing the files."`
-	AWSDisableSSL     bool   `long:"aws-disable-ssl" description:"Set to disable SSSL for the endpoint. Mostly useful just for testing."`
+	AWSDisableSSL     bool   `long:"aws-disable-ssl" description:"Set to disable SSL for the endpoint. Mostly useful just for testing."`
 	S3Endpoint        string `long:"s3-endpoint" description:"Set a different endpoint than the default s3.amazonaws.com. Mostly useful for testing with a fake S3 service, or if using an S3-compatible service."`
 	S3FilePeriod      int    `long:"s3-file-period" description:"Length of time, in minutes, to allow files to be saved to or retrieved from S3 by the client. Defaults to 15 minutes."`
 }
