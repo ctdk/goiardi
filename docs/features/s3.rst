@@ -1,0 +1,13 @@
+.. _s3:
+
+S3 File Uploads
+===============
+
+Configuration
+=============
+
+Testing it out
+==============
+
+Converting from local file store to S3
+======================================

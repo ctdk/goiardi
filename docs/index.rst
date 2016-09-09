@@ -6,7 +6,7 @@
 Welcome to goiardi's documentation!
 ===================================
 
-Goiardi is an implementation of the Chef server (http://www.chef.io) written in Go. It can either run entirely in memory with the option to save and load the in-memory data and search indexes to and from disk, drawing inspiration from  chef-zero, or it can use MySQL or PostgreSQL as its storage backend.
+Goiardi is an implementation of the Chef server (http://www.chef.io) written in Go. It can either run entirely in memory with the option to save and load the in-memory data and search indexes to and from disk, drawing inspiration from  chef-zero, or it can use MySQL or PostgreSQL as its storage backend. Cookbooks can either be stored locally, or optionally in Amazon S3 (or a compatible service).
 
 Like all software, it is a work in progress. Goiardi now, though, should have all the functionality of the open source Chef Server, plus some extras like reporting, event logging, and a Chef Push-like feature called "shovey". It does not support other Enterprise Chef type features like  organizations at this time. When used, knife works, and chef-client runs complete successfully. Almost all chef-pendant tests successfully successfully  run, with a few disagreements about error messages that don't impact the clients. It does pretty well against the official chef-pedant, but because goiardi handles some authentication matters a little differently than the official chef-server, there is also a fork of chef-pedant located at https://github.com/ctdk/chef-pedant that's more custom tailored to goiardi.
 
@@ -33,6 +33,7 @@ The goiardi manual is licensed under a Creative Commons Attribution 4.0 License 
    features/logging
    features/webui
    features/metrics
+   features/s3
 
 Indices and tables
 ==================
