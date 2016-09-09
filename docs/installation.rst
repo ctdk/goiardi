@@ -5,7 +5,7 @@ Installation
 
 To install goiardi from source:
 
-1. Install go. (http://golang.org/doc/install.html) Goiardi only supports go 1.6+ at this time, but older versions (especially go 1.5) may work. Goiardi should generally be able to be built with the latest version of Go, and this is generally recommended. Immediately after a minor release, of course, caution may be warranted.
+1. Install go. (http://golang.org/doc/install.html) Officially goiardi only supports go 1.6+ at this time, but older versions (especially go 1.5) may work. Goiardi should generally be able to be built with the latest version of Go, and this is generally recommended. Immediately after a minor release, of course, caution may be warranted.
 
 2. Make sure your ``$GOROOT`` and ``$PATH`` are set up correctly per the Go installation instructions.
 
@@ -142,6 +142,19 @@ Currently available command line and config file options::
         --statsd-instance= Statsd instance name to use for this server.
                            Defaults to the server's hostname, with '.'
                            replaced by '_'.
+        --use-s3-upload    Store cookbook files in S3 rather than
+                           locally in memory or on disk.
+        --aws-region=      AWS region to use S3 uploads.
+        --s3-bucket=       The name of the S3 bucket storing the files.
+        --aws-disable-ssl  Set to disable SSL for the endpoint. Mostly
+                           useful just for testing.
+        --s3-endpoint=     Set a different endpoint than the default
+                           s3.amazonaws.com. Mostly useful for testing
+                           with a fake S3 service, or if using an
+                           S3-compatible service.
+        --s3-file-period=  Length of time, in minutes, to allow files to
+                           be saved to or retrieved from S3 by the
+                           client. Defaults to 15 minutes.
 
 Options specified on the command line override options in the config file.
 
