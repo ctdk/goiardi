@@ -8,6 +8,8 @@
 * Use vendoring.
 * Rejigger the package building process a bit - changing how the different
   packages are built and how version numbers are determined.
+* Fix a long-standing annoyance where the log file would get truncated when
+  goiardi started or restarted.
 
 0.10.4
 ------
