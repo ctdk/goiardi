@@ -4,8 +4,10 @@
 * Change how items are indexed with the postgres indexer, to reduce the number
   of rows in the search_items table substantially (at the cost of possible
   differences in search results in a few weird corner cases).
+* Search parser no longer chokes on Unicode.
 * Use vendoring.
-* Rejigger the package building process a bit.
+* Rejigger the package building process a bit - changing how the different
+  packages are built and how version numbers are determined.
 
 0.10.4
 ------

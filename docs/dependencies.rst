@@ -3,25 +3,9 @@
 Dependencies
 ============
 
-Goiardi currently has eleven dependencies: go-flags, go-cache, go-trie, toml, the mysql driver from go-sql-driver, the postgres driver, logger, go-uuid, serf, msgp, and met.
+As of version 0.11.0, goiardi now includes its dependencies in the ``vendor`` directory. This saves the headache of having to download various sources and possibly finding that they don't work.
 
-To install them, run:
-
-.. code-block:: bash
-
-    go get github.com/jessevdk/go-flags
-    go get github.com/pmylund/go-cache
-    go get github.com/ctdk/go-trie/gtrie
-    go get github.com/BurntSushi/toml
-    go get github.com/go-sql-driver/mysql
-    go get github.com/lib/pq
-    go get github.com/tideland/golib/logger
-    go get github.com/codeskyblue/go-uuid
-    go get github.com/hashicorp/serf/client
-    go get github.com/philhofer/msgp/msgp
-    go get github.com/raintank/met
-
-from your ``$GOROOT``, or just let ``go get`` install them.
+If, for whatever reason, you are building goiardi with vendoring disabled, the dependencies will be installed when you ``go get`` it.
 
 If you would like to modify the search grammar, you'll need the ``peg`` package. To install that, run:
 
