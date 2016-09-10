@@ -99,6 +99,7 @@ type Conf struct {
 	AWSDisableSSL     bool   `toml:"aws-disable-ssl"`
 	S3Endpoint        string `toml:"s3-endpoint"`
 	S3FilePeriod      int    `toml:"s3-file-period"`
+	EnvVars      []string `toml:"env-vars"`
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -680,6 +681,22 @@ func ParseConfigOptions() error {
 
 		if Config.S3FilePeriod == 0 {
 			Config.S3FilePeriod = 15
+		}
+	}
+
+	// Environment variables
+	if len(Config.EnvVars) != 0 {
+		for _, v := range Config.EnvVars {
+			logger.Debugf("setting %s", v)
+			env := strings.SplitN(v, "=", 2)
+			if len(env) != 2 {
+				logger.Fatalf("Error setting environment variable %s - seems to be malformed.", v)
+				os.Exit(1)
+			}
+			if verr := os.Setenv(env[0], env[1]); verr != nil {
+				logger.Fatalf(verr.Error())
+				os.Exit(1)
+			}
 		}
 	}
 
