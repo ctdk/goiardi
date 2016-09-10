@@ -131,11 +131,6 @@ log-events = true
 # Path to RSA private key used to sign shovey requests.
 # sign-priv-key = "/path/to/shovey.key"
 
-# MySQL options. If "use-mysql" is true on the command line or in the
-# configuration file, connect to mysql with the options in [mysql]. All of the
-# MySQL options must be strings.
-use-mysql = false
-
 # Local directory for storing cookbook files on the filesystem. Optional in 
 # in-memory mode (standard behavior is to keep the files in memory), and
 # mandatory for SQL mode.
@@ -166,6 +161,11 @@ use-mysql = false
 # stastd-instance = "my_goiardi_server" # should be the hostname. "." will
 #      					# automatically be converted to "_".
 
+# MySQL options. If "use-mysql" is true on the command line or in the
+# configuration file, connect to mysql with the options in [mysql]. All of the
+# MySQL options must be strings.
+use-mysql = false
+
 [mysql]
 	username = "foo" # technically optional, although you probably want it
 	password = "s3kr1t" # optional, if you have no password set for MySQL
@@ -188,6 +188,27 @@ use-mysql = false
 #   "BAZ=blugh",
 #   "AWS_THINGY=sos3kr1t"
 # ]
+
+# Amazon S3 uploads
+#
+# Settings for S3, if using S3 (or a compatible service) to store uploaded
+# cookbooks.
+#
+## Whether to use s3 uploads
+# use-s3-upload = true
+# 
+## AWS region to use
+# aws-region = "us-west"
+#
+## Disable SSL with s3. Mostly for testing with fakes3 or somesuch.
+# aws-disable-ssl = false
+#
+## S3 endpoint. Again, mostly for testing with fakes3 or similar.
+# s3-endpoint = "s3.amazonaws.com"
+#
+## Length of time, in minutes, for URLs generated to upload or download files
+## to/from S3 to remain valid. Default is 15 minutes.
+# s3-file-period = 15
 
 use-postgresql = false
 
