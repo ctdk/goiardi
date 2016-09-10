@@ -176,9 +176,18 @@ use-mysql = false
 	dbname = "goiardi_test"
 	# See https://github.com/go-sql-driver/mysql#parameters for an
 	# explanation of available parameters
-	[mysql.extra_params]
-		tls = "false"
-		foo = "bar"
+	#[mysql.extra_params]
+	#	tls = "false"
+	#	foo = "bar"
+
+# Environment variables - if, for some reason, you need to pass environment
+# variables to goiardi but can't easily do so in the usual way, you can do so
+# here.
+# env-vars = [
+#   "FOO=bar",
+#   "BAZ=blugh",
+#   "AWS_THINGY=sos3kr1t"
+# ]
 
 use-postgresql = false
 
