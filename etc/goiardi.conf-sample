@@ -133,7 +133,7 @@ log-events = true
 
 # Local directory for storing cookbook files on the filesystem. Optional in 
 # in-memory mode (standard behavior is to keep the files in memory), and
-# mandatory for SQL mode.
+# mandatory for SQL mode (unless using S3 uploads).
 # local-filestore-dir = "/var/goiardi/file_checksums"
 
 # Postgres and advanced search options

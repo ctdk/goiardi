@@ -167,7 +167,7 @@ type Options struct {
 	DisableWebUI      bool   `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface."`
 	UseMySQL          bool   `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file."`
 	UsePostgreSQL     bool   `long:"use-postgresql" description:"Use a PostgreSQL database for data storage. Configure database options in the config file."`
-	LocalFstoreDir    string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* for SQL mode."`
+	LocalFstoreDir    string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* (unless using S3 uploads) for SQL mode."`
 	LogEvents         bool   `long:"log-events" description:"Log changes to chef objects."`
 	LogEventKeep      int    `short:"K" long:"log-event-keep" description:"Number of events to keep in the event log. If set, the event log will be checked periodically and pruned to this number of entries."`
 	Export            string `short:"x" long:"export" description:"Export all server data to the given file, exiting afterwards. Should be used with caution. Cannot be used at the same time as -m/--import."`
@@ -189,7 +189,7 @@ type Options struct {
 	StatsdAddr        string `long:"statsd-addr" description:"IP address and port of statsd instance to connect to. (default 'localhost:8125')"`
 	StatsdType        string `long:"statsd-type" description:"statsd format, can be either 'standard' or 'datadog' (default 'standard')"`
 	StatsdInstance    string `long:"statsd-instance" description:"Statsd instance name to use for this server. Defaults to the server's hostname, with '.' replaced by '_'."`
-	UseS3Upload       bool   `long:"use-s3-upload" description:"Store cookbook files in S3 rather than locally in memory or on disk."`
+	UseS3Upload       bool   `long:"use-s3-upload" description:"Store cookbook files in S3 rather than locally in memory or on disk. This or --local-filestore-dir must be set in SQL mode. Cannot be used with in-memory mode."`
 	AWSRegion         string `long:"aws-region" description:"AWS region to use S3 uploads."`
 	S3Bucket          string `long:"s3-bucket" description:"The name of the S3 bucket storing the files."`
 	AWSDisableSSL     bool   `long:"aws-disable-ssl" description:"Set to disable SSL for the endpoint. Mostly useful just for testing."`
@@ -397,8 +397,39 @@ func ParseConfigOptions() error {
 	if opts.LocalFstoreDir != "" {
 		Config.LocalFstoreDir = opts.LocalFstoreDir
 	}
-	if Config.LocalFstoreDir == "" && (Config.UseMySQL || Config.UsePostgreSQL) {
-		logger.Fatalf("local-filestore-dir must be set when running goiardi in SQL mode")
+
+	// s3 upload conf
+	if opts.UseS3Upload {
+		Config.UseS3Upload = opts.UseS3Upload
+	}
+	if Config.UseS3Upload {
+		if !Config.UseMySQL && !Config.UsePostgreSQL {
+			logger.Fatalf("S3 uploads must be used in SQL mode, not in-memory mode.")
+			os.Exit(1)
+		}
+		if opts.AWSRegion != "" {
+			Config.AWSRegion = opts.AWSRegion
+		}
+		if opts.S3Bucket != "" {
+			Config.S3Bucket = opts.S3Bucket
+		}
+		if opts.AWSDisableSSL {
+			Config.AWSDisableSSL = opts.AWSDisableSSL
+		}
+		if opts.S3Endpoint != "" {
+			Config.S3Endpoint = opts.S3Endpoint
+		}
+		if opts.S3FilePeriod != 0 {
+			Config.S3FilePeriod = opts.S3FilePeriod
+		}
+
+		if Config.S3FilePeriod == 0 {
+			Config.S3FilePeriod = 15
+		}
+	}
+
+	if Config.LocalFstoreDir == "" && ((Config.UseMySQL || Config.UsePostgreSQL) && !Config.UseS3Upload) {
+		logger.Fatalf("local-filestore-dir or use-s3-upload must be set and configured when running goiardi in SQL mode")
 		os.Exit(1)
 	}
 	if Config.LocalFstoreDir != "" {
@@ -656,32 +687,6 @@ func ParseConfigOptions() error {
 	}
 	if Config.StatsdInstance == "" {
 		Config.StatsdInstance = strings.Replace(Config.Hostname, ".", "_", -1)
-	}
-
-	// s3 upload conf
-	if opts.UseS3Upload {
-		Config.UseS3Upload = opts.UseS3Upload
-	}
-	if Config.UseS3Upload {
-		if opts.AWSRegion != "" {
-			Config.AWSRegion = opts.AWSRegion
-		}
-		if opts.S3Bucket != "" {
-			Config.S3Bucket = opts.S3Bucket
-		}
-		if opts.AWSDisableSSL {
-			Config.AWSDisableSSL = opts.AWSDisableSSL
-		}
-		if opts.S3Endpoint != "" {
-			Config.S3Endpoint = opts.S3Endpoint
-		}
-		if opts.S3FilePeriod != 0 {
-			Config.S3FilePeriod = opts.S3FilePeriod
-		}
-
-		if Config.S3FilePeriod == 0 {
-			Config.S3FilePeriod = 15
-		}
 	}
 
 	// Environment variables
