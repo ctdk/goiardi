@@ -82,9 +82,9 @@ Currently available command line and config file options::
                            database options in the config file.
         --use-postgresql   Use a PostgreSQL database for data storage.
                            Configure database options in the config file.
-        --local-filestore-dir= Directory to save uploaded files in. Optional when
-                           running in in-memory mode, *mandatory* for SQL
-                           mode.
+        --local-filestore-dir= Directory to save uploaded files in. Optional
+                           when running in in-memory mode, *mandatory*
+                           (unless using S3 uploads) for SQL mode.
         --log-events       Log changes to chef objects.
     -K, --log-event-keep=  Number of events to keep in the event log. If set,
                            the event log will be checked periodically and
@@ -142,8 +142,10 @@ Currently available command line and config file options::
         --statsd-instance= Statsd instance name to use for this server.
                            Defaults to the server's hostname, with '.'
                            replaced by '_'.
-        --use-s3-upload    Store cookbook files in S3 rather than
-                           locally in memory or on disk.
+        --use-s3-upload    Store cookbook files in S3 rather than locally in
+                           memory or on disk. This or --local-filestore-dir
+                           must be set in SQL mode. Cannot be used with
+                           in-memory mode.
         --aws-region=      AWS region to use S3 uploads.
         --s3-bucket=       The name of the S3 bucket storing the files.
         --aws-disable-ssl  Set to disable SSL for the endpoint. Mostly

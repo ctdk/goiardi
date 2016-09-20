@@ -5,7 +5,8 @@
 * Change how items are indexed with the postgres indexer, to reduce the number
   of rows in the search_items table substantially (at the cost of possible
   differences in search results in a few weird corner cases).
-* Search parser no longer chokes on Unicode.
+* Search parser no longer chokes on Unicode. Unfortunately Postgres' ltree
+  module does not accept all Unicode alphanumeric characters as valid still.
 * Use vendoring.
 * Rejigger the package building process a bit - changing how the different
   packages are built and how version numbers are determined.

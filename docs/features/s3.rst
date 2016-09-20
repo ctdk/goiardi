@@ -11,3 +11,13 @@ Testing it out
 
 Converting from local file store to S3
 ======================================
+
+A script is provided in ``scripts/lsf-conv.sh`` to make the local filestore to S3 transition easier. It requires `s3cmd <http://s3tools.org/s3cmd>`, but could easily be adapted to use the official aws-cli.
+
+Once your bucket and s3cmd are all configured, run the script to upload the cookbook files. The options are:
+
+``Usage: -a <AWS access id> -s <AWS secret> -r <region> -b <bucket> -d <local filestore directory>``
+
+The AWS access id and secret are optional if you're using the same credentials for chef as you've configured s3cmd to use.
+
+Nothing's in place for converting back to the local filestore from S3, but it wouldn't be too hard. All you would need to do is download all of the files from S3 and make sure they all get back into the local filestore directory (rather than the subdirectories derived from the first two letters of the hash).
