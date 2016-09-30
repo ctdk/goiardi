@@ -3,11 +3,66 @@
 S3 File Uploads
 ===============
 
+With goiardi 0.11.0, you can store cookbook files in S3 (or a compatible service), instead of storing them locally.
+
 Configuration
 =============
 
+goiardi options
+---------------
+
+There are five options to set for goiardi S3 cookbook uploads. They are:
+
+* ``use-s3-upload``: Enables (or disables) the S3 cookbook uploads.
+
+* ``aws-region``: The AWS region to upload files to. No default.
+
+* ``s3-endpoint``: An optional setting to change the S3 endpoint. Defaults to ``s3.amazonaws.com``, which is what you want, but can be set to any S3-compatible service.
+
+* ``aws-disable-ssl``: Disable SSL with S3 URLs. Almost certainly not something you should enable, unless you're running fakes3 or somesuch locally for testing.
+
+* ``s3-file-period``: How long, in minutes, links to cookbook files should remain valid to upload/download. Defaults to 15.
+
+These options can be set on the command line or in the goiardi.conf file. 
+
+S3 credentials
+--------------
+
+There are a few ways of storing the AWS credentials for goiardi to use for the S3 uploads.
+
+The best way is to use the `AWS credentials file <https://blogs.aws.amazon.com/security/post/Tx3D6U6WSFGOK2H/A-New-and-Standardized-Way-to-Manage-Credentials-in-the-AWS-SDKs>`.
+
+Failing that, set the ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY`` environment variables. They can be added to the init script that starts goiardi, or it can be added to the goiardi config file in the ``env-vars`` section.
+
 Testing it out
 ==============
+
+`Fake-s3 <https://github.com/jubos/fake-s3>` works pretty well for testing, but the current master doesn't handle bulk deletes from the aws-sdk go client. To fix this, apply the patch below to fake-s3, rebuild the gem, and reinstall.
+
+::
+
+        diff --git a/lib/fakes3/server.rb b/lib/fakes3/server.rb
+        index 47a4456..e4f3119 100644
+        --- a/lib/fakes3/server.rb
+        +++ b/lib/fakes3/server.rb
+        @@ -257,6 +257,16 @@ module FakeS3
+                 )
+
+                 response.body = XmlAdapter.complete_multipart_result real_obj
+        +      elsif query.has_key?('delete')
+        +       keys = s_req.webrick_request.body.scan(/\<Key\>(.*?)\<\/Key\>/).flatten
+        +
+        +       bucket_obj = @store.get_bucket(s_req.bucket)
+        +       keys.each do |k|
+        +         @store.delete_object(bucket_obj, k, s_req.webrick_request)
+        +       end
+        +
+        +       response.status = 204
+        +       response.body = ""
+               elsif request.content_type =~ /^multipart\/form-data; boundary=(.+)/
+                 key=request.query['key']
+
+If you're using fake-s3 to test it out, set the ``--aws-disable-ssl`` option (if you don't run fake-s3 with SSL enabled) and set ``--s3-endpoint`` to the bucket + fake-s3's hostname. (If you're using ``fakes3.local`` for your fake-s3 server and you're using a bucket named ``goiardi``, add ``goiardi.fakes3.local`` to ``/etc/hosts``.)
 
 Converting from local file store to S3
 ======================================
