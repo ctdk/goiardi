@@ -21,3 +21,8 @@ package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/xenial ${DIR}/artifacts/jessie/*.
 
 # ubuntu
 package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/trusty ${DIR}/artifacts/trusty/*.deb
+
+# centos
+
+package_cloud push ${PACKAGECLOUD_REPO}/el/6 ${DIR}/artifacts/el6/*.rpm
+package_cloud push ${PACKAGECLOUD_REPO}/el/7 ${DIR}/artifacts/el7/*.rpm

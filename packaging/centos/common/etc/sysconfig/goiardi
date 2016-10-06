@@ -1,0 +1,6 @@
+user="goiardi"
+group="goiardi"
+chroot="/"
+chdir="/"
+nice=""
+
