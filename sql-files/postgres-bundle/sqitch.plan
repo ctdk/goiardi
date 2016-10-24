@@ -50,3 +50,4 @@ ltree_del_item 2015-04-12T20:03:50Z Jeremy Bingham <jeremy@goiardi.gl> # procedu
 @v0.10.0 2015-07-23T07:21:08Z Jeremy Bingham <jeremy@goiardi.gl># Tag the 0.10.0 release.
 
 jsonb 2016-09-09T08:17:31Z Jeremy Bingham <jeremy@eridu.local> # Switch from json to jsonb columns. Will require using postgres 9.4+.
+@v0.11.0 2016-10-24T08:35:53Z Jeremy Bingham <jeremy@goiardi.gl> # tag the 0.11.0 release schema
