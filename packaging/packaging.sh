@@ -14,9 +14,11 @@ CURDIR=`pwd`
 ARTIFACT_DIR=$CURDIR/artifacts
 GOIARDI_VERSION=`git describe --long --always`
 GIT_HASH=`git rev-parse --short HEAD`
+COMMON_DIR="$CURDIR/common"
 BUILD="$CURDIR/build"
-mkdir $BUILD/bin
+mkdir -p $BUILD/bin
 SHARE="$BUILD/share"
+mkdir $SHARE
 cp $CURDIR/../sql-files/*.sql $SHARE
 cp $CURDIR/README_GOIARDI_SCHEMA.txt $SHARE
 
@@ -39,7 +41,6 @@ fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/trusty/go
 
 BUILD_ROOT="$BUILD/wheezy"
 FILES_DIR="$CURDIR/debian/wheezy"
-COMMON_DIR="$CURDIR/common"
 mkdir -p $BUILD_ROOT
 cd $BUILD_ROOT
 mkdir -p usr/bin
@@ -50,7 +51,7 @@ cp $BUILD/goiardi-$GOIARDI_VERSION-linux-amd64 usr/bin/goiardi
 cp -r $FILES_DIR/fs/etc .
 cp -r $COMMON_DIR/* .
 
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/artifacts/wheezy/goiardi-VERSION_ARCH.deb -a amd64 --description "a golang chef server" --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/wheezy/goiardi-VERSION_ARCH.deb -a amd64 --description "a golang chef server" --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 BUILD_ROOT="$BUILD/jessie"
 FILES_DIR="$CURDIR/debian/jessie"
@@ -64,7 +65,7 @@ cp $BUILD/goiardi-$GOIARDI_VERSION-linux-amd64 usr/bin/goiardi
 cp -r $FILES_DIR/fs/lib .
 cp -r $COMMON_DIR/* .
 
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/artifacts/jessie/goiardi-VERSION_ARCH.deb -a amd64 --description "a golang chef server"  --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/jessie/goiardi-VERSION_ARCH.deb -a amd64 --description "a golang chef server"  --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 # CentOS
 
@@ -84,7 +85,7 @@ cp -r $FILES_DIR/fs/etc .
 cp -r $COMMON_DIR/* .
 cp -r $CENTOS_COMMON_DIR/etc .
 
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/artifacts/el6/goiardi-VERSION.el6.ARCH.rpm -a amd64 --description "a golang chef server" --after-install $CENTOS_SCRIPTS/postinst.sh --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/el6/goiardi-VERSION.el6.ARCH.rpm -a amd64 --description "a golang chef server" --after-install $CENTOS_SCRIPTS/postinst.sh --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 BUILD_ROOT="$BUILD/el7"
 FILES_DIR="$CURDIR/debian/jessie"
@@ -99,15 +100,15 @@ cp -r $FILES_DIR/fs/lib .
 cp -r $COMMON_DIR/* .
 cp -r $CENTOS_COMMON_DIR/etc .
 
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/artifacts/el7/goiardi-VERSION.el7.ARCH.rpm -a amd64 --description "a golang chef server" --after-install $CENTOS_SCRIPTS/postinst.sh --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/el7/goiardi-VERSION.el7.ARCH.rpm -a amd64 --description "a golang chef server" --after-install $CENTOS_SCRIPTS/postinst.sh --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 # ARM binaries
 
 cd $CURDIR
 cd ..
 
-GOARM=6 gox -osarch="linux/arm" -ldflags "-X github.com/ctdk/goiardi/config.GitHash=$GIT_HASH" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}6"
-GOARM=7 gox -osarch="linux/arm" -ldflags "-X github.com/ctdk/goiardi/config.GitHash=$GIT_HASH" -output="{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}7"
+GOARM=6 gox -osarch="linux/arm" -ldflags "-X github.com/ctdk/goiardi/config.GitHash=$GIT_HASH" -output="$BUILD/{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}6"
+GOARM=7 gox -osarch="linux/arm" -ldflags "-X github.com/ctdk/goiardi/config.GitHash=$GIT_HASH" -output="$BUILD/{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}7"
 
 BUILD_ROOT="$BUILD/wheezy-arm6"
 FILES_DIR="$CURDIR/debian/wheezy"
@@ -121,7 +122,7 @@ cp $BUILD/goiardi-$GOIARDI_VERSION-linux-arm6 usr/bin/goiardi
 cp -r $FILES_DIR/fs/etc .
 cp -r $COMMON_DIR/* .
 
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/artifacts/wheezy/goiardi-VERSION_ARCH.deb -a armel --description "a golang chef server" --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/wheezy/goiardi-VERSION_ARCH.deb -a armel --description "a golang chef server" --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 BUILD_ROOT="$BUILD/wheezy-arm7"
 FILES_DIR="$CURDIR/debian/wheezy"
@@ -135,7 +136,7 @@ cp $BUILD/goiardi-$GOIARDI_VERSION-linux-arm7 usr/bin/goiardi
 cp -r $FILES_DIR/fs/etc .
 cp -r $COMMON_DIR/* .
 
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/artifacts/wheezy/goiardi-VERSION_ARCH.deb -a armhf --description "a golang chef server" --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/wheezy/goiardi-VERSION_ARCH.deb -a armhf --description "a golang chef server" --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 BUILD_ROOT="$BUILD/jessie-arm6"
 FILES_DIR="$CURDIR/debian/jessie"
@@ -149,7 +150,7 @@ cp $BUILD/goiardi-$GOIARDI_VERSION-linux-arm6 usr/bin/goiardi
 cp -r $FILES_DIR/fs/lib .
 cp -r $COMMON_DIR/* .
 
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/artifacts/jessie/goiardi-VERSION_ARCH.deb -a armel --description "a golang chef server"  --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/jessie/goiardi-VERSION_ARCH.deb -a armel --description "a golang chef server"  --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 BUILD_ROOT="$BUILD/jessie-arm7"
 FILES_DIR="$CURDIR/debian/jessie"
@@ -163,6 +164,6 @@ cp $BUILD/goiardi-$GOIARDI_VERSION-linux-arm7 usr/bin/goiardi
 cp -r $FILES_DIR/fs/lib .
 cp -r $COMMON_DIR/* .
 
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/artifacts/jessie/goiardi-VERSION_ARCH.deb -a armel --description "a golang chef server"  --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/jessie/goiardi-VERSION_ARCH.deb -a armhf --description "a golang chef server"  --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 cd $CURDIR
