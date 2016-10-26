@@ -85,7 +85,7 @@ cp -r $FILES_DIR/fs/etc .
 cp -r $COMMON_DIR/* .
 cp -r $CENTOS_COMMON_DIR/etc .
 
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/el6/goiardi-VERSION.el6.ARCH.rpm -a amd64 --description "a golang chef server" --after-install $CENTOS_SCRIPTS/postinst.sh --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t rpm -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/el6/goiardi-VERSION.el6.ARCH.rpm -a amd64 --description "a golang chef server" --after-install $CENTOS_SCRIPTS/postinst.sh --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 BUILD_ROOT="$BUILD/el7"
 FILES_DIR="$CURDIR/debian/jessie"
@@ -100,7 +100,7 @@ cp -r $FILES_DIR/fs/lib .
 cp -r $COMMON_DIR/* .
 cp -r $CENTOS_COMMON_DIR/etc .
 
-fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/el7/goiardi-VERSION.el7.ARCH.rpm -a amd64 --description "a golang chef server" --after-install $CENTOS_SCRIPTS/postinst.sh --license apachev2 -m "<jeremy@goiardi.gl>" .
+fpm -s dir -t rpm -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/el7/goiardi-VERSION.el7.ARCH.rpm -a amd64 --description "a golang chef server" --after-install $CENTOS_SCRIPTS/postinst.sh --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 # ARM binaries
 
