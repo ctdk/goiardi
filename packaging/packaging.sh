@@ -6,10 +6,6 @@
 # make more easily specified later
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
-for VAR in trusty wheezy jessie el6 el7; do
-	mkdir -p artifacts/$VAR
-done
-
 CURDIR=`pwd`
 ARTIFACT_DIR=$CURDIR/artifacts
 GOIARDI_VERSION=`git describe --long --always`
@@ -20,6 +16,10 @@ SHARE="$BUILD/share"
 
 rm -r $BUILD
 rm -r $ARTIFACT_DIR
+
+for VAR in trusty wheezy jessie el6 el7; do
+	mkdir -p $ARTIFACT_DIR/$VAR
+done
 
 mkdir -p $BUILD/bin
 mkdir $SHARE
