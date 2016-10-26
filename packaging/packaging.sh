@@ -16,8 +16,12 @@ GOIARDI_VERSION=`git describe --long --always`
 GIT_HASH=`git rev-parse --short HEAD`
 COMMON_DIR="$CURDIR/common"
 BUILD="$CURDIR/build"
-mkdir -p $BUILD/bin
 SHARE="$BUILD/share"
+
+rm -r $BUILD
+rm -r $ARTIFACT_DIR
+
+mkdir -p $BUILD/bin
 mkdir $SHARE
 cp $CURDIR/../sql-files/*.sql $SHARE
 cp $CURDIR/README_GOIARDI_SCHEMA.txt $SHARE
