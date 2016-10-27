@@ -1,90 +1,178 @@
 package gtrie
 
 // NOTE: THIS FILE WAS PRODUCED BY THE
-// MSGP CODE GENERATION TOOL (github.com/philhofer/msgp)
+// MSGP CODE GENERATION TOOL (github.com/tinylib/msgp)
 // DO NOT EDIT
 
 import (
-	"github.com/philhofer/msgp/msgp"
+	"github.com/tinylib/msgp/msgp"
 )
 
-
-// MarshalMsg implements the msgp.Marshaler interface
-func (z *Transition) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-
-	o = msgp.AppendMapHeader(o, 2)
-
-	o = msgp.AppendString(o, "Child")
-
-	if z.Child == nil {
-		o = msgp.AppendNil(o)
-	} else {
-
-		o, err = z.Child.MarshalMsg(o)
+// DecodeMsg implements msgp.Decodable
+func (z *Node) DecodeMsg(dc *msgp.Reader) (err error) {
+	var field []byte
+	_ = field
+	var isz uint32
+	isz, err = dc.ReadMapHeader()
+	if err != nil {
+		return
+	}
+	for isz > 0 {
+		isz--
+		field, err = dc.ReadMapKeyPtr()
 		if err != nil {
 			return
 		}
-
+		switch msgp.UnsafeString(field) {
+		case "Id":
+			{
+				var tmp int
+				tmp, err = dc.ReadInt()
+				z.Id = NodeId(tmp)
+			}
+			if err != nil {
+				return
+			}
+		case "Terminal":
+			z.Terminal, err = dc.ReadBool()
+			if err != nil {
+				return
+			}
+		case "Transitions":
+			var xsz uint32
+			xsz, err = dc.ReadArrayHeader()
+			if err != nil {
+				return
+			}
+			if cap(z.Transitions) >= int(xsz) {
+				z.Transitions = z.Transitions[:xsz]
+			} else {
+				z.Transitions = make([]Transition, xsz)
+			}
+			for xvk := range z.Transitions {
+				err = z.Transitions[xvk].DecodeMsg(dc)
+				if err != nil {
+					return
+				}
+			}
+		default:
+			err = dc.Skip()
+			if err != nil {
+				return
+			}
+		}
 	}
-
-	o = msgp.AppendString(o, "Label")
-
-	o = msgp.AppendInt32(o, int32(z.Label))
-
 	return
 }
 
-// UnmarshalMsg unmarshals a Transition from MessagePack, returning any extra bytes
-// and any errors encountered
-func (z *Transition) UnmarshalMsg(bts []byte) (o []byte, err error) {
+// EncodeMsg implements msgp.Encodable
+func (z *Node) EncodeMsg(en *msgp.Writer) (err error) {
+	// map header, size 3
+	// write "Id"
+	err = en.Append(0x83, 0xa2, 0x49, 0x64)
+	if err != nil {
+		return err
+	}
+	err = en.WriteInt(int(z.Id))
+	if err != nil {
+		return
+	}
+	// write "Terminal"
+	err = en.Append(0xa8, 0x54, 0x65, 0x72, 0x6d, 0x69, 0x6e, 0x61, 0x6c)
+	if err != nil {
+		return err
+	}
+	err = en.WriteBool(z.Terminal)
+	if err != nil {
+		return
+	}
+	// write "Transitions"
+	err = en.Append(0xab, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x73)
+	if err != nil {
+		return err
+	}
+	err = en.WriteArrayHeader(uint32(len(z.Transitions)))
+	if err != nil {
+		return
+	}
+	for xvk := range z.Transitions {
+		err = z.Transitions[xvk].EncodeMsg(en)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z *Node) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 3
+	// string "Id"
+	o = append(o, 0x83, 0xa2, 0x49, 0x64)
+	o = msgp.AppendInt(o, int(z.Id))
+	// string "Terminal"
+	o = append(o, 0xa8, 0x54, 0x65, 0x72, 0x6d, 0x69, 0x6e, 0x61, 0x6c)
+	o = msgp.AppendBool(o, z.Terminal)
+	// string "Transitions"
+	o = append(o, 0xab, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.Transitions)))
+	for xvk := range z.Transitions {
+		o, err = z.Transitions[xvk].MarshalMsg(o)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *Node) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
-
 	var isz uint32
 	isz, bts, err = msgp.ReadMapHeaderBytes(bts)
 	if err != nil {
 		return
 	}
-	for xplz := uint32(0); xplz < isz; xplz++ {
+	for isz > 0 {
+		isz--
 		field, bts, err = msgp.ReadMapKeyZC(bts)
 		if err != nil {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-
-		case "Child":
-			if msgp.IsNil(bts) {
-				bts, err = msgp.ReadNilBytes(bts)
-				if err != nil {
-					return
-				}
-				z.Child = nil
-			} else {
-				if z.Child == nil {
-					z.Child = new(Node)
-				}
-
-				bts, err = z.Child.UnmarshalMsg(bts)
-
-				if err != nil {
-					return
-				}
-
-			}
-
-		case "Label":
+		case "Id":
 			{
-				var tmp int32
-
-				tmp, bts, err = msgp.ReadInt32Bytes(bts)
-
-				z.Label = rune(tmp)
+				var tmp int
+				tmp, bts, err = msgp.ReadIntBytes(bts)
+				z.Id = NodeId(tmp)
 			}
 			if err != nil {
 				return
 			}
-
+		case "Terminal":
+			z.Terminal, bts, err = msgp.ReadBoolBytes(bts)
+			if err != nil {
+				return
+			}
+		case "Transitions":
+			var xsz uint32
+			xsz, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				return
+			}
+			if cap(z.Transitions) >= int(xsz) {
+				z.Transitions = z.Transitions[:xsz]
+			} else {
+				z.Transitions = make([]Transition, xsz)
+			}
+			for xvk := range z.Transitions {
+				bts, err = z.Transitions[xvk].UnmarshalMsg(bts)
+				if err != nil {
+					return
+				}
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -92,48 +180,82 @@ func (z *Transition) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			}
 		}
 	}
-
 	o = bts
 	return
 }
 
-// Msgsize implements the msgp.Sizer interface
-func (z *Transition) Msgsize() (s int) {
-
-	s += msgp.MapHeaderSize
-	s += msgp.StringPrefixSize + 5
-
-	if z.Child == nil {
-		s += msgp.NilSize
-	} else {
-
-		s += z.Child.Msgsize()
-
+func (z *Node) Msgsize() (s int) {
+	s = 1 + 3 + msgp.IntSize + 9 + msgp.BoolSize + 12 + msgp.ArrayHeaderSize
+	for xvk := range z.Transitions {
+		s += z.Transitions[xvk].Msgsize()
 	}
-	s += msgp.StringPrefixSize + 5
-
-	s += msgp.Int32Size
-
 	return
 }
 
-// DecodeMsg implements the msgp.Decodable interface
+// DecodeMsg implements msgp.Decodable
+func (z *NodeId) DecodeMsg(dc *msgp.Reader) (err error) {
+	{
+		var tmp int
+		tmp, err = dc.ReadInt()
+		(*z) = NodeId(tmp)
+	}
+	if err != nil {
+		return
+	}
+	return
+}
+
+// EncodeMsg implements msgp.Encodable
+func (z NodeId) EncodeMsg(en *msgp.Writer) (err error) {
+	err = en.WriteInt(int(z))
+	if err != nil {
+		return
+	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z NodeId) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	o = msgp.AppendInt(o, int(z))
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *NodeId) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	{
+		var tmp int
+		tmp, bts, err = msgp.ReadIntBytes(bts)
+		(*z) = NodeId(tmp)
+	}
+	if err != nil {
+		return
+	}
+	o = bts
+	return
+}
+
+func (z NodeId) Msgsize() (s int) {
+	s = msgp.IntSize
+	return
+}
+
+// DecodeMsg implements msgp.Decodable
 func (z *Transition) DecodeMsg(dc *msgp.Reader) (err error) {
 	var field []byte
 	_ = field
-
 	var isz uint32
 	isz, err = dc.ReadMapHeader()
 	if err != nil {
 		return
 	}
-	for xplz := uint32(0); xplz < isz; xplz++ {
-		field, err = dc.ReadMapKey(field)
+	for isz > 0 {
+		isz--
+		field, err = dc.ReadMapKeyPtr()
 		if err != nil {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-
 		case "Child":
 			if dc.IsNil() {
 				err = dc.ReadNil()
@@ -145,28 +267,20 @@ func (z *Transition) DecodeMsg(dc *msgp.Reader) (err error) {
 				if z.Child == nil {
 					z.Child = new(Node)
 				}
-
 				err = z.Child.DecodeMsg(dc)
-
 				if err != nil {
 					return
 				}
-
 			}
-
 		case "Label":
-
 			{
 				var tmp int32
-
 				tmp, err = dc.ReadInt32()
-
 				z.Label = rune(tmp)
 			}
 			if err != nil {
 				return
 			}
-
 		default:
 			err = dc.Skip()
 			if err != nil {
@@ -174,137 +288,101 @@ func (z *Transition) DecodeMsg(dc *msgp.Reader) (err error) {
 			}
 		}
 	}
-
 	return
 }
 
-// EncodeMsg implements the msgp.Encodable interface
+// EncodeMsg implements msgp.Encodable
 func (z *Transition) EncodeMsg(en *msgp.Writer) (err error) {
-
-	err = en.WriteMapHeader(2)
+	// map header, size 2
+	// write "Child"
+	err = en.Append(0x82, 0xa5, 0x43, 0x68, 0x69, 0x6c, 0x64)
 	if err != nil {
-		return
+		return err
 	}
-
-	err = en.WriteString("Child")
-	if err != nil {
-		return
-	}
-
 	if z.Child == nil {
 		err = en.WriteNil()
 		if err != nil {
 			return
 		}
 	} else {
-
 		err = z.Child.EncodeMsg(en)
-
 		if err != nil {
 			return
 		}
-
 	}
-
-	err = en.WriteString("Label")
+	// write "Label"
+	err = en.Append(0xa5, 0x4c, 0x61, 0x62, 0x65, 0x6c)
 	if err != nil {
-		return
+		return err
 	}
-
 	err = en.WriteInt32(int32(z.Label))
-
 	if err != nil {
 		return
 	}
-
 	return
 }
 
-// MarshalMsg implements the msgp.Marshaler interface
-func (z *Node) MarshalMsg(b []byte) (o []byte, err error) {
+// MarshalMsg implements msgp.Marshaler
+func (z *Transition) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-
-	o = msgp.AppendMapHeader(o, 3)
-
-	o = msgp.AppendString(o, "Id")
-
-	o = msgp.AppendInt(o, int(z.Id))
-
-	o = msgp.AppendString(o, "Terminal")
-
-	o = msgp.AppendBool(o, z.Terminal)
-
-	o = msgp.AppendString(o, "Transitions")
-
-	o = msgp.AppendArrayHeader(o, uint32(len(z.Transitions)))
-	for xvk := range z.Transitions {
-
-		o, err = z.Transitions[xvk].MarshalMsg(o)
+	// map header, size 2
+	// string "Child"
+	o = append(o, 0x82, 0xa5, 0x43, 0x68, 0x69, 0x6c, 0x64)
+	if z.Child == nil {
+		o = msgp.AppendNil(o)
+	} else {
+		o, err = z.Child.MarshalMsg(o)
 		if err != nil {
 			return
 		}
-
 	}
-
+	// string "Label"
+	o = append(o, 0xa5, 0x4c, 0x61, 0x62, 0x65, 0x6c)
+	o = msgp.AppendInt32(o, int32(z.Label))
 	return
 }
 
-// UnmarshalMsg unmarshals a Node from MessagePack, returning any extra bytes
-// and any errors encountered
-func (z *Node) UnmarshalMsg(bts []byte) (o []byte, err error) {
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *Transition) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
-
 	var isz uint32
 	isz, bts, err = msgp.ReadMapHeaderBytes(bts)
 	if err != nil {
 		return
 	}
-	for xplz := uint32(0); xplz < isz; xplz++ {
+	for isz > 0 {
+		isz--
 		field, bts, err = msgp.ReadMapKeyZC(bts)
 		if err != nil {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-
-		case "Id":
-			{
-				var tmp int
-
-				tmp, bts, err = msgp.ReadIntBytes(bts)
-
-				z.Id = NodeId(tmp)
-			}
-			if err != nil {
-				return
-			}
-
-		case "Terminal":
-
-			z.Terminal, bts, err = msgp.ReadBoolBytes(bts)
-
-			if err != nil {
-				return
-			}
-
-		case "Transitions":
-			var xsz uint32
-			xsz, bts, err = msgp.ReadArrayHeaderBytes(bts)
-			if cap(z.Transitions) >= int(xsz) {
-				z.Transitions = z.Transitions[0:int(xsz)]
-			} else {
-				z.Transitions = make([]Transition, int(xsz))
-			}
-			for xvk := range z.Transitions {
-
-				bts, err = z.Transitions[xvk].UnmarshalMsg(bts)
-
+		case "Child":
+			if msgp.IsNil(bts) {
+				bts, err = msgp.ReadNilBytes(bts)
 				if err != nil {
 					return
 				}
-
+				z.Child = nil
+			} else {
+				if z.Child == nil {
+					z.Child = new(Node)
+				}
+				bts, err = z.Child.UnmarshalMsg(bts)
+				if err != nil {
+					return
+				}
 			}
-
+		case "Label":
+			{
+				var tmp int32
+				tmp, bts, err = msgp.ReadInt32Bytes(bts)
+				z.Label = rune(tmp)
+			}
+			if err != nil {
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -312,152 +390,17 @@ func (z *Node) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			}
 		}
 	}
-
 	o = bts
 	return
 }
 
-// Msgsize implements the msgp.Sizer interface
-func (z *Node) Msgsize() (s int) {
-
-	s += msgp.MapHeaderSize
-	s += msgp.StringPrefixSize + 2
-
-	s += msgp.IntSize
-	s += msgp.StringPrefixSize + 8
-
-	s += msgp.BoolSize
-	s += msgp.StringPrefixSize + 11
-
-	s += msgp.ArrayHeaderSize
-	for xvk := range z.Transitions {
-		_ = xvk
-
-		s += z.Transitions[xvk].Msgsize()
-
+func (z *Transition) Msgsize() (s int) {
+	s = 1 + 6
+	if z.Child == nil {
+		s += msgp.NilSize
+	} else {
+		s += z.Child.Msgsize()
 	}
-
-	return
-}
-
-// DecodeMsg implements the msgp.Decodable interface
-func (z *Node) DecodeMsg(dc *msgp.Reader) (err error) {
-	var field []byte
-	_ = field
-
-	var isz uint32
-	isz, err = dc.ReadMapHeader()
-	if err != nil {
-		return
-	}
-	for xplz := uint32(0); xplz < isz; xplz++ {
-		field, err = dc.ReadMapKey(field)
-		if err != nil {
-			return
-		}
-		switch msgp.UnsafeString(field) {
-
-		case "Id":
-
-			{
-				var tmp int
-
-				tmp, err = dc.ReadInt()
-
-				z.Id = NodeId(tmp)
-			}
-			if err != nil {
-				return
-			}
-
-		case "Terminal":
-
-			z.Terminal, err = dc.ReadBool()
-
-			if err != nil {
-				return
-			}
-
-		case "Transitions":
-			var xsz uint32
-			xsz, err = dc.ReadArrayHeader()
-			if err != nil {
-				return
-			}
-			if cap(z.Transitions) > 0 && cap(z.Transitions) >= int(xsz) {
-				z.Transitions = z.Transitions[0:int(xsz)]
-			} else {
-				z.Transitions = make([]Transition, int(xsz))
-			}
-			for xvk := range z.Transitions {
-
-				err = z.Transitions[xvk].DecodeMsg(dc)
-
-				if err != nil {
-					return
-				}
-
-			}
-
-		default:
-			err = dc.Skip()
-			if err != nil {
-				return
-			}
-		}
-	}
-
-	return
-}
-
-// EncodeMsg implements the msgp.Encodable interface
-func (z *Node) EncodeMsg(en *msgp.Writer) (err error) {
-
-	err = en.WriteMapHeader(3)
-	if err != nil {
-		return
-	}
-
-	err = en.WriteString("Id")
-	if err != nil {
-		return
-	}
-
-	err = en.WriteInt(int(z.Id))
-
-	if err != nil {
-		return
-	}
-
-	err = en.WriteString("Terminal")
-	if err != nil {
-		return
-	}
-
-	err = en.WriteBool(z.Terminal)
-
-	if err != nil {
-		return
-	}
-
-	err = en.WriteString("Transitions")
-	if err != nil {
-		return
-	}
-
-	err = en.WriteArrayHeader(uint32(len(z.Transitions)))
-	if err != nil {
-		return
-	}
-	for xvk := range z.Transitions {
-
-		err = z.Transitions[xvk].EncodeMsg(en)
-
-		if err != nil {
-			return
-		}
-
-	}
-
+	s += 6 + msgp.Int32Size
 	return
 }

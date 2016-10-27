@@ -178,10 +178,11 @@
 			"revisionTime": "2014-02-08T11:57:53Z"
 		},
 		{
-			"checksumSHA1": "3f3lGSsD2pLXeuJ1U6mzaENEVEg=",
+			"checksumSHA1": "0y3DF9yrB5zhO24cg+NZLX+XfYE=",
+			"origin": "github.com/ctdk/goiardi/vendor/github.com/ctdk/go-trie/gtrie",
 			"path": "github.com/ctdk/go-trie/gtrie",
-			"revision": "616790b18c07269ce2d61ce23d83732935271edf",
-			"revisionTime": "2014-12-18T06:24:46Z"
+			"revision": "6443fbc024a06fe4fb45e1151585c874934eaa4c",
+			"revisionTime": "2016-10-27T11:05:31Z"
 		},
 		{
 			"checksumSHA1": "OZ8Mh0e3GVyIh44Zi1QswzWpxh8=",
@@ -300,12 +301,6 @@
 			"revisionTime": "2016-01-29T03:59:39Z"
 		},
 		{
-			"checksumSHA1": "x3/R/j3EFspin1nOqAs5TWHyDsU=",
-			"path": "github.com/philhofer/msgp/msgp",
-			"revision": "ad0ff2e232ad2e37faf67087fb24bf8d04a8ce20",
-			"revisionTime": "2016-08-03T06:23:24Z"
-		},
-		{
 			"checksumSHA1": "D+eX5lLgOgij1Hs7NO10OLdUVZo=",
 			"path": "github.com/pmylund/go-cache",
 			"revision": "1881a9bccb818787f68c52bfba648c6cf34c34fa",
@@ -346,6 +341,12 @@
 			"path": "github.com/tideland/golib/version",
 			"revision": "2938f1706f66af160b438fe2ce4931b9667dc12a",
 			"revisionTime": "2016-06-24T20:11:12Z"
+		},
+		{
+			"checksumSHA1": "CQb99iyxSSb4/NYBaiomuG4IIwk=",
+			"path": "github.com/tinylib/msgp/msgp",
+			"revision": "cd4fb1548c31d88af25205dc021be20935aec720",
+			"revisionTime": "2015-08-05T04:23:39Z"
 		},
 		{
 			"checksumSHA1": "XNmPFaFgzySgspAuguUZp+UAws0=",

@@ -162,7 +162,7 @@ func AppendUint(b []byte, u uint) []byte { return AppendUint64(b, uint64(u)) }
 // AppendUint8 appends a uint8 to the slice
 func AppendUint8(b []byte, u uint8) []byte { return AppendUint64(b, uint64(u)) }
 
-// AppendByte is analogous to AppendUint8
+// AppendByte is analagous to AppendUint8
 func AppendByte(b []byte, u byte) []byte { return AppendUint8(b, uint8(u)) }
 
 // AppendUint16 appends a uint16 to the slice
@@ -399,12 +399,7 @@ func AppendIntf(b []byte, i interface{}) ([]byte, error) {
 			}
 		}
 		return b, nil
-	case reflect.Ptr:
-		if v.IsNil() {
-			return AppendNil(b), err
-		}
-		b, err = AppendIntf(b, v.Elem().Interface())
-		return b, err
+
 	default:
 		return b, &ErrUnsupportedType{T: v.Type()}
 	}
