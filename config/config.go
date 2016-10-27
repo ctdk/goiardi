@@ -76,30 +76,30 @@ type Conf struct {
 	DoExport          bool
 	DoImport          bool
 	ImpExFile         string
-	ObjMaxSize        int64  `toml:"obj-max-size"`
-	JSONReqMaxSize    int64  `toml:"json-req-max-size"`
-	UseUnsafeMemStore bool   `toml:"use-unsafe-mem-store"`
-	DbPoolSize        int    `toml:"db-pool-size"`
-	MaxConn           int    `toml:"max-connections"`
-	UseSerf           bool   `toml:"use-serf"`
-	SerfEventAnnounce bool   `toml:"serf-event-announce"`
-	SerfAddr          string `toml:"serf-addr"`
-	UseShovey         bool   `toml:"use-shovey"`
-	SignPrivKey       string `toml:"sign-priv-key"`
-	DotSearch         bool   `toml:"dot-search"`
-	ConvertSearch     bool   `toml:"convert-search"`
-	PgSearch          bool   `toml:"pg-search"`
-	UseStatsd         bool   `toml:"use-statsd"`
-	StatsdAddr        string `toml:"statsd-addr"`
-	StatsdType        string `toml:"statsd-type"`
-	StatsdInstance    string `toml:"statsd-instance"`
-	UseS3Upload       bool   `toml:"use-s3-upload"`
-	AWSRegion         string `toml:"aws-region"`
-	S3Bucket          string `toml:"s3-bucket"`
-	AWSDisableSSL     bool   `toml:"aws-disable-ssl"`
-	S3Endpoint        string `toml:"s3-endpoint"`
-	S3FilePeriod      int    `toml:"s3-file-period"`
-	EnvVars      []string `toml:"env-vars"`
+	ObjMaxSize        int64    `toml:"obj-max-size"`
+	JSONReqMaxSize    int64    `toml:"json-req-max-size"`
+	UseUnsafeMemStore bool     `toml:"use-unsafe-mem-store"`
+	DbPoolSize        int      `toml:"db-pool-size"`
+	MaxConn           int      `toml:"max-connections"`
+	UseSerf           bool     `toml:"use-serf"`
+	SerfEventAnnounce bool     `toml:"serf-event-announce"`
+	SerfAddr          string   `toml:"serf-addr"`
+	UseShovey         bool     `toml:"use-shovey"`
+	SignPrivKey       string   `toml:"sign-priv-key"`
+	DotSearch         bool     `toml:"dot-search"`
+	ConvertSearch     bool     `toml:"convert-search"`
+	PgSearch          bool     `toml:"pg-search"`
+	UseStatsd         bool     `toml:"use-statsd"`
+	StatsdAddr        string   `toml:"statsd-addr"`
+	StatsdType        string   `toml:"statsd-type"`
+	StatsdInstance    string   `toml:"statsd-instance"`
+	UseS3Upload       bool     `toml:"use-s3-upload"`
+	AWSRegion         string   `toml:"aws-region"`
+	S3Bucket          string   `toml:"s3-bucket"`
+	AWSDisableSSL     bool     `toml:"aws-disable-ssl"`
+	S3Endpoint        string   `toml:"s3-endpoint"`
+	S3FilePeriod      int      `toml:"s3-file-period"`
+	EnvVars           []string `toml:"env-vars"`
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.

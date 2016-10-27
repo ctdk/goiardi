@@ -31,8 +31,8 @@ import (
 
 	"github.com/ctdk/go-trie/gtrie"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tinylib/msgp/msgp"
 	"github.com/tideland/golib/logger"
+	"github.com/tinylib/msgp/msgp"
 )
 
 type FileIndex struct {
