@@ -182,7 +182,7 @@ func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 			_ = c
 			newq, nend, nerr := extractSubQuery(s)
 			if nerr != nil {
-				return nil, err
+				return nil, nerr
 			}
 			s = nend
 			var d map[string]indexer.Document
