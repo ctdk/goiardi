@@ -1,6 +1,5 @@
 * More documentation where appropriate
-* Provide a smooth and easy installation process, possibly packages where
-  appropriate.
-* Update email in copyright notices.
+* Provide packages on more platforms, including getting everything set up for
+  real Debian packages.
 
 Also see https://github.com/ctdk/goiardi/issues?state=open

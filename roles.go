@@ -1,7 +1,7 @@
 /* Role functions */
 
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
