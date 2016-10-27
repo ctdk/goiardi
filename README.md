@@ -14,7 +14,7 @@ The full goiardi documentation has been moved out of this README because it was
 getting too big to be easily manageable. It now uses sphinx to manage and format
 the documentation, which can be found under the `docs/` directory. To learn
 about sphinx-doc, see http://sphinx-doc.org/. The documentation can also be
-found online at http://goiardi.readthedocs.org/en/latest/.
+found online at http://goiardi.readthedocs.io/en/latest/.
 
 In addition to the aforementioned Chef documentation at http://docs.opscode.com,
 more documentation specific to goiardi can be viewed with godoc. See

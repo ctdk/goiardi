@@ -1,4 +1,4 @@
-0.11.0 (unreleased)
+0.11.0
 ------
 * Ability to upload cookbooks to S3.
 * Add script to upload local files to S3 to migrate.
@@ -13,6 +13,12 @@
 * Fix a long-standing annoyance where the log file would get truncated when
   goiardi started or restarted.
 * Allow passing environment variables to goiardi through the config file.
+* Fix in-memory indexer to work with go 1.7.
+* Add packages for CentOS 6 and 7. Also use a gox fork pulling in someone's PR
+  with better ARM support until that gets merged upstream eventually.
+* Change the postgres columns using the 'json' data type to use 'jsonb'
+  instead. This is generally better, but does mean that goiardi now requires
+  PostgreSQL 9.4 or later.
 
 0.10.4
 ------

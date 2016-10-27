@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jbingham@gmail.com>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ The full goiardi documentation has been moved out of this file because it was
 getting too big to be easily manageable. It now uses sphinx to manage and format
 the documentation, which can be found under the `docs/` directory. To learn
 about sphinx-doc, see http://sphinx-doc.org/. The documentation can also be
-found online at http://goiardi.readthedocs.org/en/latest/. The godocs for
+found online at http://goiardi.readthedocs.io/en/latest/. The godocs for
 goiardi are now focused on development and internals.
 */
 package main
