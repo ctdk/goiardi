@@ -6,10 +6,10 @@ S3 File Uploads
 With goiardi 0.11.0, you can store cookbook files in S3 (or a compatible service), instead of storing them locally.
 
 Configuration
-=============
+-------------
 
 goiardi options
----------------
+~~~~~~~~~~~~~~~
 
 There are five options to set for goiardi S3 cookbook uploads. They are:
 
@@ -26,7 +26,7 @@ There are five options to set for goiardi S3 cookbook uploads. They are:
 These options can be set on the command line or in the goiardi.conf file. 
 
 S3 credentials
---------------
+~~~~~~~~~~~~~~
 
 There are a few ways of storing the AWS credentials for goiardi to use for the S3 uploads.
 
@@ -35,7 +35,7 @@ The best way is to use the `AWS credentials file <https://blogs.aws.amazon.com/s
 Failing that, set the ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY`` environment variables. They can be added to the init script that starts goiardi, or it can be added to the goiardi config file in the ``env-vars`` section.
 
 Testing it out
-==============
+--------------
 
 `Fake-s3 <https://github.com/jubos/fake-s3>` works pretty well for testing, but the current master doesn't handle bulk deletes from the aws-sdk go client. To fix this, apply the patch below to fake-s3, rebuild the gem, and reinstall.
 
@@ -65,7 +65,7 @@ Testing it out
 If you're using fake-s3 to test it out, set the ``--aws-disable-ssl`` option (if you don't run fake-s3 with SSL enabled) and set ``--s3-endpoint`` to the bucket + fake-s3's hostname. (If you're using ``fakes3.local`` for your fake-s3 server and you're using a bucket named ``goiardi``, add ``goiardi.fakes3.local`` to ``/etc/hosts``.)
 
 Converting from local file store to S3
-======================================
+--------------------------------------
 
 A script is provided in ``scripts/lsf-conv.sh`` to make the local filestore to S3 transition easier. It requires `s3cmd <http://s3tools.org/s3cmd>`, but could easily be adapted to use the official aws-cli.
 
