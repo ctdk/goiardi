@@ -16,7 +16,7 @@ the documentation, which can be found under the `docs/` directory. To learn
 about sphinx-doc, see http://sphinx-doc.org/. The documentation can also be
 found online at http://goiardi.readthedocs.io/en/latest/.
 
-In addition to the aforementioned Chef documentation at http://docs.opscode.com,
+In addition to the aforementioned Chef documentation at http://docs.chef.io,
 more documentation specific to goiardi can be viewed with godoc. See
 https://godoc.org/golang.org/x/tools/cmd/godoc for an explanation of how
 godoc works. The goiardi godocs can also be viewed online at
