@@ -60,7 +60,7 @@ Jeremy Bingham (<jeremy@goiardi.gl>)
 COPYRIGHT
 ---------
 
-Copyright 2013-2015, Jeremy Bingham
+Copyright 2013-2016, Jeremy Bingham
 
 The `depgraph` and `digraph` packages are vendored from terraform and are
 copyrighted by Hashicorp.
