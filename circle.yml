@@ -6,7 +6,7 @@ test:
     - cd packaging && /bin/bash packaging.sh
 general:
   artifacts:
-    - pkg/artifacts
+    - packaging/artifacts
 deployment:
   production:
     branch: releases
