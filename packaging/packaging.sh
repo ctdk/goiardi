@@ -111,9 +111,6 @@ fpm -s dir -t rpm -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/el7/goiar
 cd $CURDIR
 cd ..
 
-GOARM=6 gox -osarch="linux/arm" -ldflags "-X github.com/ctdk/goiardi/config.GitHash=$GIT_HASH" -output="$BUILD/{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}6"
-GOARM=7 gox -osarch="linux/arm" -ldflags "-X github.com/ctdk/goiardi/config.GitHash=$GIT_HASH" -output="$BUILD/{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}7"
-
 BUILD_ROOT="$BUILD/wheezy-armv6"
 FILES_DIR="$CURDIR/debian/wheezy"
 mkdir -p $BUILD_ROOT
