@@ -1,7 +1,7 @@
 test:
   pre:
     - gem install fpm
-    - apt-get install rpm
+    - sudo apt-get install rpm
     - go get github.com/ctdk/gox
   post:
     - cd packaging && /bin/bash packaging.sh
