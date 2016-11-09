@@ -23,12 +23,12 @@ package cookbook
 import (
 	"database/sql"
 	"fmt"
-	gversion "github.com/ctdk/go-version"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/depgraph"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/util"
+	gversion "github.com/hashicorp/go-version"
 	"github.com/tideland/golib/logger"
 	"net/http"
 	"regexp"
