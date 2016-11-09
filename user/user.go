@@ -31,7 +31,7 @@ import (
 	"database/sql"
 	"encoding/gob"
 	"fmt"
-	"github.com/ctdk/goiardi/chefcrypto"
+	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"

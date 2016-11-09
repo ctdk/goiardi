@@ -33,7 +33,7 @@ import (
 	"time"
 
 	"github.com/codeskyblue/go-uuid"
-	"github.com/ctdk/goiardi/chefcrypto"
+	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/node"
