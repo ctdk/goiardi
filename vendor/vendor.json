@@ -172,29 +172,16 @@
 			"revisionTime": "2016-09-01T22:26:51Z"
 		},
 		{
-			"checksumSHA1": "n6WHmaVaxufQthaT1tYnqTmtSsY=",
-			"path": "github.com/codeskyblue/go-uuid",
-			"revision": "952abbca900b023c1a80bc522ff4795db50d9d6c",
-			"revisionTime": "2014-02-08T11:57:53Z"
+			"checksumSHA1": "QIOlyIbmUan8arSrVluFbIlTYFA=",
+			"path": "github.com/ctdk/chefcrypto",
+			"revision": "dea96d785906a3d64685dfd09e05646eb62dab38",
+			"revisionTime": "2016-11-09T19:16:39Z"
 		},
 		{
-			"checksumSHA1": "0y3DF9yrB5zhO24cg+NZLX+XfYE=",
-			"origin": "github.com/ctdk/goiardi/vendor/github.com/ctdk/go-trie/gtrie",
+			"checksumSHA1": "4ZZ3xl65G82hHm2oIA5jTqHZCPA=",
 			"path": "github.com/ctdk/go-trie/gtrie",
-			"revision": "6443fbc024a06fe4fb45e1151585c874934eaa4c",
-			"revisionTime": "2016-10-27T11:05:31Z"
-		},
-		{
-			"checksumSHA1": "OZ8Mh0e3GVyIh44Zi1QswzWpxh8=",
-			"path": "github.com/ctdk/go-version",
-			"revision": "098575c33c951e2009638a06454df46b50766b01",
-			"revisionTime": "2015-01-25T02:10:27Z"
-		},
-		{
-			"checksumSHA1": "+SBFmIVFHRkzn2vPti01Rvp44eo=",
-			"path": "github.com/go-chef/chef",
-			"revision": "cdacc19ee7c4bb901dd0775f698410b29a01da1e",
-			"revisionTime": "2016-03-22T17:08:36Z"
+			"revision": "fe74c509b12ed76cb4724293154fb40c7060b823",
+			"revisionTime": "2016-11-10T00:09:26Z"
 		},
 		{
 			"checksumSHA1": "FCeEm2BWZV/n4oTy+SGd/k0Ab5c=",
@@ -229,6 +216,12 @@
 			"path": "github.com/hashicorp/go-multierror",
 			"revision": "9432bc08aa8d486e497e27f84878ebbe8c1eab66",
 			"revisionTime": "2016-08-16T23:01:54Z"
+		},
+		{
+			"checksumSHA1": "EcZfls6vcqjasWV/nBlu+C+EFmc=",
+			"path": "github.com/hashicorp/go-version",
+			"revision": "e96d3840402619007766590ecea8dd7af1292276",
+			"revisionTime": "2016-10-31T18:26:05Z"
 		},
 		{
 			"checksumSHA1": "vt+P9D2yWDO3gdvdgCzwqunlhxU=",
@@ -293,6 +286,12 @@
 			"path": "github.com/miekg/dns",
 			"revision": "9432bc08aa8d486e497e27f84878ebbe8c1eab66",
 			"revisionTime": "2016-08-16T23:01:54Z"
+		},
+		{
+			"checksumSHA1": "xN14ZoFcgefABp24aowYtQVMDsc=",
+			"path": "github.com/pborman/uuid",
+			"revision": "c55201b036063326c5b1b89ccfe45a184973d073",
+			"revisionTime": "2016-02-16T16:37:10Z"
 		},
 		{
 			"checksumSHA1": "mbhJnsNwGAwkTQH5c2hVRO9YmxA=",
