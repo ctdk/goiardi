@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-chef/chef"
+	"github.com/ctdk/goiardi/authentication/go-chef/chef"
 )
 
 var privKey = `-----BEGIN RSA PRIVATE KEY-----

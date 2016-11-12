@@ -32,14 +32,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codeskyblue/go-uuid"
-	"github.com/ctdk/goiardi/chefcrypto"
+	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/util"
 	serfclient "github.com/hashicorp/serf/client"
+	"github.com/pborman/uuid"
 	"github.com/tideland/golib/logger"
 )
 
