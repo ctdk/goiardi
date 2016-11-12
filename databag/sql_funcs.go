@@ -159,7 +159,7 @@ func (dbi *DataBagItem) updateDBItemSQL() error {
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
-			err = fmt.Errorf("updating data bag item %s in data bag %s had an error '%s', and then rolling back the transaction gave another erorr '%s'", dbi.origName, dbi.DataBagName, err.Error(), terr.Error())
+			err = fmt.Errorf("updating data bag item %s in data bag %s had an error '%s', and then rolling back the transaction gave another error '%s'", dbi.origName, dbi.DataBagName, err.Error(), terr.Error())
 		}
 		return err
 	}
@@ -180,7 +180,7 @@ func (dbi *DataBagItem) deleteDBItemSQL() error {
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
-			err = fmt.Errorf("deleting data bag item %s in data bag %s had an error '%s', and then rolling back the transaction gave another erorr '%s'", dbi.origName, dbi.DataBagName, err.Error(), terr.Error())
+			err = fmt.Errorf("deleting data bag item %s in data bag %s had an error '%s', and then rolling back the transaction gave another error '%s'", dbi.origName, dbi.DataBagName, err.Error(), terr.Error())
 		}
 		return err
 	}
@@ -298,7 +298,7 @@ func (db *DataBag) deleteSQL() error {
 	if err != nil && err != sql.ErrNoRows {
 		terr := tx.Rollback()
 		if terr != nil {
-			err = fmt.Errorf("deleting data bag items for data bag %s had an error '%s', and then rolling back the transaction gave another erorr '%s'", db.Name, err.Error(), terr.Error())
+			err = fmt.Errorf("deleting data bag items for data bag %s had an error '%s', and then rolling back the transaction gave another error '%s'", db.Name, err.Error(), terr.Error())
 		}
 		return err
 	}
@@ -310,7 +310,7 @@ func (db *DataBag) deleteSQL() error {
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
-			err = fmt.Errorf("deleting data bag %s had an error '%s', and then rolling back the transaction gave another erorr '%s'", db.Name, err.Error(), terr.Error())
+			err = fmt.Errorf("deleting data bag %s had an error '%s', and then rolling back the transaction gave another error '%s'", db.Name, err.Error(), terr.Error())
 		}
 		return err
 	}

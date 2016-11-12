@@ -48,7 +48,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 		var err error
 		offset, err = strconv.Atoi(o[0])
 		if err != nil {
-			jsonErrorReport(w, r, "invalid offset converstion to int", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid offset conversion to int", http.StatusBadRequest)
 			return
 		}
 		if offset < 0 {
