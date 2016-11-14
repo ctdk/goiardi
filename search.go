@@ -36,7 +36,14 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"sync"
 )
+
+var riM *sync.Mutex
+
+func init() {
+	riM = new(sync.Mutex)
+}
 
 func searchHandler(w http.ResponseWriter, r *http.Request) {
 	/* ... and we need search to run the environment tests, so here we
@@ -203,6 +210,12 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func reindexAll() {
+	// Take the mutex before starting to reindex everything. This way at
+	// least reindexing jobs won't pile up on top of each other all trying
+	// to execute simultaneously.
+	riM.Lock()
+	defer riM.Unlock()
+
 	reindexObjs := make([]indexer.Indexable, 0, 100)
 	// We clear the index, *then* do the fetch because if
 	// something comes in between the time we fetch the
