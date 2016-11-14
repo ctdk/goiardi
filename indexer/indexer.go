@@ -22,10 +22,17 @@ package indexer
 import (
 	"fmt"
 	"runtime"
+	"sync"
 
 	"github.com/ctdk/goiardi/config"
 	"github.com/tideland/golib/logger"
 )
+
+var riM *sync.Mutex
+
+func init() {
+	riM = new(sync.Mutex)
+}
 
 // Indexable is an interface that provides all the information necessary to
 // index an object. All objects that will be indexed need to implement this.
@@ -148,6 +155,9 @@ func ClearIndex() {
 // ReIndex rebuilds the search index from scratch
 func ReIndex(objects []Indexable) error {
 	go func() {
+		// take the mutex
+		riM.Lock()
+		defer riM.Unlock()
 		ch := make(chan struct{}, runtime.NumCPU())
 		for i := 0; i < runtime.NumCPU(); i++ {
 			ch <- struct{}{}
