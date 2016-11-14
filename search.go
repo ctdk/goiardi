@@ -223,20 +223,34 @@ func reindexAll() {
 	// just be added naturally
 	indexer.ClearIndex()
 
+	// Send the objects to be reindexed in somewhat more manageable chunks
+	clientObjs := make([]indexer.Indexable, 0, 100)
 	for _, v := range client.AllClients() {
-		reindexObjs = append(reindexObjs, v)
+		clientObjs = append(clientObjs, v)
 	}
+	indexer.ReIndex(clientObjs)
+
+	nodeObjs := make([]indexer.Indexable, 0, 100)
 	for _, v := range node.AllNodes() {
-		reindexObjs = append(reindexObjs, v)
+		nodeObjs = append(nodeObjs, v)
 	}
+	indexer.ReIndex(nodeObjs)
+
+	roleObjs := make([]indexer.Indexable, 0, 100)
 	for _, v := range role.AllRoles() {
-		reindexObjs = append(reindexObjs, v)
+		roleObjs = append(roleObjs, v)
 	}
+	indexer.ReIndex(roleObjs)
+
+	environmentObjs := make([]indexer.Indexable, 0, 100)
 	for _, v := range environment.AllEnvironments() {
-		reindexObjs = append(reindexObjs, v)
+		environmentObjs = append(environmentObjs, v)
 	}
 	defaultEnv, _ := environment.Get("_default")
-	reindexObjs = append(reindexObjs, defaultEnv)
+	environmentObjs = append(environmentObjs, defaultEnv)
+	indexer.ReIndex(environmentObjs)
+
+	dbagObjs := make([]indexer.Indexable, 0, 100)
 	// data bags have to be done separately
 	dbags := databag.GetList()
 	for _, db := range dbags {
@@ -256,8 +270,8 @@ func reindexAll() {
 			dbis[i] = n
 			i++
 		}
-		reindexObjs = append(reindexObjs, dbis...)
+		dbagObjs = append(dbagObjs, dbis...)
 	}
-	indexer.ReIndex(reindexObjs)
+	indexer.ReIndex(dbagObjs)
 	return
 }
