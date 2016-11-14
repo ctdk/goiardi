@@ -216,7 +216,6 @@ func reindexAll() {
 	riM.Lock()
 	defer riM.Unlock()
 
-	reindexObjs := make([]indexer.Indexable, 0, 100)
 	// We clear the index, *then* do the fetch because if
 	// something comes in between the time we fetch the
 	// objects to reindex and when it gets done, they'll
