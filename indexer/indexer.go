@@ -153,12 +153,30 @@ func ClearIndex() {
 }
 
 // ReIndex rebuilds the search index from scratch
-func ReIndex(objects []Indexable) error {
+func ReIndex(objects []Indexable, rCh chan struct{}) error {
 	go func() {
+		z := 0
+		t := "(none)"
+		if len(objects) > 0 {
+			z = len(objects)
+			t = fmt.Sprintf("%T", objects[0])
+			logger.Debugf("starting to reindex %d objects of %s type", z, t)
+		} else {
+			logger.Debugf("No objects actually in this round of reindexing")
+		}
 		// take the mutex
+		logger.Debugf("attempting to take indexer.ReIndex mutex (%d %s)", z, t)
 		riM.Lock()
-		defer riM.Unlock()
+		logger.Debugf("indexer.ReIndex mutex (%d %s) taken", z, t)
+		mCh := make(chan struct{}, 1)
+		defer func(){
+			<- mCh
+			logger.Debugf("releasing indexer.ReIndex mutex (%d %s)", z, t)
+			rCh <- struct{}{}
+			riM.Unlock()
+		}()
 		ch := make(chan struct{}, runtime.NumCPU())
+		fCh := make(chan struct{}, z)
 		for i := 0; i < runtime.NumCPU(); i++ {
 			ch <- struct{}{}
 		}
@@ -167,8 +185,15 @@ func ReIndex(objects []Indexable) error {
 				<-ch
 				objIndex.SaveItem(obj)
 				ch <- struct{}{}
+				fCh <- struct{}{}
 			}(o)
 		}
+		if z > 0 {
+			for y := 0; y < z; y++ {
+				<- fCh
+			}
+		}
+		mCh <- struct{}{}
 	}()
 	// We really ought to be able to return from an error, but at the moment
 	// there aren't any ways it does so in the index save bits.

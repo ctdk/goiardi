@@ -34,14 +34,20 @@ import (
 	"github.com/tideland/golib/logger"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"sync"
 )
 
+const ReindexableTypes = 5
+
 var riM *sync.Mutex
+var reindexNum = 0
+var pid int
 
 func init() {
+	pid = os.Getpid()
 	riM = new(sync.Mutex)
 }
 
@@ -197,7 +203,7 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return
 		}
-		reindexAll()
+		go reindexAll()
 		reindexResponse["reindex"] = "OK"
 	default:
 		jsonErrorReport(w, r, "Method not allowed. If you're trying to do something with a data bag named 'reindex', it's not going to work I'm afraid.", http.StatusMethodNotAllowed)
@@ -213,13 +219,27 @@ func reindexAll() {
 	// Take the mutex before starting to reindex everything. This way at
 	// least reindexing jobs won't pile up on top of each other all trying
 	// to execute simultaneously.
+	rdex := reindexNum
+	reindexNum++
+	logger.Infof("Taking mutex for reindex %d ($$ %d)", rdex, pid)
 	riM.Lock()
-	defer riM.Unlock()
+	logger.Infof("mutex acquired %d ($$ %d)", rdex, pid)
+	rCh := make(chan struct{}, ReindexableTypes)
+	defer func() {
+		for u := 0; u < ReindexableTypes; u++ {
+			<- rCh
+			logger.Debugf("a reindexing goroutine finished")
+		}
+		logger.Infof("all reindexing goroutines finished, release reindexing mutex for %d ($$ %d)", rdex, pid)
+		riM.Unlock()
+		logger.Debugf("reindexing mutex for %d ($$ %d) unlocked", rdex, pid)
+	}()
 
 	// We clear the index, *then* do the fetch because if
 	// something comes in between the time we fetch the
 	// objects to reindex and when it gets done, they'll
 	// just be added naturally
+	logger.Infof("Clearing index for reindexing now")
 	indexer.ClearIndex()
 
 	// Send the objects to be reindexed in somewhat more manageable chunks
@@ -227,19 +247,22 @@ func reindexAll() {
 	for _, v := range client.AllClients() {
 		clientObjs = append(clientObjs, v)
 	}
-	indexer.ReIndex(clientObjs)
+	logger.Debugf("reindexing clients")
+	indexer.ReIndex(clientObjs, rCh)
 
 	nodeObjs := make([]indexer.Indexable, 0, 100)
 	for _, v := range node.AllNodes() {
 		nodeObjs = append(nodeObjs, v)
 	}
-	indexer.ReIndex(nodeObjs)
+	logger.Debugf("reindexing nodes")
+	indexer.ReIndex(nodeObjs, rCh)
 
 	roleObjs := make([]indexer.Indexable, 0, 100)
 	for _, v := range role.AllRoles() {
 		roleObjs = append(roleObjs, v)
 	}
-	indexer.ReIndex(roleObjs)
+	logger.Debugf("reindexing roles")
+	indexer.ReIndex(roleObjs, rCh)
 
 	environmentObjs := make([]indexer.Indexable, 0, 100)
 	for _, v := range environment.AllEnvironments() {
@@ -247,7 +270,8 @@ func reindexAll() {
 	}
 	defaultEnv, _ := environment.Get("_default")
 	environmentObjs = append(environmentObjs, defaultEnv)
-	indexer.ReIndex(environmentObjs)
+	logger.Debugf("reindexing environments")
+	indexer.ReIndex(environmentObjs, rCh)
 
 	dbagObjs := make([]indexer.Indexable, 0, 100)
 	// data bags have to be done separately
@@ -271,6 +295,7 @@ func reindexAll() {
 		}
 		dbagObjs = append(dbagObjs, dbis...)
 	}
-	indexer.ReIndex(dbagObjs)
+	logger.Debugf("Reindexing data bags")
+	indexer.ReIndex(dbagObjs, rCh)
 	return
 }
