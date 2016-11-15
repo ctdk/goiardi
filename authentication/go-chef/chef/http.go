@@ -39,17 +39,6 @@ type Client struct {
 	Auth    *AuthConfig
 	BaseURL *url.URL
 	client  *http.Client
-
-	ACLs         *ACLService
-	Clients      *ApiClientService
-	Cookbooks    *CookbookService
-	DataBags     *DataBagService
-	Environments *EnvironmentService
-	Nodes        *NodeService
-	Principals   *PrincipalService
-	Roles        *RoleService
-	Sandboxes    *SandboxService
-	Search       *SearchService
 }
 
 // Config contains the configuration options for a chef client. This is Used primarily in the NewClient() constructor in order to setup a proper client object
@@ -150,16 +139,6 @@ func NewClient(cfg *Config) (*Client, error) {
 		},
 		BaseURL: baseUrl,
 	}
-	c.ACLs = &ACLService{client: c}
-	c.Clients = &ApiClientService{client: c}
-	c.Cookbooks = &CookbookService{client: c}
-	c.DataBags = &DataBagService{client: c}
-	c.Environments = &EnvironmentService{client: c}
-	c.Nodes = &NodeService{client: c}
-	c.Principals = &PrincipalService{client: c}
-	c.Roles = &RoleService{client: c}
-	c.Sandboxes = &SandboxService{client: c}
-	c.Search = &SearchService{client: c}
 	return c, nil
 }
 
@@ -320,3 +299,5 @@ func PrivateKeyFromString(key []byte) (*rsa.PrivateKey, error) {
 	}
 	return rsaKey, nil
 }
+
+func debug(fmt string, args ...interface{}) {}
