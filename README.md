@@ -89,6 +89,11 @@ The `depgraph` and `digraph` packages are vendored from Hashicorp's terraform
 package, and is under the Mozilla Public License version 2.0. The MPL is
 included in those directories and applies only to those files.
 
+A small part of `go-chef/chef` is included under the `authentication` directory
+to remove a circular dependency with tests between goiardi and go-chef, only
+enough to make a minimal client sufficient to test authenticating headers. It is
+copyright 2013-2014, Jesse Nelson under the terms of the Apache 2.0 license.
+
 Thanks go out to the fine folks of Opscode and the Chef community for all their
 hard work.
 
