@@ -520,7 +520,10 @@ func (u *User) URLType() string {
 }
 
 func (u *User) export() *privUser {
-	pk := u.PublicKey()
+	var pk string
+	if !config.UsingExternalSecrets() {
+		pk = u.PublicKey()
+	}
 	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &pk, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt}
 }
 
