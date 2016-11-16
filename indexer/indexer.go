@@ -169,8 +169,8 @@ func ReIndex(objects []Indexable, rCh chan struct{}) error {
 		riM.Lock()
 		logger.Debugf("indexer.ReIndex mutex (%d %s) taken", z, t)
 		mCh := make(chan struct{}, 1)
-		defer func(){
-			<- mCh
+		defer func() {
+			<-mCh
 			logger.Debugf("releasing indexer.ReIndex mutex (%d %s)", z, t)
 			rCh <- struct{}{}
 			riM.Unlock()
@@ -190,7 +190,7 @@ func ReIndex(objects []Indexable, rCh chan struct{}) error {
 		}
 		if z > 0 {
 			for y := 0; y < z; y++ {
-				<- fCh
+				<-fCh
 			}
 		}
 		mCh <- struct{}{}

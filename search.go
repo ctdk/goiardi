@@ -227,7 +227,7 @@ func reindexAll() {
 	rCh := make(chan struct{}, ReindexableTypes)
 	defer func() {
 		for u := 0; u < ReindexableTypes; u++ {
-			<- rCh
+			<-rCh
 			logger.Debugf("a reindexing goroutine finished")
 		}
 		logger.Infof("all reindexing goroutines finished, release reindexing mutex for %d ($$ %d)", rdex, pid)

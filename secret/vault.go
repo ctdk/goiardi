@@ -19,7 +19,7 @@ package secret
 // Functions for using hashicorp vault (https://www.vaultproject.io/) to store
 // secrets in goiardi.
 
-import(
+import (
 	"fmt"
 	vault "github.com/hashicorp/vault/api"
 )
@@ -42,7 +42,7 @@ func configureVault() (*vaultSecretStore, error) {
 		return nil, err
 	}
 
-	v := &vaultSecretStore{ c }
+	v := &vaultSecretStore{c}
 	return v, nil
 }
 
