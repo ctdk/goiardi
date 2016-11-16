@@ -99,6 +99,7 @@ type Conf struct {
 	AWSDisableSSL     bool     `toml:"aws-disable-ssl"`
 	S3Endpoint        string   `toml:"s3-endpoint"`
 	S3FilePeriod      int      `toml:"s3-file-period"`
+	UseExtSecrets     bool     `toml:"use-external-secrets"`
 	EnvVars           []string `toml:"env-vars"`
 }
 
@@ -195,6 +196,7 @@ type Options struct {
 	AWSDisableSSL     bool   `long:"aws-disable-ssl" description:"Set to disable SSL for the endpoint. Mostly useful just for testing."`
 	S3Endpoint        string `long:"s3-endpoint" description:"Set a different endpoint than the default s3.amazonaws.com. Mostly useful for testing with a fake S3 service, or if using an S3-compatible service."`
 	S3FilePeriod      int    `long:"s3-file-period" description:"Length of time, in minutes, to allow files to be saved to or retrieved from S3 by the client. Defaults to 15 minutes."`
+	UseExtSecrets     bool   `long:"use-external-secrets" description:"Use an external service to store secrets (currently user/client public keys). Currently only vault is supported."`
 }
 
 // The goiardi version.
@@ -689,6 +691,11 @@ func ParseConfigOptions() error {
 		Config.StatsdInstance = strings.Replace(Config.Hostname, ".", "_", -1)
 	}
 
+	// secret storage config
+	if opts.UseExtSecrets {
+		Config.UseExtSecrets = opts.UseExtSecrets
+	}
+
 	// Environment variables
 	if len(Config.EnvVars) != 0 {
 		for _, v := range Config.EnvVars {
@@ -738,4 +745,8 @@ func ServerBaseURL() string {
 // in-memory data store.
 func UsingDB() bool {
 	return Config.UseMySQL || Config.UsePostgreSQL
+}
+
+func UsingExternalSecrets() bool {
+	return Config.UseExtSecrets
 }

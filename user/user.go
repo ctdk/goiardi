@@ -34,7 +34,9 @@ import (
 	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/util"
+	"github.com/tideland/golib/logger"
 	"net/http"
 )
 
@@ -363,7 +365,7 @@ func (u *User) GenerateKeys() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	u.pubKey = pubPem
+	u.SetPublicKey(pubPem)
 	return privPem, nil
 }
 
@@ -419,6 +421,16 @@ func (u *User) IsClient() bool {
 
 // PublicKey returns the user's public key. Part of the Actor interface.
 func (u *User) PublicKey() string {
+	if config.UsingExternalSecrets() {
+		pk, err := secret.GetPublicKey(u)
+		if err != nil {
+			// pubKey's not goign to work very well if we can't get
+			// it....
+			logger.Errorf(err.Error())
+			return ""
+		}
+		return pk
+	}
 	return u.pubKey
 }
 
@@ -430,7 +442,11 @@ func (u *User) SetPublicKey(pk interface{}) error {
 		if !ok {
 			return err
 		}
-		u.pubKey = pk
+		if config.UsingExternalSecrets() {
+			secret.SetPublicKey(u, pk)
+		} else {
+			u.pubKey = pk
+		}
 	default:
 		err := fmt.Errorf("invalid type %T for public key", pk)
 		return err
@@ -504,7 +520,8 @@ func (u *User) URLType() string {
 }
 
 func (u *User) export() *privUser {
-	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt}
+	pk := u.PublicKey()
+	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &pk, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt}
 }
 
 func (u *User) GobEncode() ([]byte, error) {

@@ -19,29 +19,28 @@
 package secret
 
 import (
-	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/util"
 )
 
 type ActorKeyer interface {
 	PublicKey() string
 	SetPublicKey(interface{}) error
-	GoiardiObj
+	util.GoiardiObj
 }
 
 type secretSource interface {
-	getPublicKey(ActorKeyer) string, error
+	getPublicKey(ActorKeyer) (string, error)
 	setPublicKey(ActorKeyer, string) error
 }
 
 var secretStore secretSource
 
-func ConfigureSecretStore(conf *config.Config) error {
-	_ = conf
+func ConfigureSecretStore() error {
 	// will be a switch here for the type of secret backend
 	var err error
 	secretStore, err = configureVault()
 	if err != nil {
-		return error
+		return err
 	}
 	return nil
 }
@@ -50,6 +49,6 @@ func GetPublicKey(c ActorKeyer) (string, error) {
 	return secretStore.getPublicKey(c)
 }
 
-func SetPublicKey(c ActorKeyer, pubKey string) (string, error) {
+func SetPublicKey(c ActorKeyer, pubKey string) error {
 	return secretStore.setPublicKey(c, pubKey)
 }

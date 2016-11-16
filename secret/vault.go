@@ -53,7 +53,7 @@ func (v *vaultSecretStore) getPublicKey(c ActorKeyer) (string, error) {
 		err := fmt.Errorf("Failed to read %s from vault: %s", path, err)
 		return "", err
 	}
-	pk := s[Data]["pubKey"]
+	pk := s.Data["pubKey"]
 	if pk == nil {
 		err := fmt.Errorf("no data for %s from vault", path)
 		return "", err
