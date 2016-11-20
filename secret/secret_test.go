@@ -149,7 +149,6 @@ func TestResetPublicKey(t *testing.T) {
 	}
 }
 
-/* 
 func TestMultipleObjKeys(t *testing.T) {
 	cs := []*keyer{ &keyer{ name: "bleek1" }, &keyer{ name: "bleek2" }, &keyer{ name: "bleek3" } }
 	
@@ -171,4 +170,3 @@ func TestMultipleObjKeys(t *testing.T) {
 		}
 	}
 }
- */
