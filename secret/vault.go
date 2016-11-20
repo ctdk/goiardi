@@ -107,12 +107,19 @@ func (v *vaultSecretStore) setPublicKey(c ActorKeyer, pubKey string) error {
 	defer v.m.Unlock()
 	path := makePath(c)
 	t := time.Now()
-	s, err := v.Logical().Write(path, map[string]interface{}{
+	_, err := v.Logical().Write(path, map[string]interface{}{
 		"pubKey": pubKey,
 	})
+	if err != nil {
+		return err
+	}
+	s, err := v.Logical().Read(path)
+	if err != nil {
+		return fmt.Errorf("Error re-reading secret from vault after setting: %s", err.Error())
+	}
 	sVal := newSecretVal(path, pubKey, t, s)
 	v.secrets[path] = sVal
-	return err
+	return nil
 }
 
 func makePath(c ActorKeyer) string {
