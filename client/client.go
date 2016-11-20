@@ -437,7 +437,7 @@ func (c *Client) GenerateKeys() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	c.pubKey = pubPem
+	c.SetPublicKey(pubPem)
 	return privPem, nil
 }
 
