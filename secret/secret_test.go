@@ -29,9 +29,9 @@ import (
 var vaultInstalled bool
 
 const (
-	token = "f1d77d43-0a27-f05a-5426-08bd20a6311d"
+	token     = "f1d77d43-0a27-f05a-5426-08bd20a6311d"
 	vaultAddr = "127.0.0.1:28022"
-	pubKey = "ABCDEF123456"
+	pubKey    = "ABCDEF123456"
 )
 
 var c *keyer
@@ -67,14 +67,14 @@ func TestMain(m *testing.M) {
 	cmd := exec.Command(vaultPath, "server", "-dev", fmt.Sprintf("-dev-listen-address=%s", vaultAddr), fmt.Sprintf("-dev-root-token-id=%s", token))
 
 	e := cmd.Start()
-	
+
 	if e != nil {
 		log.Fatalf("Err running vault: %s", e.Error())
 	}
 
 	defer func() {
 		if err := recover(); err != nil {
-		    cmd.Process.Kill()
+			cmd.Process.Kill()
 		}
 	}()
 
@@ -90,7 +90,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Err mounting path in vault: '%s'", err.Error())
 	}
 
-	c = &keyer{ name: "foobar" }
+	c = &keyer{name: "foobar"}
 	i := m.Run()
 	cmd.Process.Kill()
 
@@ -148,9 +148,9 @@ func TestResetPublicKey(t *testing.T) {
 }
 
 func TestMultipleObjKeys(t *testing.T) {
-	cs := []*keyer{ &keyer{ name: "bleek1" }, &keyer{ name: "bleek2" }, &keyer{ name: "bleek3" } }
-	
-	keys := []string{ "12345", "abcdef", "eekamouse" }
+	cs := []*keyer{&keyer{name: "bleek1"}, &keyer{name: "bleek2"}, &keyer{name: "bleek3"}}
+
+	keys := []string{"12345", "abcdef", "eekamouse"}
 
 	for i := 0; i < 3; i++ {
 		err := SetPublicKey(cs[i], keys[i])

@@ -21,34 +21,34 @@ package secret
 
 import (
 	"fmt"
+	vault "github.com/hashicorp/vault/api"
 	"github.com/tideland/golib/logger"
 	"sync"
 	"time"
-	vault "github.com/hashicorp/vault/api"
 )
 
 // make this a pool later?
 
 type vaultSecretStore struct {
-	m sync.RWMutex
+	m       sync.RWMutex
 	secrets map[string]*secretVal
 	*vault.Client
 }
 
-const MaxStaleAgeSeconds = 3600 // configurable later, but make it an hour for 
-				// now
+const MaxStaleAgeSeconds = 3600 // configurable later, but make it an hour for
+// now
 const StaleTryAgainSeconds = 60 // try stale values again in a minute
 
 type secretVal struct {
-	path string
-	created time.Time
-	renewable bool
-	ttl time.Duration
-	expires time.Time
-	stale bool
+	path          string
+	created       time.Time
+	renewable     bool
+	ttl           time.Duration
+	expires       time.Time
+	stale         bool
 	staleTryAgain time.Time
-	staleTime time.Time
-	value interface{}
+	staleTime     time.Time
+	value         interface{}
 }
 
 func configureVault() (*vaultSecretStore, error) {
@@ -162,7 +162,7 @@ func (v *vaultSecretStore) secretValue(s *secretVal) (interface{}, error) {
 			if err != nil {
 				err := fmt.Errorf("Couldn't renew the secret for %s before %d seconds ran out, giving up", s.path, MaxStaleAgeSeconds)
 				return nil, err
-			} 
+			}
 			s = s2
 		} else if time.Now().After(s.staleTryAgain) {
 			s2, err := v.getPublicKeySecretPath(s.path)
