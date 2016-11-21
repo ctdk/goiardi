@@ -66,13 +66,11 @@ func TestMain(m *testing.M) {
 	}
 	cmd := exec.Command(vaultPath, "server", "-dev", fmt.Sprintf("-dev-listen-address=%s", vaultAddr), fmt.Sprintf("-dev-root-token-id=%s", token))
 
-	go func() {
-		e := cmd.Run()
-		
-		if e != nil {
-			log.Fatalf("Err running vault: %s", e.Error())
-		}
-	}()
+	e := cmd.Start()
+	
+	if e != nil {
+		log.Fatalf("Err running vault: %s", e.Error())
+	}
 
 	defer func() {
 		if err := recover(); err != nil {
