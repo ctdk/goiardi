@@ -728,7 +728,7 @@ func getQuorum(quorum string, numNodes int) (int, Qerror) {
 			return 0, CastErr(err)
 		}
 		if qnum > float64(numNodes) {
-			err := Errorf("%d nodes were required for the quorum, but only %d matched the criteria given", qnum, numNodes)
+			err := Errorf("%f nodes were required for the quorum, but only %d matched the criteria given", qnum, numNodes)
 			err.SetStatus("quorum_failed")
 			return 0, err
 		}

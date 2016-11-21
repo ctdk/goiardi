@@ -184,9 +184,8 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 func (p *PostgresSearch) GetEndpoints() []string {
 	// TODO: deal with possible errors
 	endpoints, err := indexer.Endpoints()
-	return endpoints
 	if err != nil {
-		panic(err)
+		logger.Errorf(err.Error())
 	}
 	return endpoints
 }
