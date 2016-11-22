@@ -45,7 +45,7 @@ const StaleTryAgainSeconds = 60 // try stale values again in a minute
 
 type secretVal struct {
 	path          string
-	secretType string
+	secretType    string
 	created       time.Time
 	renewable     bool
 	ttl           time.Duration
@@ -302,7 +302,7 @@ func (v *vaultSecretStore) getPasswdHash(c ActorKeyer) (string, error) {
 		err := fmt.Errorf("The type was wrong fetching the passwd hash from vault: %T -- error, if any: %s", s, errStr)
 		return "", err
 	}
-} 
+}
 
 func (v *vaultSecretStore) deletePasswdHash(c ActorKeyer) error {
 	v.m.Lock()

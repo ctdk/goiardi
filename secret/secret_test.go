@@ -217,7 +217,7 @@ func TestMultipleObjKeys(t *testing.T) {
 }
 
 func TestDeleteKey(t *testing.T) {
-	k := &keyer{name:"key_keyerson"}
+	k := &keyer{name: "key_keyerson"}
 	key := "456123000"
 	err := SetPublicKey(k, key)
 	if err != nil {
@@ -234,7 +234,7 @@ func TestDeleteKey(t *testing.T) {
 }
 
 func TestSetPasswdHash(t *testing.T) {
-	k := &keyer{name:"bob_keyman"}
+	k := &keyer{name: "bob_keyman"}
 	pass := "foobarbaz"
 	salt, err := chefcrypto.GenerateSalt()
 	if err != nil {
@@ -251,7 +251,7 @@ func TestSetPasswdHash(t *testing.T) {
 }
 
 func TestGetPasswdHash(t *testing.T) {
-	k := &keyer{name:"jebediah_keyman"}
+	k := &keyer{name: "jebediah_keyman"}
 	pass := "foobarbaz"
 	salt, err := chefcrypto.GenerateSalt()
 	if err != nil {
@@ -276,7 +276,7 @@ func TestGetPasswdHash(t *testing.T) {
 }
 
 func TestDeletePasswdHash(t *testing.T) {
-	k := &keyer{name:"bill_keyman"}
+	k := &keyer{name: "bill_keyman"}
 	pass := "foobarbaz"
 	salt, err := chefcrypto.GenerateSalt()
 	if err != nil {

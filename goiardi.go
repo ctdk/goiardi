@@ -92,7 +92,6 @@ func main() {
 		}
 	}
 
-
 	// Set up secrets, if we're using them.
 	if config.UsingExternalSecrets() {
 		secret.ConfigureSecretStore()
