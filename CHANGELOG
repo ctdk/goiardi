@@ -1,3 +1,13 @@
+0.11.1 (not released yet)
+------
+* Allow storing secrets (client & user public keys, shovey signing private
+  keys, and user password hashes) in an external service. Currently only vault
+  is supported.
+* Rework reindexing to break it into smaller chunks and ensure that only one
+  reindexing job can run at a time.
+* Package goiardi for RHEL 7 and Debian jessie for s390x. Rather experimental,
+  of course.
+
 0.11.0
 ------
 * Ability to upload cookbooks to S3.
