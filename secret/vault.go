@@ -21,6 +21,8 @@ package secret
 
 import (
 	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	vault "github.com/hashicorp/vault/api"
@@ -53,6 +55,8 @@ type secretVal struct {
 	staleTime     time.Time
 	value         interface{}
 }
+
+type secretConvert func(interface{}) (interface{}, error)
 
 func configureVault() (*vaultSecretStore, error) {
 	// use the VAULT_* environment variables to configure vault access,
@@ -100,12 +104,16 @@ func (v *vaultSecretStore) getSecretPath(path string, secretType string) (*secre
 		err := fmt.Errorf("No secret returned from vault for %s (%s)", path, secretType)
 		return nil, err
 	}
-	pk := s.Data[secretType]
-	if pk == nil {
+	p := s.Data[secretType]
+	if p == nil {
 		err := fmt.Errorf("no data for %s (%s) from vault", path, secretType)
 		return nil, err
 	}
-	sVal := newSecretVal(path, secretType, pk, t, s)
+	p, err = convertors(secretType)(p)
+	if err != nil {
+		return nil, err
+	}
+	sVal := newSecretVal(path, secretType, p, t, s)
 	return sVal, nil
 }
 
@@ -251,7 +259,20 @@ func (v *vaultSecretStore) valueStr(s *secretVal) (string, error) {
 // shovey signing key
 
 func (v *vaultSecretStore) getSigningKey(path string) (*rsa.PrivateKey, error) {
-	return nil, nil
+	v.m.RLock()
+	defer v.m.RUnlock()
+	s, err := v.getSecret(path, "RSAKey")
+	switch s := s.(type) {
+	case *rsa.PrivateKey:
+		return s, err
+	default:
+		var errStr string
+		if err != nil {
+			errStr = err.Error()
+		}
+		kerr := fmt.Errorf("RSA private key for shovey was not returned. An object of type %T was. Error, if any: %s", s, errStr)
+		return nil, kerr
+	}
 }
 
 // user passwd hash methods
@@ -290,4 +311,35 @@ func (v *vaultSecretStore) deletePasswdHash(c ActorKeyer) error {
 	defer v.m.Unlock()
 	path := makeHashPath(c)
 	return v.deleteSecret(path)
+}
+
+// funcs to process secrets after fetching them from vault
+
+func secretPassThrough(i interface{}) (interface{}, error) {
+	return i, nil
+}
+
+func secretRSAKey(i interface{}) (interface{}, error) {
+	p, ok := i.(string)
+	if !ok {
+		return nil, fmt.Errorf("not an RSA private key in string form")
+	}
+	pBlock, _ := pem.Decode([]byte(p))
+	if pBlock == nil {
+		return nil, fmt.Errorf("invalid block size for private key for shovey from vault")
+	}
+	pk, err := x509.ParsePKCS1PrivateKey(pBlock.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	return pk, nil
+}
+
+func convertors(secretType string) secretConvert {
+	switch secretType {
+	case "RSAKey":
+		return secretRSAKey
+	default:
+		return secretPassThrough
+	}
 }
