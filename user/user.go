@@ -181,6 +181,10 @@ func (u *User) Delete() util.Gerror {
 		if err != nil {
 			return util.CastErr(err)
 		}
+		err = secret.DeletePasswdHash(u)
+		if err != nil {
+			return util.CastErr(err)
+		}
 	}
 	return nil
 }
@@ -197,9 +201,15 @@ func (u *User) Rename(newName string) util.Gerror {
 		return err
 	}
 	var pk string
+	var pw string
 	if config.UsingExternalSecrets() {
 		pk = u.PublicKey()
+		pw = u.Passwd()
 		err := secret.DeletePublicKey(u)
+		if err != nil {
+			return util.CastErr(err)
+		}
+		err = secret.DeletePasswdHash(u)
 		if err != nil {
 			return util.CastErr(err)
 		}
@@ -231,6 +241,10 @@ func (u *User) Rename(newName string) util.Gerror {
 	u.Username = newName
 	if config.UsingExternalSecrets() {
 		err := secret.SetPublicKey(u, pk)
+		if err != nil {
+			return util.CastErr(err)
+		}
+		err = secret.SetPasswdHash(u, pw)
 		if err != nil {
 			return util.CastErr(err)
 		}
@@ -328,7 +342,11 @@ ValidElem:
 // it's still hashed with the user's salt.
 func (u *User) SetPasswdHash(pwhash string) {
 	if pwhash != "" {
-		u.passwd = pwhash
+		if config.UsingExternalSecrets() {
+			secret.SetPasswdHash(u, pwhash)
+		} else {
+			u.passwd = pwhash
+		}
 	}
 }
 
@@ -496,11 +514,18 @@ func (u *User) SetPasswd(password string) util.Gerror {
 		return err
 	}
 	/* If those validations pass, set the password */
-	var perr error
-	u.passwd, perr = chefcrypto.HashPasswd(password, u.salt)
+	pw, perr := chefcrypto.HashPasswd(password, u.salt)
 	if perr != nil {
 		err := util.Errorf(perr.Error())
 		return err
+	}
+	if config.UsingExternalSecrets() {
+		err := secret.SetPasswdHash(u, pw)
+		if err != nil {
+			return util.CastErr(err)
+		}
+	} else {
+		u.passwd = pw
 	}
 	return nil
 }
@@ -513,12 +538,25 @@ func (u *User) CheckPasswd(password string) util.Gerror {
 		err := util.Errorf(perr.Error())
 		return err
 	}
-	if u.passwd != h {
+	if u.Passwd() != h {
 		err := util.Errorf("password did not match")
 		return err
 	}
 
 	return nil
+}
+
+// Passwd returns the password hash, either from the user object or an external
+// secret store
+func (u *User) Passwd() string {
+	if config.UsingExternalSecrets() {
+		pw, err := secret.GetPasswdHash(u)
+		if err != nil {
+			logger.Errorf(err.Error())
+		}
+		return pw
+	}
+	return u.passwd
 }
 
 func validateUserName(name string) util.Gerror {
@@ -541,10 +579,12 @@ func (u *User) URLType() string {
 
 func (u *User) export() *privUser {
 	var pk string
+	var pw string
 	if !config.UsingExternalSecrets() {
 		pk = u.PublicKey()
+		pw = u.Passwd()
 	}
-	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &pk, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt}
+	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &pk, Admin: &u.Admin, Email: &u.Email, Passwd: &pw, Salt: &u.salt}
 }
 
 func (u *User) GobEncode() ([]byte, error) {
