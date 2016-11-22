@@ -496,6 +496,14 @@ func ParseConfigOptions() error {
 		Config.ProxyPort = Config.Port
 	}
 
+	// secret storage config
+	if opts.UseExtSecrets {
+		Config.UseExtSecrets = opts.UseExtSecrets
+	}
+	if opts.VaultAddr != "" {
+		Config.VaultAddr = opts.VaultAddr
+	}
+
 	if opts.UseSSL {
 		Config.UseSSL = opts.UseSSL
 	}
@@ -691,14 +699,6 @@ func ParseConfigOptions() error {
 	}
 	if Config.StatsdInstance == "" {
 		Config.StatsdInstance = strings.Replace(Config.Hostname, ".", "_", -1)
-	}
-
-	// secret storage config
-	if opts.UseExtSecrets {
-		Config.UseExtSecrets = opts.UseExtSecrets
-	}
-	if opts.VaultAddr != "" {
-		Config.VaultAddr = opts.VaultAddr
 	}
 
 	// Environment variables
