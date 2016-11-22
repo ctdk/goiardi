@@ -92,6 +92,12 @@ func main() {
 		}
 	}
 
+
+	// Set up secrets, if we're using them.
+	if config.UsingExternalSecrets() {
+		secret.ConfigureSecretStore()
+	}
+
 	gobRegister()
 	ds := datastore.New()
 	indexer.Initialize(config.Config)
@@ -177,11 +183,6 @@ func main() {
 			os.Exit(1)
 		}
 		startNodeMonitor()
-	}
-
-	// Set up secrets, if we're using them.
-	if config.UsingExternalSecrets() {
-		secret.ConfigureSecretStore()
 	}
 
 	/* Create default clients and users. Currently chef-validator,
