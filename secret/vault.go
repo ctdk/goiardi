@@ -59,8 +59,6 @@ type secretVal struct {
 type secretConvert func(interface{}) (interface{}, error)
 
 func configureVault() (*vaultSecretStore, error) {
-	// use the VAULT_* environment variables to configure vault access,
-	// at least for now
 	conf := vault.DefaultConfig()
 	if err := conf.ReadEnvironment(); err != nil {
 		return nil, err
@@ -90,7 +88,7 @@ func (v *vaultSecretStore) getSecret(path string, secretType string) (interface{
 	} else {
 		logger.Debugf("using cached secret for %s", path)
 	}
-	return v.valueStr(v.secrets[path])
+	return v.secretValue(v.secrets[path])
 }
 
 func (v *vaultSecretStore) getSecretPath(path string, secretType string) (*secretVal, error) {
