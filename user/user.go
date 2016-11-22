@@ -176,6 +176,12 @@ func (u *User) Delete() util.Gerror {
 		ds := datastore.New()
 		ds.Delete("user", u.Username)
 	}
+	if config.UsingExternalSecrets() {
+		err := secret.DeletePublicKey(u)
+		if err != nil {
+			return util.CastErr(err)
+		}
+	}
 	return nil
 }
 
@@ -189,6 +195,14 @@ func (u *User) Rename(newName string) util.Gerror {
 		err := util.Errorf("Cannot rename the last admin")
 		err.SetStatus(http.StatusForbidden)
 		return err
+	}
+	var pk string
+	if config.UsingExternalSecrets() {
+		pk = u.PublicKey()
+		err := secret.DeletePublicKey(u)
+		if err != nil {
+			return util.CastErr(err)
+		}
 	}
 	if config.UsingDB() {
 		if config.Config.UseMySQL {
@@ -215,6 +229,12 @@ func (u *User) Rename(newName string) util.Gerror {
 		ds.Delete("client", u.Username)
 	}
 	u.Username = newName
+	if config.UsingExternalSecrets() {
+		err := secret.SetPublicKey(u, pk)
+		if err != nil {
+			return util.CastErr(err)
+		}
+	}
 	return nil
 }
 

@@ -21,6 +21,7 @@ package secret
 
 import (
 	"fmt"
+	"github.com/ctdk/goiardi/config"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/tideland/golib/logger"
 	"sync"
@@ -58,6 +59,9 @@ func configureVault() (*vaultSecretStore, error) {
 	if err := conf.ReadEnvironment(); err != nil {
 		return nil, err
 	}
+	if config.Config.VaultAddr != "" {
+		conf.Address = config.Config.VaultAddr
+	}
 	c, err := vault.NewClient(conf)
 	if err != nil {
 		return nil, err
@@ -90,7 +94,11 @@ func (v *vaultSecretStore) getPublicKeySecretPath(path string) (*secretVal, erro
 	t := time.Now()
 	s, err := v.Logical().Read(path)
 	if err != nil {
-		err := fmt.Errorf("Failed to read %s from vault: %s", path, err)
+		err := fmt.Errorf("Failed to read %s from vault: %s", path, err.Error())
+		return nil, err
+	}
+	if s == nil {
+		err := fmt.Errorf("No secret returned from vault for %s", path)
 		return nil, err
 	}
 	pk := s.Data["pubKey"]
@@ -106,6 +114,7 @@ func (v *vaultSecretStore) setPublicKey(c ActorKeyer, pubKey string) error {
 	v.m.Lock()
 	defer v.m.Unlock()
 	path := makePath(c)
+	logger.Debugf("setting pubic key for %s", path)
 	t := time.Now()
 	_, err := v.Logical().Write(path, map[string]interface{}{
 		"pubKey": pubKey,
@@ -119,6 +128,18 @@ func (v *vaultSecretStore) setPublicKey(c ActorKeyer, pubKey string) error {
 	}
 	sVal := newSecretVal(path, pubKey, t, s)
 	v.secrets[path] = sVal
+	return nil
+}
+
+func (v *vaultSecretStore) deletePublicKey(c ActorKeyer) error {
+	v.m.Lock()
+	defer v.m.Unlock()
+	path := makePath(c)
+	delete(v.secrets, path)
+	_, err := v.Logical().Delete(path)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -155,6 +176,7 @@ func (v *vaultSecretStore) secretValue(s *secretVal) (interface{}, error) {
 				s.staleTime = time.Now().Add(MaxStaleAgeSeconds * time.Second)
 				s.staleTryAgain = time.Now().Add(StaleTryAgainSeconds * time.Second)
 			} else {
+				logger.Debugf("successfully renewed secret for %s", s.path)
 				s = s2
 			}
 		} else if time.Now().After(s.staleTime) {
@@ -163,6 +185,7 @@ func (v *vaultSecretStore) secretValue(s *secretVal) (interface{}, error) {
 				err := fmt.Errorf("Couldn't renew the secret for %s before %d seconds ran out, giving up", s.path, MaxStaleAgeSeconds)
 				return nil, err
 			}
+			logger.Debugf("successfully renewed secret for %s beforegiving up due to staleness", s.path)
 			s = s2
 		} else if time.Now().After(s.staleTryAgain) {
 			s2, err := v.getPublicKeySecretPath(s.path)
@@ -170,6 +193,7 @@ func (v *vaultSecretStore) secretValue(s *secretVal) (interface{}, error) {
 				logger.Debugf("error trying to renew the secret for %s: %s -- will renew again in %d seconds", s.path, err.Error(), StaleTryAgainSeconds)
 				s.staleTryAgain = time.Now().Add(StaleTryAgainSeconds)
 			} else {
+				logger.Debugf("successfully renewed secret after being stale")
 				s = s2
 			}
 		}

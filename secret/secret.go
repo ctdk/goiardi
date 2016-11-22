@@ -31,6 +31,7 @@ type ActorKeyer interface {
 type secretSource interface {
 	getPublicKey(ActorKeyer) (string, error)
 	setPublicKey(ActorKeyer, string) error
+	deletePublicKey(ActorKeyer) error
 }
 
 var secretStore secretSource
@@ -51,4 +52,8 @@ func GetPublicKey(c ActorKeyer) (string, error) {
 
 func SetPublicKey(c ActorKeyer, pubKey string) error {
 	return secretStore.setPublicKey(c, pubKey)
+}
+
+func DeletePublicKey(c ActorKeyer) error {
+	return secretStore.deletePublicKey(c)
 }

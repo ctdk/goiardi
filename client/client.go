@@ -222,6 +222,12 @@ func (c *Client) Delete() error {
 		ds.Delete("client", c.Name)
 	}
 	indexer.DeleteItemFromCollection("client", c.Name)
+	if config.UsingExternalSecrets() {
+		err := secret.DeletePublicKey(c)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -271,6 +277,14 @@ func (c *Client) Rename(newName string) util.Gerror {
 		err.SetStatus(http.StatusForbidden)
 		return err
 	}
+	var pk string
+	if config.UsingExternalSecrets() {
+		pk = c.PublicKey()
+		err := secret.DeletePublicKey(c)
+		if err != nil {
+			return util.CastErr(err)
+		}
+	}
 
 	if config.UsingDB() {
 		var err util.Gerror
@@ -297,6 +311,12 @@ func (c *Client) Rename(newName string) util.Gerror {
 		ds.Delete("client", c.Name)
 	}
 	c.Name = newName
+	if config.UsingExternalSecrets() {
+		err := secret.SetPublicKey(c, pk)
+		if err != nil {
+			return util.CastErr(err)
+		}
+	}
 	return nil
 }
 

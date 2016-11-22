@@ -168,3 +168,20 @@ func TestMultipleObjKeys(t *testing.T) {
 		}
 	}
 }
+
+func TestDeleteKey(t *testing.T) {
+	k := &keyer{name:"key_keyerson"}
+	key := "456123000"
+	err := SetPublicKey(k, key)
+	if err != nil {
+		t.Error(err)
+	}
+	err = DeletePublicKey(k)
+	if err != nil {
+		t.Errorf("error deleting key: %s", err.Error())
+	}
+	pk, pkerr := GetPublicKey(k)
+	if pk != "" || pkerr == nil {
+		t.Errorf("public key '%s' was found after it was deleted", pk)
+	}
+}

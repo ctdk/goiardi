@@ -100,6 +100,7 @@ type Conf struct {
 	S3Endpoint        string   `toml:"s3-endpoint"`
 	S3FilePeriod      int      `toml:"s3-file-period"`
 	UseExtSecrets     bool     `toml:"use-external-secrets"`
+	VaultAddr 	  string   `toml:"vault-addr"`
 	EnvVars           []string `toml:"env-vars"`
 }
 
@@ -197,6 +198,7 @@ type Options struct {
 	S3Endpoint        string `long:"s3-endpoint" description:"Set a different endpoint than the default s3.amazonaws.com. Mostly useful for testing with a fake S3 service, or if using an S3-compatible service."`
 	S3FilePeriod      int    `long:"s3-file-period" description:"Length of time, in minutes, to allow files to be saved to or retrieved from S3 by the client. Defaults to 15 minutes."`
 	UseExtSecrets     bool   `long:"use-external-secrets" description:"Use an external service to store secrets (currently user/client public keys). Currently only vault is supported."`
+	VaultAddr string `long:"vault-addr" description:"Specify address of vault server (i.e. https://127.0.0.1:8200). Defaults to the value of VAULT_ADDR."`
 }
 
 // The goiardi version.
@@ -694,6 +696,9 @@ func ParseConfigOptions() error {
 	// secret storage config
 	if opts.UseExtSecrets {
 		Config.UseExtSecrets = opts.UseExtSecrets
+	}
+	if opts.VaultAddr != "" {
+		Config.VaultAddr = opts.VaultAddr
 	}
 
 	// Environment variables
