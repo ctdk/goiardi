@@ -34,6 +34,7 @@ The goiardi manual is licensed under a Creative Commons Attribution 4.0 License 
    features/webui
    features/metrics
    features/s3
+   features/secrets
 
 Indices and tables
 ==================

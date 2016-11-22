@@ -157,6 +157,15 @@ Currently available command line and config file options::
         --s3-file-period=  Length of time, in minutes, to allow files to
                            be saved to or retrieved from S3 by the
                            client. Defaults to 15 minutes.
+        --use-external-secrets  Use an external service to store secrets
+                           (currently user/client public keys). Currently
+                           only vault is supported.
+        --vault-addr=      Specify address of vault server (i.e.
+                           https://127.0.0.1:8200). Defaults to the value of
+                           VAULT_ADDR.
+        --vault-shovey-key= Specify a path in vault holding shovey's private
+                           key. The key must be put in vault as
+                           'privateKey=<contents>'.
 
 Options specified on the command line override options in the config file.
 

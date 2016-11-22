@@ -40,7 +40,7 @@ Setting goiardi up to use shovey is pretty straightforward.
       openssl rsa -in shovey.pem -pubout -out shovey.key # public key
 
   Obviously, save these keys.
-
+* If you're using an external service (like vault) to store secrets, please see   :ref:`secrets` for how to set up shovey's signing key with that. 
 * Run goiardi like you usually would, but add these options:
   ``--use-serf --use-shovey --sign-priv-key=/path/to/shovey.pem``
 * Install serf and schob on a chef node. Ensure that the serf agent on the node
