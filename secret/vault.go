@@ -116,7 +116,7 @@ func (v *vaultSecretStore) getSecretPath(path string, secretType string) (*secre
 }
 
 func (v *vaultSecretStore) setSecret(path string, secretType string, value interface{}) error {
-	logger.Debugf("setting pubic key for %s (%s)", path, secretType)
+	logger.Debugf("setting public key for %s (%s)", path, secretType)
 	t := time.Now()
 	_, err := v.Logical().Write(path, map[string]interface{}{
 		secretType: value,
