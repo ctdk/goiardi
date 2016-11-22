@@ -20,6 +20,7 @@ package secret
 // secrets in goiardi.
 
 import (
+	"crypto/rsa"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	vault "github.com/hashicorp/vault/api"
@@ -42,6 +43,7 @@ const StaleTryAgainSeconds = 60 // try stale values again in a minute
 
 type secretVal struct {
 	path          string
+	secretType string
 	created       time.Time
 	renewable     bool
 	ttl           time.Duration
@@ -73,13 +75,10 @@ func configureVault() (*vaultSecretStore, error) {
 	return v, nil
 }
 
-func (v *vaultSecretStore) getPublicKey(c ActorKeyer) (string, error) {
-	v.m.RLock()
-	defer v.m.RUnlock()
-	path := makePath(c)
+func (v *vaultSecretStore) getSecret(path string, secretType string) (interface{}, error) {
 	if v.secrets[path] == nil {
-		logger.Debugf("secret for %s is nil, fetching from vault", path)
-		s, err := v.getPublicKeySecretPath(path)
+		logger.Debugf("secret (%s) for %s is nil, fetching from vault", secretType, path)
+		s, err := v.getSecretPath(path, secretType)
 		if err != nil {
 			return "", err
 		}
@@ -90,34 +89,31 @@ func (v *vaultSecretStore) getPublicKey(c ActorKeyer) (string, error) {
 	return v.valueStr(v.secrets[path])
 }
 
-func (v *vaultSecretStore) getPublicKeySecretPath(path string) (*secretVal, error) {
+func (v *vaultSecretStore) getSecretPath(path string, secretType string) (*secretVal, error) {
 	t := time.Now()
 	s, err := v.Logical().Read(path)
 	if err != nil {
-		err := fmt.Errorf("Failed to read %s from vault: %s", path, err.Error())
+		err := fmt.Errorf("Failed to read %s (%s) from vault: %s", path, secretType, err.Error())
 		return nil, err
 	}
 	if s == nil {
-		err := fmt.Errorf("No secret returned from vault for %s", path)
+		err := fmt.Errorf("No secret returned from vault for %s (%s)", path, secretType)
 		return nil, err
 	}
-	pk := s.Data["pubKey"]
+	pk := s.Data[secretType]
 	if pk == nil {
-		err := fmt.Errorf("no data for %s from vault", path)
+		err := fmt.Errorf("no data for %s (%s) from vault", path, secretType)
 		return nil, err
 	}
-	sVal := newSecretVal(path, pk, t, s)
+	sVal := newSecretVal(path, secretType, pk, t, s)
 	return sVal, nil
 }
 
-func (v *vaultSecretStore) setPublicKey(c ActorKeyer, pubKey string) error {
-	v.m.Lock()
-	defer v.m.Unlock()
-	path := makePath(c)
-	logger.Debugf("setting pubic key for %s", path)
+func (v *vaultSecretStore) setSecret(path string, secretType string, value interface{}) error {
+	logger.Debugf("setting pubic key for %s (%s)", path, secretType)
 	t := time.Now()
 	_, err := v.Logical().Write(path, map[string]interface{}{
-		"pubKey": pubKey,
+		secretType: value,
 	})
 	if err != nil {
 		return err
@@ -126,15 +122,12 @@ func (v *vaultSecretStore) setPublicKey(c ActorKeyer, pubKey string) error {
 	if err != nil {
 		return fmt.Errorf("Error re-reading secret from vault after setting: %s", err.Error())
 	}
-	sVal := newSecretVal(path, pubKey, t, s)
+	sVal := newSecretVal(path, secretType, value, t, s)
 	v.secrets[path] = sVal
 	return nil
 }
 
-func (v *vaultSecretStore) deletePublicKey(c ActorKeyer) error {
-	v.m.Lock()
-	defer v.m.Unlock()
-	path := makePath(c)
+func (v *vaultSecretStore) deleteSecret(path string) error {
 	delete(v.secrets, path)
 	_, err := v.Logical().Delete(path)
 	if err != nil {
@@ -143,13 +136,56 @@ func (v *vaultSecretStore) deletePublicKey(c ActorKeyer) error {
 	return nil
 }
 
-func makePath(c ActorKeyer) string {
+func (v *vaultSecretStore) getPublicKey(c ActorKeyer) (string, error) {
+	v.m.RLock()
+	defer v.m.RUnlock()
+	path := makePubKeyPath(c)
+	s, err := v.getSecret(path, "pubKey")
+	switch s := s.(type) {
+	case string:
+		return s, err
+	case []byte:
+		return string(s), err
+	case nil:
+		return "", err
+	default:
+		var errStr string
+		if err != nil {
+			errStr = err.Error()
+		}
+		err := fmt.Errorf("The type was wrong fetching the public key from vault: %T -- error, if any: %s", s, errStr)
+		return "", err
+	}
+}
+
+func (v *vaultSecretStore) setPublicKey(c ActorKeyer, pubKey string) error {
+	v.m.Lock()
+	defer v.m.Unlock()
+	path := makePubKeyPath(c)
+	return v.setSecret(path, "pubKey", pubKey)
+}
+
+func (v *vaultSecretStore) deletePublicKey(c ActorKeyer) error {
+	v.m.Lock()
+	defer v.m.Unlock()
+	path := makePubKeyPath(c)
+	return v.deleteSecret(path)
+}
+
+func makePubKeyPath(c ActorKeyer) string {
 	return fmt.Sprintf("keys/%s/%s", c.URLType(), c.GetName())
 }
 
-func newSecretVal(path string, value interface{}, t time.Time, s *vault.Secret) *secretVal {
+func makeHashPath(c ActorKeyer) string {
+	// strictly speaking only users actually have passwords, but in case
+	// something else ever comes up, make the path a little longer.
+	return fmt.Sprintf("keys/passwd/%s/%s", c.URLType(), c.GetName())
+}
+
+func newSecretVal(path string, secretType string, value interface{}, t time.Time, s *vault.Secret) *secretVal {
 	sVal := new(secretVal)
 	sVal.path = path
+	sVal.secretType = secretType
 	sVal.created = t
 	sVal.renewable = s.Renewable
 	sVal.ttl = time.Duration(s.LeaseDuration) * time.Second
@@ -168,8 +204,8 @@ func (s *secretVal) isExpired() bool {
 func (v *vaultSecretStore) secretValue(s *secretVal) (interface{}, error) {
 	if s.isExpired() {
 		logger.Debugf("trying to renew secret for %s", s.path)
+		s2, err := v.getSecretPath(s.path, s.secretType)
 		if !s.stale {
-			s2, err := v.getPublicKeySecretPath(s.path)
 			if err != nil {
 				logger.Debugf("error trying to renew the secret for %s: %s -- marking as stale", s.path, err.Error())
 				s.stale = true
@@ -180,7 +216,6 @@ func (v *vaultSecretStore) secretValue(s *secretVal) (interface{}, error) {
 				s = s2
 			}
 		} else if time.Now().After(s.staleTime) {
-			s2, err := v.getPublicKeySecretPath(s.path)
 			if err != nil {
 				err := fmt.Errorf("Couldn't renew the secret for %s before %d seconds ran out, giving up", s.path, MaxStaleAgeSeconds)
 				return nil, err
@@ -188,7 +223,6 @@ func (v *vaultSecretStore) secretValue(s *secretVal) (interface{}, error) {
 			logger.Debugf("successfully renewed secret for %s beforegiving up due to staleness", s.path)
 			s = s2
 		} else if time.Now().After(s.staleTryAgain) {
-			s2, err := v.getPublicKeySecretPath(s.path)
 			if err != nil {
 				logger.Debugf("error trying to renew the secret for %s: %s -- will renew again in %d seconds", s.path, err.Error(), StaleTryAgainSeconds)
 				s.staleTryAgain = time.Now().Add(StaleTryAgainSeconds)
@@ -212,4 +246,48 @@ func (v *vaultSecretStore) valueStr(s *secretVal) (string, error) {
 		return "", err
 	}
 	return valStr, nil
+}
+
+// shovey signing key
+
+func (v *vaultSecretStore) getSigningKey(path string) (*rsa.PrivateKey, error) {
+	return nil, nil
+}
+
+// user passwd hash methods
+
+func (v *vaultSecretStore) setPasswdHash(c ActorKeyer, pwhash string) error {
+	v.m.Lock()
+	defer v.m.Unlock()
+	path := makeHashPath(c)
+	return v.setSecret(path, "passwd", pwhash)
+}
+
+func (v *vaultSecretStore) getPasswdHash(c ActorKeyer) (string, error) {
+	v.m.RLock()
+	defer v.m.RUnlock()
+	path := makeHashPath(c)
+	s, err := v.getSecret(path, "passwd")
+	switch s := s.(type) {
+	case string:
+		return s, err
+	case []byte:
+		return string(s), err
+	case nil:
+		return "", err
+	default:
+		var errStr string
+		if err != nil {
+			errStr = err.Error()
+		}
+		err := fmt.Errorf("The type was wrong fetching the passwd hash from vault: %T -- error, if any: %s", s, errStr)
+		return "", err
+	}
+} 
+
+func (v *vaultSecretStore) deletePasswdHash(c ActorKeyer) error {
+	v.m.Lock()
+	defer v.m.Unlock()
+	path := makeHashPath(c)
+	return v.deleteSecret(path)
 }

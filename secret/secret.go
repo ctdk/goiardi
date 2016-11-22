@@ -19,6 +19,7 @@
 package secret
 
 import (
+	"crypto/rsa"
 	"github.com/ctdk/goiardi/util"
 )
 
@@ -32,6 +33,10 @@ type secretSource interface {
 	getPublicKey(ActorKeyer) (string, error)
 	setPublicKey(ActorKeyer, string) error
 	deletePublicKey(ActorKeyer) error
+	setPasswdHash(ActorKeyer, string) error
+	getPasswdHash(ActorKeyer) (string, error)
+	deletePasswdHash(ActorKeyer) error
+	getSigningKey(string) (*rsa.PrivateKey, error)
 }
 
 var secretStore secretSource
@@ -56,4 +61,20 @@ func SetPublicKey(c ActorKeyer, pubKey string) error {
 
 func DeletePublicKey(c ActorKeyer) error {
 	return secretStore.deletePublicKey(c)
+}
+
+func GetSigningKey(path string) (*rsa.PrivateKey, error) {
+	return secretStore.getSigningKey(path)
+}
+
+func GetPasswdHash(c ActorKeyer) (string, error) {
+	return secretStore.getPasswdHash(c)
+}
+
+func SetPasswdHash(c ActorKeyer, hash string) error {
+	return secretStore.setPasswdHash(c, hash)
+}
+
+func DeletePasswdHash(c ActorKeyer) error {
+	return secretStore.deletePasswdHash(c)
 }
