@@ -11,6 +11,6 @@ CREATE TABLE organizations (
 	primary key(id),
 	unique key(name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-INSERT INTO organizations (name) values ("default");
+INSERT INTO organizations (name, created_at, updated_at) values ("default", now(), now());
 
 COMMIT;
