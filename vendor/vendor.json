@@ -184,6 +184,12 @@
 			"revisionTime": "2016-11-10T00:09:26Z"
 		},
 		{
+			"checksumSHA1": "KCWVxG+J8SxHGlGiUghe0KBGsa8=",
+			"path": "github.com/fatih/structs",
+			"revision": "dc3312cb1a4513a366c4c9e622ad55c32df12ed3",
+			"revisionTime": "2016-08-07T23:55:29Z"
+		},
+		{
 			"checksumSHA1": "FCeEm2BWZV/n4oTy+SGd/k0Ab5c=",
 			"origin": "github.com/aws/aws-sdk-go/vendor/github.com/go-ini/ini",
 			"path": "github.com/go-ini/ini",
@@ -204,6 +210,12 @@
 			"revisionTime": "2016-08-16T23:01:54Z"
 		},
 		{
+			"checksumSHA1": "Uzyon2091lmwacNsl1hCytjhHtg=",
+			"path": "github.com/hashicorp/go-cleanhttp",
+			"revision": "ad28ea4487f05916463e2423a55166280e8254b5",
+			"revisionTime": "2016-04-07T17:41:26Z"
+		},
+		{
 			"checksumSHA1": "TNlVzNR1OaajcNi3CbQ3bGbaLGU=",
 			"origin": "github.com/hashicorp/serf/vendor/github.com/hashicorp/go-msgpack/codec",
 			"path": "github.com/hashicorp/go-msgpack/codec",
@@ -216,6 +228,12 @@
 			"path": "github.com/hashicorp/go-multierror",
 			"revision": "9432bc08aa8d486e497e27f84878ebbe8c1eab66",
 			"revisionTime": "2016-08-16T23:01:54Z"
+		},
+		{
+			"checksumSHA1": "A1PcINvF3UiwHRKn8UcgARgvGRs=",
+			"path": "github.com/hashicorp/go-rootcerts",
+			"revision": "6bb64b370b90e7ef1fa532be9e591a81c3493e00",
+			"revisionTime": "2016-05-03T14:34:40Z"
 		},
 		{
 			"checksumSHA1": "EcZfls6vcqjasWV/nBlu+C+EFmc=",
@@ -310,10 +328,10 @@
 			"revisionTime": "2016-08-16T23:01:54Z"
 		},
 		{
-			"checksumSHA1": "cKYNVS3yHdA4gk8S7imF+RiQKBo=",
+			"checksumSHA1": "a00G4sNLFFemyn1q0qdC5dw6H04=",
 			"path": "github.com/hashicorp/vault/api",
-			"revision": "61411f2f4ff610f25e311a7b36d4a2cd123e980c",
-			"revisionTime": "2016-11-15T17:00:57Z"
+			"revision": "2a84f795f778d58ee1d1ddc013c2ad518173ac8b",
+			"revisionTime": "2016-11-22T21:43:05Z"
 		},
 		{
 			"checksumSHA1": "ft77GtqeZEeCXioGpF/s6DlGm/U=",
@@ -358,6 +376,12 @@
 			"path": "github.com/miekg/dns",
 			"revision": "9432bc08aa8d486e497e27f84878ebbe8c1eab66",
 			"revisionTime": "2016-08-16T23:01:54Z"
+		},
+		{
+			"checksumSHA1": "AXacfEchaUqT5RGmPmMXsOWRhv8=",
+			"path": "github.com/mitchellh/go-homedir",
+			"revision": "756f7b183b7ab78acdbbee5c7f392838ed459dda",
+			"revisionTime": "2016-06-21T17:42:43Z"
 		},
 		{
 			"checksumSHA1": "UuXgD2dDojfS8AViUEe15gLIWZE=",
@@ -406,6 +430,12 @@
 			"path": "github.com/raintank/met/statsd",
 			"revision": "22adb08485707c45d56323a26ade763f684a912c",
 			"revisionTime": "2016-03-23T09:52:04Z"
+		},
+		{
+			"checksumSHA1": "Qm7DuiE3Cn0+CelfV9tggSPNG0k=",
+			"path": "github.com/sethgrid/pester",
+			"revision": "2a102734c18c43c74fd0664e06cd414cf9602b93",
+			"revisionTime": "2016-09-16T18:34:45Z"
 		},
 		{
 			"checksumSHA1": "tLHFQmf6SKRc9JGYDB8EXIXT7Ec=",
