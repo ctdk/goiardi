@@ -578,13 +578,7 @@ func (u *User) URLType() string {
 }
 
 func (u *User) export() *privUser {
-	var pk string
-	var pw string
-	if !config.UsingExternalSecrets() {
-		pk = u.PublicKey()
-		pw = u.Passwd()
-	}
-	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &pk, Admin: &u.Admin, Email: &u.Email, Passwd: &pw, Salt: &u.salt}
+	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt}
 }
 
 func (u *User) GobEncode() ([]byte, error) {

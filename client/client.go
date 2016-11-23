@@ -599,11 +599,7 @@ func useAuth() bool {
 }
 
 func (c *Client) export() *privClient {
-	var pk string
-	if !config.UsingExternalSecrets() {
-		pk = c.PublicKey()
-	}
-	return &privClient{Name: &c.Name, NodeName: &c.NodeName, JSONClass: &c.JSONClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &pk, Admin: &c.Admin, Certificate: &c.Certificate}
+	return &privClient{Name: &c.Name, NodeName: &c.NodeName, JSONClass: &c.JSONClass, ChefType: &c.ChefType, Validator: &c.Validator, Orgname: &c.Orgname, PublicKey: &c.pubKey, Admin: &c.Admin, Certificate: &c.Certificate}
 }
 
 func (c *Client) flatExport() *flatClient {
