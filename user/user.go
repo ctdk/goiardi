@@ -34,7 +34,9 @@ import (
 	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/util"
+	"github.com/tideland/golib/logger"
 	"net/http"
 )
 
@@ -174,6 +176,16 @@ func (u *User) Delete() util.Gerror {
 		ds := datastore.New()
 		ds.Delete("user", u.Username)
 	}
+	if config.UsingExternalSecrets() {
+		err := secret.DeletePublicKey(u)
+		if err != nil {
+			return util.CastErr(err)
+		}
+		err = secret.DeletePasswdHash(u)
+		if err != nil {
+			return util.CastErr(err)
+		}
+	}
 	return nil
 }
 
@@ -187,6 +199,20 @@ func (u *User) Rename(newName string) util.Gerror {
 		err := util.Errorf("Cannot rename the last admin")
 		err.SetStatus(http.StatusForbidden)
 		return err
+	}
+	var pk string
+	var pw string
+	if config.UsingExternalSecrets() {
+		pk = u.PublicKey()
+		pw = u.Passwd()
+		err := secret.DeletePublicKey(u)
+		if err != nil {
+			return util.CastErr(err)
+		}
+		err = secret.DeletePasswdHash(u)
+		if err != nil {
+			return util.CastErr(err)
+		}
 	}
 	if config.UsingDB() {
 		if config.Config.UseMySQL {
@@ -213,6 +239,16 @@ func (u *User) Rename(newName string) util.Gerror {
 		ds.Delete("client", u.Username)
 	}
 	u.Username = newName
+	if config.UsingExternalSecrets() {
+		err := secret.SetPublicKey(u, pk)
+		if err != nil {
+			return util.CastErr(err)
+		}
+		err = secret.SetPasswdHash(u, pw)
+		if err != nil {
+			return util.CastErr(err)
+		}
+	}
 	return nil
 }
 
@@ -306,7 +342,11 @@ ValidElem:
 // it's still hashed with the user's salt.
 func (u *User) SetPasswdHash(pwhash string) {
 	if pwhash != "" {
-		u.passwd = pwhash
+		if config.UsingExternalSecrets() {
+			secret.SetPasswdHash(u, pwhash)
+		} else {
+			u.passwd = pwhash
+		}
 	}
 }
 
@@ -363,7 +403,7 @@ func (u *User) GenerateKeys() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	u.pubKey = pubPem
+	u.SetPublicKey(pubPem)
 	return privPem, nil
 }
 
@@ -419,6 +459,16 @@ func (u *User) IsClient() bool {
 
 // PublicKey returns the user's public key. Part of the Actor interface.
 func (u *User) PublicKey() string {
+	if config.UsingExternalSecrets() {
+		pk, err := secret.GetPublicKey(u)
+		if err != nil {
+			// pubKey's not goign to work very well if we can't get
+			// it....
+			logger.Errorf(err.Error())
+			return ""
+		}
+		return pk
+	}
 	return u.pubKey
 }
 
@@ -430,7 +480,11 @@ func (u *User) SetPublicKey(pk interface{}) error {
 		if !ok {
 			return err
 		}
-		u.pubKey = pk
+		if config.UsingExternalSecrets() {
+			secret.SetPublicKey(u, pk)
+		} else {
+			u.pubKey = pk
+		}
 	default:
 		err := fmt.Errorf("invalid type %T for public key", pk)
 		return err
@@ -460,11 +514,18 @@ func (u *User) SetPasswd(password string) util.Gerror {
 		return err
 	}
 	/* If those validations pass, set the password */
-	var perr error
-	u.passwd, perr = chefcrypto.HashPasswd(password, u.salt)
+	pw, perr := chefcrypto.HashPasswd(password, u.salt)
 	if perr != nil {
 		err := util.Errorf(perr.Error())
 		return err
+	}
+	if config.UsingExternalSecrets() {
+		err := secret.SetPasswdHash(u, pw)
+		if err != nil {
+			return util.CastErr(err)
+		}
+	} else {
+		u.passwd = pw
 	}
 	return nil
 }
@@ -477,12 +538,25 @@ func (u *User) CheckPasswd(password string) util.Gerror {
 		err := util.Errorf(perr.Error())
 		return err
 	}
-	if u.passwd != h {
+	if u.Passwd() != h {
 		err := util.Errorf("password did not match")
 		return err
 	}
 
 	return nil
+}
+
+// Passwd returns the password hash, either from the user object or an external
+// secret store
+func (u *User) Passwd() string {
+	if config.UsingExternalSecrets() {
+		pw, err := secret.GetPasswdHash(u)
+		if err != nil {
+			logger.Errorf(err.Error())
+		}
+		return pw
+	}
+	return u.passwd
 }
 
 func validateUserName(name string) util.Gerror {

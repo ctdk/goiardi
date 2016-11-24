@@ -35,7 +35,9 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/util"
+	"github.com/tideland/golib/logger"
 	"net/http"
 )
 
@@ -220,6 +222,12 @@ func (c *Client) Delete() error {
 		ds.Delete("client", c.Name)
 	}
 	indexer.DeleteItemFromCollection("client", c.Name)
+	if config.UsingExternalSecrets() {
+		err := secret.DeletePublicKey(c)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -269,6 +277,14 @@ func (c *Client) Rename(newName string) util.Gerror {
 		err.SetStatus(http.StatusForbidden)
 		return err
 	}
+	var pk string
+	if config.UsingExternalSecrets() {
+		pk = c.PublicKey()
+		err := secret.DeletePublicKey(c)
+		if err != nil {
+			return util.CastErr(err)
+		}
+	}
 
 	if config.UsingDB() {
 		var err util.Gerror
@@ -295,6 +311,12 @@ func (c *Client) Rename(newName string) util.Gerror {
 		ds.Delete("client", c.Name)
 	}
 	c.Name = newName
+	if config.UsingExternalSecrets() {
+		err := secret.SetPublicKey(c, pk)
+		if err != nil {
+			return util.CastErr(err)
+		}
+	}
 	return nil
 }
 
@@ -435,7 +457,7 @@ func (c *Client) GenerateKeys() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	c.pubKey = pubPem
+	c.SetPublicKey(pubPem)
 	return privPem, nil
 }
 
@@ -524,6 +546,16 @@ func (c *Client) IsClient() bool {
 
 // PublicKey returns the client's public key. Part of the Actor interface.
 func (c *Client) PublicKey() string {
+	if config.UsingExternalSecrets() {
+		pk, err := secret.GetPublicKey(c)
+		if err != nil {
+			// pubKey's not goign to work very well if we can't get
+			// it....
+			logger.Errorf(err.Error())
+			return ""
+		}
+		return pk
+	}
 	return c.pubKey
 }
 
@@ -535,7 +567,11 @@ func (c *Client) SetPublicKey(pk interface{}) error {
 		if !ok {
 			return err
 		}
-		c.pubKey = pk
+		if config.UsingExternalSecrets() {
+			secret.SetPublicKey(c, pk)
+		} else {
+			c.pubKey = pk
+		}
 	default:
 		err := fmt.Errorf("invalid type %T for public key", pk)
 		return err
@@ -567,7 +603,8 @@ func (c *Client) export() *privClient {
 }
 
 func (c *Client) flatExport() *flatClient {
-	return &flatClient{Name: c.Name, NodeName: c.NodeName, JSONClass: c.JSONClass, ChefType: c.ChefType, Validator: c.Validator, Orgname: c.Orgname, PublicKey: c.pubKey, Admin: c.Admin, Certificate: c.Certificate}
+	pk := c.PublicKey()
+	return &flatClient{Name: c.Name, NodeName: c.NodeName, JSONClass: c.JSONClass, ChefType: c.ChefType, Validator: c.Validator, Orgname: c.Orgname, PublicKey: pk, Admin: c.Admin, Certificate: c.Certificate}
 }
 
 func (c *Client) GobEncode() ([]byte, error) {

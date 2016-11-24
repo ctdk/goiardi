@@ -20,6 +20,7 @@ package shovey
 
 import (
 	"bytes"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -36,6 +37,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/util"
 	serfclient "github.com/hashicorp/serf/client"
@@ -728,7 +730,7 @@ func getQuorum(quorum string, numNodes int) (int, Qerror) {
 			return 0, CastErr(err)
 		}
 		if qnum > float64(numNodes) {
-			err := Errorf("%d nodes were required for the quorum, but only %d matched the criteria given", qnum, numNodes)
+			err := Errorf("%f nodes were required for the quorum, but only %d matched the criteria given", qnum, numNodes)
 			err.SetStatus("quorum_failed")
 			return 0, err
 		}
@@ -754,9 +756,20 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 	}
 	payloadBlock := strings.Join(parr, "\n")
 
-	config.Key.RLock()
-	defer config.Key.RUnlock()
-	sig, err := chefcrypto.SignTextBlock(payloadBlock, config.Key.PrivKey)
+	var pk *rsa.PrivateKey
+	if config.UsingExternalSecrets() {
+		var err error
+		pk, err = secret.GetSigningKey(config.Config.VaultShoveyKey)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		config.Key.RLock()
+		defer config.Key.RUnlock()
+		j := *config.Key.PrivKey
+		pk = &j
+	}
+	sig, err := chefcrypto.SignTextBlock(payloadBlock, pk)
 	if err != nil {
 		return "", err
 	}

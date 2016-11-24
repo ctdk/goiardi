@@ -54,6 +54,7 @@ import (
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/search"
+	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
@@ -89,6 +90,11 @@ func main() {
 			logger.Fatalf(derr.Error())
 			os.Exit(1)
 		}
+	}
+
+	// Set up secrets, if we're using them.
+	if config.UsingExternalSecrets() {
+		secret.ConfigureSecretStore()
 	}
 
 	gobRegister()

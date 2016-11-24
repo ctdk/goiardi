@@ -99,6 +99,9 @@ type Conf struct {
 	AWSDisableSSL     bool     `toml:"aws-disable-ssl"`
 	S3Endpoint        string   `toml:"s3-endpoint"`
 	S3FilePeriod      int      `toml:"s3-file-period"`
+	UseExtSecrets     bool     `toml:"use-external-secrets"`
+	VaultAddr         string   `toml:"vault-addr"`
+	VaultShoveyKey    string   `toml:"vault-shovey-key"`
 	EnvVars           []string `toml:"env-vars"`
 }
 
@@ -195,10 +198,13 @@ type Options struct {
 	AWSDisableSSL     bool   `long:"aws-disable-ssl" description:"Set to disable SSL for the endpoint. Mostly useful just for testing."`
 	S3Endpoint        string `long:"s3-endpoint" description:"Set a different endpoint than the default s3.amazonaws.com. Mostly useful for testing with a fake S3 service, or if using an S3-compatible service."`
 	S3FilePeriod      int    `long:"s3-file-period" description:"Length of time, in minutes, to allow files to be saved to or retrieved from S3 by the client. Defaults to 15 minutes."`
+	UseExtSecrets     bool   `long:"use-external-secrets" description:"Use an external service to store secrets (currently user/client public keys). Currently only vault is supported."`
+	VaultAddr         string `long:"vault-addr" description:"Specify address of vault server (i.e. https://127.0.0.1:8200). Defaults to the value of VAULT_ADDR."`
+	VaultShoveyKey    string `long:"vault-shovey-key" description:"Specify a path in vault holding shovey's private key. The key must be put in vault as 'privateKey=<contents>'."`
 }
 
 // The goiardi version.
-const Version = "0.11.0"
+const Version = "0.11.1"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
 const ChefVersion = "11.1.7"
@@ -492,6 +498,14 @@ func ParseConfigOptions() error {
 		Config.ProxyPort = Config.Port
 	}
 
+	// secret storage config
+	if opts.UseExtSecrets {
+		Config.UseExtSecrets = opts.UseExtSecrets
+	}
+	if opts.VaultAddr != "" {
+		Config.VaultAddr = opts.VaultAddr
+	}
+
 	if opts.UseSSL {
 		Config.UseSSL = opts.UseSSL
 	}
@@ -618,38 +632,47 @@ func ParseConfigOptions() error {
 	if opts.SignPrivKey != "" {
 		Config.SignPrivKey = opts.SignPrivKey
 	}
+	if opts.VaultShoveyKey != "" {
+		Config.VaultShoveyKey = opts.VaultShoveyKey
+	}
 
 	// if using shovey, open the existing, or create if absent, signing
 	// keys.
 	if Config.UseShovey {
-		if Config.SignPrivKey == "" {
-			Config.SignPrivKey = path.Join(Config.ConfRoot, "shovey-sign_rsa")
-		} else if !path.IsAbs(Config.SignPrivKey) {
-			Config.SignPrivKey = path.Join(Config.ConfRoot, Config.SignPrivKey)
+		if Config.UseExtSecrets {
+			if Config.VaultShoveyKey == "" {
+				Config.VaultShoveyKey = "keys/shovey/signing"
+			}
+		} else {
+			if Config.SignPrivKey == "" {
+				Config.SignPrivKey = path.Join(Config.ConfRoot, "shovey-sign_rsa")
+			} else if !path.IsAbs(Config.SignPrivKey) {
+				Config.SignPrivKey = path.Join(Config.ConfRoot, Config.SignPrivKey)
+			}
+			privfp, err := os.Open(Config.SignPrivKey)
+			if err != nil {
+				logger.Fatalf("Private key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPrivKey)
+				os.Exit(1)
+			}
+			privPem, err := ioutil.ReadAll(privfp)
+			if err != nil {
+				logger.Fatalf(err.Error())
+				os.Exit(1)
+			}
+			privBlock, _ := pem.Decode(privPem)
+			if privBlock == nil {
+				logger.Fatalf("Invalid block size for private key for shovey")
+				os.Exit(1)
+			}
+			privKey, err := x509.ParsePKCS1PrivateKey(privBlock.Bytes)
+			if err != nil {
+				logger.Fatalf(err.Error())
+				os.Exit(1)
+			}
+			Key.Lock()
+			defer Key.Unlock()
+			Key.PrivKey = privKey
 		}
-		privfp, err := os.Open(Config.SignPrivKey)
-		if err != nil {
-			logger.Fatalf("Private key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPrivKey)
-			os.Exit(1)
-		}
-		privPem, err := ioutil.ReadAll(privfp)
-		if err != nil {
-			logger.Fatalf(err.Error())
-			os.Exit(1)
-		}
-		privBlock, _ := pem.Decode(privPem)
-		if privBlock == nil {
-			logger.Fatalf("Invalid block size for private key for shovey")
-			os.Exit(1)
-		}
-		privKey, err := x509.ParsePKCS1PrivateKey(privBlock.Bytes)
-		if err != nil {
-			logger.Fatalf(err.Error())
-			os.Exit(1)
-		}
-		Key.Lock()
-		defer Key.Unlock()
-		Key.PrivKey = privKey
 	}
 
 	if opts.DotSearch {
@@ -738,4 +761,8 @@ func ServerBaseURL() string {
 // in-memory data store.
 func UsingDB() bool {
 	return Config.UseMySQL || Config.UsePostgreSQL
+}
+
+func UsingExternalSecrets() bool {
+	return Config.UseExtSecrets
 }

@@ -27,7 +27,7 @@ cp $CURDIR/../sql-files/*.sql $SHARE
 cp $CURDIR/README_GOIARDI_SCHEMA.txt $SHARE
 
 cd ..
-gox -osarch="linux/amd64 linux/armv6 linux/armv7" -ldflags "-X github.com/ctdk/goiardi/config.GitHash=$GIT_HASH" -output="$BUILD/{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}"
+gox -osarch="linux/amd64 linux/armv6 linux/armv7 linux/s390x" -ldflags "-X github.com/ctdk/goiardi/config.GitHash=$GIT_HASH" -output="$BUILD/{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}"
 
 BUILD_ROOT="$BUILD/trusty"
 FILES_DIR="$CURDIR/ubuntu/trusty"
@@ -166,5 +166,34 @@ cp -r $FILES_DIR/fs/lib .
 cp -r $COMMON_DIR/* .
 
 fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/jessie/goiardi-VERSION_ARCH.deb -a armhf --description "a golang chef server"  --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+
+BUILD_ROOT="$BUILD/jessie-s390x"
+FILES_DIR="$CURDIR/debian/jessie"
+mkdir -p $BUILD_ROOT
+cd $BUILD_ROOT
+mkdir -p usr/bin
+mkdir -p usr/share/goiardi
+cp $SHARE/* usr/share/goiardi
+mkdir -p var/lib/goiardi/lfs
+cp $BUILD/goiardi-$GOIARDI_VERSION-linux-s390x usr/bin/goiardi
+cp -r $FILES_DIR/fs/lib .
+cp -r $COMMON_DIR/* .
+
+fpm -s dir -t deb -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/jessie/goiardi-VERSION_ARCH.deb -a s390x --description "a golang chef server"  --after-install $FILES_DIR/scripts/postinst.sh --after-remove $FILES_DIR/scripts/postrm.sh --deb-suggests mysql-server --deb-suggests postgresql --license apachev2 -m "<jeremy@goiardi.gl>" .
+
+BUILD_ROOT="$BUILD/el7-s390x"
+FILES_DIR="$CURDIR/debian/jessie"
+mkdir -p $BUILD_ROOT
+cd $BUILD_ROOT
+mkdir -p usr/bin
+mkdir -p usr/share/goiardi
+cp $SHARE/* usr/share/goiardi
+mkdir -p var/lib/goiardi/lfs
+cp $BUILD/goiardi-$GOIARDI_VERSION-s390x usr/bin/goiardi
+cp -r $FILES_DIR/fs/lib .
+cp -r $COMMON_DIR/* .
+cp -r $CENTOS_COMMON_DIR/etc .
+
+fpm -s dir -t rpm -n goiardi -v $GOIARDI_VERSION -C . -p $ARTIFACT_DIR/el7/goiardi-VERSION.el7.ARCH.rpm -a s390x --description "a golang chef server" --after-install $CENTOS_SCRIPTS/postinst.sh --license apachev2 -m "<jeremy@goiardi.gl>" .
 
 cd $CURDIR
