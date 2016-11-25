@@ -21,3 +21,6 @@
   but may also need updating for things like secrets and s3 for orgs
 * auth version 1.3
 * Policyfile
+* Update oc-chef-pedant to the latest code shipping with chef-server (pedant
+  seems to have moved into there, IIRC)
+* more go tests for new goiardi stuff
