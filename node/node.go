@@ -387,6 +387,11 @@ func Count() int64 {
 		c, _ := countSQL()
 		return c
 	}
-	nl := GetList()
-	return int64(len(nl))
+	orgs := organization.AllOrganizations()
+	i := 0
+	for _, org := range orgs {
+		nl := GetList(org)
+		i += len(nl)
+	}
+	return int64(i)
 }

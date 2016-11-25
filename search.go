@@ -270,7 +270,7 @@ func reindexAll() {
 	indexer.ClearIndex()
 	orgs := organization.AllOrganizations()
 	for _, org := range orgs {
-		log.Debugf("Starting to reindex org %s", org.Name)
+		logger.Debugf("Starting to reindex org %s", org.Name)
 		indexer.CreateOrgDex(org.Name)
 		// Send the objects to be reindexed in somewhat more manageable chunks
 		clientObjs := make([]indexer.Indexable, 0, 100)

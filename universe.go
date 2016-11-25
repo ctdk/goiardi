@@ -19,6 +19,8 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/cookbook"
+	"github.com/ctdk/goiardi/organization"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
@@ -31,7 +33,14 @@ func universeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	universe := cookbook.Universe()
+	vars := mux.Vars(r)
+	org, orgerr := organization.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+
+	universe := cookbook.Universe(org)
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&universe); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)

@@ -8,4 +8,12 @@
 * Go over new functionality for org appropriateness in general. New items are:
 	o secrets
 	o s3 uploads
-
+	o metrics
+	o pprof info
+	o in-mem search fixes
+	o reindexing refactor
+* sort out chefcrypto between 0.11.1 and 1.0.0-dev
+* SQL funcs still need to be properly orgified
+* Make an org-specific version of node.Count
+* Document undocumented functions, methods, and vars
+* metrics for universe?

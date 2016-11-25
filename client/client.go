@@ -233,7 +233,7 @@ func (c *Client) Delete() util.Gerror {
 	if config.UsingExternalSecrets() {
 		err := secret.DeletePublicKey(c)
 		if err != nil {
-			return err
+			return util.CastErr(err)
 		}
 	}
 	return nil
