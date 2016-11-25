@@ -204,10 +204,10 @@ type Options struct {
 }
 
 // The goiardi version.
-const Version = "0.11.1"
+const Version = "1.0.0-dev"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
-const ChefVersion = "11.1.7"
+const ChefVersion = "12.0.0"
 
 // The default time difference allowed between the server's clock and the time
 // in the X-OPS-TIMESTAMP header.
