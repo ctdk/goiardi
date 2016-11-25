@@ -17,3 +17,7 @@
 * Make an org-specific version of node.Count
 * Document undocumented functions, methods, and vars
 * metrics for universe?
+* Check out import/export for org appropriateness - may have been done already,
+  but may also need updating for things like secrets and s3 for orgs
+* auth version 1.3
+* Policyfile
