@@ -1,5 +1,4 @@
 * More documentation where appropriate
-* Provide packages on more platforms, including getting everything set up for
-  real Debian packages.
+* For 1.0.0 specifics, see TODO-1.0.0
 
 Also see https://github.com/ctdk/goiardi/issues?state=open
