@@ -21,9 +21,9 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/organization"
 	"testing"
 )
 

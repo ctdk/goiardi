@@ -67,10 +67,10 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	serfclient "github.com/hashicorp/serf/client"
-	"regexp"
 	"github.com/raintank/met"
 	"github.com/raintank/met/helper"
 	"github.com/tideland/golib/logger"
+	"regexp"
 )
 
 type interceptHandler struct {

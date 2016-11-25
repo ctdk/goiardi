@@ -135,15 +135,15 @@ func (v versionConstraint) String() string {
 }
 
 type depMeta struct {
-	version    string
-	constraint versionConstraint
-	notFound   bool
-	noVersion  bool
+	version      string
+	constraint   versionConstraint
+	notFound     bool
+	noVersion    bool
 	organization *organization.Organization
 }
 
 type DependsError struct {
-	depErr *depgraph.ConstraintError
+	depErr       *depgraph.ConstraintError
 	organization *organization.Organization
 }
 
@@ -525,7 +525,7 @@ func DependsCookbooks(org *organization.Organization, runList []string, envConst
 	cerr := g.CheckConstraints()
 
 	if cerr != nil {
-		err := &DependsError{depErr: cerr.(*depgraph.ConstraintError), organization: org,}
+		err := &DependsError{depErr: cerr.(*depgraph.ConstraintError), organization: org}
 		return nil, err
 	}
 

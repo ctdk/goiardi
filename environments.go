@@ -32,9 +32,9 @@ import (
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"strings"
-	"github.com/tideland/golib/logger"
 )
 
 func environmentHandler(w http.ResponseWriter, r *http.Request) {
