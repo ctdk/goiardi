@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@ package util
 
 import (
 	"fmt"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/filestore"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"net/mail"
 	"regexp"
@@ -153,8 +155,26 @@ func ValidateCookbookDivision(orgName string, dname string, div interface{}) ([]
 				 * in sandbox */
 				chksum, cherr := ValidateAsString(v["checksum"])
 				if cherr == nil {
-					if _, ferr := filestore.Get(orgName, chksum); ferr != nil {
-						var merr Gerror
+					var itemURL string
+					var uploaded bool
+					var ferr error
+
+					if config.Config.UseS3Upload {
+						uploaded, ferr = CheckForObject("default", chksum)
+						if ferr != nil {
+							uploaded = false
+							logger.Errorf(ferr.Error())
+						} else if uploaded {
+							itemURL, _ = S3GetURL(orgName, chksum)
+						}
+					} else {
+						if _, ferr = filestore.Get(orgName, chksum); ferr == nil {
+							uploaded = true
+							itemURL = CustomURL(fmt.Sprintf("/organizations/%s/file_store/%s", orgName, chksum))
+						}
+					}
+					var merr Gerror
+					if !uploaded {
 						/* This is nuts. */
 						if dname == "recipes" {
 							merr = Errorf("Manifest has a checksum that hasn't been uploaded.")
@@ -163,8 +183,7 @@ func ValidateCookbookDivision(orgName string, dname string, div interface{}) ([]
 						}
 						return nil, merr
 					}
-					itemURL := fmt.Sprintf("/organizations/%s/file_store/%s", orgName, chksum)
-					v["url"] = CustomURL(itemURL)
+					v["url"] = itemURL
 					d = append(d, v)
 				}
 			default:

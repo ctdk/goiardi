@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,13 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/gob"
-	"github.com/codeskyblue/go-uuid"
+	"encoding/json"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"github.com/pborman/uuid"
+	"github.com/raintank/met"
 	"net/http"
 	"strconv"
 	"time"
@@ -65,6 +67,16 @@ type privReport struct {
 	NodeName       *string
 	OrganizationID *int
 }
+
+// statsd metric holders
+var (
+	runsStarted      met.Count
+	runsOK           met.Count
+	runsFailed       met.Count
+	runRunTime       met.Timer
+	runTotalResCount met.Count
+	runUpdatedRes    met.Count
+)
 
 // New creates a new report.
 func New(org *organization.Organization, runID string, nodeName string) (*Report, util.Gerror) {
@@ -137,14 +149,19 @@ func Get(org *organization.Organization, runID string) (*Report, util.Gerror) {
 
 // Save a report.
 func (r *Report) Save() error {
+	var err error
 	if config.Config.UseMySQL {
-		return r.saveMySQL()
+		err = r.saveMySQL()
 	} else if config.Config.UsePostgreSQL {
-		return r.savePostgreSQL()
+		err = r.savePostgreSQL()
 	} else {
 		ds := datastore.New()
 		ds.Set(r.org.DataKey("report"), r.RunID, r)
 	}
+	if err != nil {
+		return err
+	}
+	r.registerMetrics()
 	return nil
 }
 
@@ -221,6 +238,14 @@ func (r *Report) UpdateFromJSON(jsonReport map[string]interface{}) util.Gerror {
 	}
 	var trc int
 	switch t := jsonReport["total_res_count"].(type) {
+	// JSON NUMBER CASE
+	case json.Number:
+		tn, err := t.Int64()
+		if err != nil {
+			err := util.Errorf("Error converting %v to int: %s", jsonReport["total_res_count"], err.Error())
+			return err
+		}
+		trc = int(tn)
 	case string:
 		var err error
 		trc, err = strconv.Atoi(t)
@@ -388,4 +413,34 @@ func (r *Report) ContainerKind() string {
 
 func (r *Report) OrgName() string {
 	return r.org.Name
+}
+
+// TODO: orgify metrics
+
+func InitializeMetrics(metrics met.Backend) {
+	runsStarted = metrics.NewCount("client.run.started")
+	runsOK = metrics.NewCount("client.run.success")
+	runsFailed = metrics.NewCount("client.run.failure")
+	runRunTime = metrics.NewTimer("client.run.run_time", 0)
+	runTotalResCount = metrics.NewCount("client.run.total_resource_count")
+	runUpdatedRes = metrics.NewCount("client.run.updated_resources")
+}
+
+func (r *Report) registerMetrics() {
+	if !config.Config.UseStatsd {
+		return
+	}
+	switch r.Status {
+	case "started":
+		runsStarted.Inc(1)
+	case "success":
+		runsOK.Inc(1)
+	case "failure":
+		runsFailed.Inc(1)
+	}
+	if r.Status != "started" {
+		runRunTime.Value(r.EndTime.Sub(r.StartTime))
+		runTotalResCount.Inc(int64(r.TotalResCount))
+		runUpdatedRes.Inc(int64(len(r.Resources)))
+	}
 }

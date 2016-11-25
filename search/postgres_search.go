@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/datastore"
@@ -65,6 +66,10 @@ func (p *PostgresSearch) Search(org *organization.Organization, idx string, q st
 		}
 		return nil, serr
 	}
+
+	// Don't start timing searches until the existence of the index has
+	// been checked.
+	defer trackSearchTiming(time.Now(), q, pgSearchTimings)
 
 	// Special case "goodness". If the search term is "*:*" with no
 	// qualifiers, short circuit everything and just get a list of the
@@ -180,9 +185,8 @@ func (p *PostgresSearch) Search(org *organization.Organization, idx string, q st
 func (p *PostgresSearch) GetEndpoints(org *organization.Organization) []string {
 	// TODO: deal with possible errors
 	endpoints, err := indexer.Endpoints(org.Name)
-	return endpoints
 	if err != nil {
-		panic(err)
+		logger.Errorf(err.Error())
 	}
 	return endpoints
 }
@@ -204,19 +208,28 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 			if c.field != "" {
 				pq.paths = append(pq.paths, string(c.field))
 			}
-			args, qstr := buildBasicQuery(c.field, c.term, t, curOp)
+			args, xtraPath, qstr := buildBasicQuery(c.field, c.term, t, curOp)
+			if xtraPath != "" {
+				pq.paths = append(pq.paths, xtraPath)
+			}
 			pq.arguments = append(pq.arguments, args...)
 			pq.queryStrs = append(pq.queryStrs, qstr)
 			*t++
 		case *GroupedQuery:
 			pq.paths = append(pq.paths, string(c.field))
-			args, qstr := buildGroupedQuery(c.field, c.terms, t, curOp)
+			args, xtraPath, qstr := buildGroupedQuery(c.field, c.terms, t, curOp)
+			if xtraPath != "" {
+				pq.paths = append(pq.paths, xtraPath)
+			}
 			pq.arguments = append(pq.arguments, args...)
 			pq.queryStrs = append(pq.queryStrs, qstr)
 			*t++
 		case *RangeQuery:
 			pq.paths = append(pq.paths, string(c.field))
-			args, qstr := buildRangeQuery(c.field, c.start, c.end, c.inclusive, t, curOp)
+			args, xtraPath, qstr := buildRangeQuery(c.field, c.start, c.end, c.inclusive, t, curOp)
+			if xtraPath != "" {
+				pq.paths = append(pq.paths, xtraPath)
+			}
 			pq.arguments = append(pq.arguments, args...)
 			pq.queryStrs = append(pq.queryStrs, qstr)
 			*t++
@@ -264,13 +277,14 @@ func (pq *PgQuery) results() ([]string, error) {
 	return res, nil
 }
 
-func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, string) {
+func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, string, string) {
 	opStr := binOp(op)
 	originalTerm := term.term
 	cop := matchOp(term.mod, &term)
 
 	var q string
 	args := []string{string(field)}
+	var xtraPath string
 	if originalTerm == "*" || originalTerm == "" {
 		q = fmt.Sprintf("%s(f%d.path ~ _ARG_)", opStr, *tNum)
 	} else if field == "" { // feeling REALLY iffy about this one, but it
@@ -278,29 +292,61 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, s
 		q = fmt.Sprintf("%s(f%d.value %s _ARG_)", opStr, *tNum, cop)
 		args = []string{string(term.term)}
 	} else {
-		q = fmt.Sprintf("%s(f%d.path OPERATOR(goiardi.~) _ARG_ AND f%d.value %s _ARG_)", opStr, *tNum, *tNum, cop)
+		altQueryPath := fmt.Sprintf("%s.%s", string(field), string(originalTerm))
+		// For ltree, change this *back*.
+		// Strictly speaking, certain kinds of query won't have exactly
+		// the same behavior as you would get with solr, but it only
+		// comes up in a few corner cases that should be unlikely in
+		// real world searching. (Famous last words.) It should only be
+		// queries like "foo:bar*" or "foo:bar?" where "foo.bar*" is a
+		// ltree path rather than a path and value, because searches
+		// with ? matching single characters won't work right, and
+		// wildcard searches with * might not behave quite the way one
+		// expects (*maybe*). In practice it shouldn't be a huge
+		// problem.
+		altQueryPath = util.PgSearchQueryKey(string(altQueryPath))
+		q = fmt.Sprintf("%s((f%d.path OPERATOR(goiardi.~) _ARG_ AND f%d.value %s _ARG_) OR (f%d.path OPERATOR(goiardi.~) _ARG_))", opStr, *tNum, *tNum, cop, *tNum)
 		args = append(args, string(term.term))
+		args = append(args, altQueryPath)
+		xtraPath = altQueryPath
 	}
 
-	return args, q
+	return args, xtraPath, q
 }
 
-func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]string, string) {
+func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]string, string, string) {
 	opStr := binOp(op)
 
 	var q string
 	args := []string{string(field)}
 	var grouped []*gClause
 
+	basePath := string(field)
+	xtraPath := fmt.Sprintf("%s.*", string(field))
+	var groupedPaths []*gClause
+	var groupedArgs []string
+	ltNum := *tNum
+
 	for _, v := range terms {
+		orgTerm := v.term
 		cop := matchOp(op, &v)
 
 		clause := fmt.Sprintf("f%d.value %s _ARG_", *tNum, cop)
 		g := &gClause{clause, v.mod}
 		grouped = append(grouped, g)
+
+		var ltreeNot string
+		if v.mod == OpUnaryNot {
+			ltreeNot = "!"
+		}
+		groupedArgs = append(groupedArgs, fmt.Sprintf("%s.%s%s", basePath, ltreeNot, util.PgSearchQueryKey(string(orgTerm))))
+		ltNum++
+
+		groupedPaths = append(groupedPaths, &gClause{fmt.Sprintf("f%d.path OPERATOR(goiardi.~) _ARG_", ltNum), v.mod})
 		args = append(args, string(v.term))
 	}
 	var clauseArr []string
+	var ltClauseArr []string
 	for i, g := range grouped {
 		var j string
 		if i != 0 {
@@ -312,18 +358,33 @@ func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]stri
 		}
 		clauseArr = append(clauseArr, fmt.Sprintf("%s%s", j, g.clause))
 	}
+	for i, lc := range groupedPaths {
+		var j string
+		if i != 0 {
+			if lc.op == OpUnaryPro || lc.op == OpUnaryReq || lc.op == OpUnaryNot {
+				j = " AND "
+			} else {
+				j = " OR "
+			}
+		}
+		ltClauseArr = append(ltClauseArr, fmt.Sprintf("%s%s", j, lc.clause))
+	}
 	clauses := strings.Join(clauseArr, " ")
-	q = fmt.Sprintf("%s(f%d.path OPERATOR(goiardi.~) _ARG_ AND (%s))", opStr, *tNum, clauses)
-	return args, q
+	ltClauses := strings.Join(ltClauseArr, " ")
+	q = fmt.Sprintf("%s((f%d.path OPERATOR(goiardi.~) _ARG_ AND (%s)) OR (%s))", opStr, *tNum, clauses, ltClauses)
+	*tNum = ltNum
+	args = append(args, groupedArgs...)
+	return args, xtraPath, q
 }
 
-func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool, tNum *int, op Op) ([]string, string) {
+func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool, tNum *int, op Op) ([]string, string, string) {
 	if start > end {
 		start, end = end, start
 	}
 
 	var q string
 	args := []string{string(field)}
+	xtraPath := fmt.Sprintf("%s.*", string(field))
 
 	opStr := binOp(op)
 	var equals string
@@ -331,22 +392,39 @@ func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool
 		equals = "="
 	}
 	var ranges []string
+	var rangePaths []string
+	var rangeArgs []string // these need to be added to the args after
+
 	if string(start) != "*" {
 		s := fmt.Sprintf("f%d.value >%s _ARG_", *tNum, equals)
 		ranges = append(ranges, s)
 		args = append(args, string(start))
+		rangePaths = append(rangePaths, fmt.Sprintf("f%d.path OPERATOR(goiardi.>%s) _ARG_", *tNum, equals))
+		rangeArgs = append(rangeArgs, fmt.Sprintf("%s.%s", string(field), util.PgSearchQueryKey(string(start))))
 	}
 	if string(end) != "*" {
 		e := fmt.Sprintf("f%d.value <%s _ARG_", *tNum, equals)
 		ranges = append(ranges, e)
 		args = append(args, string(end))
+		rangePaths = append(rangePaths, fmt.Sprintf("f%d.path OPERATOR(goiardi.<%s) _ARG_", *tNum, equals))
+		rangeArgs = append(rangeArgs, fmt.Sprintf("%s.%s", string(field), util.PgSearchQueryKey(string(end))))
 	}
+
+	args = append(args, xtraPath)
+	if len(rangeArgs) != 0 {
+		args = append(args, rangeArgs...)
+	}
+
 	var rangeStr string
+	var rangePathStr string
 	if len(ranges) != 0 {
 		rangeStr = fmt.Sprintf(" AND (%s)", strings.Join(ranges, " AND "))
+		// Add the first path match to keep the range query with ltrees
+		// from shooting off into the distance
+		rangePathStr = fmt.Sprintf(" OR (f%d.path OPERATOR(goiardi.~) _ARG_ AND %s)", *tNum, strings.Join(rangePaths, " AND "))
 	}
-	q = fmt.Sprintf("%s(f%d.path OPERATOR(goiardi.~) _ARG_%s)", opStr, *tNum, rangeStr)
-	return args, q
+	q = fmt.Sprintf("%s(f%d.path OPERATOR(goiardi.~) _ARG_%s%s)", opStr, *tNum, rangeStr, rangePathStr)
+	return args, xtraPath, q
 }
 
 func matchOp(op Op, term *QueryTerm) string {

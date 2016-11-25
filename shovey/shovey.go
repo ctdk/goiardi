@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package shovey
 
 import (
 	"bytes"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -32,15 +33,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codeskyblue/go-uuid"
-	"github.com/ctdk/goiardi/chefcrypto"
+	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/util"
 	serfclient "github.com/hashicorp/serf/client"
+	"github.com/pborman/uuid"
 	"github.com/tideland/golib/logger"
 )
 
@@ -619,7 +621,7 @@ func (sr *ShoveyRun) UpdateFromJSON(srData map[string]interface{}) util.Gerror {
 	if errorStr, ok := srData["error"].(string); ok {
 		sr.Error = errorStr
 	}
-	if exitStatus, ok := srData["exit_status"].(float64); ok {
+	if exitStatus, ok := intify(srData["exit_status"]); ok {
 		sr.ExitStatus = uint8(exitStatus)
 	}
 
@@ -741,7 +743,7 @@ func getQuorum(quorum string, numNodes int) (int, Qerror) {
 			return 0, CastErr(err)
 		}
 		if qnum > float64(numNodes) {
-			err := Errorf("%d nodes were required for the quorum, but only %d matched the criteria given", qnum, numNodes)
+			err := Errorf("%f nodes were required for the quorum, but only %d matched the criteria given", qnum, numNodes)
 			err.SetStatus("quorum_failed")
 			return 0, err
 		}
@@ -767,9 +769,20 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 	}
 	payloadBlock := strings.Join(parr, "\n")
 
-	config.Key.RLock()
-	defer config.Key.RUnlock()
-	sig, err := chefcrypto.SignTextBlock(payloadBlock, config.Key.PrivKey)
+	var pk *rsa.PrivateKey
+	if config.UsingExternalSecrets() {
+		var err error
+		pk, err = secret.GetSigningKey(config.Config.VaultShoveyKey)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		config.Key.RLock()
+		defer config.Key.RUnlock()
+		j := *config.Key.PrivKey
+		pk = &j
+	}
+	sig, err := chefcrypto.SignTextBlock(payloadBlock, pk)
 	if err != nil {
 		return "", err
 	}
@@ -796,7 +809,8 @@ func ImportShovey(org *organization.Organization, shoveyJSON map[string]interfac
 		return nil
 	}
 	status := shoveyJSON["status"].(string)
-	timeout := time.Duration(shoveyJSON["timeout"].(float64))
+	ttmp, _ := intify(shoveyJSON["timeout"])
+	timeout := time.Duration(ttmp)
 	quorum := shoveyJSON["quorum"].(string)
 	s := &Shovey{RunID: runID, NodeNames: nodeNames, Command: command, CreatedAt: createdAt, UpdatedAt: updatedAt, Status: status, Timeout: timeout, Quorum: quorum, org: org}
 	return s.importSave()
@@ -820,9 +834,12 @@ func ImportShoveyRun(org *organization.Organization, sRunJSON map[string]interfa
 			return err
 		}
 	}
+
 	errMsg := sRunJSON["error"].(string)
-	exitStatus := uint8(sRunJSON["exit_status"].(float64))
+	extmp, _ := intify(sRunJSON["exit_status"])
+	exitStatus := uint8(extmp)
 	sr := &ShoveyRun{ShoveyUUID: shoveyUUID, NodeName: nodeName, Status: status, AckTime: ackTime, EndTime: endTime, Error: errMsg, ExitStatus: exitStatus, org: org}
+
 	// This can use the normal save function
 	return sr.save()
 }
@@ -832,7 +849,8 @@ func ImportShoveyRun(org *organization.Organization, sRunJSON map[string]interfa
 func ImportShoveyRunStream(org *organization.Organization, srStreamJSON map[string]interface{}) error {
 	shoveyUUID := srStreamJSON["ShoveyUUID"].(string)
 	nodeName := srStreamJSON["NodeName"].(string)
-	seq := int(srStreamJSON["Seq"].(float64))
+	seqtmp, _ := intify(srStreamJSON["Seq"])
+	seq := int(seqtmp)
 	outputType := srStreamJSON["OutputType"].(string)
 	output := srStreamJSON["Output"].(string)
 	isLast := srStreamJSON["IsLast"].(bool)
@@ -882,4 +900,22 @@ func (s *Shovey) ContainerKind() string {
 
 func (s *Shovey) OrgName() string {
 	return s.org.Name
+}
+
+func intify(i interface{}) (int64, bool) {
+	var retint int64
+	var ok bool
+
+	switch i := i.(type) {
+	case json.Number:
+		j, err := i.Int64()
+		if err == nil {
+			retint = j
+			ok = true
+		}
+	case float64:
+		retint = int64(i)
+		ok = true
+	}
+	return retint, ok
 }

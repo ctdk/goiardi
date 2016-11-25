@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/databag"
@@ -99,6 +100,7 @@ type TrieSearch struct {
 // Search parses the given query string and search the given index for any
 // matching results.
 func (t *TrieSearch) Search(org *organization.Organization, idx string, query string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
+	defer trackSearchTiming(time.Now(), query, inMemSearchTimings)
 	m.Lock()
 	defer m.Unlock()
 	qq := &Tokenizer{Buffer: query}
@@ -182,7 +184,7 @@ func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 			_ = c
 			newq, nend, nerr := extractSubQuery(s)
 			if nerr != nil {
-				return nil, err
+				return nil, nerr
 			}
 			s = nend
 			var d map[string]indexer.Document

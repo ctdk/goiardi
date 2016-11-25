@@ -131,14 +131,9 @@ log-events = true
 # Path to RSA private key used to sign shovey requests.
 # sign-priv-key = "/path/to/shovey.key"
 
-# MySQL options. If "use-mysql" is true on the command line or in the
-# configuration file, connect to mysql with the options in [mysql]. All of the
-# MySQL options must be strings.
-use-mysql = false
-
 # Local directory for storing cookbook files on the filesystem. Optional in 
 # in-memory mode (standard behavior is to keep the files in memory), and
-# mandatory for SQL mode.
+# mandatory for SQL mode (unless using S3 uploads).
 # local-filestore-dir = "/var/goiardi/file_checksums"
 
 # Postgres and advanced search options
@@ -153,6 +148,24 @@ use-mysql = false
 #                   # in-memory search index. Not surprisingly, this requires
 #                   # using Postgres for the storage backend.
 
+# Statsd options
+# With this, you can send some metrics about goiardi to statsd, which can in
+# turn be sent on to graphite or similar and, when used with something like
+# grafana, can be visualized or if used with something like bosun you could set
+# alerts on it, like if the number of chef-client runs that fail suddenly jumps
+# dramatically.
+#
+# use-statsd = false
+# statsd-addr = "127.0.0.1:8125"
+# statsd-type = "standard" # can also be "datadog", for their statsd format
+# stastd-instance = "my_goiardi_server" # should be the hostname. "." will
+#      					# automatically be converted to "_".
+
+# MySQL options. If "use-mysql" is true on the command line or in the
+# configuration file, connect to mysql with the options in [mysql]. All of the
+# MySQL options must be strings.
+use-mysql = false
+
 [mysql]
 	username = "foo" # technically optional, although you probably want it
 	password = "s3kr1t" # optional, if you have no password set for MySQL
@@ -163,9 +176,39 @@ use-mysql = false
 	dbname = "goiardi_test"
 	# See https://github.com/go-sql-driver/mysql#parameters for an
 	# explanation of available parameters
-	[mysql.extra_params]
-		tls = "false"
-		foo = "bar"
+	#[mysql.extra_params]
+	#	tls = "false"
+	#	foo = "bar"
+
+# Environment variables - if, for some reason, you need to pass environment
+# variables to goiardi but can't easily do so in the usual way, you can do so
+# here.
+# env-vars = [
+#   "FOO=bar",
+#   "BAZ=blugh",
+#   "AWS_THINGY=sos3kr1t"
+# ]
+
+# Amazon S3 uploads
+#
+# Settings for S3, if using S3 (or a compatible service) to store uploaded
+# cookbooks.
+#
+## Whether to use s3 uploads
+# use-s3-upload = true
+# 
+## AWS region to use
+# aws-region = "us-west"
+#
+## Disable SSL with s3. Mostly for testing with fakes3 or somesuch.
+# aws-disable-ssl = false
+#
+## S3 endpoint. Again, mostly for testing with fakes3 or similar.
+# s3-endpoint = "s3.amazonaws.com"
+#
+## Length of time, in minutes, for URLs generated to upload or download files
+## to/from S3 to remain valid. Default is 15 minutes.
+# s3-file-period = 15
 
 use-postgresql = false
 

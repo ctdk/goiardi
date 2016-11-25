@@ -6,6 +6,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"unicode"
 )
 
 const END_SYMBOL rune = 4
@@ -360,13 +361,14 @@ func (t *tokens16) PrintSyntax() {
 	}
 }
 
-func (t *tokens16) PrintSyntaxTree(buffer string) {
+func (t *tokens16) PrintSyntaxTree(buffer2 string) {
+	buffer := []rune(buffer2)
 	tokens, _ := t.PreOrder()
 	for token := range tokens {
 		for c := 0; c < int(token.next); c++ {
 			fmt.Printf(" ")
 		}
-		fmt.Printf("\x1B[34m%v\x1B[m %v\n", Rul3s[token.Rule], strconv.Quote(buffer[token.begin:token.end]))
+		fmt.Printf("\x1B[34m%v\x1B[m %v\n", Rul3s[token.Rule], strconv.Quote(string(buffer[token.begin:token.end])))
 	}
 }
 
@@ -710,7 +712,7 @@ func (e *parseError) Error() string {
 			Rul3s[token.Rule],
 			translations[begin].line, translations[begin].symbol,
 			translations[end].line, translations[end].symbol,
-			/*strconv.Quote(*/ e.p.Buffer[begin:end] /*)*/)
+			/*strconv.Quote(*/ string(e.p.buffer[begin:end]) /*)*/)
 	}
 
 	return error
@@ -724,14 +726,24 @@ func (p *Tokenizer) Highlighter() {
 	p.TokenTree.PrintSyntax()
 }
 
+func isASCII(str string) bool {
+	for _, r := range []rune(str) {
+		if r > unicode.MaxASCII {
+			return false
+		}
+	}
+	return true
+}
+
 func (p *Tokenizer) Execute() {
-	buffer, begin, end := p.Buffer, 0, 0
+	buffer, begin, end := p.buffer, 0, 0
+
 	for token := range p.TokenTree.Tokens() {
 		switch token.Rule {
 		case RulePegText:
 			begin, end = int(token.begin), int(token.end)
 		case RuleAction0:
-			p.AddTerm(buffer[begin:end])
+			p.AddTerm(string(buffer[begin:end]))
 		case RuleAction1:
 			p.StartBasic()
 		case RuleAction2:
@@ -743,9 +755,9 @@ func (p *Tokenizer) Execute() {
 		case RuleAction5:
 			p.StartRange(false)
 		case RuleAction6:
-			p.AddField(buffer[begin:end])
+			p.AddField(string(buffer[begin:end]))
 		case RuleAction7:
-			p.AddRange(buffer[begin:end])
+			p.AddRange(string(buffer[begin:end]))
 		case RuleAction8:
 			p.StartSubQuery()
 		case RuleAction9:
@@ -769,9 +781,9 @@ func (p *Tokenizer) Execute() {
 		case RuleAction18:
 			p.AddOp(OpFuzzy)
 		case RuleAction19:
-			p.AddTerm(buffer[begin:end])
+			p.AddTerm(string(buffer[begin:end]))
 		case RuleAction20:
-			p.AddTerm(buffer[begin:end])
+			p.AddTerm(string(buffer[begin:end]))
 
 		}
 	}
@@ -2142,8 +2154,15 @@ func (p *Tokenizer) Init() {
 							}
 							position++
 							break
-						default:
+						//default:
+						case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
 							if c := buffer[position]; c < rune('A') || c > rune('Z') {
+								goto l186
+							}
+							position++
+							break
+						default:
+							if c := buffer[position]; !unicode.IsLetter(c) && !unicode.IsNumber(c) {
 								goto l186
 							}
 							position++
@@ -2201,8 +2220,14 @@ func (p *Tokenizer) Init() {
 								}
 								position++
 								break
-							default:
+							case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
 								if c := buffer[position]; c < rune('A') || c > rune('Z') {
+									goto l189
+								}
+								position++
+								break
+							default:
+								if c := buffer[position]; !unicode.IsLetter(c) && !unicode.IsNumber(c) {
 									goto l189
 								}
 								position++
@@ -2279,8 +2304,14 @@ func (p *Tokenizer) Init() {
 							}
 							position++
 							break
-						default:
+						case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
 							if c := buffer[position]; c < rune('A') || c > rune('Z') {
+								goto l195
+							}
+							position++
+							break
+						default:
+							if c := buffer[position]; !unicode.IsLetter(c) && !unicode.IsNumber(c) {
 								goto l195
 							}
 							position++

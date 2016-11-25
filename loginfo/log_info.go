@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package loginfo
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -114,6 +115,13 @@ func Import(org *organization.Organization, logData map[string]interface{}) erro
 	le.ObjectName = logData["object_name"].(string)
 	le.ExtendedInfo = logData["extended_info"].(string)
 	le.ID = int(logData["id"].(float64))
+	switch l := logData["id"].(type) {
+	case float64:
+		le.ID = int(l)
+	case json.Number:
+		k, _ := l.Int64()
+		le.ID = int(k)
+	}
 	t, err := time.Parse(time.RFC3339, logData["time"].(string))
 	if err != nil {
 		return nil

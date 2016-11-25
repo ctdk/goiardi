@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,10 +141,14 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				quorum = "100%"
 			}
 			logger.Debugf("run_timeout is a %T", shvData["run_timeout"])
-			if t, ok := shvData["run_timeout"].(float64); !ok {
-				timeout = 300
-			} else {
+			switch t := shvData["run_timeout"].(type) {
+			case json.Number:
+				tj, _ := t.Int64()
+				timeout = int(tj)
+			case float64:
 				timeout = int(t)
+			default:
+				timeout = 300
 			}
 			var nodeNames []string
 
@@ -374,13 +378,18 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			seqFloat, ok := streamData["seq"].(float64)
-			if !ok {
+			var seq int
+			switch sf := streamData["seq"].(type) {
+			case json.Number:
+				sj, _ := sf.Int64()
+				seq = int(sj)
+			case float64:
+				seq = int(sf)
+			default:
 				oerr := util.Errorf("invalid seq")
 				jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 				return
 			}
-			seq := int(seqFloat)
 
 			err = sj.AddStreamOutput(output, outputType, seq, isLast)
 			if err != nil {

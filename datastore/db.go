@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,6 +131,7 @@ func DecodeBlob(data []byte, obj interface{}) error {
 	// hmmm
 	dbuf := bytes.NewBuffer(data)
 	dec := json.NewDecoder(dbuf)
+	dec.UseNumber()
 	err := dec.Decode(obj)
 	if err != nil {
 		return err

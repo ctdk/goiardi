@@ -1,12 +1,22 @@
-test:
+machine:
+  environment:
+    GODIST: "go1.7.3.linux-amd64.tar.gz"
+dependencies:
   pre:
+    - mkdir -p download
+    - test -e download/$GODIST || curl -o download/$GODIST https://storage.googleapis.com/golang/$GODIST
+    - sudo rm -rf /usr/local/go
+    - sudo tar -C /usr/local -xzf download/$GODIST
+  post:
     - gem install fpm
-    - go get github.com/mitchellh/gox
+    - sudo apt-get install rpm
+    - go get github.com/ctdk/gox
+test:
   post:
     - cd packaging && /bin/bash packaging.sh
 general:
   artifacts:
-    - pkg/artifacts
+    - packaging/artifacts
 deployment:
   production:
     branch: releases

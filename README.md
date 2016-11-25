@@ -14,9 +14,9 @@ The full goiardi documentation has been moved out of this README because it was
 getting too big to be easily manageable. It now uses sphinx to manage and format
 the documentation, which can be found under the `docs/` directory. To learn
 about sphinx-doc, see http://sphinx-doc.org/. The documentation can also be
-found online at http://goiardi.readthedocs.org/en/latest/.
+found online at http://goiardi.readthedocs.io/en/latest/.
 
-In addition to the aforementioned Chef documentation at http://docs.opscode.com,
+In addition to the aforementioned Chef documentation at http://docs.chef.io,
 more documentation specific to goiardi can be viewed with godoc. See
 https://godoc.org/golang.org/x/tools/cmd/godoc for an explanation of how
 godoc works. The goiardi godocs can also be viewed online at
@@ -60,7 +60,7 @@ Jeremy Bingham (<jeremy@goiardi.gl>)
 COPYRIGHT
 ---------
 
-Copyright 2013-2015, Jeremy Bingham
+Copyright 2013-2016, Jeremy Bingham
 
 The `depgraph` and `digraph` packages are vendored from terraform and are
 copyrighted by Hashicorp.
@@ -82,12 +82,17 @@ License. See the LICENSE file for details.
 The goiardi documentation in the `docs` directory is licensed under a Creative
 Commons Attribution 4.0 International (CC-BY 4.0) License.
 
-Chef is copyright (c) 2008-2014 Chef Software (formerly Opscode, Inc.) and its
+Chef is copyright (c) 2008-2016 Chef Software (formerly Opscode, Inc.) and its
 various contributors.
 
 The `depgraph` and `digraph` packages are vendored from Hashicorp's terraform
 package, and is under the Mozilla Public License version 2.0. The MPL is
 included in those directories and applies only to those files.
+
+A small part of `go-chef/chef` is included under the `authentication` directory
+to remove a circular dependency with tests between goiardi and go-chef, only
+enough to make a minimal client sufficient to test authenticating headers. It is
+copyright 2013-2014, Jesse Nelson under the terms of the Apache 2.0 license.
 
 Thanks go out to the fine folks of Opscode and the Chef community for all their
 hard work.

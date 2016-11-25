@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -455,4 +455,23 @@ func getNodesByStatusSQL(nodeNames []string, status string) ([]*Node, error) {
 	}
 	err := fmt.Errorf("impossible db state, man")
 	return nil, err
+}
+
+func countSQL() (int64, error) {
+	var c int64
+	var sqlStmt string
+	if config.Config.UseMySQL {
+		sqlStmt = "SELECT COUNT(*) FROM nodes"
+	} else if config.Config.UsePostgreSQL {
+		sqlStmt = "SELECT COUNT(*) FROM goiardi.nodes"
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return 0, err
+	}
+	err = stmt.QueryRow().Scan(&c)
+	if err != nil {
+		return 0, err
+	}
+	return c, nil
 }

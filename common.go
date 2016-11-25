@@ -1,7 +1,7 @@
 /* Some common definitions, interfaces, etc. */
 
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import (
 func parseObjJSON(data io.ReadCloser) (map[string]interface{}, error) {
 	objData := make(map[string]interface{})
 	dec := json.NewDecoder(data)
+	dec.UseNumber()
 
 	if err := dec.Decode(&objData); err != nil {
 		return nil, err

@@ -5,7 +5,7 @@ Installation
 
 To install goiardi from source:
 
-1. Install go. (http://golang.org/doc/install.html) You will need to use at least go 1.3 to compile goiardi, but go 1.4 and 1.5 work as well. At this time goiardi can be built with the latest version of Go, and this is recommended. Immediately after a minor release, of course, caution may be warranted.
+1. Install go. (http://golang.org/doc/install.html) Officially goiardi only supports go 1.6+ at this time, but older versions (especially go 1.5) may work. Goiardi should generally be able to be built with the latest version of Go, and this is generally recommended. Immediately after a minor release, of course, caution may be warranted.
 
 2. Make sure your ``$GOROOT`` and ``$PATH`` are set up correctly per the Go installation instructions.
 
@@ -82,9 +82,9 @@ Currently available command line and config file options::
                            database options in the config file.
         --use-postgresql   Use a PostgreSQL database for data storage.
                            Configure database options in the config file.
-        --local-filestore-dir= Directory to save uploaded files in. Optional when
-                           running in in-memory mode, *mandatory* for SQL
-                           mode.
+        --local-filestore-dir= Directory to save uploaded files in. Optional
+                           when running in in-memory mode, *mandatory*
+                           (unless using S3 uploads) for SQL mode.
         --log-events       Log changes to chef objects.
     -K, --log-event-keep=  Number of events to keep in the event log. If set,
                            the event log will be checked periodically and
@@ -124,6 +124,48 @@ Currently available command line and config file options::
                Requires --use-serf.
         --sign-priv-key=   Path to RSA private key used to sign shovey
                            requests.
+        --dot-search       If set, searches will use . to separate elements
+                           instead of _.
+        --convert-search   If set, convert _ syntax searches to . syntax.
+                           Only useful if --dot-search is set.
+        --pg-search        Use the new Postgres based search engine instead
+                           of the default ersatz Solr. Requires
+                           --use-postgresql, automatically turns on
+                           --dot-search. --convert-search is recommended,
+                           but not required.
+        --use-statsd       Whether or not to collect statistics about
+                           goiardi and send them to statsd.
+        --statsd-addr=     IP address and port of statsd instance to connect
+                           to. (default 'localhost:8125')
+        --statsd-type=     statsd format, can be either 'standard' or
+                           'datadog' (default 'standard')
+        --statsd-instance= Statsd instance name to use for this server.
+                           Defaults to the server's hostname, with '.'
+                           replaced by '_'.
+        --use-s3-upload    Store cookbook files in S3 rather than locally in
+                           memory or on disk. This or --local-filestore-dir
+                           must be set in SQL mode. Cannot be used with
+                           in-memory mode.
+        --aws-region=      AWS region to use S3 uploads.
+        --s3-bucket=       The name of the S3 bucket storing the files.
+        --aws-disable-ssl  Set to disable SSL for the endpoint. Mostly
+                           useful just for testing.
+        --s3-endpoint=     Set a different endpoint than the default
+                           s3.amazonaws.com. Mostly useful for testing
+                           with a fake S3 service, or if using an
+                           S3-compatible service.
+        --s3-file-period=  Length of time, in minutes, to allow files to
+                           be saved to or retrieved from S3 by the
+                           client. Defaults to 15 minutes.
+        --use-external-secrets  Use an external service to store secrets
+                           (currently user/client public keys). Currently
+                           only vault is supported.
+        --vault-addr=      Specify address of vault server (i.e.
+                           https://127.0.0.1:8200). Defaults to the value of
+                           VAULT_ADDR.
+        --vault-shovey-key= Specify a path in vault holding shovey's private
+                           key. The key must be put in vault as
+                           'privateKey=<contents>'.
 
 Options specified on the command line override options in the config file.
 
@@ -133,3 +175,5 @@ Binaries and Packages
 =====================
 
 There are other options for installing goiardi, in case you don't want to build it from scratch. Binaries for several platforms are provided with each release, and there are .debs available as well at https://packagecloud.io/ct/goiardi. At the moment packages are only being built for Debian wheezy, Ubuntu 14.04, and raspbian (which is under Debian wheezy) for Raspberry Pi and Raspberry Pi 2. Other versions of Debian, Ubuntu, CentOS and friends, and perhaps others are on the roadmap.
+
+There is also a [homebrew tap](https://github.com/ctdk/homebrew-ctdk) that includes goiardi now, for folks running Mac OS X and using homebrew.

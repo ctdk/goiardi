@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -162,6 +162,9 @@ func TestFoo(t *testing.T) {
 
 func TestSearchNode(t *testing.T) {
 	n, _ := searcher.Search(org, "node", "name:node1", 1000, "id ASC", 0, nil)
+	if e != nil {
+		t.Errorf("err searching: %s", e.Error())
+	}
 	if len(n) == 0 || n[0]["name"] != "node1" {
 		t.Errorf("nothing returned from search")
 	}

@@ -1,4 +1,4 @@
-%syntax-version=1.0.0-b2
+%syntax-version=1.0.0
 %project=goiardi_postgres
 %uri=http://ctdk.github.com/goiardi/postgres-support
 
@@ -48,3 +48,6 @@ ltree 2015-04-11T06:21:26Z Jeremy Bingham <jeremy@goiardi.gl> # Add tables for l
 ltree_del_col 2015-04-12T19:33:15Z Jeremy Bingham <jeremy@goiardi.gl> # procedure for deleting search collections
 ltree_del_item 2015-04-12T20:03:50Z Jeremy Bingham <jeremy@goiardi.gl> # procedure for deleting search items
 @v0.10.0 2015-07-23T07:21:08Z Jeremy Bingham <jeremy@goiardi.gl># Tag the 0.10.0 release.
+
+jsonb 2016-09-09T08:17:31Z Jeremy Bingham <jeremy@eridu.local> # Switch from json to jsonb columns. Will require using postgres 9.4+.
+@v0.11.0 2016-10-24T08:35:53Z Jeremy Bingham <jeremy@goiardi.gl> # tag the 0.11.0 release schema

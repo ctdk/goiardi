@@ -1,7 +1,7 @@
 /* Various cryptographic functions, as needed. */
 
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
  */
 
 // Package chefcrypto bundles up crytographic routines for goairdi.
+// DEPRECATED: This library has been moved to github.com/ctdk/chefcrypto, and
+// will be removed from goiardi with a later release.
 package chefcrypto
 
 import (

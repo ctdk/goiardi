@@ -2,7 +2,7 @@
  * to learn more about programming in Go. */
 
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,10 +28,13 @@ import (
 	"github.com/ctdk/goiardi/acl"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"path"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -55,6 +58,8 @@ import (
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
+	"github.com/ctdk/goiardi/search"
+	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/universe"
@@ -63,12 +68,22 @@ import (
 	"github.com/gorilla/mux"
 	serfclient "github.com/hashicorp/serf/client"
 	"regexp"
+	"github.com/raintank/met"
+	"github.com/raintank/met/helper"
 	"github.com/tideland/golib/logger"
 )
 
 type interceptHandler struct {
 	router *mux.Router
 }
+
+type apiTimerInfo struct {
+	elapsed time.Duration
+	path    string
+	method  string
+}
+
+var apiChan chan *apiTimerInfo
 
 func main() {
 	config.ParseConfigOptions()
@@ -85,6 +100,11 @@ func main() {
 			logger.Fatalf(derr.Error())
 			os.Exit(1)
 		}
+	}
+
+	// Set up secrets, if we're using them.
+	if config.UsingExternalSecrets() {
+		secret.ConfigureSecretStore()
 	}
 
 	gobRegister()
@@ -104,6 +124,21 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	metricsBackend, merr := helper.New(config.Config.UseStatsd, config.Config.StatsdAddr, config.Config.StatsdType, "goiardi", config.Config.StatsdInstance)
+	if merr != nil {
+		logger.Fatalf(merr.Error())
+		os.Exit(1)
+	}
+	util.InitS3(config.Config)
+	initGeneralStatsd(metricsBackend)
+	report.InitializeMetrics(metricsBackend)
+	search.InitializeMetrics(metricsBackend)
+	apiChan = make(chan *apiTimerInfo, 10) // unbuffered shouldn't block
+	// anything, but a little buffer
+	// shouldn't hurt
+	go apiTimerMaster(apiChan, metricsBackend)
+
 	setSaveTicker()
 	setLogEventPurgeTicker()
 
@@ -291,13 +326,76 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func trackApiTiming(start time.Time, r *http.Request) {
+	if !config.Config.UseStatsd {
+		return
+	}
+	elapsed := time.Since(start)
+	apiChan <- &apiTimerInfo{elapsed: elapsed, path: r.URL.Path, method: r.Method}
+}
+
+func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
+	if !config.Config.UseStatsd {
+		return
+	}
+	metrics := make(map[string]met.Timer)
+	for timeInfo := range apiChan {
+		p := path.Clean(timeInfo.path)
+		pathTmp := strings.Split(p, "/")
+		if len(pathTmp) > 1 {
+			p = pathTmp[1]
+		} else {
+			p = "root"
+		}
+		metricStr := fmt.Sprintf("api.timing.%s.%s", p, strings.ToLower(timeInfo.method))
+		if _, ok := metrics[metricStr]; !ok {
+			metrics[metricStr] = metricsBackend.NewTimer(metricStr, 0)
+		}
+		metrics[metricStr].Value(timeInfo.elapsed)
+
+		logger.Debugf("in apiChan %s: %d microseconds %s %s", metricStr, timeInfo.elapsed/time.Microsecond, timeInfo.path, timeInfo.method)
+	}
+}
+
 func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* knife sometimes sends URL paths that start with //. Redirecting
 	 * worked for GETs, but since it was breaking POSTs and screwing with
 	 * GETs with query params, we just clean up the path and move on. */
 
+	// experimental - track time of api requests
+	defer trackApiTiming(time.Now(), r)
+
 	/* log the URL */
 	logger.Debugf("Serving %s -- %s", r.URL.Path, r.Method)
+
+	// block /debug/pprof if not localhost
+	if strings.HasPrefix(r.URL.Path, "/debug") {
+		fwded := strings.Split(r.Header.Get("X-Forwarded-For"), ", ")
+		remoteIP, _, rerr := net.SplitHostPort(r.RemoteAddr)
+		var block bool
+		if rerr == nil {
+			var xForwarded string
+			if len(fwded) != 0 {
+				xForwarded = fwded[len(fwded)-1]
+			}
+			logger.Debugf("remote ip candidates: ra: '%s', '%s'", remoteIP, xForwarded)
+			rIP := net.ParseIP(remoteIP)
+			xFIP := net.ParseIP(xForwarded)
+			logger.Debugf("ips now: '%q' '%q'", rIP, xFIP)
+			logger.Debugf("local? '%q' '%q'", rIP.IsLoopback(), xFIP.IsLoopback())
+			if !rIP.IsLoopback() && !xFIP.IsLoopback() {
+				logger.Debugf("blocked %s (x-forwarded-for: %s) from accessing /debug/pprof!", rIP.String(), xFIP.String())
+				block = true
+			}
+		} else {
+			logger.Debugf("remote ip %q is bad, not IP:port (blocking from /debug/pprof)", r.RemoteAddr)
+			block = true
+		}
+		if block {
+			http.Error(w, "Forbidden!", http.StatusForbidden)
+			return
+		}
+	}
 
 	if r.Method != "CONNECT" {
 		if p := cleanPath(r.URL.Path); p != r.URL.Path {
@@ -618,6 +716,8 @@ func gobRegister() {
 	gob.Register(new(container.Container))
 	gob.Register(new(acl.ACL))
 	gob.Register(new(acl.ACLitem))
+	var jn json.Number
+	gob.Register(jn)
 }
 
 func setSaveTicker() {
@@ -747,4 +847,86 @@ func startNodeMonitor() {
 		}
 	}()
 	return
+}
+
+func initGeneralStatsd(metricsBackend met.Backend) {
+	if !config.Config.UseStatsd {
+		return
+	}
+	// a count of the nodes on this server. Add other gauges later, but
+	// start with this one.
+	nodeCountGauge := metricsBackend.NewGauge("node.count", node.Count())
+
+	// Taking some inspiration from this page I found:
+	// http://zqpythonic.qiniucdn.com/data/20131112090955/index.html
+	// -- which does not seem to be the original source of it, but that
+	// seems to be gone -- we'll also take metrics of the golang runtime.
+	memStats := &runtime.MemStats{}
+	// initial reading in of memstat data
+	runtime.ReadMemStats(memStats)
+	lastSampleTime := time.Now()
+
+	numGoroutine := metricsBackend.NewGauge("runtime.goroutines", int64(runtime.NumGoroutine()))
+	allocated := metricsBackend.NewGauge("runtime.memory.allocated", int64(memStats.Alloc))
+	mallocs := metricsBackend.NewGauge("runtime.memory.mallocs", int64(memStats.Mallocs))
+	frees := metricsBackend.NewGauge("runtime.memory.frees", int64(memStats.Frees))
+	totalPause := metricsBackend.NewGauge("runtime.gc.total_pause", int64(memStats.PauseTotalNs))
+	heapAlloc := metricsBackend.NewGauge("runtime.memory.heap", int64(memStats.HeapAlloc))
+	stackInUse := metricsBackend.NewGauge("runtime.memory.stack", int64(memStats.StackInuse))
+	pausePerSec := metricsBackend.NewGauge("runtime.gc.pause_per_sec", 0)
+	pausePerTick := metricsBackend.NewGauge("runtime.gc.pause_per_tick", 0)
+	numGCTotal := metricsBackend.NewGauge("runtime.gc.num_gc", int64(memStats.NumGC))
+	gcPerSec := metricsBackend.NewGauge("runtime.gc.gc_per_sec", 0)
+	gcPerTick := metricsBackend.NewGauge("runtime.gc.gc_per_tick", 0)
+	gcPause := metricsBackend.NewTimer("runtime.gc.pause", 0)
+
+	lastPause := memStats.PauseTotalNs
+	lastGC := memStats.NumGC
+
+	statsdTickInt := 10
+
+	// update the gauges every 10 seconds. Make this configurable later?
+	go func() {
+		ticker := time.NewTicker(time.Duration(statsdTickInt) * time.Second)
+		for _ = range ticker.C {
+			runtime.ReadMemStats(memStats)
+			now := time.Now()
+
+			nodeCountGauge.Value(node.Count())
+			numGoroutine.Value(int64(runtime.NumGoroutine()))
+			allocated.Value(int64(memStats.Alloc))
+			mallocs.Value(int64(memStats.Mallocs))
+			frees.Value(int64(memStats.Frees))
+			totalPause.Value(int64(memStats.PauseTotalNs))
+			heapAlloc.Value(int64(memStats.HeapAlloc))
+			stackInUse.Value(int64(memStats.StackInuse))
+			numGCTotal.Value(int64(memStats.NumGC))
+
+			p := int(memStats.PauseTotalNs - lastPause)
+			pausePerSec.Value(int64(p / statsdTickInt))
+			pausePerTick.Value(int64(p))
+
+			countGC := int64(memStats.NumGC - lastGC)
+			diffTime := int64(now.Sub(lastSampleTime).Seconds())
+			gcPerSec.Value(countGC / diffTime)
+			gcPerTick.Value(countGC)
+
+			if countGC > 0 {
+				if countGC > 256 {
+					logger.Warningf("lost some gc pause times")
+					countGC = 256
+				}
+				var i int64
+				for i = 0; i < countGC; i++ {
+					idx := int((memStats.NumGC-uint32(i))+255) % 256
+					pause := time.Duration(memStats.PauseNs[idx])
+					gcPause.Value(pause)
+				}
+			}
+
+			lastPause = memStats.PauseTotalNs
+			lastGC = memStats.NumGC
+			lastSampleTime = now
+		}
+	}()
 }

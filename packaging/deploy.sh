@@ -2,14 +2,10 @@
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
-GOIARDI_VERSION="0.10.3"
-ITERATION=`cat $DIR/iteration`
+CURDIR=`pwd`
+GOIARDI_VERSION=`git describe --long --always`
 
 gem install package_cloud
-# if we're here, we're deploying. Unleash the tag
-git tag "pkg-${GOIARDI_VERSION}-${ITERATION}"
-git push --tags
-git tag -d "pkg-${GOIARDI_VERSION}-${ITERATION}"
 
 if [ -z ${PACKAGECLOUD_REPO} ] ; then
   echo "The environment variable PACKAGECLOUD_REPO must be set."
@@ -17,10 +13,16 @@ if [ -z ${PACKAGECLOUD_REPO} ] ; then
 fi
 
 # debian/raspbian
-package_cloud push ${PACKAGECLOUD_REPO}/debian/wheezy ${DIR}/artifacts/goiardi-${GOIARDI_VERSION}-${ITERATION}_*.deb
+package_cloud push ${PACKAGECLOUD_REPO}/debian/wheezy ${DIR}/artifacts/wheezy/*.deb
 
 # debian/jessie
-package_cloud push ${PACKAGECLOUD_REPO}/debian/jessie ${DIR}/artifacts/goiardi-${GOIARDI_VERSION}-${ITERATION}jessie_*.deb
+package_cloud push ${PACKAGECLOUD_REPO}/debian/jessie ${DIR}/artifacts/jessie/*.deb
+package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/xenial ${DIR}/artifacts/jessie/*amd64.deb
 
 # ubuntu
-package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/trusty ${DIR}/artifacts/goiardi-${GOIARDI_VERSION}-${ITERATION}ubuntu_*.deb
+package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/trusty ${DIR}/artifacts/trusty/*.deb
+
+# centos
+
+package_cloud push ${PACKAGECLOUD_REPO}/el/6 ${DIR}/artifacts/el6/*.rpm
+package_cloud push ${PACKAGECLOUD_REPO}/el/7 ${DIR}/artifacts/el7/*.rpm

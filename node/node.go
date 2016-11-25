@@ -1,7 +1,7 @@
 /* Node object/class/whatever it is that Go calls them. */
 
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -379,4 +379,14 @@ func AllNodes(org *organization.Organization) []*Node {
 		}
 	}
 	return nodes
+}
+
+// Count returns a count of all nodes on this server.
+func Count() int64 {
+	if config.UsingDB() {
+		c, _ := countSQL()
+		return c
+	}
+	nl := GetList()
+	return int64(len(nl))
 }

@@ -2,7 +2,7 @@
  * right now. */
 
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -231,7 +231,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 		topLev := make([]string, len(v))
 		n := 0
 		for k, u := range v {
-			if key != "" {
+			if key != "" && !config.Config.UsePostgreSQL {
 				topLev[n] = k
 				n++
 			}
@@ -246,7 +246,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 				merger[j] = q
 			}
 		}
-		if key != "" {
+		if key != "" && !config.Config.UsePostgreSQL {
 			merger[key] = topLev
 		}
 	case map[string]string:
@@ -255,7 +255,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 		topLev := make([]string, len(v))
 		n := 0
 		for k, u := range v {
-			if key != "" {
+			if key != "" && !config.Config.UsePostgreSQL {
 				topLev[n] = k
 				n++
 			}
@@ -263,11 +263,11 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 			if key == "" {
 				nkey = k
 			} else {
-				nkey = fmt.Sprintf("%s%s%s", key, k)
+				nkey = fmt.Sprintf("%s%s%s", key, sep, k)
 			}
 			merger[nkey] = u
 		}
-		if key != "" {
+		if key != "" && !config.Config.UsePostgreSQL {
 			merger[key] = topLev
 		}
 

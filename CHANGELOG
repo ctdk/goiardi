@@ -4,6 +4,49 @@
   and whatnot.
 * Refactor of HTTP handling to use gorilla-mux.
 
+0.11.1
+------
+* Allow storing secrets (client & user public keys, shovey signing private
+  keys, and user password hashes) in an external service. Currently only vault
+  is supported.
+* Rework reindexing to break it into smaller chunks and ensure that only one
+  reindexing job can run at a time.
+* Package goiardi for RHEL 7 and Debian jessie for s390x. Rather experimental,
+  of course.
+
+0.11.0
+------
+* Ability to upload cookbooks to S3.
+* Add script to upload local files to S3 to migrate.
+* Change how items are indexed with the postgres indexer, to reduce the number
+  of rows in the search_items table substantially (at the cost of possible
+  differences in search results in a few weird corner cases).
+* Search parser no longer chokes on Unicode. Unfortunately Postgres' ltree
+  module does not accept all Unicode alphanumeric characters as valid still.
+* Use vendoring.
+* Rejigger the package building process a bit - changing how the different
+  packages are built and how version numbers are determined.
+* Fix a long-standing annoyance where the log file would get truncated when
+  goiardi started or restarted.
+* Allow passing environment variables to goiardi through the config file.
+* Fix in-memory indexer to work with go 1.7.
+* Add packages for CentOS 6 and 7. Also use a gox fork pulling in someone's PR
+  with better ARM support until that gets merged upstream eventually.
+* Change the postgres columns using the 'json' data type to use 'jsonb'
+  instead. This is generally better, but does mean that goiardi now requires
+  PostgreSQL 9.4 or later.
+
+0.10.4
+------
+* Export pprof info over HTTP, but only accept connections from localhost for
+  that information.
+* Add statsd metrics for things like chef-client run timings (requires
+  reporting) and started/succeeded/failed, number of nodes, API endpoint 
+  timings, various pieces of runtime info like GC pauses, RAM used, and number
+  of resources updated & total resources for client runs.
+* Fix JSON decoding issue where very large numbers would suddenly turn into
+  floats.
+
 0.10.3
 ------
 * Handle someone trying to use syslog on Windows ourselves, rather than

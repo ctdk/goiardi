@@ -1,7 +1,7 @@
 /* Cookbooks! The ultimate building block of any chef run. */
 
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,13 @@ package cookbook
 import (
 	"database/sql"
 	"fmt"
-	gversion "github.com/ctdk/go-version"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/depgraph"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	gversion "github.com/hashicorp/go-version"
 	"github.com/tideland/golib/logger"
 	"net/http"
 	"regexp"
@@ -961,7 +961,11 @@ func (c *Cookbook) deleteHashes(fhashes []string) {
 		}
 	}
 	/* And delete whatever file hashes we still have */
-	filestore.DeleteHashes(c.org.Name, fhashes)
+	if config.Config.UseS3Upload {
+		util.S3DeleteHashes(c.org.Name, fhashes)
+	} else {
+		filestore.DeleteHashes(c.org.Name, fhashes)
+	}
 }
 
 // DeleteVersion deletes a particular version of a cookbook.
@@ -1229,8 +1233,18 @@ func methodize(org *organization.Organization, method string, cbThing []map[stri
 			if method == "PUT" && k == "url" {
 				continue
 			}
-			if k == "url" && r.MatchString(`/file_store/`) {
-				retHash[i][k] = util.JoinStr(baseURL, "/organizations/", org.Name, "/file_store/", chkSum)
+			str, _ := j.(string)
+			if k == "url" && (r.MatchString(str) || str == "") {
+				// s3uploads - generate new signed url
+				if config.Config.UseS3Upload {
+					var err error
+					retHash[i][k], err = util.S3GetURL(org.Name, chkSum)
+					if err != nil {
+						logger.Errorf(err.Error())
+					}
+				} else {
+					retHash[i][k] = util.JoinStr(baseURL, "/organizations/", org.Name, "/file_store/", chkSum)
+				}
 			} else {
 				retHash[i][k] = j
 			}

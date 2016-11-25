@@ -1,7 +1,7 @@
 /* Goiardi configuration. */
 
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,19 +76,33 @@ type Conf struct {
 	DoExport          bool
 	DoImport          bool
 	ImpExFile         string
-	ObjMaxSize        int64  `toml:"obj-max-size"`
-	JSONReqMaxSize    int64  `toml:"json-req-max-size"`
-	UseUnsafeMemStore bool   `toml:"use-unsafe-mem-store"`
-	DbPoolSize        int    `toml:"db-pool-size"`
-	MaxConn           int    `toml:"max-connections"`
-	UseSerf           bool   `toml:"use-serf"`
-	SerfEventAnnounce bool   `toml:"serf-event-announce"`
-	SerfAddr          string `toml:"serf-addr"`
-	UseShovey         bool   `toml:"use-shovey"`
-	SignPrivKey       string `toml:"sign-priv-key"`
-	DotSearch         bool   `toml:"dot-search"`
-	ConvertSearch     bool   `toml:"convert-search"`
-	PgSearch          bool   `toml:"pg-search"`
+	ObjMaxSize        int64    `toml:"obj-max-size"`
+	JSONReqMaxSize    int64    `toml:"json-req-max-size"`
+	UseUnsafeMemStore bool     `toml:"use-unsafe-mem-store"`
+	DbPoolSize        int      `toml:"db-pool-size"`
+	MaxConn           int      `toml:"max-connections"`
+	UseSerf           bool     `toml:"use-serf"`
+	SerfEventAnnounce bool     `toml:"serf-event-announce"`
+	SerfAddr          string   `toml:"serf-addr"`
+	UseShovey         bool     `toml:"use-shovey"`
+	SignPrivKey       string   `toml:"sign-priv-key"`
+	DotSearch         bool     `toml:"dot-search"`
+	ConvertSearch     bool     `toml:"convert-search"`
+	PgSearch          bool     `toml:"pg-search"`
+	UseStatsd         bool     `toml:"use-statsd"`
+	StatsdAddr        string   `toml:"statsd-addr"`
+	StatsdType        string   `toml:"statsd-type"`
+	StatsdInstance    string   `toml:"statsd-instance"`
+	UseS3Upload       bool     `toml:"use-s3-upload"`
+	AWSRegion         string   `toml:"aws-region"`
+	S3Bucket          string   `toml:"s3-bucket"`
+	AWSDisableSSL     bool     `toml:"aws-disable-ssl"`
+	S3Endpoint        string   `toml:"s3-endpoint"`
+	S3FilePeriod      int      `toml:"s3-file-period"`
+	UseExtSecrets     bool     `toml:"use-external-secrets"`
+	VaultAddr         string   `toml:"vault-addr"`
+	VaultShoveyKey    string   `toml:"vault-shovey-key"`
+	EnvVars           []string `toml:"env-vars"`
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -99,6 +113,10 @@ type SigningKeys struct {
 
 // Key is the initialized shovey public and private keys.
 var Key = &SigningKeys{}
+
+// GitHash is the git hash (supplied with '-ldflags "-X config.GitHash=<hash>"')
+// of goiardi when it was compiled.
+var GitHash = "unknown"
 
 // LogLevelNames give convenient, easier to remember than number name for the
 // different levels of logging.
@@ -152,7 +170,7 @@ type Options struct {
 	DisableWebUI      bool   `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface."`
 	UseMySQL          bool   `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file."`
 	UsePostgreSQL     bool   `long:"use-postgresql" description:"Use a PostgreSQL database for data storage. Configure database options in the config file."`
-	LocalFstoreDir    string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* for SQL mode."`
+	LocalFstoreDir    string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* (unless using S3 uploads) for SQL mode."`
 	LogEvents         bool   `long:"log-events" description:"Log changes to chef objects."`
 	LogEventKeep      int    `short:"K" long:"log-event-keep" description:"Number of events to keep in the event log. If set, the event log will be checked periodically and pruned to this number of entries."`
 	Export            string `short:"x" long:"export" description:"Export all server data to the given file, exiting afterwards. Should be used with caution. Cannot be used at the same time as -m/--import."`
@@ -170,10 +188,23 @@ type Options struct {
 	DotSearch         bool   `long:"dot-search" description:"If set, searches will use . to separate elements instead of _."`
 	ConvertSearch     bool   `long:"convert-search" description:"If set, convert _ syntax searches to . syntax. Only useful if --dot-search is set."`
 	PgSearch          bool   `long:"pg-search" description:"Use the new Postgres based search engine instead of the default ersatz Solr. Requires --use-postgresql, automatically turns on --dot-search. --convert-search is recommended, but not required."`
+	UseStatsd         bool   `long:"use-statsd" description:"Whether or not to collect statistics about goiardi and send them to statsd."`
+	StatsdAddr        string `long:"statsd-addr" description:"IP address and port of statsd instance to connect to. (default 'localhost:8125')"`
+	StatsdType        string `long:"statsd-type" description:"statsd format, can be either 'standard' or 'datadog' (default 'standard')"`
+	StatsdInstance    string `long:"statsd-instance" description:"Statsd instance name to use for this server. Defaults to the server's hostname, with '.' replaced by '_'."`
+	UseS3Upload       bool   `long:"use-s3-upload" description:"Store cookbook files in S3 rather than locally in memory or on disk. This or --local-filestore-dir must be set in SQL mode. Cannot be used with in-memory mode."`
+	AWSRegion         string `long:"aws-region" description:"AWS region to use S3 uploads."`
+	S3Bucket          string `long:"s3-bucket" description:"The name of the S3 bucket storing the files."`
+	AWSDisableSSL     bool   `long:"aws-disable-ssl" description:"Set to disable SSL for the endpoint. Mostly useful just for testing."`
+	S3Endpoint        string `long:"s3-endpoint" description:"Set a different endpoint than the default s3.amazonaws.com. Mostly useful for testing with a fake S3 service, or if using an S3-compatible service."`
+	S3FilePeriod      int    `long:"s3-file-period" description:"Length of time, in minutes, to allow files to be saved to or retrieved from S3 by the client. Defaults to 15 minutes."`
+	UseExtSecrets     bool   `long:"use-external-secrets" description:"Use an external service to store secrets (currently user/client public keys). Currently only vault is supported."`
+	VaultAddr         string `long:"vault-addr" description:"Specify address of vault server (i.e. https://127.0.0.1:8200). Defaults to the value of VAULT_ADDR."`
+	VaultShoveyKey    string `long:"vault-shovey-key" description:"Specify a path in vault holding shovey's private key. The key must be put in vault as 'privateKey=<contents>'."`
 }
 
 // The goiardi version.
-const Version = "0.10.3"
+const Version = "0.11.1"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
 const ChefVersion = "11.1.7"
@@ -211,7 +242,7 @@ func ParseConfigOptions() error {
 	}
 
 	if opts.Version {
-		fmt.Printf("goiardi version %s built with %s (aiming for compatibility with Chef Server version %s).\n", Version, runtime.Version(), ChefVersion)
+		fmt.Printf("goiardi version %s (git hash: %s) built with %s (aiming for compatibility with Chef Server version %s).\n", Version, GitHash, runtime.Version(), ChefVersion)
 		os.Exit(0)
 	}
 
@@ -322,7 +353,7 @@ func ParseConfigOptions() error {
 		Config.SysLog = opts.SysLog
 	}
 	if Config.LogFile != "" {
-		lfp, lerr := os.Create(Config.LogFile)
+		lfp, lerr := os.OpenFile(Config.LogFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModeAppend|0666)
 		if lerr != nil {
 			log.Println(err)
 			os.Exit(1)
@@ -372,8 +403,39 @@ func ParseConfigOptions() error {
 	if opts.LocalFstoreDir != "" {
 		Config.LocalFstoreDir = opts.LocalFstoreDir
 	}
-	if Config.LocalFstoreDir == "" && (Config.UseMySQL || Config.UsePostgreSQL) {
-		logger.Fatalf("local-filestore-dir must be set when running goiardi in SQL mode")
+
+	// s3 upload conf
+	if opts.UseS3Upload {
+		Config.UseS3Upload = opts.UseS3Upload
+	}
+	if Config.UseS3Upload {
+		if !Config.UseMySQL && !Config.UsePostgreSQL {
+			logger.Fatalf("S3 uploads must be used in SQL mode, not in-memory mode.")
+			os.Exit(1)
+		}
+		if opts.AWSRegion != "" {
+			Config.AWSRegion = opts.AWSRegion
+		}
+		if opts.S3Bucket != "" {
+			Config.S3Bucket = opts.S3Bucket
+		}
+		if opts.AWSDisableSSL {
+			Config.AWSDisableSSL = opts.AWSDisableSSL
+		}
+		if opts.S3Endpoint != "" {
+			Config.S3Endpoint = opts.S3Endpoint
+		}
+		if opts.S3FilePeriod != 0 {
+			Config.S3FilePeriod = opts.S3FilePeriod
+		}
+
+		if Config.S3FilePeriod == 0 {
+			Config.S3FilePeriod = 15
+		}
+	}
+
+	if Config.LocalFstoreDir == "" && ((Config.UseMySQL || Config.UsePostgreSQL) && !Config.UseS3Upload) {
+		logger.Fatalf("local-filestore-dir or use-s3-upload must be set and configured when running goiardi in SQL mode")
 		os.Exit(1)
 	}
 	if Config.LocalFstoreDir != "" {
@@ -434,6 +496,14 @@ func ParseConfigOptions() error {
 	}
 	if Config.ProxyPort == 0 {
 		Config.ProxyPort = Config.Port
+	}
+
+	// secret storage config
+	if opts.UseExtSecrets {
+		Config.UseExtSecrets = opts.UseExtSecrets
+	}
+	if opts.VaultAddr != "" {
+		Config.VaultAddr = opts.VaultAddr
 	}
 
 	if opts.UseSSL {
@@ -562,38 +632,47 @@ func ParseConfigOptions() error {
 	if opts.SignPrivKey != "" {
 		Config.SignPrivKey = opts.SignPrivKey
 	}
+	if opts.VaultShoveyKey != "" {
+		Config.VaultShoveyKey = opts.VaultShoveyKey
+	}
 
 	// if using shovey, open the existing, or create if absent, signing
 	// keys.
 	if Config.UseShovey {
-		if Config.SignPrivKey == "" {
-			Config.SignPrivKey = path.Join(Config.ConfRoot, "shovey-sign_rsa")
-		} else if !path.IsAbs(Config.SignPrivKey) {
-			Config.SignPrivKey = path.Join(Config.ConfRoot, Config.SignPrivKey)
+		if Config.UseExtSecrets {
+			if Config.VaultShoveyKey == "" {
+				Config.VaultShoveyKey = "keys/shovey/signing"
+			}
+		} else {
+			if Config.SignPrivKey == "" {
+				Config.SignPrivKey = path.Join(Config.ConfRoot, "shovey-sign_rsa")
+			} else if !path.IsAbs(Config.SignPrivKey) {
+				Config.SignPrivKey = path.Join(Config.ConfRoot, Config.SignPrivKey)
+			}
+			privfp, err := os.Open(Config.SignPrivKey)
+			if err != nil {
+				logger.Fatalf("Private key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPrivKey)
+				os.Exit(1)
+			}
+			privPem, err := ioutil.ReadAll(privfp)
+			if err != nil {
+				logger.Fatalf(err.Error())
+				os.Exit(1)
+			}
+			privBlock, _ := pem.Decode(privPem)
+			if privBlock == nil {
+				logger.Fatalf("Invalid block size for private key for shovey")
+				os.Exit(1)
+			}
+			privKey, err := x509.ParsePKCS1PrivateKey(privBlock.Bytes)
+			if err != nil {
+				logger.Fatalf(err.Error())
+				os.Exit(1)
+			}
+			Key.Lock()
+			defer Key.Unlock()
+			Key.PrivKey = privKey
 		}
-		privfp, err := os.Open(Config.SignPrivKey)
-		if err != nil {
-			logger.Fatalf("Private key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPrivKey)
-			os.Exit(1)
-		}
-		privPem, err := ioutil.ReadAll(privfp)
-		if err != nil {
-			logger.Fatalf(err.Error())
-			os.Exit(1)
-		}
-		privBlock, _ := pem.Decode(privPem)
-		if privBlock == nil {
-			logger.Fatalf("Invalid block size for private key for shovey")
-			os.Exit(1)
-		}
-		privKey, err := x509.ParsePKCS1PrivateKey(privBlock.Bytes)
-		if err != nil {
-			logger.Fatalf(err.Error())
-			os.Exit(1)
-		}
-		Key.Lock()
-		defer Key.Unlock()
-		Key.PrivKey = privKey
 	}
 
 	if opts.DotSearch {
@@ -608,6 +687,45 @@ func ParseConfigOptions() error {
 	}
 	if Config.IndexFile != "" && Config.PgSearch {
 		logger.Infof("Specifying an index file for search while using the postgres search isn't useful.")
+	}
+
+	// statsd configuration
+	if opts.UseStatsd {
+		Config.UseStatsd = opts.UseStatsd
+	}
+	if opts.StatsdAddr != "" {
+		Config.StatsdAddr = opts.StatsdAddr
+	}
+	if opts.StatsdType != "" {
+		Config.StatsdType = opts.StatsdType
+	}
+	if opts.StatsdInstance != "" {
+		Config.StatsdInstance = opts.StatsdInstance
+	}
+	if Config.StatsdAddr == "" {
+		Config.StatsdAddr = "localhost:8125"
+	}
+	if Config.StatsdType == "" {
+		Config.StatsdType = "standard"
+	}
+	if Config.StatsdInstance == "" {
+		Config.StatsdInstance = strings.Replace(Config.Hostname, ".", "_", -1)
+	}
+
+	// Environment variables
+	if len(Config.EnvVars) != 0 {
+		for _, v := range Config.EnvVars {
+			logger.Debugf("setting %s", v)
+			env := strings.SplitN(v, "=", 2)
+			if len(env) != 2 {
+				logger.Fatalf("Error setting environment variable %s - seems to be malformed.", v)
+				os.Exit(1)
+			}
+			if verr := os.Setenv(env[0], env[1]); verr != nil {
+				logger.Fatalf(verr.Error())
+				os.Exit(1)
+			}
+		}
 	}
 
 	return nil
@@ -643,4 +761,8 @@ func ServerBaseURL() string {
 // in-memory data store.
 func UsingDB() bool {
 	return Config.UseMySQL || Config.UsePostgreSQL
+}
+
+func UsingExternalSecrets() bool {
+	return Config.UseExtSecrets
 }
