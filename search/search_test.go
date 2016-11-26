@@ -28,7 +28,7 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
 	"testing"
-	//"time"
+	"time"
 )
 
 // Most search testing can be handled fine with chef-pedant, but that's no
@@ -58,7 +58,8 @@ var dbag4 *databag.DataBag
 var orgName = "default"
 var org *organization.Organization
 
-func orgInit() int {
+func init() {
+	indexer.Initialize(config.Config)
 	gob.Register(new(organization.Organization))
 	var err error
 	org, err = organization.New("default", "defaultyboo")
@@ -69,11 +70,7 @@ func orgInit() int {
 	if err != nil {
 		panic(err)
 	}
-	return 1
-}
 
-func makeSearchItems() int {
-	indexer.Initialize(config.Config)
 	/* Gotta populate the search index */
 	nodes := make([]*node.Node, 4)
 	roles := make([]*role.Role, 4)
@@ -86,10 +83,6 @@ func makeSearchItems() int {
 	gob.Register(new(client.Client))
 	gob.Register(new(databag.DataBag))
 
-	// circleci is sometimes weird about the index having everything. This
-	// *never* comes up locally. ??? Could possibly be because the indexer
-	// hasn't had a chance to finish indexing?
-	reindexObjs := make([]indexer.Indexable, 0, 4*5)
 	for i := 0; i < 4; i++ {
 		nodes[i], _ = node.New(org, fmt.Sprintf("node%d", i))
 		nodes[i].Default["baz"] = fmt.Sprintf("borb")
@@ -107,14 +100,6 @@ func makeSearchItems() int {
 		dbi["id"] = fmt.Sprintf("dbi%d", i)
 		dbi["foo"] = fmt.Sprintf("dbag_item_%d", i)
 		dbags[i].NewDBItem(dbi)
-		reindexObjs = append(reindexObjs, nodes[i])
-		reindexObjs = append(reindexObjs, roles[i])
-		reindexObjs = append(reindexObjs, envs[i])
-		reindexObjs = append(reindexObjs, clients[i])
-		dbis, _ := dbags[i].AllDBItems()
-		for _, d := range dbis {
-			reindexObjs = append(reindexObjs, d)
-		}
 	}
 	node1 = nodes[0]
 	node2 = nodes[1]
@@ -144,11 +129,7 @@ func makeSearchItems() int {
 
 	/* Make this function return something so the compiler's happy building
 	 * the tests. */
-	return 1
 }
-
-var zz = orgInit()
-var v = makeSearchItems()
 
 var searcher = &TrieSearch{}
 
@@ -161,7 +142,7 @@ func TestFoo(t *testing.T) {
  */
 
 func TestSearchNode(t *testing.T) {
-	n, _ := searcher.Search(org, "node", "name:node1", 1000, "id ASC", 0, nil)
+	n, e := searcher.Search(org, "node", "name:node1", 1000, "id ASC", 0, nil)
 	if e != nil {
 		t.Errorf("err searching: %s", e.Error())
 	}

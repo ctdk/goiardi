@@ -23,8 +23,14 @@ import (
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/config"
 	"testing"
 )
+
+func init() {
+	indexer.Initialize(config.Config)
+}
 
 var pivotal *user.User
 
