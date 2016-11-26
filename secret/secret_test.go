@@ -70,6 +70,7 @@ var c *keyer
 
 type keyer struct {
 	name string
+	org string
 }
 
 func (k *keyer) GetName() string {
@@ -78,6 +79,13 @@ func (k *keyer) GetName() string {
 
 func (k *keyer) URLType() string {
 	return "keyer"
+}
+
+func (k *keyer) OrgName() string {
+	if k.org != "" {
+		return k.org
+	}
+	return "default"
 }
 
 func (k *keyer) PublicKey() string {
