@@ -19,10 +19,10 @@ package report
 import (
 	"encoding/gob"
 	"fmt"
-	"github.com/ctdk/goiardi/node"
-	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/organization"
 	"testing"
 	"time"
 )

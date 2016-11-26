@@ -20,11 +20,11 @@ import (
 	"encoding/gob"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/group"
+	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
-	"github.com/ctdk/goiardi/indexer"
-	"github.com/ctdk/goiardi/config"
 	"testing"
 )
 

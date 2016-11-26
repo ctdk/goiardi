@@ -70,7 +70,7 @@ var c *keyer
 
 type keyer struct {
 	name string
-	org string
+	org  string
 }
 
 func (k *keyer) GetName() string {
