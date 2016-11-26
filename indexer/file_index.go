@@ -737,6 +737,8 @@ func (i *FileIndex) Save() error {
 }
 
 func (i *FileIndex) Load() error {
+	i.m.Lock()
+	defer i.m.Unlock()
 	idxFile := i.file
 	if idxFile == "" {
 		err := fmt.Errorf("Yikes! Cannot load index from disk because no file was specified.")
@@ -755,7 +757,9 @@ func (i *FileIndex) Load() error {
 		return zerr
 	}
 	dec := gob.NewDecoder(zfp)
-	err = dec.Decode(&i)
+	fi := new(FileIndex)
+	err = dec.Decode(&fi)
+	i.idxmap = fi.idxmap
 	zfp.Close()
 	if err != nil {
 		fp.Close()
