@@ -25,9 +25,9 @@ package util
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/codeskyblue/go-uuid"
-	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/config"
+	"github.com/pborman/uuid"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"reflect"
 	"regexp"

@@ -21,7 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goas/v2/logger"
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
@@ -31,6 +30,7 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"strconv"
 	"strings"
