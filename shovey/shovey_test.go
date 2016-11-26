@@ -26,6 +26,10 @@ import (
 	"testing"
 )
 
+func init() {
+	indexer.Initialize(config.Config)
+}
+
 var org *organization.Organization
 
 func TestShoveyCreation(t *testing.T) {

@@ -21,11 +21,17 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/indexer"
 	"testing"
 	"time"
 )
 
 var org *organization.Organization
+
+func init() {
+	indexer.Initialize(config.Config)
+}
 
 func TestReportCreation(t *testing.T) {
 	gob.Register(new(organization.Organization))

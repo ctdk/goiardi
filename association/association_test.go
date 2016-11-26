@@ -19,13 +19,19 @@ package association
 import (
 	"encoding/gob"
 	"fmt"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/group"
+	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"testing"
 )
 
 var pivotal *user.User
+
+func init() {
+	indexer.Initialize(config.Config)
+}
 
 func TestAssociationReqCreation(t *testing.T) {
 	gob.Register(new(AssociationReq))

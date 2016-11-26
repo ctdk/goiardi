@@ -18,10 +18,16 @@ package group
 
 import (
 	"encoding/gob"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"testing"
 )
+
+func init() {
+	indexer.Initialize(config.Config)
+}
 
 // More group tests will be coming, as
 

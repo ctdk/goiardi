@@ -18,8 +18,14 @@ package organization
 
 import (
 	"encoding/gob"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/indexer"
 	"testing"
 )
+
+func init() {
+	indexer.Initialize(config.Config)
+}
 
 func TestOrgCreation(t *testing.T) {
 	z := new(Organization)

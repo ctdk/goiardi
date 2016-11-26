@@ -29,6 +29,10 @@ import (
 
 var org *organization.Organization
 
+func init() {
+	indexer.Initialize(config.Config)
+}
+
 func TestActorClient(t *testing.T) {
 	gob.Register(new(organization.Organization))
 	org, _ = organization.New("default", "boo")

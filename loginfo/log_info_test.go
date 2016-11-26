@@ -23,12 +23,17 @@ import (
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
 	"testing"
 	"time"
 )
 
 var org *organization.Organization
+
+func init() {
+	indexer.Initialize(config.Config)
+}
 
 func TestLogEvent(t *testing.T) {
 	gob.Register(new(organization.Organization))
