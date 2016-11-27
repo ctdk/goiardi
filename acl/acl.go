@@ -245,10 +245,13 @@ func Get(org *organization.Organization, kind string, subkind string) (*ACL, uti
 
 	}
 	ds := datastore.New()
+	log.Printf("getting ACL acl :: %s", util.JoinStr(kind, "-", subkind))
 	a, found := ds.Get(org.DataKey("acl"), util.JoinStr(kind, "-", subkind))
 	if !found {
+		log.Printf("not found, hmm")
 		return defaultACL(org, kind, subkind)
 	} else {
+		log.Printf("found, but?")
 		err := a.(*ACL).resetActorsGroups()
 		if err != nil {
 			return nil, err
@@ -509,10 +512,14 @@ func (a *ACL) EditFromJSON(perm string, data interface{}) util.Gerror {
 			if actors, ok := aclEdit["actors"].([]interface{}); ok {
 				acts = make([]actor.Actor, 0, len(actors))
 				for _, act := range actors {
+					log.Printf("actor? %q", act)
 					switch act := act.(type) {
 					case string:
+						log.Printf("hmm")
 						actr, err := actor.GetActor(a.Org, act)
+						log.Printf("bum")
 						if err != nil {
+							err.SetStatus(http.StatusBadRequest)
 							return err
 						}
 						acts = append(acts, actr)
@@ -530,6 +537,7 @@ func (a *ACL) EditFromJSON(perm string, data interface{}) util.Gerror {
 					case string:
 						grp, err := group.Get(a.Org, gr)
 						if err != nil {
+							err.SetStatus(http.StatusBadRequest)
 							return err
 						}
 						gs = append(gs, grp)
@@ -572,7 +580,7 @@ func (a *ACL) save() util.Gerror {
 			key = util.JoinStr(a.Owner.ContainerKind(), "-", a.Owner.ContainerType(), "-", a.Owner.GetName())
 		} else {
 			itemType = "acl"
-			key = util.JoinStr(a.Subkind, "-", a.Kind)
+			key = util.JoinStr(a.Kind, "-", a.Subkind)
 		}
 		log.Printf("Saving ACL %s :: %s", itemType, key)
 		ds.Set(a.Org.DataKey(itemType), key, a)
@@ -611,6 +619,7 @@ func (a *ACL) CheckPerm(perm string, doer actor.Actor) (bool, util.Gerror) {
 	a.m.RLock()
 	defer a.m.RUnlock()
 	log.Printf("The ACL: %+v", a)
+	log.Printf("PERM CHECK FOR %s:%s", doer.GetName(), perm)
 	acli, ok := a.ACLitems[perm]
 	acli.m.RLock()
 	defer acli.m.RUnlock()

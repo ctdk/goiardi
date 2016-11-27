@@ -294,6 +294,7 @@ func main() {
 	s.HandleFunc("/users", userOrgListHandler)
 	s.HandleFunc("/users/{name}", userOrgHandler)
 	s.HandleFunc("/universe", universe.UniverseHandler)
+	s.HandleFunc("/{any}/_acl", orgACLHandler)
 
 	/* TODO: figure out how to handle the root & not found pages */
 	muxer.HandleFunc("/", rootHandler)

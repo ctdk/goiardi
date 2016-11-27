@@ -38,6 +38,7 @@ import (
 // various acl handlers
 
 func orgACLHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 	orgName := vars["org"]
 	kind := "containers"
@@ -239,12 +240,26 @@ func cookbookACLPermHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func groupACLHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
+	if r.Method != "GET" {
+		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
 	orgName := vars["org"]
-	kind := "groups"
-	subkind := vars["group_name"]
-	baseACLHandler(w, r, orgName, kind, subkind)
+	org, orgerr := organization.Get(orgName)
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+	it, iterr := group.Get(org, vars["group_name"])
+	if iterr != nil {
+		jsonErrorReport(w, r, iterr.Error(), iterr.Status())
+		return
+	}
+	baseItemACLHandler(w, r, org, it)
+	
 }
 
 func groupACLPermHandler(w http.ResponseWriter, r *http.Request) {
