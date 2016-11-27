@@ -28,7 +28,6 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
-	"log"
 	"net/http"
 )
 
@@ -330,7 +329,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, averr.Error(), averr.Status())
 		return
 	}
-	log.Printf("saving user is: %+v", opUser)
 	if f, err := containerACL.CheckPerm("create", opUser); err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
@@ -423,14 +421,12 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !opUser.IsValidator() {
-		log.Println("adding creator and self to client acl")
 		err = cACL.AddActor("all", opUser)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
 	}
-	log.Printf("acl is: %+v", cACL)
 	err = cACL.Save()
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())

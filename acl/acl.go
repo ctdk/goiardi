@@ -27,7 +27,6 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	"log"
 	"net/http"
 	"sync"
 )
@@ -245,13 +244,10 @@ func Get(org *organization.Organization, kind string, subkind string) (*ACL, uti
 
 	}
 	ds := datastore.New()
-	log.Printf("getting ACL acl :: %s", util.JoinStr(kind, "-", subkind))
 	a, found := ds.Get(org.DataKey("acl"), util.JoinStr(kind, "-", subkind))
 	if !found {
-		log.Printf("not found, hmm")
 		return defaultACL(org, kind, subkind)
 	} else {
-		log.Printf("found, but?")
 		err := a.(*ACL).resetActorsGroups()
 		if err != nil {
 			return nil, err
@@ -276,7 +272,6 @@ func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerro
 	var defacl *ACL
 	a, found := ds.Get(org.DataKey("acl-item"), util.JoinStr(item.ContainerKind(), "-", item.ContainerType(), "-", item.GetName()))
 	if !found {
-		log.Printf("Did not find an ACL for client %s, using default", util.JoinStr(item.ContainerKind(), "-", item.ContainerType(), "-", item.GetName()))
 		var err util.Gerror
 		defacl, err = defaultACL(org, item.ContainerKind(), item.ContainerType())
 		// This experiment may have petered out
@@ -512,12 +507,9 @@ func (a *ACL) EditFromJSON(perm string, data interface{}) util.Gerror {
 			if actors, ok := aclEdit["actors"].([]interface{}); ok {
 				acts = make([]actor.Actor, 0, len(actors))
 				for _, act := range actors {
-					log.Printf("actor? %q", act)
 					switch act := act.(type) {
 					case string:
-						log.Printf("hmm")
 						actr, err := actor.GetActor(a.Org, act)
-						log.Printf("bum")
 						if err != nil {
 							err.SetStatus(http.StatusBadRequest)
 							return err
@@ -582,7 +574,6 @@ func (a *ACL) save() util.Gerror {
 			itemType = "acl"
 			key = util.JoinStr(a.Kind, "-", a.Subkind)
 		}
-		log.Printf("Saving ACL %s :: %s", itemType, key)
 		ds.Set(a.Org.DataKey(itemType), key, a)
 	}
 	return nil
@@ -618,28 +609,22 @@ func (acli *ACLitem) ToJSON() map[string]interface{} {
 func (a *ACL) CheckPerm(perm string, doer actor.Actor) (bool, util.Gerror) {
 	a.m.RLock()
 	defer a.m.RUnlock()
-	log.Printf("The ACL: %+v", a)
-	log.Printf("PERM CHECK FOR %s:%s", doer.GetName(), perm)
 	acli, ok := a.ACLitems[perm]
 	acli.m.RLock()
 	defer acli.m.RUnlock()
 
-	log.Printf("The ACLitem: %+v", acli)
 	if !ok {
 		return false, util.Errorf("invalid perm %s for %s-%s", perm, a.Kind, a.Subkind)
 	}
 	// check for user perms in this ACL
 	if f, _ := acli.checkForActor(doer); f {
-		log.Printf("Actor check for %s passed", doer.GetName())
 		return f, nil
 	}
 	for _, g := range acli.Groups {
 		if f := g.SeekActor(doer); f {
-			log.Printf("Group %s check for %s passed", g.Name, doer.GetName())
 			return f, nil
 		}
 	}
-	log.Printf("going to association check now for %s", doer.GetName())
 	if doer.IsUser() {
 		_, err := association.GetAssoc(doer.(*user.User), a.Org)
 		if err != nil {
@@ -669,7 +654,6 @@ func checkValidPerm(perm string) bool {
 
 func (a *ACLitem) checkForActor(actr actor.Actor) (bool, int) {
 	for i, ac := range a.Actors {
-		log.Printf("ac %s :: actr %s", ac.GetName(), actr.GetName())
 		if ac.GetName() == actr.GetName() {
 			return true, i
 		}
