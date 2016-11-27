@@ -103,6 +103,7 @@ type versionConstraintError struct {
 
 func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 	tMeta := tail.Meta.(*depMeta)
+	logger.Debugf("tMeta is: %+q", tMeta)
 	var headVersion string
 	var headConstraint string
 	if head.Meta != nil {
@@ -280,6 +281,7 @@ func Get(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 	} else {
 		ds := datastore.New()
 		var c interface{}
+		logger.Debugf("in get for cookbook %s, org is? %q", name, org)
 		c, found = ds.Get(org.DataKey("cookbook"), name)
 		if c != nil {
 			cookbook = c.(*Cookbook)
@@ -355,6 +357,7 @@ func (c *Cookbook) sortedVersions() []*CookbookVersion {
 		keys[u] = k
 		u++
 		datastore.ChkNilArray(cbv)
+		cbv.org = c.org
 	}
 	sort.Sort(sort.Reverse(keys))
 
@@ -501,6 +504,7 @@ func DependsCookbooks(org *organization.Organization, runList []string, envConst
 
 	cbShelf := make(map[string]*Cookbook)
 	for _, cbName := range runListRef {
+		logger.Debugf("In runListRef loop for %s", cbName)
 		if _, found := cbShelf[cbName]; found || nodes[cbName].Meta.(*depMeta).notFound {
 			continue
 		}
@@ -516,7 +520,11 @@ func DependsCookbooks(org *organization.Organization, runList []string, envConst
 			continue
 		}
 		nodes[cbName].Meta.(*depMeta).version = cbv.Version
+		logger.Debugf("depMeta info for %s: %+q", cbName, nodes[cbName].Meta.(*depMeta))
 		cbv.getDependencies(g, nodes, cbShelf)
+	}
+	for k, n := range nodes {
+		logger.Debugf("nodes: %s :: %+q", k, n)
 	}
 	nouns := make([]*depgraph.Noun, 1)
 	nouns[0] = graphRoot
@@ -591,6 +599,7 @@ func (c *Cookbook) badConstraints(constraints versionConstraint) []string {
 func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]*depgraph.Noun, cbShelf map[string]*Cookbook) {
 	depList := cbv.Metadata["dependencies"].(map[string]interface{})
 	for r, c2 := range depList {
+		logger.Debugf("getDependencies depList loop: %s", c2.(string))
 		if _, ok := nodes[r]; ok {
 			if nodes[r].Meta.(*depMeta).noVersion || nodes[r].Meta.(*depMeta).notFound {
 				continue
@@ -602,7 +611,7 @@ func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]
 		var found bool
 
 		if _, ok := nodes[r]; !ok {
-			nodes[r] = &depgraph.Noun{Name: r, Meta: &depMeta{}}
+			nodes[r] = &depgraph.Noun{Name: r, Meta: &depMeta{organization: cbv.org}}
 		}
 		dep, depPos, dt := checkDependency(nodes[cbv.CookbookName], r)
 		if dep == nil {
