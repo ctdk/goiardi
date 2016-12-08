@@ -149,7 +149,7 @@ func (i *FileIndex) Search(idx string, term string, notop bool) (map[string]Docu
 	if term == "*:*" {
 		return idc.allDocs(), nil
 	}
-	results, err := idc.searchCollection(term, notop)
+	results, err := idc.searchCollection(unescape(term), notop)
 	return results, err
 }
 
@@ -767,4 +767,9 @@ func decompressText(buf []byte) (string, error) {
 		return "", err
 	}
 	return string(t), nil
+}
+
+func unescape(term string) string {
+	re := regexp.MustCompile(`\\(\S)`)
+	return re.ReplaceAllString(term, "$1")
 }
