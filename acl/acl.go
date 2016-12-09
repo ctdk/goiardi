@@ -27,6 +27,7 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"sync"
 )
@@ -621,6 +622,8 @@ func (a *ACL) CheckPerm(perm string, doer actor.Actor) (bool, util.Gerror) {
 		return f, nil
 	}
 	for _, g := range acli.Groups {
+		logger.Debugf("Checking group %s for %s", g.Name, doer.GetName())
+		logger.Debugf("group stuff: %+v", g)
 		if f := g.SeekActor(doer); f {
 			return f, nil
 		}
@@ -632,7 +635,7 @@ func (a *ACL) CheckPerm(perm string, doer actor.Actor) (bool, util.Gerror) {
 		}
 	} else {
 		if doer.OrgName() != a.Org.Name {
-			err := util.Errorf("client %s is not associated iwth org %s", doer.GetName(), a.Org.Name)
+			err := util.Errorf("client %s is not associated with org %s", doer.GetName(), a.Org.Name)
 			err.SetStatus(http.StatusForbidden)
 			return false, err
 		}

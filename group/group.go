@@ -24,7 +24,7 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	"log"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"sync"
 )
@@ -326,7 +326,7 @@ func ClearActor(org *organization.Organization, act actor.Actor) {
 	for _, g := range gs {
 		e := g.DelActor(act) // don't care if it's not available
 		if e != nil {
-			log.Printf("error deleting actor for %s: %s", act.GetName(), e.Error())
+			logger.Debugf("error deleting actor for %s: %s", act.GetName(), e.Error())
 		}
 		g.Save()
 	}

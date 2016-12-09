@@ -123,7 +123,7 @@ func TestAddDelActors(t *testing.T) {
 	}
 }
 
-func TestAdDelGroups(t *testing.T) {
+func TestAddDelGroups(t *testing.T) {
 	org, _ := organization.New("florp4", "mlorph normph")
 	org.Save()
 	MakeDefaultGroups(org)
@@ -142,5 +142,21 @@ func TestAdDelGroups(t *testing.T) {
 	}
 	if f, _ := g.checkForActor(a.Name); f {
 		t.Errorf("group %s was found in group after being removed", a.Name)
+	}
+}
+
+func TestSeekActor(t *testing.T) {
+	org, _ := organization.New("florp5", "mlorph normph")
+	org.Save()
+	MakeDefaultGroups(org)
+	g, _ := Get(org, "admins")
+	a, _ := user.New("gurbur")
+	err := g.AddActor(a)
+	if err != nil {
+		t.Error(err)
+	}
+	tt := g.SeekActor(a)
+	if !tt {
+		t.Errorf("SeekActor failed to find %s in the %s group", a.Name, g.Name)
 	}
 }
