@@ -1,6 +1,7 @@
 0.11.2 (unreleased)
 ------
-* Fix a bug with escaped characters in certain searches (thanks ickymettle)
+* Fix a bug with escaped characters in certain searches (thanks ickymettle).
+  Does require rebuilding the search index.
 * Allow using 'novault' as a build tag to avoid having to have the vault api
   present when building goiardi.
 
