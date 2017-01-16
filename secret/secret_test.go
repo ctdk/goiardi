@@ -1,3 +1,5 @@
+// +build !novault
+
 /*
  * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
