@@ -143,8 +143,6 @@ type PostgreSQLdb struct {
 	SSLMode  string
 }
 
-
-
 // Options holds options set from the command line, which are then merged with
 // the options in Conf. Configurations from the command line are preferred to
 // those set in the config file.
@@ -235,7 +233,7 @@ func ParseConfigOptions() error {
 	//_, err := flags.Parse(opts)
 	parser := flags.NewParser(opts, flags.Default)
 	if hideVaultOptions {
-		vopts := []string{ "vault-addr", "vault-shovey-key", "use-external-secrets" }
+		vopts := []string{"vault-addr", "vault-shovey-key", "use-external-secrets"}
 		for _, v := range vopts {
 			c := parser.FindOptionByLongName(v)
 			c.Hidden = true

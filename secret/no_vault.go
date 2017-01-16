@@ -19,8 +19,8 @@
 package secret
 
 import (
-	"errors"
 	"crypto/rsa"
+	"errors"
 )
 
 // This file exists solely for the case where packaging vault and all its
@@ -30,7 +30,6 @@ import (
 var errNoVault = errors.New("Tried to use secrets, but this version of goiardi was compiled without vault support.")
 
 type vaultSecretStore struct {
-
 }
 
 func configureVault() (*vaultSecretStore, error) {
