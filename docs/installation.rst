@@ -167,6 +167,8 @@ Currently available command line and config file options::
                            key. The key must be put in vault as
                            'privateKey=<contents>'.
 
+**NB:** If goiardi has been compiled with the ``novault`` build tag, the help output will be missing ``--use-external-secrets``, ``--vault-addr``, and ``--vault-shovey-key``.
+
 Options specified on the command line override options in the config file.
 
 For more documentation on Chef, see (http://docs.chef.io).

@@ -19,6 +19,9 @@ package search
 import (
 	"encoding/gob"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/databag"
@@ -27,8 +30,6 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
-	"testing"
-	"time"
 )
 
 // Most search testing can be handled fine with chef-pedant, but that's no
@@ -99,6 +100,7 @@ func init() {
 		dbi := make(map[string]interface{})
 		dbi["id"] = fmt.Sprintf("dbi%d", i)
 		dbi["foo"] = fmt.Sprintf("dbag_item_%d", i)
+		dbi["mac"] = fmt.Sprintf("01:02:03:04:05:%02d", i)
 		dbags[i].NewDBItem(dbi)
 	}
 	node1 = nodes[0]
@@ -276,6 +278,12 @@ func TestSecondOrg(t *testing.T) {
 	n, _ = searcher.Search(sorg, "node", "name:node1", 1000, "id ASC", 0, nil)
 	if len(n) != 0 {
 		t.Errorf("searching the second test org for node1 unexpectedly returned a result")
+}
+
+func TestSearchBasicQueryEscaped(t *testing.T) {
+	d, _ := searcher.Search("databag1", "mac:01\\:02\\:03\\:04\\:05\\:01", 1000, "id ASC", 0, nil)
+	if len(d) != 1 {
+		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(d))
 	}
 }
 

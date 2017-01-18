@@ -5,6 +5,8 @@ Secret Handling
 
 Starting with version 0.11.1, goiardi can use external services to store secrets like public keys, the signing key for shovey, and user password hashes. As of this writing, only `Hashicorp's vault <https://www.vaultproject.io/>`_ is supported. This is very new functionality, so be aware.
 
+**NB:** If goiardi has been compiled with the ``novault`` build tag, none of this will be available.
+
 Configuration
 -------------
 

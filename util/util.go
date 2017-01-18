@@ -187,12 +187,12 @@ func Indexify(flattened map[string]interface{}) []string {
 	for k, v := range flattened {
 		switch v := v.(type) {
 		case string:
-			v = IndexEscapeStr(v)
+			//v = IndexEscapeStr(v)
 			line := fmt.Sprintf("%s:%s", k, v)
 			readyToIndex = append(readyToIndex, line)
 		case []string:
 			for _, w := range v {
-				w = IndexEscapeStr(w)
+				//w = IndexEscapeStr(w)
 				line := fmt.Sprintf("%s:%s", k, w)
 				readyToIndex = append(readyToIndex, line)
 			}

@@ -184,7 +184,7 @@ func (i *FileIndex) Search(orgName string, idx string, term string, notop bool) 
 	if term == "*:*" {
 		return idc.allDocs(), nil
 	}
-	results, err := idc.searchCollection(term, notop)
+	results, err := idc.searchCollection(unescape(term), notop)
 	return results, err
 }
 
@@ -201,7 +201,7 @@ func (i *FileIndex) SearchText(orgName string, idx string, term string, notop bo
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
 		return nil, err
 	}
-	results, err := idc.searchTextCollection(term, notop)
+	results, err := idc.searchTextCollection(unescape(term), notop)
 	return results, err
 }
 
@@ -236,7 +236,7 @@ func (i *FileIndex) SearchResults(term string, notop bool, docs map[string]Docum
 		}
 		return docs, nil
 	}
-	res, err := idc.searchCollection(term, notop)
+	res, err := idc.searchCollection(unescape(term), notop)
 	return res, err
 }
 
@@ -266,7 +266,7 @@ func (i *FileIndex) SearchResultsText(term string, notop bool, docs map[string]D
 	defer i.m.RUnlock()
 	d := docToIdxDoc(docs)
 	idc := &IdxCollection{docs: d}
-	res, err := idc.searchTextCollection(term, notop)
+	res, err := idc.searchTextCollection(unescape(term), notop)
 	return res, err
 }
 
@@ -820,4 +820,9 @@ func decompressText(buf []byte) (string, error) {
 		return "", err
 	}
 	return string(t), nil
+}
+
+func unescape(term string) string {
+	re := regexp.MustCompile(`\\(\S)`)
+	return re.ReplaceAllString(term, "$1")
 }

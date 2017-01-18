@@ -230,7 +230,16 @@ var Config = initConfig()
 // taking precedence over options in the config file.
 func ParseConfigOptions() error {
 	var opts = &Options{}
-	_, err := flags.Parse(opts)
+	//_, err := flags.Parse(opts)
+	parser := flags.NewParser(opts, flags.Default)
+	if hideVaultOptions {
+		vopts := []string{"vault-addr", "vault-shovey-key", "use-external-secrets"}
+		for _, v := range vopts {
+			c := parser.FindOptionByLongName(v)
+			c.Hidden = true
+		}
+	}
+	_, err := parser.Parse()
 
 	if err != nil {
 		if err.(*flags.Error).Type == flags.ErrHelp {
