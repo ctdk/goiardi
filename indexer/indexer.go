@@ -66,6 +66,7 @@ type ObjIndexer interface {
 	DeleteItem(string, string, string) error
 	SaveItem(Indexable) error
 	Endpoints(string) ([]string, error)
+	OrgList() []string
 	Clear() error
 }
 
@@ -136,6 +137,10 @@ func IndexObj(object Indexable) {
 func Endpoints(orgName string) ([]string, error) {
 	endpoints, err := objIndex.Endpoints(orgName)
 	return endpoints, err
+}
+
+func OrgList() []string {
+	return objIndex.OrgList()
 }
 
 // SaveIndex saves the index files to disk.

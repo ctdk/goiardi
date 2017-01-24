@@ -278,10 +278,11 @@ func TestSecondOrg(t *testing.T) {
 	n, _ = searcher.Search(sorg, "node", "name:node1", 1000, "id ASC", 0, nil)
 	if len(n) != 0 {
 		t.Errorf("searching the second test org for node1 unexpectedly returned a result")
+	}
 }
 
 func TestSearchBasicQueryEscaped(t *testing.T) {
-	d, _ := searcher.Search("databag1", "mac:01\\:02\\:03\\:04\\:05\\:01", 1000, "id ASC", 0, nil)
+	d, _ := searcher.Search(org, "databag1", "mac:01\\:02\\:03\\:04\\:05\\:01", 1000, "id ASC", 0, nil)
 	if len(d) != 1 {
 		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(d))
 	}

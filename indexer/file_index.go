@@ -79,8 +79,24 @@ func (i *FileIndex) Initialize() error {
 	gob.Register(ic)
 	gob.Register(id)
 
+	i.idxmap = i.makeIdxmap()
 	i.makeDefaultCollections("default")
 	return nil
+}
+
+func (i *FileIndex) makeIdxmap() map[string]map[string]IndexCollection {
+	idxmap := make(map[string]map[string]IndexCollection)
+	return idxmap
+}
+
+func (i *FileIndex) OrgList() []string {
+	l := make([]string, len(i.idxmap))
+	j := 0
+	for k, _ := range i.idxmap {
+		l[j] = k
+		j++
+	}
+	return l
 }
 
 func (i *FileIndex) CreateOrgDex(orgName string) error {
@@ -89,6 +105,7 @@ func (i *FileIndex) CreateOrgDex(orgName string) error {
 	i.checkOrCreateOrgDex(orgName)
 	i.m.Unlock()
 	i.makeDefaultCollections(orgName)
+
 	return nil
 }
 
@@ -291,7 +308,13 @@ func (i *FileIndex) Endpoints(orgName string) ([]string, error) {
 }
 
 func (i *FileIndex) Clear() error {
-	i.makeDefaultCollections("default")
+	orgNames := i.OrgList()
+	i.m.Lock()
+	i.idxmap = i.makeIdxmap()
+	i.m.Unlock()
+	for _, o := range orgNames {
+		i.makeDefaultCollections(o)
+	}
 	return nil
 }
 
@@ -300,7 +323,6 @@ func (i *FileIndex) makeDefaultCollections(orgName string) {
 	i.m.Lock()
 	defer i.m.Unlock()
 	i.updated = true
-	i.idxmap = make(map[string]map[string]IndexCollection)
 	for _, d := range defaults {
 		i.CreateCollection(orgName, d)
 	}

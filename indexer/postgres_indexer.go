@@ -238,3 +238,7 @@ func (p *PostgresIndex) Clear() error {
 
 	return nil
 }
+
+func (p *PostgresIndex) OrgList() []string {
+	return nil
+}
