@@ -90,6 +90,9 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// remove the client from any groups it's in
+		group.ClearActor(org, chefClient)
+
 		enc := json.NewEncoder(w)
 		if jerr := enc.Encode(&jsonClient); jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)

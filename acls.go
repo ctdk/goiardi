@@ -28,7 +28,6 @@ import (
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
-	//"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"

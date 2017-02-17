@@ -27,7 +27,6 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"sync"
 )
@@ -65,7 +64,7 @@ type ACL struct {
 	m          sync.RWMutex
 }
 
-func defaultACL(org *organization.Organization, kind string, subkind string) (*ACL, util.Gerror) {
+func defaultACL(org *organization.Organization, kind string, subkind string, name string) (*ACL, util.Gerror) {
 	acl := new(ACL)
 	acl.Kind = kind
 	acl.Subkind = subkind
@@ -89,7 +88,7 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 			if ggerr != nil {
 				return nil, ggerr
 			}
-			if admins != nil && subkind != "$$root$$" {
+			if admins != nil && (subkind != "$$root$$" && subkind != "clients" && !((subkind == "containers" || subkind == "groups") && name == "clients")) {
 				for _, u := range admins.Actors {
 					acl.addActor(perm, u)
 				}
@@ -98,13 +97,25 @@ func defaultACL(org *organization.Organization, kind string, subkind string) (*A
 		// TODO: change this addGroup to use the acl.addGroup method, &
 		// prefetch the groups to add
 		switch subkind {
-		case "$$root$$", "containers", "groups":
+		case "$$root$$", "containers":
 			addGroup(org, acl.ACLitems["create"], "admins")
 			addGroup(org, acl.ACLitems["read"], "admins")
 			addGroup(org, acl.ACLitems["read"], "users")
 			addGroup(org, acl.ACLitems["update"], "admins")
 			addGroup(org, acl.ACLitems["delete"], "admins")
 			addGroup(org, acl.ACLitems["grant"], "admins")
+			if name == "clients" {
+				addGroup(org, acl.ACLitems["delete"], "users")
+			}
+		case "groups":
+			addGroup(org, acl.ACLitems["create"], "admins")
+			addGroup(org, acl.ACLitems["read"], "admins")
+			addGroup(org, acl.ACLitems["update"], "admins")
+			addGroup(org, acl.ACLitems["delete"], "admins")
+			addGroup(org, acl.ACLitems["grant"], "admins")
+			if name != "clients" {
+				addGroup(org, acl.ACLitems["read"], "users")
+			}
 		case "cookbooks", "environments", "roles":
 			addGroup(org, acl.ACLitems["create"], "admins")
 			addGroup(org, acl.ACLitems["create"], "users")
@@ -247,7 +258,7 @@ func Get(org *organization.Organization, kind string, subkind string) (*ACL, uti
 	ds := datastore.New()
 	a, found := ds.Get(org.DataKey("acl"), util.JoinStr(kind, "-", subkind))
 	if !found {
-		return defaultACL(org, kind, subkind)
+		return defaultACL(org, kind, subkind, "")
 	} else {
 		err := a.(*ACL).resetActorsGroups()
 		if err != nil {
@@ -274,7 +285,7 @@ func GetItemACL(org *organization.Organization, item ACLOwner) (*ACL, util.Gerro
 	a, found := ds.Get(org.DataKey("acl-item"), util.JoinStr(item.ContainerKind(), "-", item.ContainerType(), "-", item.GetName()))
 	if !found {
 		var err util.Gerror
-		defacl, err = defaultACL(org, item.ContainerKind(), item.ContainerType())
+		defacl, err = defaultACL(org, item.ContainerKind(), item.ContainerType(), item.GetName())
 		// This experiment may have petered out
 		// Experiment: inherit the parent container's ACL, rather than
 		// the default for this type.
@@ -622,8 +633,6 @@ func (a *ACL) CheckPerm(perm string, doer actor.Actor) (bool, util.Gerror) {
 		return f, nil
 	}
 	for _, g := range acli.Groups {
-		logger.Debugf("Checking group %s for %s", g.Name, doer.GetName())
-		logger.Debugf("group stuff: %+v", g)
 		if f := g.SeekActor(doer); f {
 			return f, nil
 		}
