@@ -83,12 +83,17 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
 			return
 		}
-		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
-			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
-			return
-		} else if !f {
-			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-			return
+
+		// Somewhat weirdly, users can create environments even if they
+		// can't read them.
+		if r.Method != "POST" {
+			if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+				return
+			} else if !f {
+				jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+				return
+			}
 		}
 		switch r.Method {
 		case "GET":
