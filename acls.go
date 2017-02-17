@@ -27,8 +27,8 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/node"
-	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -258,7 +258,7 @@ func groupACLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	baseItemACLHandler(w, r, org, it)
-	
+
 }
 
 func groupACLPermHandler(w http.ResponseWriter, r *http.Request) {

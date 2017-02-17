@@ -298,7 +298,7 @@ func TestACLEditFromJSON(t *testing.T) {
 		t.Error(err)
 	}
 	fauxJSON := make(map[string]interface{})
-	fauxJSON["create"] = map[string]interface{}{ "actors": []interface{}{ "pivotal" }, "groups": []interface{}{ "admins", g.Name } } 
+	fauxJSON["create"] = map[string]interface{}{"actors": []interface{}{"pivotal"}, "groups": []interface{}{"admins", g.Name}}
 	aerr := a.EditFromJSON("create", fauxJSON)
 	if aerr != nil {
 		t.Error(aerr)
