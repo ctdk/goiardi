@@ -107,7 +107,7 @@ func defaultACL(org *organization.Organization, kind string, subkind string, nam
 			if name == "clients" {
 				addGroup(org, acl.ACLitems["delete"], "users")
 			}
-			if name == "environments" {
+			if name == "environments" || name == "nodes" {
 				addGroup(org, acl.ACLitems["create"], "users")
 			}
 		case "groups":
