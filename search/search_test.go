@@ -54,6 +54,7 @@ var dbag1 *databag.DataBag
 var dbag2 *databag.DataBag
 var dbag3 *databag.DataBag
 var dbag4 *databag.DataBag
+var dbagunic *databag.DataBag
 
 func makeSearchItems() int {
 	indexer.Initialize(config.Config)
@@ -99,6 +100,15 @@ func makeSearchItems() int {
 		for _, d := range dbis {
 			reindexObjs = append(reindexObjs, d)
 		}
+	}
+	dbagunic, _ = databag.New("unicode")
+	dbagunic.Save()
+	for k := 0; k < 500; k++ {
+		dbu := make(map[string]interface{})
+		dbu["id"] = fmt.Sprintf("dbagunic%d", k)
+		dbu["foo"] = fmt.Sprintf("dbagunic_thingamagic_%d", k)
+		dbu["blè"] = "üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü"
+		dbagunic.NewDBItem(dbu)
 	}
 	node1 = nodes[0]
 	node2 = nodes[1]
@@ -248,6 +258,23 @@ func TestSearchDbagAll(t *testing.T) {
 	d, _ := searcher.Search("databag1", "*:*", 1000, "id ASC", 0, nil)
 	if len(d) != 1 {
 		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(d))
+	}
+}
+
+func TestSearchDbagUnicode(t *testing.T) {
+	d, err := searcher.Search("unicode", "blè:*", 1000, "id ASC", 0, nil)
+	if err != nil {
+		t.Errorf("unicode search error was %s", err.Error())
+	}
+	if len(d) != 500 {
+		t.Errorf("unicode search: expected 500, got %d", len(d))
+	}
+	d, err = searcher.Search("unicode", "blè:ü*", 1000, "id ASC", 0, nil)
+	if err != nil {
+		t.Errorf("unicode search #2 error was %s", err.Error())
+	}
+	if len(d) != 500 {
+		t.Errorf("unicode search #2: expected 500, got %d", len(d))
 	}
 }
 
