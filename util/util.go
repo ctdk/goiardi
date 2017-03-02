@@ -168,15 +168,20 @@ func MapifyObject(obj interface{}) map[string]interface{} {
 // slice of strings formatted like "key:value".
 func Indexify(flattened map[string]interface{}) []string {
 	var readyToIndex []string
+	maxKeyLen := 50
+	maxValLen := 100
 	for k, v := range flattened {
+		k = TrimStringMax(k, maxKeyLen)
 		switch v := v.(type) {
 		case string:
 			//v = IndexEscapeStr(v)
+			v = TrimStringMax(v, maxValLen)
 			line := fmt.Sprintf("%s:%s", k, v)
 			readyToIndex = append(readyToIndex, line)
 		case []string:
 			for _, w := range v {
 				//w = IndexEscapeStr(w)
+				w = TrimStringMax(w, maxValLen)
 				line := fmt.Sprintf("%s:%s", k, w)
 				readyToIndex = append(readyToIndex, line)
 			}
