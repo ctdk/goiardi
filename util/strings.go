@@ -18,6 +18,7 @@ package util
 
 import (
 	"fmt"
+	"golang.org/x/exp/utf8string"
 	"regexp"
 	"strings"
 )
@@ -83,4 +84,13 @@ func parseArray(array string) []string {
 		results = append(results, s)
 	}
 	return results
+}
+
+// TrimStringMax trims a string down if its length is over a certain amount
+func TrimStringMax(s string, strLength int) string {
+	r := utf8string.NewString(s)
+	if r.RuneCount() > strLength {
+		return r.Slice(0, strLength)
+	}
+	return s
 }
