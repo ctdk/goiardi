@@ -911,7 +911,7 @@ func (c *Cookbook) deleteHashes(fhashes []string) {
 					 * one in fhashes, also break out.
 					 */
 					if fh == vh {
-						fhashes = delSliceElement(i, fhashes)
+						fhashes = util.DelSliceElement(i, fhashes)
 						break
 					} else if fh > vh {
 						break
@@ -1231,23 +1231,9 @@ func getAttrHashes(attr []map[string]interface{}) []string {
 }
 
 func removeDupHashes(fhashes []string) []string {
-	for i, v := range fhashes {
-		/* break if we're the last element */
-		if i+1 >= len(fhashes) {
-			break
-		}
-		/* If the current element is equal to the next one, remove
-		 * the next element. */
-		if v == fhashes[i+1] {
-			fhashes = delSliceElement(i+1, fhashes)
-		}
-	}
-	return fhashes
-}
-
-func delSliceElement(pos int, strs []string) []string {
-	strs = append(strs[:pos], strs[pos+1:]...)
-	return strs
+	// needed this functionality elsewhere, so it's been moved to util.
+	// Keeping this as a wrapper for simplicity.
+	return util.RemoveDupStrings(fhashes)
 }
 
 // RecipeList provides a list of recipes in this cookbook version.

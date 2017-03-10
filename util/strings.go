@@ -94,3 +94,23 @@ func TrimStringMax(s string, strLength int) string {
 	}
 	return s
 }
+
+// RemoveDupStrings removes duplicates from a slice of strings. The slice of
+// strings must be sorted before it's used with this function.
+func RemoveDupStrings(strs []string) []string {
+	for i, v := range strs {
+		if i+1 >= len(strs) {
+			break
+		}
+		if v == strs[i+1] {
+			strs = DelSliceElement(i+1, strs)
+		}
+	}
+	return strs
+}
+
+// DelSliceElement removes an element from a slice of strings.
+func DelSliceElement(pos int, strs []string) []string {
+	strs = append(strs[:pos], strs[pos+1:]...)
+	return strs
+}
