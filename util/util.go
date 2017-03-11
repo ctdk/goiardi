@@ -175,6 +175,8 @@ func Indexify(flattened map[string]interface{}) []string {
 			line := fmt.Sprintf("%s:%s", k, v)
 			readyToIndex = append(readyToIndex, line)
 		case []string:
+			sort.Strings(v)
+			v = RemoveDupStrings(v)
 			for _, w := range v {
 				//w = IndexEscapeStr(w)
 				line := fmt.Sprintf("%s:%s", k, w)
