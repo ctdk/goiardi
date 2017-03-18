@@ -84,3 +84,45 @@ func parseArray(array string) []string {
 	}
 	return results
 }
+
+// RemoveDupStrings removes duplicates from a slice of strings. The slice of
+// strings must be sorted before it's used with this function.
+func RemoveDupStrings(strs []string) []string {
+	for i, v := range strs {
+		// catches the case where we've sliced off all the duplicates,
+		// but if we don't break here checking the last element will
+		// needlessly keep marching down the remainder of the slice for
+		// no effect
+		if i > len(strs) {
+			break
+		}
+		j := 1
+		s := 0
+		for {
+			if i+1 >= len(strs) {
+				break
+			}
+			if v == strs[i+j] {
+				j++
+				s++
+			} else {
+				break
+			}
+		}
+		if s == 0 {
+			continue
+		}
+		strs = delTwoPosElements(i+i, s, strs)
+	}
+	return strs
+}
+
+// DelSliceElement removes an element from a slice of strings.
+func DelSliceElement(pos int, strs []string) []string {
+	return delTwoPosElements(pos, 1, strs)
+}
+
+func delTwoPosElements(pos int, skip int, strs []string) []string {
+	strs = append(strs[:pos], strs[pos+skip:]...)
+	return strs
+}
