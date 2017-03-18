@@ -99,7 +99,7 @@ func RemoveDupStrings(strs []string) []string {
 		j := 1
 		s := 0
 		for {
-			if i+1 >= len(strs) {
+			if i+j >= len(strs) {
 				break
 			}
 			if v == strs[i+j] {
