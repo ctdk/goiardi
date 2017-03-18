@@ -17,6 +17,7 @@
 package util
 
 import (
+	"sort"
 	"testing"
 )
 
@@ -31,5 +32,20 @@ func TestStringTrimming(t *testing.T) {
 	}
 	if len(u) != l {
 		t.Errorf("post-trim len for u should have been %d, got %d (%s)", l, len(u), u)
+	}
+}
+
+func TestDupRemoval(t *testing.T) {
+	strs := []string{ "This", "", "has", "", "some", "", "some", "dupes" }
+	sort.Strings(strs)
+	strs = RemoveDupStrings(strs)
+	chkmap := make(map[string]uint8)
+	for _, v := range strs {
+		chkmap[v]++
+	}
+	for k, v := range chkmap {
+		if v > 1 {
+			t.Errorf("string '%s' had %d elements, should have had 1", k, v)
+		}
 	}
 }
