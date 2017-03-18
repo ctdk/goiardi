@@ -112,7 +112,7 @@ func RemoveDupStrings(strs []string) []string {
 		if s == 0 {
 			continue
 		}
-		strs = delTwoPosElements(i+i, s, strs)
+		strs = delTwoPosElements(i+1, s, strs)
 	}
 	return strs
 }
