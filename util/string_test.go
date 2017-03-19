@@ -21,20 +21,6 @@ import (
 	"testing"
 )
 
-func TestStringTrimming(t *testing.T) {
-	s := "12345"
-	u := "12345678901234567890"
-	l := 8
-	s = TrimStringMax(s, 8)
-	u = TrimStringMax(u, 8)
-	if len(s) != 5 {
-		t.Errorf("post-trim len for s should have been 5, somehow got %d", len(s))
-	}
-	if len(u) != l {
-		t.Errorf("post-trim len for u should have been %d, got %d (%s)", l, len(u), u)
-	}
-}
-
 func TestDupRemoval(t *testing.T) {
 	strs := []string{ "This", "", "has", "", "some", "", "some", "dupes" }
 	sort.Strings(strs)
