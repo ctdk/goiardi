@@ -35,6 +35,22 @@ func TestStringTrimming(t *testing.T) {
 	}
 }
 
+func TestStringTrimmingNoTrim(t *testing.T) {
+	faz := "hello there"
+	boo := "oogety boogety"
+	l := 0
+	fazlen := len(faz)
+	boolen := len(boo)
+	faz = TrimStringMax(faz, l)
+	boo = TrimStringMax(boo, l)
+	if len(faz) != fazlen {
+		t.Errorf("post-trim len for 'faz' should have been the same at %d, but instead we got %d", fazlen, len(faz))
+	}
+	if len(boo) != boolen {
+		t.Errorf("post-trim len for 'boo' should have been the same at %d, but instead we got %d", boolen, len(boo))
+	}
+}
+
 func TestDupRemoval(t *testing.T) {
 	strs := []string{"This", "", "has", "", "some", "", "some", "dupes"}
 	sort.Strings(strs)

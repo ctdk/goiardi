@@ -88,6 +88,9 @@ func parseArray(array string) []string {
 
 // TrimStringMax trims a string down if its length is over a certain amount
 func TrimStringMax(s string, strLength int) string {
+	if strLength <= 0 {
+		return s
+	}
 	r := utf8string.NewString(s)
 	if r.RuneCount() > strLength {
 		return r.Slice(0, strLength)
