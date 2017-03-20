@@ -21,6 +21,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"github.com/lib/pq"
+	"sort"
 	"strings"
 )
 
@@ -146,6 +147,11 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 				return err
 			}
 		case []string:
+			// remove dupes from slices of strings like we're doing
+			// now with the trie index, both to reduce ambiguity and
+			// to maybe make the indexes just a little bit smaller
+			sort.Strings(v)
+			v = util.RemoveDupStrings(v)
 			for _, w := range v {
 				w = util.IndexEscapeStr(w)
 				w = strings.Replace(w, "\n", "\\n", -1)
