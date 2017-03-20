@@ -73,9 +73,8 @@ func configureVault() (*vaultSecretStore, error) {
 		return nil, err
 	}
 
-	var m sync.RWMutex
 	secrets := make(map[string]*secretVal)
-	v := &vaultSecretStore{m, secrets, c}
+	v := &vaultSecretStore{secrets: secrets, Client: c}
 	return v, nil
 }
 
