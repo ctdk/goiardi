@@ -36,7 +36,7 @@ func TestStringTrimming(t *testing.T) {
 }
 
 func TestDupRemoval(t *testing.T) {
-	strs := []string{ "This", "", "has", "", "some", "", "some", "dupes" }
+	strs := []string{"This", "", "has", "", "some", "", "some", "dupes"}
 	sort.Strings(strs)
 	strs = RemoveDupStrings(strs)
 	chkmap := make(map[string]uint8)
