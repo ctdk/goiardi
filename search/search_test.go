@@ -261,8 +261,8 @@ func TestSearchBasicQueryEscaped(t *testing.T) {
 func TestIndexDupes(t *testing.T) {
 	r, _ := role.New("idx_role")
 	r.Default["foo"] = "bar"
-	r.Default["notdupe"] = []string{ "I", "am", "good" }
-	r.Default["dupes"] = []string{ "I", "", "will", "", "cause", "problems", "I", "" }
+	r.Default["notdupe"] = []string{"I", "am", "good"}
+	r.Default["dupes"] = []string{"I", "", "will", "", "cause", "problems", "I", ""}
 	r.Save()
 }
 
