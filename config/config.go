@@ -103,6 +103,7 @@ type Conf struct {
 	VaultAddr         string   `toml:"vault-addr"`
 	VaultShoveyKey    string   `toml:"vault-shovey-key"`
 	EnvVars           []string `toml:"env-vars"`
+	IndexValTrim      int      `toml:"index-val-trim"`
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -201,10 +202,11 @@ type Options struct {
 	UseExtSecrets     bool   `long:"use-external-secrets" description:"Use an external service to store secrets (currently user/client public keys). Currently only vault is supported."`
 	VaultAddr         string `long:"vault-addr" description:"Specify address of vault server (i.e. https://127.0.0.1:8200). Defaults to the value of VAULT_ADDR."`
 	VaultShoveyKey    string `long:"vault-shovey-key" description:"Specify a path in vault holding shovey's private key. The key must be put in vault as 'privateKey=<contents>'."`
+	IndexValTrim      int    `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If not set or set <= 0, trimming is disabled. This behavior will change with the next major release."`
 }
 
 // The goiardi version.
-const Version = "0.11.3-pre1"
+const Version = "0.11.3-pre2"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
 const ChefVersion = "11.1.7"
@@ -719,6 +721,17 @@ func ParseConfigOptions() error {
 	}
 	if Config.StatsdInstance == "" {
 		Config.StatsdInstance = strings.Replace(Config.Hostname, ".", "_", -1)
+	}
+	if opts.IndexValTrim != 0 {
+		Config.IndexValTrim = opts.IndexValTrim
+	}
+	if Config.IndexValTrim <= 0 {
+		logger.Infof("Trimming values in search index disabled")
+		if Config.IndexValTrim == 0 {
+			logger.Warningf("index-val-trim's default behavior when not set or set to 0 is to disable search index value trimming; this behavior will change with the next goiardi release")
+		}
+	} else {
+		logger.Infof("Trimming values in search index to %d characters", Config.IndexValTrim)
 	}
 
 	// Environment variables

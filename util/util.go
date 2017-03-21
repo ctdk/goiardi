@@ -169,7 +169,7 @@ func MapifyObject(obj interface{}) map[string]interface{} {
 func Indexify(flattened map[string]interface{}) []string {
 	var readyToIndex []string
 	// keep values in the index down to a reasonable size
-	maxValLen := 150
+	maxValLen := config.Config.IndexValTrim
 	for k, v := range flattened {
 		switch v := v.(type) {
 		case string:
