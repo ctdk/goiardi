@@ -258,6 +258,14 @@ func TestSearchBasicQueryEscaped(t *testing.T) {
 	}
 }
 
+func TestIndexDupes(t *testing.T) {
+	r, _ := role.New("idx_role")
+	r.Default["foo"] = "bar"
+	r.Default["notdupe"] = []string{ "I", "am", "good" }
+	r.Default["dupes"] = []string{ "I", "", "will", "", "cause", "problems", "I", "" }
+	r.Save()
+}
+
 // Probably don't want this as an always test, but it's handy to have available.
 /*
 func TestEmbiggenSearch(t *testing.T) {
