@@ -4,6 +4,8 @@
   Does require rebuilding the search index.
 * Allow using 'novault' as a build tag to avoid having to have the vault api
   present when building goiardi. Not relevant to most people.
+* Backport fix for duplicate items in arrays in indexed objects crashing the
+  server when saving.
 
 
 0.11.1
