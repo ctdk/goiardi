@@ -152,58 +152,59 @@ type Options struct {
 	Version           bool   `short:"v" long:"version" description:"Print version info."`
 	Verbose           []bool `short:"V" long:"verbose" description:"Show verbose debug information. Repeat for more verbosity."`
 	ConfFile          string `short:"c" long:"config" description:"Specify a config file to use."`
-	Ipaddress         string `short:"I" long:"ipaddress" description:"Listen on a specific IP address."`
-	Hostname          string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel."`
-	Port              int    `short:"P" long:"port" description:"Port to listen on. If port is set to 443, SSL will be activated. (default: 4545)"`
-	ProxyHostname     string `short:"Z" long:"proxy-hostname" description:"Hostname to report to clients if this goiardi server is behind a proxy using a different hostname. See also --proxy-port. Can be used with --proxy-port or alone, or not at all."`
-	ProxyPort         int    `short:"W" long:"proxy-port" description:"Port to report to clients if this goiardi server is behind a proxy using a different port than the port goiardi is listening on. Can be used with --proxy-hostname or alone, or not at all."`
-	IndexFile         string `short:"i" long:"index-file" description:"File to save search index data to."`
-	DataStoreFile     string `short:"D" long:"data-file" description:"File to save data store data to."`
-	FreezeInterval    int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk if there have been any changes (requires -i/--index-file and -D/--data-file options to be set). (Default 10 seconds.)"`
-	LogFile           string `short:"L" long:"log-file" description:"Log to file X"`
-	SysLog            bool   `short:"s" long:"syslog" description:"Log to syslog rather than a log file. Incompatible with -L/--log-file."`
-	TimeSlew          string `long:"time-slew" description:"Time difference allowed between the server's clock and the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m."`
-	ConfRoot          string `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set."`
-	UseAuth           bool   `short:"A" long:"use-auth" description:"Use authentication. Default: false."`
-	UseSSL            bool   `long:"use-ssl" description:"Use SSL for connections. If --port is set to 433, this will automatically be turned on. If it is set to 80, it will automatically be turned off. Default: off. Requires --ssl-cert and --ssl-key."`
-	SSLCert           string `long:"ssl-cert" description:"SSL certificate file. If a relative path, will be set relative to --conf-root."`
-	SSLKey            string `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root."`
-	HTTPSUrls         bool   `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP."`
-	DisableWebUI      bool   `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface."`
-	UseMySQL          bool   `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file."`
-	UsePostgreSQL     bool   `long:"use-postgresql" description:"Use a PostgreSQL database for data storage. Configure database options in the config file."`
-	LocalFstoreDir    string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* (unless using S3 uploads) for SQL mode."`
-	LogEvents         bool   `long:"log-events" description:"Log changes to chef objects."`
-	LogEventKeep      int    `short:"K" long:"log-event-keep" description:"Number of events to keep in the event log. If set, the event log will be checked periodically and pruned to this number of entries."`
+	Ipaddress         string `short:"I" long:"ipaddress" description:"Listen on a specific IP address." env:"GOIARDI_IPADDRESS"`
+	Hostname          string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel." env:"GOIARDI_HOSTNAME"`
+	Port              int    `short:"P" long:"port" description:"Port to listen on. If port is set to 443, SSL will be activated. (default: 4545)" env:"GOIARDI_PORT"`
+	ProxyHostname     string `short:"Z" long:"proxy-hostname" description:"Hostname to report to clients if this goiardi server is behind a proxy using a different hostname. See also --proxy-port. Can be used with --proxy-port or alone, or not at all." env:"GOIARDI_PROXY_HOSTNAME"`
+	ProxyPort         int    `short:"W" long:"proxy-port" description:"Port to report to clients if this goiardi server is behind a proxy using a different port than the port goiardi is listening on. Can be used with --proxy-hostname or alone, or not at all." env:"GOIARDI_PROXY_PORT"`
+	IndexFile         string `short:"i" long:"index-file" description:"File to save search index data to." env:"GOIARDI_INDEX_FILE"`
+	DataStoreFile     string `short:"D" long:"data-file" description:"File to save data store data to." env:"GOIARDI_DATA_FILE"`
+	FreezeInterval    int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk if there have been any changes (requires -i/--index-file and -D/--data-file options to be set). (Default 10 seconds.)" env:"GOIARDI_FREEZE_INTERVAL"`
+	LogFile           string `short:"L" long:"log-file" description:"Log to file X" env:"GOIARDI_LOG_FILE"`
+	SysLog            bool   `short:"s" long:"syslog" description:"Log to syslog rather than a log file. Incompatible with -L/--log-file." env:"GOIARDI_SYSLOG"`
+	LogLevel 	  string `short:"" long:"log-level" description:"Specify logging verbosity. Performs the same function as -V, but works like the 'log-level' option in the configuration file. Acceptable values are 'debug', 'info', 'warning', 'error', 'critical', and 'fatal'." env:"GOIARDI_LOG_LEVEL"`
+	TimeSlew          string `long:"time-slew" description:"Time difference allowed between the server's clock and the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m." env:"GOIARDI_TIME_SLEW"`
+	ConfRoot          string `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set." env:"GOIARDI_CONF_ROOT"`
+	UseAuth           bool   `short:"A" long:"use-auth" description:"Use authentication. Default: false. (NB: At a future time, the default behavior will change to authentication being enabled.)" env:"GOIARDI_USE_AUTH"`
+	UseSSL            bool   `long:"use-ssl" description:"Use SSL for connections. If --port is set to 433, this will automatically be turned on. If it is set to 80, it will automatically be turned off. Default: off. Requires --ssl-cert and --ssl-key." env:"GOIARDI_USE_SSL"`
+	SSLCert           string `long:"ssl-cert" description:"SSL certificate file. If a relative path, will be set relative to --conf-root." env:"GOIARDI_SSL_CERT"`
+	SSLKey            string `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root." env:"GOIARDI_SSL_KEY"`
+	HTTPSUrls         bool   `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP." env:"GOIARDI_HTTPS_URLS"`
+	DisableWebUI      bool   `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface." env:"GOIARDI_DISABLE_WEBUI"`
+	UseMySQL          bool   `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file." env:"GOIARDI_USE_MYSQL"`
+	UsePostgreSQL     bool   `long:"use-postgresql" description:"Use a PostgreSQL database for data storage. Configure database options in the config file." env:"GOIARDI_USE_POSTGRESQL"`
+	LocalFstoreDir    string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* (unless using S3 uploads) for SQL mode." env:"GOIARDI_LOCAL_FILESTORE_DIR"`
+	LogEvents         bool   `long:"log-events" description:"Log changes to chef objects." env:"GOIARDI_LOG_EVENTS"`
+	LogEventKeep      int    `short:"K" long:"log-event-keep" description:"Number of events to keep in the event log. If set, the event log will be checked periodically and pruned to this number of entries." env:"GOIARDI_LOG_EVENT_KEEP"`
 	Export            string `short:"x" long:"export" description:"Export all server data to the given file, exiting afterwards. Should be used with caution. Cannot be used at the same time as -m/--import."`
 	Import            string `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Cannot be used at the same time as -x/--export."`
-	ObjMaxSize        int64  `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)."`
-	JSONReqMaxSize    int64  `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000."`
+	ObjMaxSize        int64  `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)." env:"GOIARDI_OBJ_MAX_SIZE"`
+	JSONReqMaxSize    int64  `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000." env:"GOIARDI_JSON_REQ_MAX_SIZE"`
 	UseUnsafeMemStore bool   `long:"use-unsafe-mem-store" description:"Use the faster, but less safe, old method of storing data in the in-memory data store with pointers, rather than encoding the data with gob and giving a new copy of the object to each requestor. If this is enabled goiardi will run faster in in-memory mode, but one goroutine could change an object while it's being used by another. Has no effect when using an SQL backend. (DEPRECATED - will be removed in a future release.)"`
-	DbPoolSize        int    `long:"db-pool-size" description:"Number of idle db connections to maintain. Only useful when using one of the SQL backends. Default is 0 - no idle connections retained"`
-	MaxConn           int    `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited."`
-	UseSerf           bool   `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster. Required for shovey."`
-	SerfEventAnnounce bool   `long:"serf-event-announce" description:"Announce log events and joining the serf cluster over serf, as serf events. Requires --use-serf."`
-	SerfAddr          string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373."`
-	UseShovey         bool   `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes. Requires --use-serf."`
-	SignPrivKey       string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests."`
-	DotSearch         bool   `long:"dot-search" description:"If set, searches will use . to separate elements instead of _."`
-	ConvertSearch     bool   `long:"convert-search" description:"If set, convert _ syntax searches to . syntax. Only useful if --dot-search is set."`
-	PgSearch          bool   `long:"pg-search" description:"Use the new Postgres based search engine instead of the default ersatz Solr. Requires --use-postgresql, automatically turns on --dot-search. --convert-search is recommended, but not required."`
-	UseStatsd         bool   `long:"use-statsd" description:"Whether or not to collect statistics about goiardi and send them to statsd."`
-	StatsdAddr        string `long:"statsd-addr" description:"IP address and port of statsd instance to connect to. (default 'localhost:8125')"`
-	StatsdType        string `long:"statsd-type" description:"statsd format, can be either 'standard' or 'datadog' (default 'standard')"`
-	StatsdInstance    string `long:"statsd-instance" description:"Statsd instance name to use for this server. Defaults to the server's hostname, with '.' replaced by '_'."`
-	UseS3Upload       bool   `long:"use-s3-upload" description:"Store cookbook files in S3 rather than locally in memory or on disk. This or --local-filestore-dir must be set in SQL mode. Cannot be used with in-memory mode."`
-	AWSRegion         string `long:"aws-region" description:"AWS region to use S3 uploads."`
-	S3Bucket          string `long:"s3-bucket" description:"The name of the S3 bucket storing the files."`
-	AWSDisableSSL     bool   `long:"aws-disable-ssl" description:"Set to disable SSL for the endpoint. Mostly useful just for testing."`
-	S3Endpoint        string `long:"s3-endpoint" description:"Set a different endpoint than the default s3.amazonaws.com. Mostly useful for testing with a fake S3 service, or if using an S3-compatible service."`
-	S3FilePeriod      int    `long:"s3-file-period" description:"Length of time, in minutes, to allow files to be saved to or retrieved from S3 by the client. Defaults to 15 minutes."`
-	UseExtSecrets     bool   `long:"use-external-secrets" description:"Use an external service to store secrets (currently user/client public keys). Currently only vault is supported."`
+	DbPoolSize        int    `long:"db-pool-size" description:"Number of idle db connections to maintain. Only useful when using one of the SQL backends. Default is 0 - no idle connections retained" env:"GOIARDI_DB_POOL_SIZE"`
+	MaxConn           int    `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited." env:"GOIARDI_MAX_CONN"`
+	UseSerf           bool   `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster. Required for shovey." env:"GOIARDI_USE_SERF"`
+	SerfEventAnnounce bool   `long:"serf-event-announce" description:"Announce log events and joining the serf cluster over serf, as serf events. Requires --use-serf." env:"GOIARDI_SERF_EVENT_ANNOUNCE"`
+	SerfAddr          string `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373." env:"GOIARDI_SERF_ADDR"`
+	UseShovey         bool   `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes. Requires --use-serf." env:"GOIARDI_USE_SHOVEY"`
+	SignPrivKey       string `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests." env:"GOIARDI_SIGN_PRIV_KEY"`
+	DotSearch         bool   `long:"dot-search" description:"If set, searches will use . to separate elements instead of _." env:"GOIARDI_DOT_SEARCH"`
+	ConvertSearch     bool   `long:"convert-search" description:"If set, convert _ syntax searches to . syntax. Only useful if --dot-search is set." env:"GOIARDI_CONVERT_SEARCH"`
+	PgSearch          bool   `long:"pg-search" description:"Use the new Postgres based search engine instead of the default ersatz Solr. Requires --use-postgresql, automatically turns on --dot-search. --convert-search is recommended, but not required." env:"GOIARDI_PG_SEARCH"`
+	UseStatsd         bool   `long:"use-statsd" description:"Whether or not to collect statistics about goiardi and send them to statsd." env:"GOIARDI_USE_STATSD"`
+	StatsdAddr        string `long:"statsd-addr" description:"IP address and port of statsd instance to connect to. (default 'localhost:8125')" env:"GOIARDI_STATSD_ADDR"`
+	StatsdType        string `long:"statsd-type" description:"statsd format, can be either 'standard' or 'datadog' (default 'standard')" env:"GOIARDI_STATSD_TYPE"`
+	StatsdInstance    string `long:"statsd-instance" description:"Statsd instance name to use for this server. Defaults to the server's hostname, with '.' replaced by '_'." env:"GOIARDI_STATSD_INSTANCE"`
+	UseS3Upload       bool   `long:"use-s3-upload" description:"Store cookbook files in S3 rather than locally in memory or on disk. This or --local-filestore-dir must be set in SQL mode. Cannot be used with in-memory mode." env:"GOIARDI_USE_S3_UPLOAD"`
+	AWSRegion         string `long:"aws-region" description:"AWS region to use S3 uploads." env:"GOIARDI_AWS_REGION"`
+	S3Bucket          string `long:"s3-bucket" description:"The name of the S3 bucket storing the files." env:"GOIARDI_S3_BUCKET"`
+	AWSDisableSSL     bool   `long:"aws-disable-ssl" description:"Set to disable SSL for the endpoint. Mostly useful just for testing." env:"GOIARDI_AWS_DISABLE_SSL"`
+	S3Endpoint        string `long:"s3-endpoint" description:"Set a different endpoint than the default s3.amazonaws.com. Mostly useful for testing with a fake S3 service, or if using an S3-compatible service." env:"GOIARDI_S3_ENDPOINT"`
+	S3FilePeriod      int    `long:"s3-file-period" description:"Length of time, in minutes, to allow files to be saved to or retrieved from S3 by the client. Defaults to 15 minutes." env:"GOIARDI_S3_FILE_PERIOD"`
+	UseExtSecrets     bool   `long:"use-external-secrets" description:"Use an external service to store secrets (currently user/client public keys). Currently only vault is supported." env:"GOIARDI_USE_EXTERNAL_SECRETS"`
 	VaultAddr         string `long:"vault-addr" description:"Specify address of vault server (i.e. https://127.0.0.1:8200). Defaults to the value of VAULT_ADDR."`
-	VaultShoveyKey    string `long:"vault-shovey-key" description:"Specify a path in vault holding shovey's private key. The key must be put in vault as 'privateKey=<contents>'."`
-	IndexValTrim      int    `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If not set or set <= 0, trimming is disabled. This behavior will change with the next major release."`
+	VaultShoveyKey    string `long:"vault-shovey-key" description:"Specify a path in vault holding shovey's private key. The key must be put in vault as 'privateKey=<contents>'." env:"GOIARDI_VAULT_SHOVEY_KEY"`
+	IndexValTrim      int    `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If not set or set <= 0, trimming is disabled. This behavior will change with the next major release." env:"GOIARDI_INDEX_VAL_TRIM"`
 }
 
 // The goiardi version.
@@ -233,8 +234,8 @@ var Config = initConfig()
 // taking precedence over options in the config file.
 func ParseConfigOptions() error {
 	var opts = &Options{}
-	//_, err := flags.Parse(opts)
 	parser := flags.NewParser(opts, flags.Default)
+	parser.Usage = "[OPTIONS]\n\nMany of goiardi's command line arguments can be set with environment variables instead of flags, if desired. The options that allow this are followed by the name of the appropriate environment variable (a là [$GOIARDI_SOME_OPTION])."
 	if hideVaultOptions {
 		vopts := []string{"vault-addr", "vault-shovey-key", "use-external-secrets"}
 		for _, v := range vopts {
