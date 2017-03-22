@@ -125,7 +125,7 @@ var LogLevelNames = map[string]int{"debug": 5, "info": 4, "warning": 3, "error":
 
 // MySQLdb holds MySQL connection options.
 type MySQLdb struct {
-	Username    string `long:"username" description:"MySQL username"`
+	Username    string `long:"username" description:"MySQL username" env:"GOIARDI_MYSQL_USERNAME"`
 	Password    string `long:"password" description:"MySQL password" env:"GOIARDI_MYSQL_PASSWORD"`
 	Protocol    string `long:"protocol" description:"MySQL protocol (tcp or unix)" env:"GOIARDI_MYSQL_PROTOCOL"`
 	Address     string `long:"address" description:"MySQL IP address, hostname, or path to a socket" env:"GOIARDI_MYSQL_ADDRESS"`
@@ -138,7 +138,7 @@ type MySQLdb struct {
 type PostgreSQLdb struct {
 	Username string `long:"username" description:"PostgreSQL user name" env:"GOIARDI_POSTGRESQL_USERNAME"`
 	Password string `long:"password" description:"PostgreSQL password" env:"GOIARDI_POSTGRESQL_PASSWORD"`
-	Host     string `long:"host" description:"PostgreSQL IP host, hostname, or path to a socket" env:"GOIARDI_POSTGRESQL_ADDRESS"`
+	Host     string `long:"host" description:"PostgreSQL IP host, hostname, or path to a socket" env:"GOIARDI_POSTGRESQL_HOST"`
 	Port     string `long:"port" description:"PostgreSQL TCP port" env:"GOIARDI_POSTGRESQL_PORT"`
 	Dbname   string `long:"dbname" description:"PostgreSQL database name" env:"GOIARDI_POSTGRESQL_DBNAME"`
 	SSLMode  string `long:"ssl-mode" description:"PostgreSQL SSL mode ('enable' or 'disable')" env:"GOIARDI_POSTGRESQL_SSL_MODE"`
@@ -336,6 +336,9 @@ func ParseConfigOptions() error {
 			Config.MySQL.Dbname = opts.MySQL.Dbname
 		}
 		if opts.MySQL.ExtraParams != nil {
+			if Config.MySQL.ExtraParams == nil {
+				Config.MySQL.ExtraParams = make(map[string]string)
+			}
 			for k, v := range opts.MySQL.ExtraParams {
 				Config.MySQL.ExtraParams[k] = v
 			}
