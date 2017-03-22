@@ -1,3 +1,18 @@
+0.11.3 (unreleased)
+------
+* Add an option to trim values in search indexes. Currently not enabled by
+  default, but will be in the next minor goiardi release (so, either 0.12.0 or
+  1.0.0, depending on which ends up being next).
+* Fix a bug where duplicated items in slices in objects being indexed with the
+  in-memory trie based index would cause goiardi to crash. For good measure,
+  even though it isn't necessary to prevent a crash remove those same
+  duplicate items from objects being indexed with the postgres index.
+* Mark --use-unsafe-mem-store as deprecated. In the unlikely event someone's
+  using that option, a warning will print in the log. This option may be
+  removed at any time.
+* Allow setting configuration options via environment variables. (See
+  the documentation for the details.) (IN PROGRESS)
+
 0.11.2
 ------
 * Fix a bug with escaped characters in certain searches (thanks ickymettle).
