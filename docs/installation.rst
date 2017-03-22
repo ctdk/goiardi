@@ -5,7 +5,7 @@ Installation
 
 To install goiardi from source:
 
-1. Install go. (http://golang.org/doc/install.html) Officially goiardi only supports go 1.6+ at this time, but older versions (especially go 1.5) may work. Goiardi should generally be able to be built with the latest version of Go, and this is generally recommended. Immediately after a minor release, of course, caution may be warranted.
+1. Install go. (http://golang.org/doc/install.html) Officially goiardi only supports go 1.7+ at this time, but older versions may work. Goiardi should generally be able to be built with the latest version of Go, and this is generally recommended. Immediately after a minor release, of course, caution may be warranted.
 
 2. Make sure your ``$GOROOT`` and ``$PATH`` are set up correctly per the Go installation instructions.
 
@@ -26,6 +26,9 @@ To install goiardi from source:
    Or, you can look at the goiardi releases page on github at https://github.com/ctdk/goiardi/releases and see if there are precompiled binaries available for your platform.
 
 You can get a list of command-line options with the ``-h`` flag.
+
+Configuration
+=============
 
 Goiardi can also take a config file, run like ``goiardi -c /path/to/conf-file``. See ``etc/goiardi.conf-sample`` for an example documented configuration file. Options in the configuration file share the same name as the long command line arguments (so, for example, ``--ipaddress=127.0.0.1`` on the command line would be ``ipaddress = "127.0.0.1"`` in the config file.
 
@@ -171,11 +174,11 @@ Currently available command line and config file options::
 
 Options specified on the command line override options in the config file.
 
-For more documentation on Chef, see (http://docs.chef.io).
+For more documentation on Chef, see http://docs.chef.io.
 
 Binaries and Packages
 =====================
 
-There are other options for installing goiardi, in case you don't want to build it from scratch. Binaries for several platforms are provided with each release, and there are .debs available as well at https://packagecloud.io/ct/goiardi. At the moment packages are only being built for Debian wheezy, Ubuntu 14.04, and raspbian (which is under Debian wheezy) for Raspberry Pi and Raspberry Pi 2. Other versions of Debian, Ubuntu, CentOS and friends, and perhaps others are on the roadmap.
+There are other options for installing goiardi, in case you don't want to build it from scratch. Binaries for several platforms are provided with each release, and there are .debs available as well at https://packagecloud.io/ct/goiardi. At the moment packages are only being built for Debian wheezy, Ubuntu 14.04, and raspbian (which is under Debian wheezy) for Raspberry Pi and Raspberry Pi 2. Other versions of Debian, Ubuntu, CentOS and friends, and perhaps others are on the roadmap. As of this writing, debs for goiardi 0.11.2 can be `found in Debian sid and stretch <https://packages.qa.debian.org/g/goiardi.html>`_ (stretch is still ``testing``, but it's in the home stretch for being released), and in Ubuntu's "Zesty Zapus" ``universe`` repository.
 
-There is also a [homebrew tap](https://github.com/ctdk/homebrew-ctdk) that includes goiardi now, for folks running Mac OS X and using homebrew.
+There is also a `homebrew tap<https://github.com/ctdk/homebrew-ctdk>`_ that includes goiardi now, for folks running Mac OS X and using homebrew.
