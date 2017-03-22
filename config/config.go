@@ -125,23 +125,23 @@ var LogLevelNames = map[string]int{"debug": 5, "info": 4, "warning": 3, "error":
 
 // MySQLdb holds MySQL connection options.
 type MySQLdb struct {
-	Username    string
-	Password    string
-	Protocol    string
-	Address     string
-	Port        string
-	Dbname      string
-	ExtraParams map[string]string `toml:"extra_params"`
+	Username    string `long:"username" description:"MySQL username"`
+	Password    string `long:"password" description:"MySQL password" env:"GOIARDI_MYSQL_PASSWORD"`
+	Protocol    string `long:"protocol" description:"MySQL protocol (tcp or unix)" env:"GOIARDI_MYSQL_PROTOCOL"`
+	Address     string `long:"address" description:"MySQL IP address, hostname, or path to a socket" env:"GOIARDI_MYSQL_ADDRESS"`
+	Port        string `long:"port" description:"MySQL TCP port" env:"GOIARDI_MYSQL_PORT"`
+	Dbname      string `long:"dbname" description:"MySQL database name" env:"GOIARDI_MYSQL_DBNAME"`
+	ExtraParams map[string]string `toml:"extra_params" long:"extra-params" description:"Extra configuration parameters for MySQL. Specify them like '--mysql-extra-params=foo:bar'. Multiple extra parameters can be specified by supplying the --mysql-extra-params flag multiple times. If using an environment variable, split up multiple parameters with #, like so: GOIARDI_MYSQL_EXTRA_PARAMS='foo:bar#baz:bug'." env:"GOIARDI_MYSQL_EXTRA_PARAMS" env-delim:"#"`
 }
 
 // PostgreSQLdb holds Postgres connection options.
 type PostgreSQLdb struct {
-	Username string
-	Password string
-	Host     string
-	Port     string
-	Dbname   string
-	SSLMode  string
+	Username string `long:"username" description:"PostgreSQL user name" env:"GOIARDI_POSTGRESQL_USERNAME"`
+	Password string `long:"password" description:"PostgreSQL password" env:"GOIARDI_POSTGRESQL_PASSWORD"`
+	Host     string `long:"host" description:"PostgreSQL IP host, hostname, or path to a socket" env:"GOIARDI_POSTGRESQL_ADDRESS"`
+	Port     string `long:"port" description:"PostgreSQL TCP port" env:"GOIARDI_POSTGRESQL_PORT"`
+	Dbname   string `long:"dbname" description:"PostgreSQL database name" env:"GOIARDI_POSTGRESQL_DBNAME"`
+	SSLMode  string `long:"ssl-mode" description:"PostgreSQL SSL mode ('true' or 'false')" env:"GOIARDI_POSTGRESQL_SSL_MODE"`
 }
 
 // Options holds options set from the command line or (in most cases)
@@ -172,7 +172,9 @@ type Options struct {
 	HTTPSUrls         bool   `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP." env:"GOIARDI_HTTPS_URLS"`
 	DisableWebUI      bool   `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface." env:"GOIARDI_DISABLE_WEBUI"`
 	UseMySQL          bool   `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file." env:"GOIARDI_USE_MYSQL"`
+	MySQL MySQLdb `group:"MySQL connection options (requires --use-mysql)" namespace:"mysql"`
 	UsePostgreSQL     bool   `long:"use-postgresql" description:"Use a PostgreSQL database for data storage. Configure database options in the config file." env:"GOIARDI_USE_POSTGRESQL"`
+	PostgreSQL PostgreSQLdb `group:"PostgreSQL connection options (requires --use-postgresql)" namespace:"postgresql"`
 	LocalFstoreDir    string `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* (unless using S3 uploads) for SQL mode." env:"GOIARDI_LOCAL_FILESTORE_DIR"`
 	LogEvents         bool   `long:"log-events" description:"Log changes to chef objects." env:"GOIARDI_LOG_EVENTS"`
 	LogEventKeep      int    `short:"K" long:"log-event-keep" description:"Number of events to keep in the event log. If set, the event log will be checked periodically and pruned to this number of entries." env:"GOIARDI_LOG_EVENT_KEEP"`
@@ -236,6 +238,7 @@ func ParseConfigOptions() error {
 	var opts = &Options{}
 	parser := flags.NewParser(opts, flags.Default)
 	parser.Usage = "[OPTIONS]\n\nMany of goiardi's command line arguments can be set with environment variables instead of flags, if desired. The options that allow this are followed by the name of the appropriate environment variable (a là [$GOIARDI_SOME_OPTION])."
+	parser.NamespaceDelimiter = "-"
 	if hideVaultOptions {
 		vopts := []string{"vault-addr", "vault-shovey-key", "use-external-secrets"}
 		for _, v := range vopts {
@@ -313,11 +316,54 @@ func ParseConfigOptions() error {
 	// Use MySQL?
 	if opts.UseMySQL {
 		Config.UseMySQL = opts.UseMySQL
+		// fill in Config with any cli mysql flags
+		if opts.MySQL.Username != "" {
+			Config.MySQL.Username = opts.MySQL.Username
+		}
+		if opts.MySQL.Password != "" {
+			Config.MySQL.Password = opts.MySQL.Password
+		}
+		if opts.MySQL.Protocol != "" {
+			Config.MySQL.Protocol = opts.MySQL.Protocol
+		}
+		if opts.MySQL.Address != "" {
+			Config.MySQL.Address = opts.MySQL.Address
+		}
+		if opts.MySQL.Port != "" {
+			Config.MySQL.Port = opts.MySQL.Port
+		}
+		if opts.MySQL.Dbname != "" {
+			Config.MySQL.Dbname = opts.MySQL.Dbname
+		}
+		if opts.MySQL.ExtraParams != nil {
+			for k, v := range opts.MySQL.ExtraParams {
+				Config.MySQL.ExtraParams[k] = v
+			}
+		}
 	}
 
 	// Use Postgres?
 	if opts.UsePostgreSQL {
 		Config.UsePostgreSQL = opts.UsePostgreSQL
+		// fill in Config with any cli postgres flags
+		if opts.PostgreSQL.Username != "" {
+			Config.PostgreSQL.Username = opts.PostgreSQL.Username
+		}
+		if opts.PostgreSQL.Password != "" {
+			Config.PostgreSQL.Password = opts.PostgreSQL.Password
+		}
+		if opts.PostgreSQL.Host != "" {
+			Config.PostgreSQL.Host = opts.PostgreSQL.Host
+		}
+		if opts.PostgreSQL.Port != "" {
+			Config.PostgreSQL.Port = opts.PostgreSQL.Port
+		}
+		if opts.PostgreSQL.Dbname != "" {
+			Config.PostgreSQL.Dbname = opts.PostgreSQL.Dbname
+		}
+		if opts.PostgreSQL.SSLMode != "" {
+			Config.PostgreSQL.SSLMode = opts.PostgreSQL.SSLMode
+		}
 	}
 
 	if Config.UseMySQL && Config.UsePostgreSQL {
