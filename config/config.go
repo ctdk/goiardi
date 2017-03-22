@@ -141,7 +141,7 @@ type PostgreSQLdb struct {
 	Host     string `long:"host" description:"PostgreSQL IP host, hostname, or path to a socket" env:"GOIARDI_POSTGRESQL_ADDRESS"`
 	Port     string `long:"port" description:"PostgreSQL TCP port" env:"GOIARDI_POSTGRESQL_PORT"`
 	Dbname   string `long:"dbname" description:"PostgreSQL database name" env:"GOIARDI_POSTGRESQL_DBNAME"`
-	SSLMode  string `long:"ssl-mode" description:"PostgreSQL SSL mode ('true' or 'false')" env:"GOIARDI_POSTGRESQL_SSL_MODE"`
+	SSLMode  string `long:"ssl-mode" description:"PostgreSQL SSL mode ('enable' or 'disable')" env:"GOIARDI_POSTGRESQL_SSL_MODE"`
 }
 
 // Options holds options set from the command line or (in most cases)
@@ -162,7 +162,7 @@ type Options struct {
 	FreezeInterval    int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk if there have been any changes (requires -i/--index-file and -D/--data-file options to be set). (Default 10 seconds.)" env:"GOIARDI_FREEZE_INTERVAL"`
 	LogFile           string `short:"L" long:"log-file" description:"Log to file X" env:"GOIARDI_LOG_FILE"`
 	SysLog            bool   `short:"s" long:"syslog" description:"Log to syslog rather than a log file. Incompatible with -L/--log-file." env:"GOIARDI_SYSLOG"`
-	LogLevel 	  string `short:"" long:"log-level" description:"Specify logging verbosity. Performs the same function as -V, but works like the 'log-level' option in the configuration file. Acceptable values are 'debug', 'info', 'warning', 'error', 'critical', and 'fatal'." env:"GOIARDI_LOG_LEVEL"`
+	LogLevel 	  string `short:"g" long:"log-level" description:"Specify logging verbosity. Performs the same function as -V, but works like the 'log-level' option in the configuration file. Acceptable values are 'debug', 'info', 'warning', 'error', 'critical', and 'fatal'." env:"GOIARDI_LOG_LEVEL"`
 	TimeSlew          string `long:"time-slew" description:"Time difference allowed between the server's clock and the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m." env:"GOIARDI_TIME_SLEW"`
 	ConfRoot          string `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set." env:"GOIARDI_CONF_ROOT"`
 	UseAuth           bool   `short:"A" long:"use-auth" description:"Use authentication. Default: false. (NB: At a future time, the default behavior will change to authentication being enabled.)" env:"GOIARDI_USE_AUTH"`
