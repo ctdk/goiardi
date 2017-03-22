@@ -12,6 +12,9 @@
   removed at any time.
 * Allow setting configuration options via environment variables. (See
   the documentation for the details.) (IN PROGRESS)
+* Finally allow configuring MySQL or PostgreSQL connection options with
+  command line flags (or, now, environment variables).
+* Fixed format issues and wording in a few places in the documentation.
 
 0.11.2
 ------
