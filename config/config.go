@@ -151,7 +151,7 @@ type PostgreSQLdb struct {
 type Options struct {
 	Version           bool   `short:"v" long:"version" description:"Print version info."`
 	Verbose           []bool `short:"V" long:"verbose" description:"Show verbose debug information. Repeat for more verbosity."`
-	ConfFile          string `short:"c" long:"config" description:"Specify a config file to use."`
+	ConfFile          string `short:"c" long:"config" description:"Specify a config file to use." env:"GOIARDI_CONFIG"`
 	Ipaddress         string `short:"I" long:"ipaddress" description:"Listen on a specific IP address." env:"GOIARDI_IPADDRESS"`
 	Hostname          string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel." env:"GOIARDI_HOSTNAME"`
 	Port              int    `short:"P" long:"port" description:"Port to listen on. If port is set to 443, SSL will be activated. (default: 4545)" env:"GOIARDI_PORT"`
