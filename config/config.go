@@ -422,6 +422,9 @@ func ParseConfigOptions() error {
 	if dlev := len(opts.Verbose); dlev != 0 {
 		Config.DebugLevel = dlev
 	}
+	if opts.LogLevel != "" {
+		Config.LogLevel = opts.LogLevel
+	}
 	if Config.LogLevel != "" {
 		if lev, ok := LogLevelNames[strings.ToLower(Config.LogLevel)]; ok && Config.DebugLevel == 0 {
 			Config.DebugLevel = lev
