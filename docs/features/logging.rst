@@ -3,7 +3,7 @@
 Logging
 =======
 
-By default, goiardi logs to standard output. A log file may be specified with the ``-L/--log-file`` flag, or goiardi can log to syslog with the ``-s/--syslog`` flag on platforms that support syslog. Attempting to use syslog on one of these platforms (currently Windows and plan9 (although plan9 doesn't build for other reasons)) will result in an error.
+By default, goiardi logs to standard output. A log file may be specified with the ``-L/--log-file`` flag, or goiardi can log to syslog with the ``-s/--syslog`` flag on platforms that support syslog. Attempting to use syslog on a platform that doesn't support syslog (currently Windows and plan9 (although plan9 doesn't build for other reasons)) will result in an error.
 
 Log levels
 ----------
