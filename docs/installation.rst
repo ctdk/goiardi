@@ -23,7 +23,7 @@ To install goiardi from source:
 
     goiardi <options>
 
-   Or, you can look at the goiardi releases page on github at https://github.com/ctdk/goiardi/releases and see if there are precompiled binaries available for your platform, check out the packages at https://packagecloud.io/ct/goiardi and see if there's one for your platform there. Another option is running goiardi in Docker. The goiardi Docker repository is at https://hub.docker.com/r/ctdk/goiardi/, but there's also a Dockerfile provided in the git repository suitable for running locally.
+   Or, you can look at the goiardi releases page on github at https://github.com/ctdk/goiardi/releases and see if there are precompiled binaries available for your platform, check out the packages at https://packagecloud.io/ct/goiardi and see if there's one for your platform there. Another option is running goiardi in Docker. There's a Dockerfile in the root of the goiardi git repository that's suitable for running the local version of goiardi, but a goiardi repository on Docker Hub at https://hub.docker.com/r/ctdk/goiardi/ is also under development. Running goiardi under docker has always worked fine, but now that configuration options can be set with environment variables it's certainly easier to do so than before.
 
 Configuration
 =============
