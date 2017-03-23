@@ -13,6 +13,8 @@ GIT_HASH=`git rev-parse --short HEAD`
 COMMON_DIR="$CURDIR/common"
 BUILD="$CURDIR/build"
 SHARE="$BUILD/share"
+DOCS=$SHARE/docs
+MAN=$BUILD/man
 
 rm -r $BUILD
 rm -r $ARTIFACT_DIR
@@ -27,7 +29,14 @@ cp $CURDIR/../sql-files/*.sql $SHARE
 cp $CURDIR/README_GOIARDI_SCHEMA.txt $SHARE
 
 cd ..
+go build
 gox -osarch="linux/amd64 linux/armv6 linux/armv7 linux/s390x" -ldflags "-X github.com/ctdk/goiardi/config.GitHash=$GIT_HASH" -output="$BUILD/{{.Dir}}-$GOIARDI_VERSION-{{.OS}}-{{.Arch}}"
+
+mkdir $MAN
+./goiardi --print-man-page | sed 's/\.TH goiardi 1/\.TH goiardi 8/' > $MAN/goiardi.8
+cd docs
+make html
+cp -r _build/html $DOCS
 
 BUILD_ROOT="$BUILD/trusty"
 FILES_DIR="$CURDIR/ubuntu/trusty"
@@ -35,7 +44,9 @@ mkdir -p $BUILD_ROOT
 cd $BUILD_ROOT
 mkdir -p usr/bin
 mkdir -p usr/share/goiardi
-cp $SHARE/* usr/share/goiardi
+mkdir -p usr/share/man/man8
+cp $MAN/goiardi.8 usr/share/man/man8
+cp -r $SHARE/* usr/share/goiardi
 mkdir -p var/lib/goiardi/lfs
 cp $BUILD/goiardi-$GOIARDI_VERSION-linux-amd64 usr/bin/goiardi
 cp -r $FILES_DIR/fs/etc .
@@ -49,7 +60,9 @@ mkdir -p $BUILD_ROOT
 cd $BUILD_ROOT
 mkdir -p usr/bin
 mkdir -p usr/share/goiardi
-cp $SHARE/* usr/share/goiardi
+mkdir -p usr/share/man/man8
+cp $MAN/goiardi.8 usr/share/man/man8
+cp -r $SHARE/* usr/share/goiardi
 mkdir -p var/lib/goiardi/lfs
 cp $BUILD/goiardi-$GOIARDI_VERSION-linux-amd64 usr/bin/goiardi
 cp -r $FILES_DIR/fs/etc .
@@ -63,7 +76,9 @@ mkdir -p $BUILD_ROOT
 cd $BUILD_ROOT
 mkdir -p usr/bin
 mkdir -p usr/share/goiardi
-cp $SHARE/* usr/share/goiardi
+mkdir -p usr/share/man/man8
+cp $MAN/goiardi.8 usr/share/man/man8
+cp -r $SHARE/* usr/share/goiardi
 mkdir -p var/lib/goiardi/lfs
 cp $BUILD/goiardi-$GOIARDI_VERSION-linux-amd64 usr/bin/goiardi
 cp -r $FILES_DIR/fs/lib .
@@ -82,7 +97,9 @@ mkdir -p $BUILD_ROOT
 cd $BUILD_ROOT
 mkdir -p usr/bin
 mkdir -p usr/share/goiardi
-cp $SHARE/* usr/share/goiardi
+mkdir -p usr/share/man/man8
+cp $MAN/goiardi.8 usr/share/man/man8
+cp -r $SHARE/* usr/share/goiardi
 mkdir -p var/lib/goiardi/lfs
 cp $BUILD/goiardi-$GOIARDI_VERSION-linux-amd64 usr/bin/goiardi
 cp -r $FILES_DIR/fs/etc .
@@ -97,7 +114,9 @@ mkdir -p $BUILD_ROOT
 cd $BUILD_ROOT
 mkdir -p usr/bin
 mkdir -p usr/share/goiardi
-cp $SHARE/* usr/share/goiardi
+mkdir -p usr/share/man/man8
+cp $MAN/goiardi.8 usr/share/man/man8
+cp -r $SHARE/* usr/share/goiardi
 mkdir -p var/lib/goiardi/lfs
 cp $BUILD/goiardi-$GOIARDI_VERSION-linux-amd64 usr/bin/goiardi
 cp -r $FILES_DIR/fs/lib .
@@ -117,7 +136,9 @@ mkdir -p $BUILD_ROOT
 cd $BUILD_ROOT
 mkdir -p usr/bin
 mkdir -p usr/share/goiardi
-cp $SHARE/* usr/share/goiardi
+mkdir -p usr/share/man/man8
+cp $MAN/goiardi.8 usr/share/man/man8
+cp -r $SHARE/* usr/share/goiardi
 mkdir -p var/lib/goiardi/lfs
 cp $BUILD/goiardi-$GOIARDI_VERSION-linux-armv6 usr/bin/goiardi
 cp -r $FILES_DIR/fs/etc .
@@ -131,7 +152,9 @@ mkdir -p $BUILD_ROOT
 cd $BUILD_ROOT
 mkdir -p usr/bin
 mkdir -p usr/share/goiardi
-cp $SHARE/* usr/share/goiardi
+mkdir -p usr/share/man/man8
+cp $MAN/goiardi.8 usr/share/man/man8
+cp -r $SHARE/* usr/share/goiardi
 mkdir -p var/lib/goiardi/lfs
 cp $BUILD/goiardi-$GOIARDI_VERSION-linux-armv7 usr/bin/goiardi
 cp -r $FILES_DIR/fs/etc .
@@ -145,7 +168,9 @@ mkdir -p $BUILD_ROOT
 cd $BUILD_ROOT
 mkdir -p usr/bin
 mkdir -p usr/share/goiardi
-cp $SHARE/* usr/share/goiardi
+mkdir -p usr/share/man/man8
+cp $MAN/goiardi.8 usr/share/man/man8
+cp -r $SHARE/* usr/share/goiardi
 mkdir -p var/lib/goiardi/lfs
 cp $BUILD/goiardi-$GOIARDI_VERSION-linux-armv6 usr/bin/goiardi
 cp -r $FILES_DIR/fs/lib .
@@ -159,7 +184,9 @@ mkdir -p $BUILD_ROOT
 cd $BUILD_ROOT
 mkdir -p usr/bin
 mkdir -p usr/share/goiardi
-cp $SHARE/* usr/share/goiardi
+mkdir -p usr/share/man/man8
+cp $MAN/goiardi.8 usr/share/man/man8
+cp -r $SHARE/* usr/share/goiardi
 mkdir -p var/lib/goiardi/lfs
 cp $BUILD/goiardi-$GOIARDI_VERSION-linux-armv7 usr/bin/goiardi
 cp -r $FILES_DIR/fs/lib .
@@ -173,7 +200,9 @@ mkdir -p $BUILD_ROOT
 cd $BUILD_ROOT
 mkdir -p usr/bin
 mkdir -p usr/share/goiardi
-cp $SHARE/* usr/share/goiardi
+mkdir -p usr/share/man/man8
+cp $MAN/goiardi.8 usr/share/man/man8
+cp -r $SHARE/* usr/share/goiardi
 mkdir -p var/lib/goiardi/lfs
 cp $BUILD/goiardi-$GOIARDI_VERSION-linux-s390x usr/bin/goiardi
 cp -r $FILES_DIR/fs/lib .
@@ -187,7 +216,9 @@ mkdir -p $BUILD_ROOT
 cd $BUILD_ROOT
 mkdir -p usr/bin
 mkdir -p usr/share/goiardi
-cp $SHARE/* usr/share/goiardi
+mkdir -p usr/share/man/man8
+cp $MAN/goiardi.8 usr/share/man/man8
+cp -r $SHARE/* usr/share/goiardi
 mkdir -p var/lib/goiardi/lfs
 cp $BUILD/goiardi-$GOIARDI_VERSION-s390x usr/bin/goiardi
 cp -r $FILES_DIR/fs/lib .

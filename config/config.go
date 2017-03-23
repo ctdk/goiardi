@@ -240,7 +240,7 @@ func ParseConfigOptions() error {
 	var opts = &Options{}
 	parser := flags.NewParser(opts, flags.Default)
 	parser.ShortDescription = fmt.Sprintf("A Chef server, in Go - version %s", Version)
-	parser.LongDescription = "With no arguments, goiardi runs without any authentication or persistence entirely in memory. For authentication, persistence, stability, or other features, run goiardi with the appropriate combination of flags (or set options in the configuration file). Many of goiardi's command line arguments can be set with environment variables instead of flags, if desired. The options that allow this are followed by the name of the appropriate environment variable (e.g. [$GOIARDI_SOME_OPTION])."
+	parser.LongDescription = "With no arguments, goiardi runs without any authentication or persistence entirely in memory. For authentication, persistence, stability, or other features, run goiardi with the appropriate combination of flags (or set options in the configuration file).\n\nMany of goiardi's command line arguments can be set with environment variables instead of flags, if desired. The options that allow this are followed by the name of the appropriate environment variable (e.g. [$GOIARDI_SOME_OPTION])."
 	parser.NamespaceDelimiter = "-"
 	if hideVaultOptions {
 		vopts := []string{"vault-addr", "vault-shovey-key", "use-external-secrets"}
@@ -260,6 +260,7 @@ func ParseConfigOptions() error {
 		}
 	}
 	if opts.PrintManPage {
+		parser.LongDescription = strings.Replace(parser.LongDescription, "\n\n", "\n.PP\n", -1)
 		parser.WriteManPage(os.Stdout)
 		os.Exit(0)
 	}

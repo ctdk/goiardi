@@ -9,7 +9,7 @@ dependencies:
     - sudo tar -C /usr/local -xzf download/$GODIST
   post:
     - gem install fpm
-    - sudo apt-get install rpm
+    - sudo apt-get install rpm python-sphinx -y
     - go get github.com/ctdk/gox
 test:
   post:
