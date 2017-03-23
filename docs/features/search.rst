@@ -38,4 +38,4 @@ It is strongly recommended that you also set ``convert-search = true``, because 
 
 Also note that as this is a pretty feature the details are subject to change. In particular, the indexes on the search_items table are likely not to be optimal; you should experiment with tweaking those as you see fit, and if you find something (or the removal of something) that works especially well, please let me know.
 
-This is very new, and while it's been tested pretty thoroughly and has been running reliably in production for a while it may still have some problems. If so, `filing issues<https://github.com/ctdk/goiardi/issues>`_ is appreciated.
+This is very new, and while it's been tested pretty thoroughly and has been running reliably in production for a while it may still have some problems. If so, `filing issues <https://github.com/ctdk/goiardi/issues>`_ is appreciated.

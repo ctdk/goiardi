@@ -181,4 +181,4 @@ Binaries and Packages
 
 There are other options for installing goiardi, in case you don't want to build it from scratch. Binaries for several platforms are provided with each release, and there are .debs available as well at https://packagecloud.io/ct/goiardi. At the moment packages are only being built for Debian wheezy, Ubuntu 14.04, and raspbian (which is under Debian wheezy) for Raspberry Pi and Raspberry Pi 2. Other versions of Debian, Ubuntu, CentOS and friends, and perhaps others are on the roadmap. As of this writing, debs for goiardi 0.11.2 can be `found in Debian sid and stretch <https://packages.qa.debian.org/g/goiardi.html>`_ (stretch is still ``testing``, but it's in the home stretch for being released), and in Ubuntu's "Zesty Zapus" ``universe`` repository.
 
-There is also a `homebrew tap<https://github.com/ctdk/homebrew-ctdk>`_ that includes goiardi now, for folks running Mac OS X and using homebrew.
+There is also a `homebrew tap <https://github.com/ctdk/homebrew-ctdk>`_ that includes goiardi now, for folks running Mac OS X and using homebrew.
