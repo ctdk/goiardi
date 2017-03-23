@@ -36,8 +36,8 @@ License. See the LICENSE file for details.
 The goiardi documentation in the `docs` directory is licensed under a Creative
 Commons Attribution 4.0 International (CC-BY 4.0) License.
 
-Chef is copyright (c) 2008-2016 Chef Software (formerly Opscode, Inc.) and its
+Chef is copyright (c) 2008-2014 Chef Software (formerly Opscode, Inc.) and its
 various contributors.
 
-Thanks go out to the fine folks of Chef and the community for all their hard 
-work.
+Thanks go out to the fine folks of Chef Software and the Chef community for all
+their hard work.
