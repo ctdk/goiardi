@@ -7,10 +7,12 @@ There are two general options that can be set for either database: ``--db-pool-s
 
 It should go without saying that these options don't do much if you aren't using one of the SQL backends.
 
+Of the two databases available, PostgreSQL is the better supported and recommended configuration. MySQL still works, of course, but it can't take advantage of some of the very helpful Postgres features.
+
 MySQL mode
 ----------
 
-Goiardi can now use MySQL to store its data, instead of keeping all its data in memory (and optionally freezing its data to disk for persistence).
+Goiardi can use MySQL to store its data, instead of keeping all its data in memory (and optionally freezing its data to disk for persistence).
 
 If you want to use MySQL, you (unsurprisingly) need a MySQL installation that goiardi can access. This document assumes that you are able to install, configure, and run MySQL.
 
@@ -31,7 +33,7 @@ The above values are for illustration, of course; nothing requires goiardi's dat
 
 Set ``use-mysql = true`` in the configuration file, or specify ``--use-mysql`` on the command line. It is an error to specify both the ``-D``/``--data-file`` flag and ``--use-mysql`` at the same time.
 
-At this time, the mysql connection options have to be defined in the config file. An example configuration is available in ``etc/goiardi.conf-sample``, and is given below::
+An example configuration is available in ``etc/goiardi.conf-sample``, and is given below::
 
     [mysql]
         username = "foo" # technically optional, although you probably want it
@@ -46,7 +48,9 @@ At this time, the mysql connection options have to be defined in the config file
         [mysql.extra_params]
             tls = "false"
 
+A similar example for configuring MySQL access via the command line is below:
 
+``goiardi -A --conf-root=/Users/jeremy/etc/goiardi --ipaddress="0.0.0.0" --log-level="debug" --local-filestore-dir=/var/lib/goiardi/lfs --db-pool-size=25 --use-mysql --mysql-username=goiardi --mysql-address=localhost --mysql-extra-params=tls:false -i /var/goiardi/idx.bin --mysql-dbname=goiardi``
 
 Postgres mode
 -------------
@@ -62,7 +66,7 @@ The Postgres sqitch tutorial at https://metacpan.org/pod/sqitchtutorial explains
 
 Set ``use-postgresql`` in the configuration file, or specify ``--use-postgresql`` on the command line. It's also an error to specify both ``-D``/``--data-file`` flag and ``--use-postgresql`` at the same time like it is in MySQL mode. MySQL and Postgres cannot be used at the same time, either.
 
-Like MySQL, the Postgres connection options must be specified in the config file at this time. There is also an example Postgres configuration in the config file, and can be seen below::
+There is also an example Postgres configuration in the config file, and can be seen below::
 
     # PostgreSQL options. If "use-postgres" is set to true on the command line or in
     # the configuration file, connect to postgres with the options in [postgres].
@@ -77,6 +81,10 @@ Like MySQL, the Postgres connection options must be specified in the config file
         port = "5432"
         dbname = "mydb"
         sslmode = "disable"
+
+A command line flag sample would be something like this:
+
+``goiardi -A --conf-root=/etc/goiardi --ipaddress="0.0.0.0" --log-level="debug" --local-filestore-dir=/var/lib/goiardi/lfs --pg-search --convert-search --db-pool-size=25 --use-postgresql --postgresql-username=goiardi --postgresql-host=localhost --postgresql-dbname=goiardidb --postgresql-ssl-mode=disable``
 
 Note regarding goiardi persistence and freezing data
 ----------------------------------------------------

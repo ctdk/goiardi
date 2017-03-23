@@ -14,3 +14,5 @@ As a special note, if you are upgrading from any release prior to 0.6.1-pre1 to 
 It's a fairly quick process (a goiardi dump with the ``-x`` flag took 15 minutes or so to load with over 6200 cookbooks) at least, but if you don't do it very little of your goiardi environment will work correctly. The above steps will take care of it.
 
 If you're upgrading from version 0.8.2 (or before) to version 0.9.0, you will need to remove the search index save file before starting the new goiardi for the first time. After that's been done, run ``knife index rebuild`` to rebuild the search index.
+
+One thing that's not always necessary, but is often good practice when running the in-memory trie based index, is to rebuild the search index with ``knife index rebuild``. If anything has changed with the search index between releases, even if it's a minor one not worth making a new minor point release, rebuilding can help avoid any potential gotchas. Postgres index users should only need to reindex when it's specifically noted that they should, although rebuilding won't hurt in that case.
