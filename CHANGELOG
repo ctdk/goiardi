@@ -16,6 +16,8 @@
   command line flags (or, now, environment variables).
 * Fixed format issues and wording in a few places in the documentation.
 * Add a hidden flag to generate a simple man page.
+* Add that simple man page, along with the html docs, to the packagecloud.io
+  packages.
 
 0.11.2
 ------
