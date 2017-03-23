@@ -207,6 +207,8 @@ type Options struct {
 	VaultAddr         string `long:"vault-addr" description:"Specify address of vault server (i.e. https://127.0.0.1:8200). Defaults to the value of VAULT_ADDR."`
 	VaultShoveyKey    string `long:"vault-shovey-key" description:"Specify a path in vault holding shovey's private key. The key must be put in vault as 'privateKey=<contents>'." env:"GOIARDI_VAULT_SHOVEY_KEY"`
 	IndexValTrim      int    `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If not set or set <= 0, trimming is disabled. This behavior will change with the next major release." env:"GOIARDI_INDEX_VAL_TRIM"`
+	// hidden argument to print a formatted man page to stdout and exit
+	PrintManPage bool `long:"print-man-page" hidden:"true"`
 }
 
 // The goiardi version.
@@ -237,7 +239,8 @@ var Config = initConfig()
 func ParseConfigOptions() error {
 	var opts = &Options{}
 	parser := flags.NewParser(opts, flags.Default)
-	parser.Usage = "[OPTIONS]\n\nMany of goiardi's command line arguments can be set with environment variables instead of flags, if desired. The options that allow this are followed by the name of the appropriate environment variable (a là [$GOIARDI_SOME_OPTION])."
+	parser.ShortDescription = fmt.Sprintf("A Chef server, in Go - version %s", Version)
+	parser.LongDescription = "With no arguments, goiardi runs without any authentication or persistence entirely in memory. For authentication, persistence, stability, or other features, run goiardi with the appropriate combination of flags (or set options in the configuration file). Many of goiardi's command line arguments can be set with environment variables instead of flags, if desired. The options that allow this are followed by the name of the appropriate environment variable (e.g. [$GOIARDI_SOME_OPTION])."
 	parser.NamespaceDelimiter = "-"
 	if hideVaultOptions {
 		vopts := []string{"vault-addr", "vault-shovey-key", "use-external-secrets"}
@@ -255,6 +258,10 @@ func ParseConfigOptions() error {
 			log.Println(err)
 			os.Exit(1)
 		}
+	}
+	if opts.PrintManPage {
+		parser.WriteManPage(os.Stdout)
+		os.Exit(0)
 	}
 
 	if opts.Version {

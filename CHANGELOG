@@ -15,6 +15,7 @@
 * Finally allow configuring MySQL or PostgreSQL connection options with
   command line flags (or, now, environment variables).
 * Fixed format issues and wording in a few places in the documentation.
+* Add a hidden flag to generate a simple man page.
 
 0.11.2
 ------
