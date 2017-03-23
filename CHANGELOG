@@ -2,7 +2,8 @@
 ------
 * Add an option to trim values in search indexes. Currently not enabled by
   default, but will be in the next minor goiardi release (so, either 0.12.0 or
-  1.0.0, depending on which ends up being next).
+  1.0.0, depending on which ends up being next). Existing indexes ought to be
+  reindexed upon upgrading, but they should still work if this is skipped.
 * Fix a bug where duplicated items in slices in objects being indexed with the
   in-memory trie based index would cause goiardi to crash. For good measure,
   even though it isn't necessary to prevent a crash remove those same
@@ -11,13 +12,14 @@
   using that option, a warning will print in the log. This option may be
   removed at any time.
 * Allow setting configuration options via environment variables. (See
-  the documentation for the details.) (IN PROGRESS)
+  the documentation for the details.)
 * Finally allow configuring MySQL or PostgreSQL connection options with
   command line flags (or, now, environment variables).
 * Fixed format issues and wording in a few places in the documentation.
 * Add a hidden flag to generate a simple man page.
 * Add that simple man page, along with the html docs, to the packagecloud.io
   packages.
+* Add a Dockerfile to allow running the local goiardi source in docker.
 
 0.11.2
 ------
