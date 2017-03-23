@@ -15,7 +15,8 @@
   the documentation for the details.)
 * Finally allow configuring MySQL or PostgreSQL connection options with
   command line flags (or, now, environment variables).
-* Fixed format issues and wording in a few places in the documentation.
+* Fixed format issues and wording in a few places in the documentation, along
+  with updating the docs for the current version.
 * Add a hidden flag to generate a simple man page.
 * Add that simple man page, along with the html docs, to the packagecloud.io
   packages.
