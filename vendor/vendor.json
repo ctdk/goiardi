@@ -172,10 +172,11 @@
 			"revisionTime": "2016-09-01T22:26:51Z"
 		},
 		{
-			"checksumSHA1": "QIOlyIbmUan8arSrVluFbIlTYFA=",
+			"checksumSHA1": "XSQOrSEw3d8aLB06VhCCjXX/MNk=",
+			"origin": "github.com/ctdk/goiardi/vendor/github.com/ctdk/chefcrypto",
 			"path": "github.com/ctdk/chefcrypto",
-			"revision": "dea96d785906a3d64685dfd09e05646eb62dab38",
-			"revisionTime": "2016-11-09T19:16:39Z"
+			"revision": "7a9750159129f106c61cce3e56de1c42914dbab3",
+			"revisionTime": "2017-03-23T04:42:47Z"
 		},
 		{
 			"checksumSHA1": "4ZZ3xl65G82hHm2oIA5jTqHZCPA=",
@@ -468,6 +469,12 @@
 			"path": "github.com/tinylib/msgp/msgp",
 			"revision": "cd4fb1548c31d88af25205dc021be20935aec720",
 			"revisionTime": "2015-08-05T04:23:39Z"
+		},
+		{
+			"checksumSHA1": "OGkCDmBkdjRTfBB/P3bVOsTRUx0=",
+			"path": "golang.org/x/exp/utf8string",
+			"revision": "397dac334bad1771df6174ef38b97e1ce45ecfa7",
+			"revisionTime": "2017-02-23T23:54:37Z"
 		},
 		{
 			"checksumSHA1": "XNmPFaFgzySgspAuguUZp+UAws0=",

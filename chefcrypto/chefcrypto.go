@@ -76,6 +76,12 @@ func ValidatePublicKey(publicKey interface{}) (bool, error) {
 	case string:
 		// at the moment we don't care about the pub interface
 
+		// fix weirdly labeled public keys with an old style BEGIN but
+		// a new style END - go 1.8's encoding/pem has become strict
+		// about the ending line.
+		if strings.HasPrefix(publicKey, "-----BEGIN RSA PUBLIC KEY-----") && strings.HasSuffix(publicKey, "-----END PUBLIC KEY-----") {
+			publicKey = strings.Replace(publicKey, "-----BEGIN RSA PUBLIC KEY-----", "-----BEGIN PUBLIC KEY-----", 1)
+		}
 		decPubKey, z := pem.Decode([]byte(publicKey))
 		if decPubKey == nil {
 			err := fmt.Errorf("Public key does not validate: %s", z)

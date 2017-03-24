@@ -210,6 +210,28 @@ use-mysql = false
 ## to/from S3 to remain valid. Default is 15 minutes.
 # s3-file-period = 15
 
+## vault settings
+##
+## For goiardis compiled with the appropriate support, you can store secrets
+## like passwords and signing keys in vault. See the docs for configuration.
+##
+# use-external-secrets = false
+# vault-addr = 
+# vault-shovey-key = keys/shovey/signing
+
+# index-val-trim
+# If set to a value greater than 0, values being indexed for chef search will be
+# truncated at this number of characters to help keep memory usage sane and/or
+# keep table size a little bit more reasonable. (Probably should make it a
+# reasonably long length where the values indexed are likely to be meaningful,
+# but not so long that there's no memory savings. Keys are left untouched.
+#
+# NB: At this time, if no value for this flag is set nothing will be trimmed.
+# *This will change* to a reasonable default with the next major release. After
+# that, you'll need to explicitly set a value to disable trimming values to be
+# indexed.
+index-val-trim = 0
+
 use-postgresql = false
 
 # PostgreSQL options. If "use-postgres" is set to true on the command line or in

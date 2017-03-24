@@ -55,6 +55,7 @@ var dbag1 *databag.DataBag
 var dbag2 *databag.DataBag
 var dbag3 *databag.DataBag
 var dbag4 *databag.DataBag
+var dbagunic *databag.DataBag
 
 var orgName = "default"
 var org *organization.Organization
@@ -102,6 +103,15 @@ func init() {
 		dbi["foo"] = fmt.Sprintf("dbag_item_%d", i)
 		dbi["mac"] = fmt.Sprintf("01:02:03:04:05:%02d", i)
 		dbags[i].NewDBItem(dbi)
+	}
+	dbagunic, _ = databag.New(org, "unicode")
+	dbagunic.Save()
+	for k := 0; k < 500; k++ {
+		dbu := make(map[string]interface{})
+		dbu["id"] = fmt.Sprintf("dbagunic%d", k)
+		dbu["foo"] = fmt.Sprintf("dbagunic_thingamagic_%d", k)
+		dbu["blè"] = "üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü"
+		dbagunic.NewDBItem(dbu)
 	}
 	node1 = nodes[0]
 	node2 = nodes[1]
@@ -281,11 +291,36 @@ func TestSecondOrg(t *testing.T) {
 	}
 }
 
+func TestSearchDbagUnicode(t *testing.T) {
+	d, err := searcher.Search(org, "unicode", "blè:*", 1000, "id ASC", 0, nil)
+	if err != nil {
+		t.Errorf("unicode search error was %s", err.Error())
+	}
+	if len(d) != 500 {
+		t.Errorf("unicode search: expected 500, got %d", len(d))
+	}
+	d, err = searcher.Search(org, "unicode", "blè:ü*", 1000, "id ASC", 0, nil)
+	if err != nil {
+		t.Errorf("unicode search #2 error was %s", err.Error())
+	}
+	if len(d) != 500 {
+		t.Errorf("unicode search #2: expected 500, got %d", len(d))
+	}
+}
+
 func TestSearchBasicQueryEscaped(t *testing.T) {
 	d, _ := searcher.Search(org, "databag1", "mac:01\\:02\\:03\\:04\\:05\\:01", 1000, "id ASC", 0, nil)
 	if len(d) != 1 {
 		t.Errorf("Incorrect number of items returned, expected 1, got %d", len(d))
 	}
+}
+
+func TestIndexDupes(t *testing.T) {
+	r, _ := role.New(org, "idx_role")
+	r.Default["foo"] = "bar"
+	r.Default["notdupe"] = []string{"I", "am", "good"}
+	r.Default["dupes"] = []string{"I", "", "will", "", "cause", "problems", "I", ""}
+	r.Save()
 }
 
 // Probably don't want this as an always test, but it's handy to have available.

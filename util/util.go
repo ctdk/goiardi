@@ -184,15 +184,23 @@ func Indexify(flattened map[string]interface{}) []string {
 	// the flattened map. It's likely to be more, but it's a good start.
 	// If it's too inaccurate it may be worth addressing however.
 	readyToIndex := make([]string, 0, len(flattened))
+
+	// keep values in the index down to a reasonable size
+	maxValLen := config.Config.IndexValTrim
+
 	for k, v := range flattened {
 		switch v := v.(type) {
 		case string:
 			//v = IndexEscapeStr(v)
+			v = TrimStringMax(v, maxValLen)
 			line := fmt.Sprintf("%s:%s", k, v)
 			readyToIndex = append(readyToIndex, line)
 		case []string:
+			sort.Strings(v)
+			v = RemoveDupStrings(v)
 			for _, w := range v {
 				//w = IndexEscapeStr(w)
+				w = TrimStringMax(w, maxValLen)
 				line := fmt.Sprintf("%s:%s", k, w)
 				readyToIndex = append(readyToIndex, line)
 			}

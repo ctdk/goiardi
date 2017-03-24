@@ -18,9 +18,11 @@ package indexer
 
 import (
 	"fmt"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"github.com/lib/pq"
+	"sort"
 	"strings"
 )
 
@@ -140,11 +142,13 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 		return err
 	}
 	defer stmt.Close()
+	maxValLen := config.Config.IndexValTrim
 	for k, v := range flat {
 		k = util.PgSearchKey(k)
 		// will the values need escaped like in file search?
 		switch v := v.(type) {
 		case string:
+			v = util.TrimStringMax(v, maxValLen)
 			v = util.IndexEscapeStr(v)
 			// try it with newlines too
 			v = strings.Replace(v, "\n", "\\n", -1)
@@ -154,7 +158,13 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 				return err
 			}
 		case []string:
+			// remove dupes from slices of strings like we're doing
+			// now with the trie index, both to reduce ambiguity and
+			// to maybe make the indexes just a little bit smaller
+			sort.Strings(v)
+			v = util.RemoveDupStrings(v)
 			for _, w := range v {
+				w = util.TrimStringMax(w, maxValLen)
 				w = util.IndexEscapeStr(w)
 				w = strings.Replace(w, "\n", "\\n", -1)
 				_, err = stmt.Exec(1, scID, itemName, w, k)

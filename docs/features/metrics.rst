@@ -3,7 +3,7 @@
 Metrics
 =======
 
-Starting with goiardi v0.10.4, goiardi can export metrics about itself via statsd. In turn, statsd can feed these metrics into a time series database like graphite. Once in graphite, one could visualize the data with something like `grafana https://grafana.org`_, or set up alerts with that data in `bosun http://bosun.org`_.
+Starting with goiardi v0.10.4, goiardi can export metrics about itself via statsd. In turn, statsd can feed these metrics into a time series database like graphite. Once in graphite, one could visualize the data with something like `grafana <https://grafana.org>`_, or set up alerts with that data in `bosun <http://bosun.org>`_.
 
 At this time, goiardi exports via statsd metrics covering the runtime (memory usage, garbage collection, goroutines), API timing, information about chef-client runs, the number of nodes, and search timing.
 

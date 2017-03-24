@@ -30,12 +30,19 @@ One difference that's worth mentioning is that you can start a search term with 
 To use the postgres search in your goiardi installation, you must:
 
 a) be using postgres (duh) and
-b) enable it in your goiardi.conf file with `pg-search = true`.
+b) enable it in your goiardi.conf file with ``pg-search = true``.
 
-It is strongly recommended that you also set `convert-search = true`, because the postgres search uses the dot separator between path items instead of the underscore, and this will break existing search queries. If `index-file` is set, goiardi will print a warning that it's not very useful to have the index file enabled, but it's not a fatal error.
+It is strongly recommended that you also set ``convert-search = true``, because the postgres search uses the dot separator between path items instead of the underscore, and this will break existing search queries. If ``index-file`` is set, goiardi will print a warning that it's not very useful to have the index file enabled, but it's not a fatal error.
 
-**NB:** It is also *very* strongly recommended, especially if you run chef-client frequently in a cron or as a daemon, that you periodically reindex the search_items table. Otherwise, the indexes can grow to ridiculous sizes and you'll be wondering why you're running out of space for no clear reason. The procedure is simple, however: add a command like `echo 'REINDEX TABLE goiardi.search_items; VACUUM;' | /usr/bin/psql -d <GOIARDI_DB_NAME>` to the crontab of your postgres user (probably postgres), or some other user account with rights to the goiardi database, and that will take care of the reindexing for you. Running this command daily is a good idea, but you can experiment with reindexing at different time frames and see what works best for you. The act of reindexing itself does not appear to be particularly stressful, but of course finding a relatively quiet time to do the reindexing is probably a good idea.
+**NB:** It is also *very* strongly recommended, especially if you run chef-client frequently in a cron or as a daemon, that you periodically reindex the search_items table. Otherwise, the indexes can grow to ridiculous sizes and you'll be wondering why you're running out of space for no clear reason. The procedure is simple, however: add a command like ``echo 'REINDEX TABLE goiardi.search_items; VACUUM;' | /usr/bin/psql -d <GOIARDI_DB_NAME>`` to the crontab of your postgres user (probably postgres), or some other user account with rights to the goiardi database, and that will take care of the reindexing for you. Running this command daily is a good idea, but you can experiment with reindexing at different time frames and see what works best for you. The act of reindexing itself does not appear to be particularly stressful, but of course finding a relatively quiet time to do the reindexing is probably a good idea.
 
 Also note that as this is a pretty feature the details are subject to change. In particular, the indexes on the search_items table are likely not to be optimal; you should experiment with tweaking those as you see fit, and if you find something (or the removal of something) that works especially well, please let me know.
 
-This is very new, and while it's been tested pretty thoroughly and has been running reliably in production for a while it may still have some problems. If so, [filing issues](https://github.com/ctdk/goiardi/issues) is appreciated.
+This is very new, and while it's been tested pretty thoroughly and has been running reliably in production for a while it may still have some problems. If so, `filing issues <https://github.com/ctdk/goiardi/issues>`_ is appreciated.
+
+Search index trimming
+---------------------
+
+One option added in version 0.11.3 is the ability to trim the length of values (not keys) that will be stored in the index with ``-T/--index-val-trim``. This leads to smaller indexes and, hopefully, lower memory usage. Currently, it defaults to 0 (meaning that no values in the index will be trimmed), but this behavior will change with the next major release.
+
+Some thought should be put in to what the trim length should be. If it's too short, searches may have unexpected problems. In testing with chef-pedant locally, trimming values down to 50 characters caused some search tests to break, while 100 characters worked fine. A good value generally is 100 characters, but you may need to adjust the trim value and test until you find a good number if 100 characters doesn't work well for you.
