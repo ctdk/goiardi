@@ -1,4 +1,4 @@
-0.11.3 (unreleased)
+0.11.3
 ------
 * Add an option to trim values in search indexes. Currently not enabled by
   default, but will be in the next minor goiardi release (so, either 0.12.0 or
