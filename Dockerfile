@@ -2,7 +2,8 @@ FROM golang:1.8
 
 # A Dockerfile that lets you run the local source tree of goiardi easily
 # locally. See https://hub.docker.com/r/ctdk/goiardi/ for official goiardi
-# docker images.
+# docker images and https://github.com/ctdk/goiardi-docker for the sources of
+# those docker images.
 
 RUN mkdir -p /go/src/github.com/ctdk/goiardi
 RUN mkdir -p /etc/goiardi
