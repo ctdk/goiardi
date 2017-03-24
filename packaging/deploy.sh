@@ -17,9 +17,11 @@ package_cloud push ${PACKAGECLOUD_REPO}/debian/wheezy ${DIR}/artifacts/wheezy/*.
 
 # debian/jessie
 package_cloud push ${PACKAGECLOUD_REPO}/debian/jessie ${DIR}/artifacts/jessie/*.deb
+package_cloud push ${PACKAGECLOUD_REPO}/debian/stretch ${DIR}/artifacts/jessie/*.deb
 package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/xenial ${DIR}/artifacts/jessie/*amd64.deb
+package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/yakkety ${DIR}/artifacts/jessie/*amd64.deb
 
-# ubuntu
+# older upstart-based ubuntu
 package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/trusty ${DIR}/artifacts/trusty/*.deb
 
 # centos

@@ -21,6 +21,8 @@
 * Add that simple man page, along with the html docs, to the packagecloud.io
   packages.
 * Add a Dockerfile to allow running the local goiardi source in docker.
+* Add Debian "stretch" and Ubuntu "yakkety yak" to the distro versions we have
+  in the package repository.
 
 0.11.2
 ------
