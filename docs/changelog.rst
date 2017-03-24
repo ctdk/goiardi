@@ -1,0 +1,372 @@
+.. _changelog:
+
+CHANGELOG
+---------
+
+The goiardi CHANGELOG for all of its various releases.
+
+.. code-block:: text
+
+  0.11.3
+  ------
+  * Add an option to trim values in search indexes. Currently not enabled by
+    default, but will be in the next minor goiardi release (so, either 0.12.0 or
+    1.0.0, depending on which ends up being next). Existing indexes ought to be
+    reindexed upon upgrading, but they should still work if this is skipped.
+  * Fix a bug where duplicated items in slices in objects being indexed with the
+    in-memory trie based index would cause goiardi to crash. For good measure,
+    even though it isn't necessary to prevent a crash remove those same
+    duplicate items from objects being indexed with the postgres index.
+  * Mark --use-unsafe-mem-store as deprecated. In the unlikely event someone's
+    using that option, a warning will print in the log. This option may be
+    removed at any time.
+  * Allow setting configuration options via environment variables. (See
+    the documentation for the details.)
+  * Finally allow configuring MySQL or PostgreSQL connection options with
+    command line flags (or, now, environment variables).
+  * Fixed format issues and wording in a few places in the documentation, along
+    with updating the docs for the current version.
+  * Add a hidden flag to generate a simple man page.
+  * Add that simple man page, along with the html docs, to the packagecloud.io
+    packages.
+  * Add a Dockerfile to allow running the local goiardi source in docker.
+  * Add Debian "stretch" and Ubuntu "yakkety yak" to the distro versions we have
+    in the package repository.
+
+  0.11.2
+  ------
+  * Fix a bug with escaped characters in certain searches (thanks ickymettle).
+    Does require rebuilding the search index.
+  * Allow using 'novault' as a build tag to avoid having to have the vault api
+    present when building goiardi. Not relevant to most people.
+
+
+  0.11.1
+  ------
+  * Allow storing secrets (client & user public keys, shovey signing private
+    keys, and user password hashes) in an external service. Currently only vault
+    is supported.
+  * Rework reindexing to break it into smaller chunks and ensure that only one
+    reindexing job can run at a time.
+  * Package goiardi for RHEL 7 and Debian jessie for s390x. Rather experimental,
+    of course.
+
+  0.11.0
+  ------
+  * Ability to upload cookbooks to S3.
+  * Add script to upload local files to S3 to migrate.
+  * Change how items are indexed with the postgres indexer, to reduce the number
+    of rows in the search_items table substantially (at the cost of possible
+    differences in search results in a few weird corner cases).
+  * Search parser no longer chokes on Unicode. Unfortunately Postgres' ltree
+    module does not accept all Unicode alphanumeric characters as valid still.
+  * Use vendoring.
+  * Rejigger the package building process a bit - changing how the different
+    packages are built and how version numbers are determined.
+  * Fix a long-standing annoyance where the log file would get truncated when
+    goiardi started or restarted.
+  * Allow passing environment variables to goiardi through the config file.
+  * Fix in-memory indexer to work with go 1.7.
+  * Add packages for CentOS 6 and 7. Also use a gox fork pulling in someone's PR
+    with better ARM support until that gets merged upstream eventually.
+  * Change the postgres columns using the 'json' data type to use 'jsonb'
+    instead. This is generally better, but does mean that goiardi now requires
+    PostgreSQL 9.4 or later.
+
+  0.10.4
+  ------
+  * Export pprof info over HTTP, but only accept connections from localhost for
+    that information.
+  * Add statsd metrics for things like chef-client run timings (requires
+    reporting) and started/succeeded/failed, number of nodes, API endpoint 
+    timings, various pieces of runtime info like GC pauses, RAM used, and number
+    of resources updated & total resources for client runs.
+  * Fix JSON decoding issue where very large numbers would suddenly turn into
+    floats.
+
+  0.10.3
+  ------
+  * Handle someone trying to use syslog on Windows ourselves, rather than
+    letting the logging library do it (it was causing trouble with gox).
+
+  0.10.2
+  ------
+  * Fix up packaging and deploy scripts a bit
+  * Add sql schemas to the deb
+  * Fixed a logic error when configuring the address to listen on where the
+    value specified in the config file was always ignored, and only an address
+    specified on the command line worked. (Thanks to jordi and DQEbert here for
+    bringing this to my attention.)
+  * Added options to specify proxy hostname and port different than what goairdi
+    itself is listening on. (Thanks to jordi and DQEbert here as well.)
+  * CoC
+  * Added Debian wheezy to the list of distros we generate packages for.
+  * The logging library goiardi used moved. It had been forked, but since the
+    dependencies of said fork also moved, goiardi switched to the new version of
+    that library. Happily the logger library had added logging to syslog as an
+    option, so we just went back to using upstream at the new location.  (Thanks
+    to theckman for providing a fix for this.)
+  * In concert with the above, add a "fatal" log level.
+  * Terraform removed the depgraph module, so that's been vendored into goiardi
+    along with its digraph dependency.
+
+  0.10.1
+  ------
+  * Fix some tests
+  * Scripts, configuration files for more efficient packaging
+  * circleci integration
+  * Bomb on importing data if public keys don't validate. (thanks jordi and 
+    DQEbert for bringing this to my attention.)
+  * Validate older PKCS#1 keys -- golang's stdlib pukes on them without some
+    massaging. (thanks jordi and DQEbert for bringing this to my attention.)
+  * Fix reindexing - databags were not being reindexed with the postgres search,
+    and the SaveItem calls were moved to goroutines; otherwise, the request
+    from knife would time out and knife would restart the reindex.
+  * Allow '.' in cookbook names; despite what an error chef-pedant is looking
+    for, those are allowed. (thanks jordi and DQEbert for bringing this to my 
+    attention.)
+  * Make the authentication lib more general (thanks theckman)
+  * Output the version of golang used to build a particular goiardi binary
+    (again, thanks theckman)
+  * The changed hostname in URLs to download bug didn't get fixed in 0.7.1 quite
+    all the way after all. It is now. (Thanks to oker1 for bringing that to my
+    attention.)
+  * Fixed search tests to pass when run using more than one processor. (Brought
+    to my attention by theckman.)
+  * Fixed a deadlock that could happen when saving an in-mem index to disk at
+    the exact moment an object was being indexed. Seems to be specific to
+    go1.5.1 (or at least it never happened before that I saw), but needs fixed
+    anyway. (Also brought to my attention by theckman.)
+  * Fixed broken pipe errors with too large requests when running chef-pedant
+    against goiardi built with go 1.5.1.
+  * Update some docs.
+
+  0.10.0
+  ------
+  * Search architecture changed so different search backends can be used (thanks
+    oker1 for your work on that).
+  * Postgres search is here at last! If you're using Postgres, instead of using
+    the ersatz solr search, you can instead use Postgres to power your searches.
+  * Add a mutex for the original goiardi search - multiple simple queries
+    executing simultaneously are not a problem, but multiple complex queries can 
+    eat up all the RAM on the machine and cause goiardi to crash. This mitigates
+    that situation.
+  * Be a little more forgiving with reporting protocol versions - allow
+    specifying the protocol version as a query param instead of only as a
+    header. This is to make showing reports with the webui a little easier.
+  * Bump the Chef Server version we claim to be from 11.1.6 to 11.1.7.
+
+  0.9.2
+  -----
+  * Fix broken import/export function with reports - bringing goiardi's variable
+    naming inline with golang conventions a while back inadvertently renamed a
+    reporting JSON field. The field was renamed, and the import code will now
+    handle both correct and incorrect names for the node reporting.
+
+  0.9.1
+  -----
+  * Fix error where requests for zero byte cookbook files would crash.
+  * Authentication docs improvments (thanks oker1!)
+  * Rewritten and more robust cookbook depsolver.
+  * Fix for client creation with cheffish (thanks whiteley!)
+  * Fix for search where searching for something like "foo:bar AND NOT foo:bar"
+    was returning incorrect results. (brought to my attention and test provided
+    by brimstone, thanks!)
+  * Fixed a bug where clients could be created with the same name as a user (or
+    vice versa) in in-memory mode.
+
+  0.9.0
+  -----
+  * Validate IP address supplied on the command line or in the config file.
+  * Compress index docs to reduce memory usage with the search index.
+  * Ordering searches works now.
+  * Index and datastore files now only write to disk if there have been changes
+    since the last time they were saved.
+  * In tandem with the previous change, freeze interval default has been changed
+    from 300 seconds to 10 seconds.
+  * Bump Chef Server version we claim to be from 11.1.3 to 11.1.6.
+
+  0.8.2
+  -----
+  * Fix typo with checking for an existing client in SQL mode.
+  * Fix typo in sample config file for postgres option.
+  * Add additional checks to the local filestore option to make sure the supplied
+    directory name exists and is a directory.
+
+  0.8.1
+  -----
+  * Disable SSLv3 when using TLS.
+  * The main goiardi docs are now located at http://goiardi.readthedocs.org/en/latest/
+
+  0.8.0
+  -----
+  * Introducing shovey, a facility for running commands on nodes without a full
+    chef run.
+  * Goiardi can act as a serf client now. Mostly this is for shovey support, but
+    it can also optionally announce logged events and startup over serf as serf 
+    events.
+  * If serf is used, node statuses will be tracked by goiardi. This depends on
+    receiving a heartbeat message from the shovey client.
+  * Add an error for the unlikely situation where an SQL function is called, yet
+    no SQL database is configured.
+
+  0.7.2
+  -----
+  * Remove a newline in a debug statement, courtesy of @spheromak.
+  * Also per @spheromak's suggestion, fixed some possible race conditions
+    revealed by building goiardi with the -race flag and running chef-pedant
+    against it.
+  * Edit doc.go slightly to make godocs more attractive.
+
+  0.7.1
+  -----
+  * Add --db-pool-size and --max-connections options for configuring the number
+    of idle db connections kept around and the maximum number of db connections
+    to make to the server. It isn't particularly useful if you're not using one
+    of the SQL backends.
+  * For locally stored cookbook files (which is currently all of them), goiardi
+    now generates the URL to the resource from the currently configured
+    hostname. This fixes an issue where if you uploaded a cookbook and then
+    changed the goairdi server's hostname, the URLs to download cookbooks would
+    break.
+
+  0.7.0
+  -----
+  * Add /universe API endpoint, per
+    https://github.com/opscode/chef-rfc/blob/master/rfc014-universe-endpoint.md.
+  * Make file uploading a little more forgiving.
+  * Make validating some cookbook metadata more forgiving, to bring goiardi's
+    validations in line with erchef.
+  * Added some functions to make listing all cookbooks and recipes on the
+    server faster and move the logic into the cookbook package.
+  * Breaking DB change: with both MySQL and Postgres, the way data structures
+    for cookbooks, nodes, etc. has changed from gob encoding to using JSON. This
+    obviously breaks existing items in the database, so the following steps must
+    be followed by users using either SQL backend for data storage:
+
+      * Export their goiardi server's data with the `-x` flag.
+      * Either revert all changes to the db with sqitch, then redeploy, or drop 
+        the database manually and recreate it from either the sqitch patches or 
+        the full table dump of the release (provided starting with 0.7.0)
+      * Reload the goiardi data with the `-m` flag.
+    See the README or the godocs for more information.
+
+  0.6.1 (cancelled)
+  -----
+  * See notes for 0.7.0
+
+  0.6.0
+  -----
+  * Postgres support.
+  * Fix rebuilding indexes with an SQL backend.
+  * Fix a bug where in MySQL mode events were being logged twice.
+  * Fix an annoying chef-pedant error with data bags.
+  * Event logging methods that are not allowed now return Method Not Allowed
+    rather than Bad Request.
+  * Switch the logger to a fork that can be built and used with Windows that
+    excludes syslog when building on Windows.
+  * Add basic syslog support.
+  * Authentication protocol version 1.2 now supported.
+  * Add a 'status' param to reporting, so a list of reports return by 'knife
+    runs' can be narrowed by the status of the chef run (started, success, and
+    failure).
+  * Fix an action at a distance problem with in-memory mode objects. If this
+    behavior is still desirable (it seems to be slightly faster than the new way),
+    it can be turned back on with the --use-unsafe-mem-store flag. This change
+    DEFINITELY breaks in-mem data file compatibility. If upgrading, export your 
+    data, upgrade goiardi, and reload your data.
+  * Add several new searchable parameters for logged events.
+  * Add organization_id to all MySQL tables that might need it someday. Orgs are
+    not used at all, so only the default value of 1 currently makes it to the 
+    database.
+  * Finally ran 'go fmt' on goiardi. It didn't even mess up the long comment
+    blocks, which was what I was afraid it would do. I also ran golint against
+    goiardi and took its recommendations where it made sense, which was most
+    areas except for some involving generated parser code, comments on
+    GobEncode/Decode, commenting a bunch of identical functions on an interface
+    in search, and a couple of cases involving make and slices. All in all,
+    though, the reformatting, linting, and light refactoring has done it good.
+
+  0.5.2
+  -----
+  * Add import/export of goiardi data through a JSON dump.
+  * Add configuration options to specify the max sizes for objects uploaded to
+    the filestore and for JSON requests from the client.
+
+  0.5.1
+  -----
+  * Add log levels (from debug to critical). This makes -V/--verbose useful.
+  * Add an easier option in the config file to specify log levels by name.
+  * ipv6 already worked, but accidentally. Now it works in a more deliberate
+    fashion, preventing mishaps with addresses, colons, and port numbers.
+  * Authentication protocol version 1.1 now supported.
+  * Remove a sort on run lists that was there for some reason. I have no idea
+    what it was put there for, but it was wrong.
+  * Add an event log to log changes to objects like nodes, clients, etc. See the
+    README or godocs for details.
+  * Add support for reporting (http://docs.opscode.com/reporting.html)
+
+  0.5.0
+  -----
+  * MySQL support added
+  * No longer redirect /environments/NAME/roles/NAME to
+    /roles/NAME/environments/NAME
+  * Update documentation, reformat godocs
+  * Split actors apart into separate user and client types, made new Actor
+    interface that encompasses both users and clients.
+
+  0.4.2
+  -----
+  Bugfix release:
+  * Perm tweak for nodes updating themselves.
+  * Small change with validating role descriptions when creating or updating
+    from JSON.
+  * Fix issue with saving complicated indexed objects to disk where improperly
+    flattened indexable objects were making the gob encoder puke all over itself
+    when encoding the tries in the index docs.
+  * Fixed a possible regression with synchronizing cookbooks that did not show
+    up in testing, but only in real use.
+  * An absolutely bonkers fix for listing cookbook files with webui. Webui wants
+    all of the cookbook top level attributes sent over with a request to
+    /cookbooks/<name>/<version>, but this is the exact *opposite* of the
+    behavior chef-pedant wants, where empty definitions, attributes, etc. are
+    not sent over. Knife also seems quite content with this, so the fix for now,
+    since the two cases are mutually exclusionary, is to only send the empty
+    hashes for those top level attributes with a GET if the request is coming
+    from the webui. Bizarre, but it seems to be what's necessary.
+
+  0.4.1
+  -----
+  * Small documentation tweaks
+  * Fix bug with parsing config file options and rearrange setting some of those
+    config struct items, fix typo in sample config file.
+  * Add disable-webui option for command line and config file to disable the
+    chef webui rails app from connecting to goiardi.
+
+  0.4.0
+  -----
+  * Fix bug with pessimistic matching (https://github.com/ctdk/goiardi/issues/1)
+  * Add authentication, authorization as an option.
+  * Add SSL as an option.
+  * Fixed a few small bugs that turned up while working on authentication.
+  * Improved test coverage further, both with go tests and a forked chef-pedant
+    (https://github.com/ctdk/chef-pedant)
+  * Updated and expanded documentation.
+
+  0.3.3
+  -----
+  * Data store and indexer tweaks.
+  * Improved test coverage.
+
+  0.3.0
+  -----
+  * Added ability to freeze data store and search index to disk.
+
+  0.2.1
+  -----
+  * Added support for configuration files.
+  * Fixed issue parsing flags with newer version of go-flags.
+
+  0.2.0
+  -----
+  * Initial widely announced release. First version with working search.
