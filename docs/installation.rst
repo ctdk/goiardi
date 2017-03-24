@@ -32,7 +32,7 @@ Configuration
 
 You can get a list of command-line options with the ``-h`` flag.
 
-Additionally, many of goiardi's options that can be set with flags can also be set with environment variables. Where this is the case, the option's description will be followed by an environment variable name (like `$GOIARDI_HANDY_OPTION`).
+Additionally, many of goiardi's options that can be set with flags can also be set with environment variables. Where this is the case, the option's description will be followed by an environment variable name (like ``$GOIARDI_HANDY_OPTION``).
 
 Goiardi can also take a config file, run like ``goiardi -c /path/to/conf-file``. See ``etc/goiardi.conf-sample`` for an example documented configuration file. Options in the configuration file share the same name as the long command line arguments (so, for example, ``--ipaddress=127.0.0.1`` on the command line would be ``ipaddress = "127.0.0.1"`` in the config file.
 
