@@ -138,9 +138,19 @@ func HeaderDecrypt(pkPem string, data string) ([]byte, error) {
 	return dec[skip:], nil
 }
 
-// Auth12HeaderVerify verifies the newer version 1.2 Chef authentication protocol
-// headers.
+// Auth12HeaderVerify verifies the newer version 1.2 Chef authentication
+// protocol headers.
 func Auth12HeaderVerify(pkPem string, hashed, sig []byte) error {
+	return signHeaderVerifyBase(pkPem, hashed, sig, crypto.SHA1)
+}
+
+// Auth12HeaderVerify verifies the even newer version 1.3 Chef authentication
+// protocol headers
+func Auth13HeaderVerify(pkPem string, hashed, sig []byte) error {
+	return signHeaderVerifyBase(pkPem, hashed, sig, crypto.SHA256)
+}
+
+func signHeaderVerifyBase(pkPem string, hashed, sig []byte, algo crypto.Hash) error {
 	block, _ := pem.Decode([]byte(pkPem))
 	if block == nil {
 		return fmt.Errorf("Invalid block size for '%s'", pkPem)
@@ -149,7 +159,7 @@ func Auth12HeaderVerify(pkPem string, hashed, sig []byte) error {
 	if err != nil {
 		return err
 	}
-	return rsa.VerifyPKCS1v15(pubKey.(*rsa.PublicKey), crypto.SHA1, hashed, sig)
+	return rsa.VerifyPKCS1v15(pubKey.(*rsa.PublicKey), algo, hashed, sig)
 }
 
 // SignTextBlock signs a block of text using the provided private RSA key. Used

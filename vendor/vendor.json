@@ -172,11 +172,10 @@
 			"revisionTime": "2016-09-01T22:26:51Z"
 		},
 		{
-			"checksumSHA1": "XSQOrSEw3d8aLB06VhCCjXX/MNk=",
-			"origin": "github.com/ctdk/goiardi/vendor/github.com/ctdk/chefcrypto",
+			"checksumSHA1": "7bY3gkd6HGe4Bgb379UOq78eFnk=",
 			"path": "github.com/ctdk/chefcrypto",
-			"revision": "7a9750159129f106c61cce3e56de1c42914dbab3",
-			"revisionTime": "2017-03-23T04:42:47Z"
+			"revision": "4a758d21ce96945b7e7d0a184d7ea13c524c0362",
+			"revisionTime": "2017-04-07T17:57:39Z"
 		},
 		{
 			"checksumSHA1": "4ZZ3xl65G82hHm2oIA5jTqHZCPA=",
