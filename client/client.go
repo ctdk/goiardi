@@ -156,6 +156,23 @@ func Get(clientname string) (*Client, util.Gerror) {
 	return client, nil
 }
 
+// DoesExist checks if the client in question exists or not
+func DoesExist(clientname string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var cerr error
+		found, cerr = checkForClientSQL(datastore.Dbh, clientname)
+		if cerr != nil {
+			err = util.Errorf(cerr.Error())
+			err.SetStatus(http.StatusInternalServerError)
+			return false, err
+		}
+	} else {
+		_, found = ds.Get("client", clientname)
+	}
+	return found, nil
+}
+
 // GetMulti gets multiple clients from a given slice of client names.
 func GetMulti(clientNames []string) ([]*Client, util.Gerror) {
 	var clients []*Client

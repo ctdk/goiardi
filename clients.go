@@ -69,6 +69,11 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	case "HEAD":
+		found, err := client.DoesExist(clientName)
+		if err != nil {
+
+		}
 	case "GET":
 		chefClient, gerr := client.Get(clientName)
 
