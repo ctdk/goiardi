@@ -228,7 +228,7 @@ func DoesExist(roleName string) (bool, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("role", clientname)
+		_, found = ds.Get("role", roleName)
 	}
 	return found, nil
 }
