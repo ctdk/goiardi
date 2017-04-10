@@ -38,10 +38,27 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "DELETE":
+	case http.MethodHead:
+		permCheck := func(r *http.Request, userName string, opUser actor.Actor) util.Gerror {
+			if !opUser.IsAdmin() {
+				chefUser, err := user.Get(userName)
+				if err != nil {
+					return err
+				}
+				if !opUser.IsSelf(chefUser) {
+					err = util.Errorf("not same")
+					err.SetStatus(http.StatusForbidden)
+					return err
+				}
+			}
+			return nil
+		}
+		headChecking(w, r, opUser, userName, user.DoesExist, permCheck)
+		return
+	case http.MethodDelete:
 		chefUser, err := user.Get(userName)
 		if err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
 		if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
@@ -68,11 +85,11 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
 			return
 		}
-	case "GET":
+	case http.MethodGet:
 		chefUser, err := user.Get(userName)
 
 		if err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
 		if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
@@ -91,7 +108,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
 			return
 		}
-	case "PUT":
+	case http.MethodPut:
 		userData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)

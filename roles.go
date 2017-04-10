@@ -44,6 +44,20 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 	pathArray := splitPath(r.URL.Path)
 	roleName := pathArray[1]
 
+	// get HEAD out of the way before the entire role is fetched
+	if r.Method == http.MethodHead {
+		permCheck := func(r *http.Request, roleName string, opUser actor.Actor) util.Gerror {
+			if opUser.IsValidator() {
+				e := util.New("forbidden")
+				e.SetStatus(http.StatusForbidden)
+				return e
+			}
+			return nil
+		}
+		headChecking(w, r, opUser, roleName, role.DoesExist, permCheck)
+		return
+	}
+
 	chefRole, err := role.Get(roleName)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusNotFound)

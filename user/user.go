@@ -135,6 +135,24 @@ func Get(name string) (*User, util.Gerror) {
 	return user, nil
 }
 
+// DoesExist checks if the user in question exists or not
+func DoesExist(userName string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var cerr error
+		found, cerr = checkForUserSQL(datastore.Dbh, userName)
+		if cerr != nil {
+			err := util.Errorf(cerr.Error())
+			err.SetStatus(http.StatusInternalServerError)
+			return false, err
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get("user", userName)
+	}
+	return found, nil
+}
+
 // Save the user's current state.
 func (u *User) Save() util.Gerror {
 	if config.UsingDB() {

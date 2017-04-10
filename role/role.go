@@ -215,6 +215,24 @@ func Get(roleName string) (*Role, error) {
 	return role, nil
 }
 
+// DoesExist checks if this role exists or not
+func DoesExist(roleName string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var cerr error
+		found, cerr = checkForRoleSQL(datastore.Dbh, roleName)
+		if cerr != nil {
+			err := util.Errorf(cerr.Error())
+			err.SetStatus(http.StatusInternalServerError)
+			return false, err
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get("role", clientname)
+	}
+	return found, nil
+}
+
 // GetMulti gets multiple roles from a slice of role names.
 func GetMulti(roleNames []string) ([]*Role, util.Gerror) {
 	var roles []*Role

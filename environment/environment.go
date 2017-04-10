@@ -245,6 +245,25 @@ func Get(envName string) (*ChefEnvironment, util.Gerror) {
 	return env, nil
 }
 
+// DoesExist checks if the environment in question exists or not
+func DoesExist(environmentName string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var cerr error
+		found, cerr = checkForEnvironmentSQL(datastore.Dbh, environmentName)
+		if cerr != nil {
+			err := util.Errorf(cerr.Error())
+			err.SetStatus(http.StatusInternalServerError)
+			return false, err
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get("env", environmentName)
+	}
+	return found, nil
+}
+
+
 // GetMulti gets multiple environmets from a given slice of environment names.
 func GetMulti(envNames []string) ([]*ChefEnvironment, util.Gerror) {
 	var envs []*ChefEnvironment

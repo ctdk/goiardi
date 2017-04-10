@@ -267,6 +267,24 @@ func Get(name string) (*Cookbook, util.Gerror) {
 	return cookbook, nil
 }
 
+// DoesExist checks if the cookbook in question exists or not
+func DoesExist(cookbookName string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var cerr error
+		found, cerr = checkForCookbookSQL(datastore.Dbh, cookbookName)
+		if cerr != nil {
+			err := util.Errorf(cerr.Error())
+			err.SetStatus(http.StatusInternalServerError)
+			return false, err
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get("cookbook", cookbookName)
+	}
+	return found, nil
+}
+
 // Save a cookbook to the in-memory data store or database.
 func (c *Cookbook) Save() error {
 	var err error
@@ -850,6 +868,28 @@ func (c *Cookbook) GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) 
 	}
 	return cbv, nil
 }
+
+// DoesVersionExist checks if a particular version of a cookbook exists
+func (c *Cookbook) DoesVersionExist(cbVersion string) (bool, util.Gerror) {
+	if config.UsingDB() {
+		found, err := c.checkCookbookVersionSQL(cbVersion)
+		if err != nil {
+			cerr := util.CastErr(err)
+			return false, cerr
+		}
+		return found, nil
+	}
+	cbv, err := c.GetVersion(cbVersion)
+	if err != nil {
+		return false, err
+	}
+	var found bool
+	if cbv != nil {
+		found = true
+	}
+	return found, nil
+}
+
 
 func extractVerNums(cbVersion string) (maj, min, patch int64, err util.Gerror) {
 	if _, err = util.ValidateAsVersion(cbVersion); err != nil {

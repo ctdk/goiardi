@@ -36,11 +36,15 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 	 * uploading to s3 or a similar cloud storage provider needs to be
 	 * supported. */
 	switch r.Method {
-	case "GET":
+	case http.MethodGet, http.MethodHead:
 		w.Header().Set("Content-Type", "application/x-binary")
 		fileStore, err := filestore.Get(chksum)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		if r.Method == http.MethodHead {
+			headResponse(w, r, http.StatusOK)
 			return
 		}
 		w.Write(*fileStore.Data)

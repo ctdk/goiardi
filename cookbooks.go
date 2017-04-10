@@ -62,8 +62,8 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 
 	pathArrayLen := len(pathArray)
 
-	/* 1 and 2 length path arrays only support GET */
-	if pathArrayLen < 3 && r.Method != "GET" {
+	/* 1 and 2 length path arrays only support GET (or HEAD) */
+	if pathArrayLen < 3 && (r.Method != http.MethodGet && r.Method != "HEAD") {
 		jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 		return
 	} else if pathArrayLen < 3 && opUser.IsValidator() {
@@ -81,11 +81,33 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	 */
 
 	if pathArrayLen == 1 || (pathArrayLen == 2 && pathArray[1] == "") {
+		if r.Method == http.MethodHead {
+			// not, uh, much else to do here
+			headResponse(w, r, http.StatusOK)
+			return
+		}
 		/* list all cookbooks */
 		cookbookResponse = cookbook.CookbookLister(numResults)
 	} else if pathArrayLen == 2 {
 		/* info about a cookbook and all its versions */
 		cookbookName := pathArray[1]
+
+		// Handle HEAD responses here, and avoid wading into all that
+		// below
+		if r.Method == http.MethodHead {
+			// Until something better comes up with these, just send
+			// back 200 OK
+			if cookbookName == "_latest" || cookbookName == "_recipes" {
+				headResponse(w, r, http.StatusOK)
+				return
+			}
+			permCheck := func(r *http.Request, clientName string, opUser actor.Actor) util.Gerror {
+				return nil // because this is always OK
+			}
+			headChecking(w, r, opUser, cookbookName, cookbook.DoesExist, permCheck)
+			return
+		}
+
 		/* Undocumented behavior - a cookbook name of _latest gets a
 		 * list of the latest versions of all the cookbooks, and _recipe
 		 * gets the recipes of the latest cookbooks. */
@@ -131,7 +153,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 			return
 		}
-		if r.Method == "GET" && pathArray[2] == "_latest" { // might be other special vers
+		if (r.Method == http.MethodGet || r.Method == http.MethodHead) && pathArray[2] == "_latest" { // might be other special vers
 			cookbookVersion = pathArray[2]
 		} else {
 			cookbookVersion, vererr = util.ValidateAsVersion(pathArray[2])
@@ -142,7 +164,22 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		switch r.Method {
-		case "DELETE", "GET":
+		case http.MethodHead:
+			if opUser.IsValidator() {
+				headResponse(w, r, http.StatusForbidden)
+				return
+			}
+			cb, err := cookbook.Get(cookbookName)
+			if err != nil {
+				headResponse(w, r, err.Status())
+				return
+			}
+			permCheck := func(r *http.Request, cbv string, opUser actor.Actor) util.Gerror {
+				return nil // because this is always OK
+			}
+			headChecking(w, r, opUser, cookbookVersion, cb.DoesVersionExist, permCheck)
+			return
+		case http.MethodDelete, http.MethodGet:
 			if opUser.IsValidator() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
@@ -211,7 +248,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-		case "PUT":
+		case http.MethodPut:
 			if !opUser.IsAdmin() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return

@@ -134,6 +134,24 @@ func Get(nodeName string) (*Node, util.Gerror) {
 	return node, nil
 }
 
+// DoesExist checks if the node in question exists or not
+func DoesExist(nodeName string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var cerr error
+		found, cerr = checkForNodeSQL(datastore.Dbh, nodeName)
+		if cerr != nil {
+			err := util.Errorf(cerr.Error())
+			err.SetStatus(http.StatusInternalServerError)
+			return false, err
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get("node", nodeName)
+	}
+	return found, nil
+}
+
 // GetMulti gets multiple nodes from a given slice of node names.
 func GetMulti(nodeNames []string) ([]*Node, util.Gerror) {
 	var nodes []*Node

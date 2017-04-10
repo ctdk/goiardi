@@ -36,6 +36,23 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 
 	pathArray := splitPath(r.URL.Path)
 	op := pathArray[0]
+
+	// if we somehow get a HEAD req to one of these, where they aren't
+	// all that meaningful, just return StatusOK until we get word that we
+	// ought to do something else
+	//
+	// Mercifully this weird set of functions is out in 1.0.0-dev
+
+	if r.Method == http.MethodHead {
+		switch op {
+		case "nodes", "clients", "users", "roles":
+			headResponse(w, r, http.StatusOK)
+		default:
+			headResponse(w, r, http.StatusInternalServerError)
+		}
+		return
+	}
+	
 	var listData map[string]string
 	switch op {
 	case "nodes":
