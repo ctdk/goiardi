@@ -70,10 +70,23 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "HEAD":
-		found, err := client.DoesExist(clientName)
-		if err != nil {
-
+		permCheck := func(r *http.Request, clientName string, opUser actor.Actor) util.Gerror {
+			if !opUser.IsAdmin() {
+				chefClient, gerr := client.Get(clientName)
+				if gerr != nil {
+					return gerr
+				}
+				if !opUser.IsSelf(chefClient) {
+					err := util.New("forbidden")
+					err.SetStatus(http.StatusForbidden)
+					return err
+				}
+			}
+			return nil
 		}
+	
+		headChecking(w, r, opUser, clientName, client.DoesExist, permCheck)
+		return
 	case "GET":
 		chefClient, gerr := client.Get(clientName)
 
