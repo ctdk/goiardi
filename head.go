@@ -58,3 +58,9 @@ func headChecking(w http.ResponseWriter, r *http.Request, obj actor.Actor, resou
 	}
 	headResponse(w, r, http.StatusOK)
 }
+
+func headForbidden() util.Gerror {
+	err := util.New("forbidden")
+	err.SetStatus(http.StatusForbidden)
+	return err
+}

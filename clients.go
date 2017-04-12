@@ -77,9 +77,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 					return gerr
 				}
 				if !opUser.IsSelf(chefClient) {
-					err := util.New("forbidden")
-					err.SetStatus(http.StatusForbidden)
-					return err
+					return headForbidden()
 				}
 			}
 			return nil

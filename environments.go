@@ -69,6 +69,14 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 
 	if pathArrayLen == 1 {
 		switch r.Method {
+		case http.MethodHead:
+			// not real meaningful...
+			if opUser.IsValidator() {
+				headResponse(w, r, http.StatusForbidden)
+				return
+			}
+			headResponse(w, r, http.StatusOK)
+			return
 		case "GET":
 			if opUser.IsValidator() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
@@ -123,6 +131,20 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		 * object, so we do the json encoding in this block and return
 		 * out. */
 		envName := pathArray[1]
+
+		// get the HEAD out of the way before doing heavy lifting with
+		// environments
+		if r.Method == http.MethodHead {
+			permCheck := func(r *http.Request, envName string, opUser actor.Actor) util.Gerror {
+				if opUser.IsValidator() {
+					return headForbidden()
+				}
+				return nil
+			}
+			headChecking(w, r, opUser, envName, environment.DoesExist, permCheck)
+			return
+		}
+
 		env, err := environment.Get(envName)
 		delEnv := false /* Set this to delete the environment after
 		 * sending the json. */

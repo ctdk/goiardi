@@ -48,9 +48,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodHead {
 		permCheck := func(r *http.Request, roleName string, opUser actor.Actor) util.Gerror {
 			if opUser.IsValidator() {
-				e := util.New("forbidden")
-				e.SetStatus(http.StatusForbidden)
-				return e
+				return headForbidden()
 			}
 			return nil
 		}
