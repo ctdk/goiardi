@@ -35,7 +35,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if !opUser.IsAdmin() && r.Method != "PUT" {
+	if !opUser.IsAdmin() && r.Method != http.MethodPut {
 		jsonErrorReport(w, r, "you cannot perform this action", http.StatusForbidden)
 		return
 	}
@@ -59,7 +59,10 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 	switch op {
 	case "jobs":
 		switch r.Method {
-		case "GET":
+		case http.MethodHead:
+			headResponse(w, r, opUser, pathArray[2], shovey.DoesExist, nilPermCheck)
+			return
+		case http.MethodGet:
 			switch pathArrayLen {
 			case 4:
 				shove, err := shovey.Get(pathArray[2])
@@ -100,7 +103,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				return
 			}
-		case "POST":
+		case http.MethodPost:
 			if pathArrayLen != 2 {
 				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
@@ -156,7 +159,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 
 			shoveyResponse["id"] = s.RunID
 			shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/shovey/jobs/%s", s.RunID))
-		case "PUT":
+		case http.MethodPut:
 			switch pathArrayLen {
 			case 3:
 				if pathArray[2] != "cancel" {
@@ -245,7 +248,10 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		switch r.Method {
-		case "GET":
+		case http.MethodHead:
+			headDefaultResponse(w, r)
+			return
+		case http.MethodGet:
 			var seq int
 			r.ParseForm()
 			if s, found := r.Form["sequence"]; found {
@@ -303,7 +309,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				shoveyResponse["is_last"] = stream[len(stream)-1].IsLast
 			}
 			shoveyResponse["output"] = combinedOutput
-		case "PUT":
+		case http.MethodPut:
 			streamData, serr := parseObjJSON(r.Body)
 			logger.Debugf("streamData: %v", streamData)
 			if serr != nil {

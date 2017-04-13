@@ -123,6 +123,33 @@ func getLogEventSQL(id int) (*LogInfo, error) {
 	return le, nil
 }
 
+func checkLogEventSQL(id int) (bool, error) {
+	var found bool
+	var sqlStmt string
+
+	if config.Config.UseMySQL {
+		sqlStmt = "SELECT COUNT(id) FROM log_infos WHERE id = ?"
+	} else if config.Config.UsePostgreSQL {
+		sqlStmt = "SELECT id FROM goiardi.log_infos WHERE id = $1"
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	var c int
+	err = stmt.QueryRow(id).Scan(&c)
+	// should be hard at best to get ErrNoRows in this situation
+	if err != nil && err != sql.ErrNoRows { 
+		return false, err
+	}
+	if c != 0 {
+		found = true
+	}
+	return found, nil
+}
+
 func (le *LogInfo) deleteSQL() error {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {

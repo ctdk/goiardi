@@ -95,6 +95,31 @@ func (db *DataBag) getDBItemSQL(dbItemName string) (*DataBagItem, error) {
 	return dbi, nil
 }
 
+func (db *DataBag) checkDBItemSQL(dbItemName string) (bool, error) {
+	var found bool
+	var sqlStatement string
+	if config.Config.UseMySQL {
+		sqlStatement = "SELECT COUNT(dbi.id) FROM data_bag_items dbi JOIN data_bags db ON dbi.data_bag_id = db.id WHERE dbi.orig_name = ? AND dbi.data_bag_id = ?"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "SELECT COUNT(dbi.id) FROM goiardi.data_bag_items dbi JOIN goiardi.data_bags db on dbi.data_bag_id = db.id WHERE dbi.orig_name = $1 AND dbi.data_bag_id = $2"
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+	
+	var c int
+	err = stmt.QueryRow(dbItemName, db.id).Scan(&c)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+	if c != 0 {
+		found = true
+	}
+	return found, nil
+}
+
 func (db *DataBag) getMultiDBItemSQL(dbItemNames []string) ([]*DataBagItem, error) {
 	var sqlStmt string
 	bind := make([]string, len(dbItemNames))

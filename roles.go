@@ -65,8 +65,8 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 	if len(pathArray) == 2 {
 		/* Normal /roles/NAME case */
 		switch r.Method {
-		case "GET", "DELETE":
-			if opUser.IsValidator() || (!opUser.IsAdmin() && r.Method == "DELETE") {
+		case http.MethodGet, http.MethodDelete:
+			if opUser.IsValidator() || (!opUser.IsAdmin() && r.Method == http.MethodDelete) {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
@@ -75,7 +75,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if r.Method == "DELETE" {
+			if r.Method == http.MethodDelete {
 				err = chefRole.Delete()
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -86,7 +86,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-		case "PUT":
+		case http.MethodPut:
 			if !opUser.IsAdmin() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
@@ -144,7 +144,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		/* only method for the /roles/NAME/environment stuff is GET */
 		switch r.Method {
-		case "GET":
+		case http.MethodGet:
 			/* If we have an environment name, return the
 			 * environment specific run_list. Otherwise,
 			 * return the environments we have run lists

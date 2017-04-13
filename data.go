@@ -43,7 +43,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	if len(pathArray) == 1 {
 		/* Either a list of data bags, or a POST to create a new one */
 		switch r.Method {
-		case "GET":
+		case http.MethodGet:
 			if opUser.IsValidator() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
@@ -53,7 +53,14 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			for _, k := range dbList {
 				dbResponse[k] = util.CustomURL(fmt.Sprintf("/data/%s", k))
 			}
-		case "POST":
+		case http.MethodHead:
+			if opUser.IsValidator() {
+				headResponse(w, r, http.StatusForbidden)
+				return
+			}
+			headDefaultResponse(w, r)
+			return
+		case http.MethodPost:
 			if !opUser.IsAdmin() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
@@ -106,10 +113,18 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		dbName := pathArray[1]
 
+		/*
+		 * HEAD response note:
+		 * at this time, chef-pedant will flip if these responses start
+		 * changing to allow HEAD (or at least say it's OK). It'll be
+		 * inaccurate with reporting what methods are allowable at least
+		 * for a little while.
+		 */
+
 		/* chef-pedant is unhappy about not reporting the HTTP status
 		 * as 404 by fetching the data bag before we see if the method
 		 * is allowed, so do a quick check for that here. */
-		if (len(pathArray) == 2 && r.Method == "PUT") || (len(pathArray) == 3 && r.Method == "POST") {
+		if (len(pathArray) == 2 && r.Method == http.MethodPut) || (len(pathArray) == 3 && r.Method == http.MethodPost) {
 			var allowed string
 			if len(pathArray) == 2 {
 				allowed = "GET, POST, DELETE"
@@ -120,21 +135,47 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		if opUser.IsValidator() || (!opUser.IsAdmin() && r.Method != "GET") {
+		if opUser.IsValidator() || (!opUser.IsAdmin() && (r.Method != http.MethodGet && r.Method != http.MethodHead) {
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
+
+		// Do HEAD responses here, before starting to fetch full data
+		// bags and the like.
+		if r.Method == http.MethodHead {
+			permCheck := func(r *http.Request, dbName, opUser) util.Gerror {
+				if opUser.IsValidator() {
+					return headForbidden()
+				}
+				return nil
+			}
+			if len(pathArray == 2) {
+				
+				headChecking(w, r, opUser, dbName, databag.DoesExist, permCheck)
+			} else {
+				dbItemName := pathArray[2]
+				chefDbag, err := databag.Get(dbName)
+				if err != nil {
+					headResponse(w, r, err.Status())
+					return
+				}
+				headChecking(w, r, opUser, dbItemName, chefDbag.DoesItemExist, permCheck)
+				return
+			}
+			return
+		}
+
 		chefDbag, err := databag.Get(dbName)
 		if err != nil {
 			var errMsg string
 			status := err.Status()
-			if r.Method == "POST" {
+			if r.Method == http.MethodPost {
 				/* Posts get a special snowflake message */
 				errMsg = fmt.Sprintf("No data bag '%s' could be found. Please create this data bag before adding items to it.", dbName)
 			} else {
 				if len(pathArray) == 3 {
 					/* This is nuts. */
-					if r.Method == "DELETE" {
+					if r.Method == http.MethodDelete {
 						errMsg = fmt.Sprintf("Cannot load data bag %s item %s", dbName, pathArray[2])
 					} else {
 						errMsg = fmt.Sprintf("Cannot load data bag item %s for data bag %s", pathArray[2], dbName)
@@ -150,12 +191,12 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			/* getting list of data bag items and creating data bag
 			 * items. */
 			switch r.Method {
-			case "GET":
+			case http.MethodGet:
 
 				for _, k := range chefDbag.ListDBItems() {
 					dbResponse[k] = util.CustomObjURL(chefDbag, k)
 				}
-			case "DELETE":
+			case http.MethodDelete:
 				/* The chef API docs don't say anything
 				 * about this existing, but it does,
 				 * and without it you can't delete data
@@ -172,7 +213,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
-			case "POST":
+			case http.MethodPost:
 				rawData := databag.RawDataBagJSON(r.Body)
 				dbitem, nerr := chefDbag.NewDBItem(rawData)
 				if nerr != nil {
@@ -209,7 +250,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			dbItemName := pathArray[2]
 			if _, err := chefDbag.GetDBItem(dbItemName); err != nil {
 				var httperr string
-				if r.Method != "DELETE" {
+				if r.Method != http.MethodDelete {
 					httperr = fmt.Sprintf("Cannot load data bag item %s for data bag %s", dbItemName, chefDbag.Name)
 				} else {
 					httperr = fmt.Sprintf("Cannot load data bag %s item %s", chefDbag.Name, dbItemName)
@@ -218,14 +259,14 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			switch r.Method {
-			case "GET":
+			case http.MethodGet:
 				dbi, err := chefDbag.GetDBItem(dbItemName)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
 				dbResponse = dbi.RawData
-			case "DELETE":
+			case http.MethodDelete:
 				dbi, err := chefDbag.GetDBItem(dbItemName)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -247,7 +288,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				return
-			case "PUT":
+			case http.MethodPut:
 				rawData := databag.RawDataBagJSON(r.Body)
 				if rawID, ok := rawData["id"]; ok {
 					switch rawID := rawID.(type) {

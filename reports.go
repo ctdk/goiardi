@@ -65,7 +65,11 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	reportResponse := make(map[string]interface{})
 
 	switch r.Method {
-	case "GET":
+	case http.MethodHead:
+		// HEAD doesn't seem real meaningful here, just return 200
+		headDefaultResponse(w, r)
+		return
+	case http.MethodGet:
 		// Making an informed guess that admin rights are needed
 		// to see the node run reports
 		r.ParseForm()
@@ -174,7 +178,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 			return
 		}
-	case "POST":
+	case http.MethodPost:
 		// Can't use the usual parseObjJSON function here, since
 		// the reporting "run_list" type is a string rather
 		// than []interface{}.

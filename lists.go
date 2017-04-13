@@ -46,7 +46,7 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodHead {
 		switch op {
 		case "nodes", "clients", "users", "roles":
-			headResponse(w, r, http.StatusOK)
+			headDefaultResponse(w, r)
 		default:
 			headResponse(w, r, http.StatusInternalServerError)
 		}
@@ -84,7 +84,7 @@ func nodeHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 		return nil
 	}
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		if opUser.IsValidator() {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil
@@ -94,7 +94,7 @@ func nodeHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			itemURL := fmt.Sprintf("/nodes/%s", k)
 			nodeResponse[k] = util.CustomURL(itemURL)
 		}
-	case "POST":
+	case http.MethodPost:
 		if opUser.IsValidator() {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil
@@ -153,14 +153,14 @@ func clientHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 	}
 
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		clientList := client.GetList()
 		for _, k := range clientList {
 			/* Make sure it's a client and not a user. */
 			itemURL := fmt.Sprintf("/clients/%s", k)
 			clientResponse[k] = util.CustomURL(itemURL)
 		}
-	case "POST":
+	case http.MethodPost:
 		clientData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -256,14 +256,14 @@ func userHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 	}
 
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		userList := user.GetList()
 		for _, k := range userList {
 			/* Make sure it's a client and not a user. */
 			itemURL := fmt.Sprintf("/users/%s", k)
 			userResponse[k] = util.CustomURL(itemURL)
 		}
-	case "POST":
+	case http.MethodPost:
 		userData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -352,7 +352,7 @@ func roleHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 		return nil
 	}
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		if opUser.IsValidator() {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil
@@ -362,7 +362,7 @@ func roleHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 			itemURL := fmt.Sprintf("/roles/%s", k)
 			roleResponse[k] = util.CustomURL(itemURL)
 		}
-	case "POST":
+	case http.MethodPost:
 		if !opUser.IsAdmin() {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return nil

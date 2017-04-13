@@ -41,8 +41,17 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 
 	/* So, what are we doing? Depends on the HTTP method, of course */
 	switch r.Method {
-	case "GET", "DELETE":
-		if opUser.IsValidator() || !opUser.IsAdmin() && r.Method == "DELETE" && !(opUser.IsClient() && opUser.(*client.Client).NodeName == nodeName) {
+	case http.MethodHead:
+		permCheck := func(r *http.Request, nodeName string, opUser actor.Actor) util.Gerror {
+			if opUser.IsValidator() {
+				return headForbidden()
+			}
+			return nil
+		}
+		headChecking(w, r, opUser, nodeName, node.DoesExist, permCheck)
+		return
+	case http.MethodGet, http.MethodDelete:
+		if opUser.IsValidator() || !opUser.IsAdmin() && r.Method == http.MethodDelete && !(opUser.IsClient() && opUser.(*client.Client).NodeName == nodeName) {
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
@@ -56,7 +65,7 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if r.Method == "DELETE" {
+		if r.Method == http.MethodDelete {
 			err := chefNode.Delete()
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -67,7 +76,7 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-	case "PUT":
+	case http.MethodPut:
 		if !opUser.IsAdmin() && !(opUser.IsClient() && opUser.(*client.Client).NodeName == nodeName) {
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return

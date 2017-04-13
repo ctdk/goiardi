@@ -75,9 +75,9 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				headResponse(w, r, http.StatusForbidden)
 				return
 			}
-			headResponse(w, r, http.StatusOK)
+			headDefaultResponse(w, r)
 			return
-		case "GET":
+		case http.MethodGet:
 			if opUser.IsValidator() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
@@ -86,7 +86,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			for _, env := range envList {
 				envResponse[env] = util.CustomURL(fmt.Sprintf("/environments/%s", env))
 			}
-		case "POST":
+		case http.MethodPost:
 			if !opUser.IsAdmin() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
@@ -153,9 +153,9 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		switch r.Method {
-		case "GET", "DELETE":
+		case http.MethodGet, http.MethodDelete:
 			/* We don't actually have to do much here. */
-			if r.Method == "DELETE" {
+			if r.Method == http.MethodDelete {
 				if !opUser.IsAdmin() {
 					jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 					return
@@ -171,7 +171,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-		case "PUT":
+		case http.MethodPut:
 			if !opUser.IsAdmin() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
@@ -257,7 +257,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		envName := pathArray[1]
 		op := pathArray[2]
 
-		if op == "cookbook_versions" && r.Method != "POST" || op != "cookbook_versions" && r.Method != "GET" {
+		if op == "cookbook_versions" && r.Method != http.MethodPost || op != "cookbook_versions" && r.Method != http.MethodGet {
 			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return
 		}
@@ -363,7 +363,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		op := pathArray[2]
 		opName := pathArray[3]
 
-		if r.Method != "GET" {
+		if r.Method != http.MethodGet {
 			jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}

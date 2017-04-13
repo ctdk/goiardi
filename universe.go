@@ -24,14 +24,19 @@ import (
 
 func universeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	if r.Method != "GET" {
-		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
-		return
-	}
 
-	universe := cookbook.Universe()
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&universe); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	switch r.Method {
+	case http.MethodGet:
+		universe := cookbook.Universe()
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(&universe); err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		}
+	case http.MethodHead:
+		headDefaultResponse(w, r) // Yes, we have a universe.
+		return
+	default:
+		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 	}
+	return
 }

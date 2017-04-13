@@ -37,7 +37,7 @@ func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "POST":
+	case http.MethodPost:
 		if len(pathArray) != 1 {
 			jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 			return
@@ -82,7 +82,7 @@ func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 		sboxResponse["sandbox_id"] = sbox.ID
 		sboxResponse["checksums"] = sbox.UploadChkList()
 		w.WriteHeader(http.StatusCreated)
-	case "PUT":
+	case http.MethodPut:
 		if len(pathArray) != 2 {
 			jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 			return

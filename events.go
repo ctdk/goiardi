@@ -108,7 +108,14 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "GET":
+	case http.MethodHead:
+		if !opUser.IsAdmin() {
+			headResponse(w, r, http.StatusForbidden)
+			return
+		}
+		headDefaultResponse(w, r)
+		return
+	case http.MethodGet:
 		if !opUser.IsAdmin() {
 			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
@@ -136,7 +143,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	case "DELETE":
+	case http.MethodDelete:
 		if !opUser.IsAdmin() {
 			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
@@ -166,14 +173,27 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	eventID, aerr := strconv.Atoi(r.URL.Path[8:])
+	eventIDstr := r.URL.Path[8:]
+	eventID, aerr := strconv.Atoi(eventIDstr)
 	if aerr != nil {
 		jsonErrorReport(w, r, aerr.Error(), http.StatusBadRequest)
 		return
 	}
 
 	switch r.Method {
-	case "GET":
+	case http.MethodHead:
+		pcheck := func(r *http.Request, eventIDstr, opUser) util.Gerror {
+			if !opUser.IsAdmin() {
+				return headForbidden()
+			}
+			return nil
+		}
+		if !opUser.IsAdmin() {
+			return
+		}
+		headChecking(w, r, opUser, eventIDstr, loginfo.DoesExist, pcheck)
+		return
+	case http.MethodGet:
 		if !opUser.IsAdmin() {
 			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return
@@ -188,7 +208,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	case "DELETE":
+	case http.MethodDelete:
 		if !opUser.IsAdmin() {
 			jsonErrorReport(w, r, "You must be an admin to do that", http.StatusForbidden)
 			return

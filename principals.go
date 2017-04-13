@@ -28,12 +28,28 @@ func principalHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	principalName := r.URL.Path[12:]
 	switch r.Method {
-	case "GET":
+	case http.MethodGet, http.MethodHead:
+		// Can't so easily get out of the full request for a user or
+		// client object here, so just go ahead and do that rather than
+		// dancing around.
 		chefActor, err := actor.GetReqUser(principalName)
+
+		if r.Method == http.MethodHead {
+			var status int
+			if err != nil {
+				status = http.StatusNotFound
+			} else {
+				status = http.StatusOK
+			}
+			headResponse(w, r, status)
+			return
+		}
+
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
+		
 		var chefType string
 		if chefActor.IsUser() {
 			chefType = "user"

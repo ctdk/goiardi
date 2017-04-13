@@ -48,7 +48,7 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Write(*fileStore.Data)
-	case "PUT", "POST": /* Seems like for file uploads we ought to
+	case http.MethodPut, http.MethodPost: /* Seems like for file uploads we ought to
 		 * support POST too. */
 		w.Header().Set("Content-Type", "application/json")
 		/* Need to distinguish file already existing and some

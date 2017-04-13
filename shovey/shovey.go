@@ -167,7 +167,7 @@ func New(command string, timeout int, quorumStr string, nodeNames []string) (*Sh
 	// Conflicting uuids are unlikely, but conceivable.
 	if config.UsingDB() {
 		var err error
-		found, err = checkForShoveySQL(datastore.Dbh, runID)
+		found, err = checkForShoveySQL(runID)
 		if err != nil {
 			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -287,6 +287,21 @@ func Get(runID string) (*Shovey, util.Gerror) {
 		return nil, err
 	}
 	return shove, nil
+}
+
+// DoesExist checks if there is a shovey instance with the given run id.
+func DoesExist(runID string) (bool, util.Gerror) {
+	if config.UsingDB() {
+		found, err := checkForShoveySQL(runID)
+		if err != nil {
+			serr := util.CastErr(err)
+			return false, serr
+		}
+		return found, nil
+	}
+	ds := datastore.New()
+	_, found := ds.Get("shovey", runID)
+	return found, nil
 }
 
 // Cancel cancels all ShoveyRuns associated with this shovey instance.

@@ -46,7 +46,11 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	var statusResponse interface{}
 
 	switch r.Method {
-	case "GET":
+	case http.MethodHead:
+		// HEAD responses don't look real meaningful here
+		headDefaultResponse(w, r)
+		return
+	case http.MethodGet:
 		/* pathArray[1] will tell us what operation we're doing */
 		switch pathArray[1] {
 		// /status/all/nodes

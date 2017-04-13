@@ -162,6 +162,32 @@ func Get(id int) (*LogInfo, error) {
 	return le, nil
 }
 
+// DoesExist checks if the particular event in question exists. To be compatible
+// with the interface for HEAD responses, this method receives a string rather
+// than an integer.
+func DoesExist(eventID string) (bool, util.Gerror) {
+	id, err := strconv.Atoi(eventID)
+	if err != nil {
+		cerr := util.CastErr(err)
+		return false, err
+	}
+	if config.UsingDB() {
+
+	}
+
+	ds := datastore.New()
+	c, err := ds.GetLogInfo(id)
+	if err != nil {
+		cerr := util.CastErr(err)
+		return false, err
+	}
+	var found bool
+	if c != nil {
+		found = true
+	}
+	return found, nil
+}
+
 // Delete a logged event.
 func (le *LogInfo) Delete() error {
 	if config.UsingDB() {

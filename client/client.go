@@ -156,7 +156,7 @@ func Get(clientname string) (*Client, util.Gerror) {
 	return client, nil
 }
 
-// DoesExist checks if the client in question exists or not
+// DoesExist checks if the client in question exists or not.
 func DoesExist(clientname string) (bool, util.Gerror) {
 	var found bool
 	if config.UsingDB() {

@@ -55,6 +55,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	/* ... and we need search to run the environment tests, so here we
 	 * go. */
 	w.Header().Set("Content-Type", "application/json")
+
 	searchResponse := make(map[string]interface{})
 	pathArray := splitPath(r.URL.Path)
 	pathArrayLen := len(pathArray)
@@ -62,6 +63,18 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
+	
+	// if it's a HEAD response, just send back 200 no matter what, there's
+	// no meaningful way to use HEAD with search that I can see
+	if r.Method == http.MethodHead {
+		if opUser.IsValidator() {
+			headResponse(w, r, http.StatusForbidden)
+			return
+		}
+		headDefaultResponse(w, r)
 		return
 	}
 
@@ -118,7 +131,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	if pathArrayLen == 1 {
 		/* base end points */
 		switch r.Method {
-		case "GET":
+		case http.MethodGet:
 			if opUser.IsValidator() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
@@ -133,7 +146,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else if pathArrayLen == 2 {
 		switch r.Method {
-		case "GET", "POST":
+		case http.MethodGet, http.MethodPost:
 			if opUser.IsValidator() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
@@ -148,7 +161,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 			 * so the partial search tests don't complain
 			 * anymore. */
 			var partialData map[string]interface{}
-			if r.Method == "POST" {
+			if r.Method == http.MethodPost {
 				var perr error
 				partialData, perr = parseObjJSON(r.Body)
 				if perr != nil {
@@ -198,7 +211,7 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch r.Method {
-	case "POST":
+	case http.MethodPost:
 		if !opUser.IsAdmin() {
 			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return

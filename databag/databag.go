@@ -30,6 +30,7 @@ import (
 
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/gerror"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
@@ -126,6 +127,24 @@ func Get(dbName string) (*DataBag, util.Gerror) {
 		}
 	}
 	return dataBag, nil
+}
+
+// DoesExist checks if the data bag in question exists or not.
+func DoesExist(dbName string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var cerr error
+		found, cerr = checkForClientSQL(datastore.Dbh, dbName)
+		if cerr != nil {
+			err := util.Errorf(cerr.Error())
+			err.SetStatus(http.StatusInternalServerError)
+			return false, err
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get("data_bag", dbNname)
+	}
+	return found, nil
 }
 
 // Save a data bag.
@@ -324,6 +343,21 @@ func (db *DataBag) GetDBItem(dbItemName string) (*DataBagItem, error) {
 		return nil, err
 	}
 	return dbi, nil
+}
+
+// DoesItemExist checks if the data bag item exists without returning the entire
+// data bag and all items.
+func (db *DataBag) DoesItemExist(dbItemName string) (bool, util.Gerror) {
+	if config.UsingDB() {
+		found, err := db.checkDBItemSQL(dbItemName)
+		if err != nil {
+			gerr := util.CastErr(err)
+			return false, gerr
+		}
+		return found, nil
+	}
+	_, found := db.DataBagItems[dbItemName]
+	return found, nil
 }
 
 // GetMultiDBItems gets multiple data bag items from a slice of names.
