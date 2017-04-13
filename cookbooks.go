@@ -199,7 +199,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
-			if r.Method == "DELETE" {
+			if r.Method == http.MethodDelete {
 				if !opUser.IsAdmin() {
 					jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 					return
