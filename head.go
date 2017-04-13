@@ -40,9 +40,14 @@ type exists func(resource string) (bool, util.Gerror)
 type permChecker func(r *http.Request, resource string, obj actor.Actor) util.Gerror
 
 func headResponse(w http.ResponseWriter, r *http.Request, status int) {
-	logger.Infof("HEAD response for status %d", status)
+	logger.Debugf("HEAD response status %d for %s", status, r.URL.Path)
 	w.WriteHeader(status)
 	return
+}
+
+func headDefaultResponse(w http.ResponseWriter, r *http.Request) {
+	logger.Debugf("HEAD default response issued for %s", r.URL.Path)
+	w.WriteHeader(http.StatusOK)
 }
 
 func headChecking(w http.ResponseWriter, r *http.Request, obj actor.Actor, resource string, doesExist exists, permCheck permChecker) {
