@@ -63,7 +63,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	pathArrayLen := len(pathArray)
 
 	/* 1 and 2 length path arrays only support GET (or HEAD) */
-	if pathArrayLen < 3 && (r.Method != http.MethodGet && r.Method != "HEAD") {
+	if pathArrayLen < 3 && (r.Method != http.MethodGet && r.Method != http.MethodHead) {
 		jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 		return
 	} else if pathArrayLen < 3 && opUser.IsValidator() {

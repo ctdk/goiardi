@@ -38,7 +38,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "DELETE":
+	case http.MethodDelete:
 		chefClient, gerr := client.Get(clientName)
 		if gerr != nil {
 			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
@@ -69,7 +69,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	case "HEAD":
+	case http.MethodHead:
 		permCheck := func(r *http.Request, clientName string, opUser actor.Actor) util.Gerror {
 			if !opUser.IsAdmin() {
 				chefClient, gerr := client.Get(clientName)
@@ -85,7 +85,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 	
 		headChecking(w, r, opUser, clientName, client.DoesExist, permCheck)
 		return
-	case "GET":
+	case http.MethodGet:
 		chefClient, gerr := client.Get(clientName)
 
 		if gerr != nil {
@@ -108,7 +108,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	case "PUT":
+	case http.MethodPut:
 		clientData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
