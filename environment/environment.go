@@ -263,7 +263,6 @@ func DoesExist(environmentName string) (bool, util.Gerror) {
 	return found, nil
 }
 
-
 // GetMulti gets multiple environmets from a given slice of environment names.
 func GetMulti(envNames []string) ([]*ChefEnvironment, util.Gerror) {
 	var envs []*ChefEnvironment

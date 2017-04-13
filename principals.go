@@ -49,7 +49,7 @@ func principalHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
-		
+
 		var chefType string
 		if chefActor.IsUser() {
 			chefType = "user"

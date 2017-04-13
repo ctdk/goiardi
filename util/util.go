@@ -24,8 +24,8 @@ package util
 
 import (
 	"fmt"
-	"github.com/ctdk/goiardi/gerror"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/gerror"
 	"net/http"
 	"reflect"
 	"regexp"

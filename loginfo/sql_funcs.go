@@ -141,7 +141,7 @@ func checkLogEventSQL(id int) (bool, error) {
 	var c int
 	err = stmt.QueryRow(id).Scan(&c)
 	// should be hard at best to get ErrNoRows in this situation
-	if err != nil && err != sql.ErrNoRows { 
+	if err != nil && err != sql.ErrNoRows {
 		return false, err
 	}
 	if c != 0 {

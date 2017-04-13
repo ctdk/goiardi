@@ -108,7 +108,7 @@ func (db *DataBag) checkDBItemSQL(dbItemName string) (bool, error) {
 		return false, err
 	}
 	defer stmt.Close()
-	
+
 	var c int
 	err = stmt.QueryRow(dbItemName, db.id).Scan(&c)
 	if err != nil && err != sql.ErrNoRows {

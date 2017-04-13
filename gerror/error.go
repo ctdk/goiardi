@@ -28,7 +28,7 @@ import (
 
 // the private error struct
 type gerror struct {
-	msg string
+	msg    string
 	status int
 }
 
@@ -80,6 +80,6 @@ func (e *gerror) Status() int {
 
 // StatusError makes an error with a string and a HTTP status code.
 func StatusError(msg string, status int) Error {
-	e := &gerror{ msg: msg, status: status}
+	e := &gerror{msg: msg, status: status}
 	return e
 }

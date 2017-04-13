@@ -25,8 +25,8 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/base64"
-	"hash"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -100,7 +100,7 @@ func AuthenticateHeader(publicKey string, timeSlew time.Duration, r *http.Reques
 		apiVer = verChk[1]
 		switch apiVer {
 		case "1.0", "1.1", "1.2", "1.3":
-			;
+
 		default:
 			gerr := util.Errorf("Bad version number '%s' in X-Ops-Header", apiVer)
 			return gerr

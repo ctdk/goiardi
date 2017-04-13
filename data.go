@@ -150,7 +150,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				return nil
 			}
 			if len(pathArray) == 2 {
-				
+
 				headChecking(w, r, opUser, dbName, databag.DoesExist, permCheck)
 			} else {
 				dbItemName := pathArray[2]

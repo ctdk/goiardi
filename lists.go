@@ -52,7 +52,7 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	
+
 	var listData map[string]string
 	switch op {
 	case "nodes":

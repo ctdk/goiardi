@@ -890,7 +890,6 @@ func (c *Cookbook) DoesVersionExist(cbVersion string) (bool, util.Gerror) {
 	return found, nil
 }
 
-
 func extractVerNums(cbVersion string) (maj, min, patch int64, err util.Gerror) {
 	if _, err = util.ValidateAsVersion(cbVersion); err != nil {
 		return 0, 0, 0, err

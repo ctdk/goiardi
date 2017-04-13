@@ -66,7 +66,6 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	// if it's a HEAD response, just send back 200 no matter what, there's
 	// no meaningful way to use HEAD with search that I can see
 	if r.Method == http.MethodHead {
