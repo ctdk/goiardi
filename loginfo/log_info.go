@@ -169,17 +169,22 @@ func DoesExist(eventID string) (bool, util.Gerror) {
 	id, err := strconv.Atoi(eventID)
 	if err != nil {
 		cerr := util.CastErr(err)
-		return false, err
+		return false, cerr
 	}
 	if config.UsingDB() {
-
+		found, err := checkLogEventSQL(id)
+		if err != nil {
+			cerr := util.CastErr(err)
+			return false, cerr
+		}
+		return found, nil
 	}
 
 	ds := datastore.New()
 	c, err := ds.GetLogInfo(id)
 	if err != nil {
 		cerr := util.CastErr(err)
-		return false, err
+		return false, cerr
 	}
 	var found bool
 	if c != nil {

@@ -135,7 +135,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		if opUser.IsValidator() || (!opUser.IsAdmin() && (r.Method != http.MethodGet && r.Method != http.MethodHead) {
+		if opUser.IsValidator() || (!opUser.IsAdmin() && (r.Method != http.MethodGet && r.Method != http.MethodHead)) {
 			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 			return
 		}
@@ -143,13 +143,13 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		// Do HEAD responses here, before starting to fetch full data
 		// bags and the like.
 		if r.Method == http.MethodHead {
-			permCheck := func(r *http.Request, dbName, opUser) util.Gerror {
+			permCheck := func(r *http.Request, dbName string, opUser actor.Actor) util.Gerror {
 				if opUser.IsValidator() {
 					return headForbidden()
 				}
 				return nil
 			}
-			if len(pathArray == 2) {
+			if len(pathArray) == 2 {
 				
 				headChecking(w, r, opUser, dbName, databag.DoesExist, permCheck)
 			} else {

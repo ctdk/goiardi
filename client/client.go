@@ -163,8 +163,7 @@ func DoesExist(clientname string) (bool, util.Gerror) {
 		var cerr error
 		found, cerr = checkForClientSQL(datastore.Dbh, clientname)
 		if cerr != nil {
-			err := util.Errorf(cerr.Error())
-			err.SetStatus(http.StatusInternalServerError)
+			err := util.CastErr(cerr)
 			return false, err
 		}
 	} else {

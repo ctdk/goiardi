@@ -134,7 +134,7 @@ func checkLogEventSQL(id int) (bool, error) {
 	}
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	defer stmt.Close()
 

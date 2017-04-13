@@ -182,7 +182,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodHead:
-		pcheck := func(r *http.Request, eventIDstr, opUser) util.Gerror {
+		pcheck := func(r *http.Request, eventIDstr string, opUser actor.Actor) util.Gerror {
 			if !opUser.IsAdmin() {
 				return headForbidden()
 			}

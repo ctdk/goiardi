@@ -60,7 +60,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 	case "jobs":
 		switch r.Method {
 		case http.MethodHead:
-			headResponse(w, r, opUser, pathArray[2], shovey.DoesExist, nilPermCheck)
+			headChecking(w, r, opUser, pathArray[2], shovey.DoesExist, nilPermCheck)
 			return
 		case http.MethodGet:
 			switch pathArrayLen {

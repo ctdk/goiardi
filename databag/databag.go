@@ -30,7 +30,6 @@ import (
 
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
-	"github.com/ctdk/goiardi/gerror"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
@@ -134,7 +133,7 @@ func DoesExist(dbName string) (bool, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForClientSQL(datastore.Dbh, dbName)
+		found, cerr = checkForDataBagSQL(datastore.Dbh, dbName)
 		if cerr != nil {
 			err := util.Errorf(cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
@@ -142,7 +141,7 @@ func DoesExist(dbName string) (bool, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("data_bag", dbNname)
+		_, found = ds.Get("data_bag", dbName)
 	}
 	return found, nil
 }
