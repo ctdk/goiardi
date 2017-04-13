@@ -1,3 +1,14 @@
+0.??.? (unreleased, exact version number undetermined)
+------
+* Implement Chef authentication version 1.3.
+* Move the custom goiardi error type out of util and into its own module.
+  Wrappers around the new module are in util still for convenience, and
+  because the functions and interface are used all over the place.
+* Many endpoints now handle HEAD requests where appropriate. With some
+  endpoints this is not especially useful, but with others it's a lightweight
+  way to see what resources exist and so forth. Implements Chef RFC XXX (number
+  unassigned as of yet).
+
 0.11.3
 ------
 * Add an option to trim values in search indexes. Currently not enabled by
