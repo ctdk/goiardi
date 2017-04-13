@@ -18,6 +18,7 @@ package main
 
 import (
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/gerror"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
 	"net/http"
@@ -60,7 +61,6 @@ func headChecking(w http.ResponseWriter, r *http.Request, obj actor.Actor, resou
 }
 
 func headForbidden() util.Gerror {
-	err := util.New("forbidden")
-	err.SetStatus(http.StatusForbidden)
+	err := gerror.StatusError("forbidden", http.StatusForbidden)
 	return err
 }

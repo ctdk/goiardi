@@ -18,6 +18,7 @@ package util
 
 import (
 	"fmt"
+	"github.com/ctdk/goiardi/gerror"
 	"golang.org/x/exp/utf8string"
 	"regexp"
 	"strings"
@@ -31,7 +32,7 @@ type StringSlice []string
 func (s *StringSlice) Scan(src interface{}) error {
 	asBytes, ok := src.([]byte)
 	if !ok {
-		return error(New("Scan source was not []bytes"))
+		return error(gerror.New("Scan source was not []bytes"))
 	}
 
 	asString := string(asBytes)
