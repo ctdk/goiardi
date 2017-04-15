@@ -21,6 +21,7 @@ package main
 
 import (
 	"compress/gzip"
+	"context"
 	"crypto/tls"
 	"encoding/gob"
 	"encoding/json"
@@ -51,6 +52,7 @@ import (
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/report"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/search"
@@ -71,6 +73,12 @@ type apiTimerInfo struct {
 	elapsed time.Duration
 	path    string
 	method  string
+}
+
+var noOpUserReqs = []string{
+	"/authenticate_user",
+	"/file_store",
+	"/universe",
 }
 
 var apiChan chan *apiTimerInfo
@@ -394,7 +402,29 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Body = reader
 	}
 
-	http.DefaultServeMux.ServeHTTP(w, r)
+	// Set up the context for the request. At this time, this means setting
+	// the opUser for this request for most (but not all) types of requests.
+	// At this time the exceptions are "/file_store", "/universe", and 
+	// "/authenticate_user".
+	ctx := r.Context()
+	var skip bool
+	for _, p := range noOpUserReqs {
+		if strings.HasPrefix(r.URL.Path, p) {
+			skip = true
+			break
+		}
+	}
+	if !skip {
+		opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+		if oerr != nil {
+			w.Header().Set("Content-Type", "application/json")
+			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+			return
+		}
+		ctx = context.WithValue(ctx, reqctx.OpUserKey, opUser)
+	}
+
+	http.DefaultServeMux.ServeHTTP(w, r.WithContext(ctx))
 }
 
 func cleanPath(p string) string {

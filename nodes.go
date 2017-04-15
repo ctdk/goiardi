@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
@@ -33,7 +34,7 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 
 	nodeName := r.URL.Path[7:]
 
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
