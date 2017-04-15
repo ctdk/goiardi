@@ -376,8 +376,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if herr != nil {
 			w.Header().Set("Content-Type", "application/json")
 			logger.Errorf("Authorization failure: %s\n", herr.Error())
-			w.Header().Set("Www-Authenticate", `X-Ops-Sign version="1.0" version="1.1" version="1.2"`)
-			//http.Error(w, herr.Error(), herr.Status())
+			w.Header().Set("Www-Authenticate", `X-Ops-Sign version="1.0" version="1.1" version="1.2" version="1.3"`)
 			jsonErrorReport(w, r, herr.Error(), herr.Status())
 			return
 		}
