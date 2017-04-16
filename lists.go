@@ -1,7 +1,7 @@
 /* List handling stuff - a bit general, used by a few handlers */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -147,7 +147,7 @@ func nodeHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 
 func clientHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 	clientResponse := make(map[string]string)
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return nil
@@ -250,7 +250,7 @@ func clientHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 // user handling
 func userHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 	userResponse := make(map[string]string)
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return nil
@@ -347,7 +347,7 @@ func userHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 
 func roleHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 	roleResponse := make(map[string]string)
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return nil
