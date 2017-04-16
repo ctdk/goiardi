@@ -21,9 +21,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/loginfo"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
@@ -33,7 +33,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	pathArray := splitPath(r.URL.Path)
 	cookbookResponse := make(map[string]interface{})
 
-	opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -101,10 +101,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				headResponse(w, r, http.StatusOK)
 				return
 			}
-			permCheck := func(r *http.Request, clientName string, opUser actor.Actor) util.Gerror {
-				return nil // because this is always OK
-			}
-			headChecking(w, r, opUser, cookbookName, cookbook.DoesExist, permCheck)
+			headChecking(w, r, opUser, cookbookName, cookbook.DoesExist, nilPermCheck)
 			return
 		}
 
@@ -148,7 +145,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 		cookbookName := pathArray[1]
 		var cookbookVersion string
 		var vererr util.Gerror
-		opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+		opUser, oerr := reqctx.CtxReqUser(r.Context())
 		if oerr != nil {
 			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 			return
@@ -174,10 +171,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				headResponse(w, r, err.Status())
 				return
 			}
-			permCheck := func(r *http.Request, cbv string, opUser actor.Actor) util.Gerror {
-				return nil // because this is always OK
-			}
-			headChecking(w, r, opUser, cookbookVersion, cb.DoesVersionExist, permCheck)
+			headChecking(w, r, opUser, cookbookVersion, cb.DoesVersionExist, nilPermCheck)
 			return
 		case http.MethodDelete, http.MethodGet:
 			if opUser.IsValidator() {
