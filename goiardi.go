@@ -79,6 +79,7 @@ var noOpUserReqs = []string{
 	"/authenticate_user",
 	"/file_store",
 	"/universe",
+	"/principals",
 }
 
 var apiChan chan *apiTimerInfo
@@ -404,7 +405,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Set up the context for the request. At this time, this means setting
 	// the opUser for this request for most (but not all) types of requests.
-	// At this time the exceptions are "/file_store", "/universe", and 
+	// At this time the exceptions are "/file_store", "/universe", and
 	// "/authenticate_user".
 	ctx := r.Context()
 	var skip bool
