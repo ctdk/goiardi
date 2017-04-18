@@ -8,6 +8,9 @@
   endpoints this is not especially useful, but with others it's a lightweight
   way to see what resources exist and so forth. Implements Chef RFC XXX (number
   unassigned as of yet).
+* Start using contexts with requests. This does mean that goiardi will require
+  at least go 1.7. (As of 0.11.3 goiardi only supported go 1.7+, but it was
+  likely to build with somewhat older versions anyway.)
 
 0.11.3
 ------
