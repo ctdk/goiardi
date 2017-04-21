@@ -11,6 +11,11 @@
 * Start using contexts with requests. This does mean that goiardi will require
   at least go 1.7. (As of 0.11.3 goiardi only supported go 1.7+, but it was
   likely to build with somewhat older versions anyway.)
+* Minor bugfixes - deal with a possible race condition with the in-mem search
+  index, change some logging statements from Info to Debug that didn't need to
+  be Info level and removed a test log statement that was no longer necessary,
+  updated copyright dates.
+* Add the Chef API version header to responses.
 
 0.11.3
 ------
