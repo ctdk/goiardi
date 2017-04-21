@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -171,6 +171,37 @@ func Get(org *organization.Organization, id int) (*LogInfo, error) {
 		}
 	}
 	return le, nil
+}
+
+// DoesExist checks if the particular event in question exists. To be compatible
+// with the interface for HEAD responses, this method receives a string rather
+// than an integer.
+func DoesExist(eventID string) (bool, util.Gerror) {
+	id, err := strconv.Atoi(eventID)
+	if err != nil {
+		cerr := util.CastErr(err)
+		return false, cerr
+	}
+	if config.UsingDB() {
+		found, err := checkLogEventSQL(id)
+		if err != nil {
+			cerr := util.CastErr(err)
+			return false, cerr
+		}
+		return found, nil
+	}
+
+	ds := datastore.New()
+	c, err := ds.GetLogInfo(id)
+	if err != nil {
+		cerr := util.CastErr(err)
+		return false, cerr
+	}
+	var found bool
+	if c != nil {
+		found = true
+	}
+	return found, nil
 }
 
 // Delete a logged event.

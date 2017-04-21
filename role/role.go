@@ -1,7 +1,7 @@
 /* Roles, an important building block of Chef. */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -217,6 +217,24 @@ func Get(org *organization.Organization, roleName string) (*Role, util.Gerror) {
 		return nil, err
 	}
 	return role, nil
+}
+
+// DoesExist checks if this role exists or not
+func DoesExist(roleName string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var cerr error
+		found, cerr = checkForRoleSQL(datastore.Dbh, roleName)
+		if cerr != nil {
+			err := util.Errorf(cerr.Error())
+			err.SetStatus(http.StatusInternalServerError)
+			return false, err
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get("role", roleName)
+	}
+	return found, nil
 }
 
 // GetMulti gets multiple roles from a slice of role names.

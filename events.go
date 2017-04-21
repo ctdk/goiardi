@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -40,7 +41,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -131,7 +132,10 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "GET":
+	case http.MethodHead:
+		headDefaultResponse(w, r)
+		return
+	case http.MethodGet:
 		var leList []*loginfo.LogInfo
 		var err error
 		if limitFound {
@@ -155,13 +159,12 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	case "DELETE":
+	case http.MethodDelete:
 		if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
 			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-
 			return
 		}
 		purged, err := loginfo.PurgeLogInfos(org, purgeFrom)
@@ -190,7 +193,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -208,6 +211,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+	eventIDstr := vars["id"]
 	eventID, aerr := strconv.Atoi(vars["id"])
 	if aerr != nil {
 		jsonErrorReport(w, r, aerr.Error(), http.StatusBadRequest)
@@ -215,8 +219,20 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "GET":
-		le, err := loginfo.Get(org, eventID)
+	case http.MethodHead:
+		pcheck := func(r *http.Request, eventIDstr string, opUser actor.Actor) util.Gerror {
+			if !opUser.IsAdmin() {
+				return headForbidden()
+			}
+			return nil
+		}
+		if !opUser.IsAdmin() {
+			return
+		}
+		headChecking(w, r, opUser, eventIDstr, loginfo.DoesExist, pcheck)
+		return
+	case http.MethodGet:
+		le, err := loginfo.Get(eventID)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
@@ -226,13 +242,12 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	case "DELETE":
+	case http.MethodDelete:
 		if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
 			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-
 			return
 		}
 		le, err := loginfo.Get(org, eventID)

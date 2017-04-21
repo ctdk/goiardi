@@ -2,7 +2,7 @@
  * to learn more about programming in Go. */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ package main
 
 import (
 	"compress/gzip"
+	"context"
 	"crypto/tls"
 	"encoding/gob"
 	"encoding/json"
@@ -56,6 +57,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/report"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/search"
@@ -81,6 +83,13 @@ type apiTimerInfo struct {
 	elapsed time.Duration
 	path    string
 	method  string
+}
+
+var noOpUserReqs = []string{
+	"/authenticate_user",
+	"/file_store",
+	"/universe",
+	"/principals",
 }
 
 var apiChan chan *apiTimerInfo
@@ -430,6 +439,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Chef-Version", config.ChefVersion)
 	apiInfo := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
 	w.Header().Set("X-Ops-API-Info", apiInfo)
+	w.Header().Set("X-Ops-Server-API-Version", config.ChefApiVersion)
 
 	userID := r.Header.Get("X-OPS-USERID")
 	if rs := r.Header.Get("X-Ops-Request-Source"); rs == "web" {
@@ -479,7 +489,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if herr != nil {
 			w.Header().Set("Content-Type", "application/json")
 			logger.Errorf("Authorization failure: %s\n", herr.Error())
-			w.Header().Set("Www-Authenticate", `X-Ops-Sign version="1.0" version="1.1" version="1.2"`)
+			w.Header().Set("Www-Authenticate", `X-Ops-Sign version="1.0" version="1.1" version="1.2" version="1.3"`)
 			jsonErrorReport(w, r, herr.Error(), herr.Status())
 			return
 		}
@@ -497,12 +507,35 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Body = reader
 	}
 
-	//http.DefaultServeMux.ServeHTTP(w, r)
+	// Set up the context for the request. At this time, this means setting
+	// the opUser for this request for most (but not all) types of requests.
+	// At this time the exceptions are "/file_store", "/universe", and
+	// "/authenticate_user".
+	ctx := r.Context()
+	var skip bool
+	for _, p := range noOpUserReqs {
+		if strings.HasPrefix(r.URL.Path, p) {
+			skip = true
+			break
+		}
+	}
+	if !skip {
+		opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+		if oerr != nil {
+			w.Header().Set("Content-Type", "application/json")
+			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+			return
+		}
+		ctx = context.WithValue(ctx, reqctx.OpUserKey, opUser)
+	}
+
 	// Now instead of using the default ServeHTTP, we use the gorilla mux
 	// one. We aren't able to use it directly, however, because the chef
 	// clients and knife get unhappy unless we're able to do the above work
 	// before serving the reuquests.
-	h.router.ServeHTTP(w, r)
+	//
+	// And now, of course, it also uses a native golang context.
+	h.router.ServeHTTP(w, r.WithContext(ctx))
 }
 
 func cleanPath(p string) string {

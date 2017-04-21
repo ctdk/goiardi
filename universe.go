@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,10 +28,6 @@ import (
 
 func universeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	if r.Method != "GET" {
-		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
-		return
-	}
 
 	vars := mux.Vars(r)
 	org, orgerr := organization.Get(vars["org"])
@@ -40,9 +36,18 @@ func universeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	universe := cookbook.Universe(org)
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&universe); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	switch r.Method {
+	case http.MethodGet:
+		universe := cookbook.Universe(org)
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(&universe); err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		}
+	case http.MethodHead:
+		headDefaultResponse(w, r) // Yes, we have a universe.
+		return
+	default:
+		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 	}
+	return
 }

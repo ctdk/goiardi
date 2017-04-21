@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,10 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
+	"fmt"
+	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -35,7 +37,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -63,7 +65,11 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	var statusResponse interface{}
 
 	switch r.Method {
-	case "GET":
+	case http.MethodHead:
+		// HEAD responses don't look real meaningful here
+		headDefaultResponse(w, r)
+		return
+	case http.MethodGet:
 		/* pathArray[1] will tell us what operation we're doing */
 		switch vars["specif"] {
 		// /status/all/nodes

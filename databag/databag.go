@@ -1,7 +1,7 @@
 /* Data bags! */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -132,6 +132,24 @@ func Get(org *organization.Organization, dbName string) (*DataBag, util.Gerror) 
 		}
 	}
 	return dataBag, nil
+}
+
+// DoesExist checks if the data bag in question exists or not.
+func DoesExist(dbName string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var cerr error
+		found, cerr = checkForDataBagSQL(datastore.Dbh, dbName)
+		if cerr != nil {
+			err := util.Errorf(cerr.Error())
+			err.SetStatus(http.StatusInternalServerError)
+			return false, err
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get("data_bag", dbName)
+	}
+	return found, nil
 }
 
 // Save a data bag.
@@ -358,6 +376,21 @@ func (db *DataBag) GetDBItem(dbItemName string) (*DataBagItem, error) {
 	}
 	dbi.org = db.org
 	return dbi, nil
+}
+
+// DoesItemExist checks if the data bag item exists without returning the entire
+// data bag and all items.
+func (db *DataBag) DoesItemExist(dbItemName string) (bool, util.Gerror) {
+	if config.UsingDB() {
+		found, err := db.checkDBItemSQL(dbItemName)
+		if err != nil {
+			gerr := util.CastErr(err)
+			return false, gerr
+		}
+		return found, nil
+	}
+	_, found := db.DataBagItems[dbItemName]
+	return found, nil
 }
 
 // GetMultiDBItems gets multiple data bag items from a slice of names.

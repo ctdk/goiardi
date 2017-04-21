@@ -1,7 +1,7 @@
 /* Node functions */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -44,13 +45,26 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 
 	nodeName := vars["name"]
 
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 	if opUser.IsValidator() {
 		jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
+		return
+	}
+
+	// leave the HEAD check out of the switch below, so we can avoid getting
+	// the entire node when we don't need it.
+	if r.Method == http.MethodHead {
+		permCheck := func(r *http.Request, nodeName string, opUser actor.Actor) util.Gerror {
+			if opUser.IsValidator() {
+				return headForbidden()
+			}
+			return nil
+		}
+		headChecking(w, r, opUser, nodeName, node.DoesExist, permCheck)
 		return
 	}
 
@@ -68,7 +82,7 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 
 	/* So, what are we doing? Depends on the HTTP method, of course */
 	switch r.Method {
-	case "GET", "DELETE":
+	case http.MethodGet, http.MethodDelete:
 		if r.Method == "DELETE" {
 			delchk, ferr := containerACL.CheckPerm("delete", opUser)
 			if ferr != nil {
@@ -94,7 +108,7 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if r.Method == "DELETE" {
+		if r.Method == http.MethodDelete {
 			err := chefNode.Delete()
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -109,7 +123,7 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-	case "PUT":
+	case http.MethodPut:
 		updatechk, ferr := containerACL.CheckPerm("update", opUser)
 		if ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())

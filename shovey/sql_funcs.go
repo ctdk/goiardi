@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 	"net/http"
 )
 
-func checkForShoveySQL(dbhandle datastore.Dbhandle, runID string) (bool, error) {
+func checkForShoveySQL(runID string) (bool, error) {
 	var f int
 	var sqlStmt string
 	if config.Config.UseMySQL {
@@ -32,7 +32,7 @@ func checkForShoveySQL(dbhandle datastore.Dbhandle, runID string) (bool, error) 
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "SELECT count(*) AS c FROM goiardi.shoveys WHERE run_id = $1"
 	}
-	stmt, err := dbhandle.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return false, err
 	}

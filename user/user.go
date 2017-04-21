@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -163,6 +163,24 @@ func GetByEmail(email string) (*User, util.Gerror) {
 		}
 	}
 	return nil, util.Errorf("no user associated with email '%s' found", email)
+}
+
+// DoesExist checks if the user in question exists or not
+func DoesExist(userName string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var cerr error
+		found, cerr = checkForUserSQL(datastore.Dbh, userName)
+		if cerr != nil {
+			err := util.Errorf(cerr.Error())
+			err.SetStatus(http.StatusInternalServerError)
+			return false, err
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get("user", userName)
+	}
+	return found, nil
 }
 
 // Save the user's current state.

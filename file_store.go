@@ -2,7 +2,7 @@
  * them up to S3. Pretty much the same sort of thing chef-zero does here. */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,15 +44,19 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 	 * uploading to s3 or a similar cloud storage provider needs to be
 	 * supported. */
 	switch r.Method {
-	case "GET":
+	case http.MethodGet, http.MethodHead:
 		w.Header().Set("Content-Type", "application/x-binary")
 		fileStore, err := filestore.Get(org.Name, chksum)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
+		if r.Method == http.MethodHead {
+			headResponse(w, r, http.StatusOK)
+			return
+		}
 		w.Write(*fileStore.Data)
-	case "PUT", "POST": /* Seems like for file uploads we ought to
+	case http.MethodPut, http.MethodPost: /* Seems like for file uploads we ought to
 		 * support POST too. */
 		w.Header().Set("Content-Type", "application/json")
 		/* Need to distinguish file already existing and some

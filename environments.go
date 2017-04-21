@@ -1,7 +1,7 @@
 /* Environment functions */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import (
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -52,7 +53,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -96,7 +97,15 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		switch r.Method {
-		case "GET":
+		case http.MethodHead:
+			// not real meaningful...
+			if opUser.IsValidator() {
+				headResponse(w, r, http.StatusForbidden)
+				return
+			}
+			headDefaultResponse(w, r)
+			return
+		case http.MethodGet:
 			if opUser.IsValidator() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
@@ -105,7 +114,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			for _, env := range envList {
 				envResponse[env] = util.CustomURL(util.JoinStr("/organizations/", org.Name, "/environments/", env))
 			}
-		case "POST":
+		case http.MethodPost:
 			if f, err := containerACL.CheckPerm("create", opUser); err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
@@ -152,8 +161,23 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		/* All of the 2 element operations return the environment
 		 * object, so we do the json encoding in this block and return
 		 * out. */
+
 		envName := vars["name"]
-		env, err := environment.Get(org, envName)
+
+		// get the HEAD out of the way before doing heavy lifting with
+		// environments
+		if r.Method == http.MethodHead {
+			permCheck := func(r *http.Request, envName string, opUser actor.Actor) util.Gerror {
+				if opUser.IsValidator() {
+					return headForbidden()
+				}
+				return nil
+			}
+			headChecking(w, r, opUser, envName, environment.DoesExist, permCheck)
+			return
+		}
+
+		env, err := environment.Get(envName)
 		delEnv := false /* Set this to delete the environment after
 		 * sending the json. */
 		if err != nil {
@@ -167,9 +191,9 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch r.Method {
-		case "GET", "DELETE":
+		case http.MethodGet, http.MethodDelete:
 			/* We don't actually have to do much here. */
-			if r.Method == "DELETE" {
+			if r.Method == http.MethodDelete {
 				if f, err := containerACL.CheckPerm("delete", opUser); err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
@@ -195,7 +219,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-		case "PUT":
+		case http.MethodPut:
 			if f, err := containerACL.CheckPerm("update", opUser); err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
@@ -292,7 +316,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		envName := vars["name"]
 		op := pathArray[2]
 
-		if op == "cookbook_versions" && r.Method != "POST" || op != "cookbook_versions" && r.Method != "GET" {
+		if op == "cookbook_versions" && r.Method != http.MethodPost || op != "cookbook_versions" && r.Method != http.MethodGet {
 			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return
 		}
@@ -411,7 +435,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 		op := pathArray[2]
 		opName := vars["op_name"]
 
-		if r.Method != "GET" {
+		if r.Method != http.MethodGet {
 			jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}

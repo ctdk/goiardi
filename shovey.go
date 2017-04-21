@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -43,7 +44,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -51,6 +52,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 	containerACL, conerr := acl.Get(org, "containers", "shoveys")
 	if conerr != nil {
 		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
+		jsonErrorReport(w, r, "you cannot perform this action", http.StatusForbidden)
 		return
 	}
 	if r.Method != "PUT" {
@@ -82,7 +84,10 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 	switch op {
 	case "jobs":
 		switch r.Method {
-		case "GET":
+		case http.MethodHead:
+			headChecking(w, r, opUser, pathArray[2], shovey.DoesExist, nilPermCheck)
+			return
+		case http.MethodGet:
 			switch pathArrayLen {
 			case 4:
 				shove, err := shovey.Get(org, vars["job_id"])
@@ -123,7 +128,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				return
 			}
-		case "POST":
+		case http.MethodPost:
 			if pathArrayLen != 2 {
 				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
@@ -179,7 +184,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 
 			shoveyResponse["id"] = s.RunID
 			shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/shovey/jobs/%s", s.RunID))
-		case "PUT":
+		case http.MethodPut:
 			if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
@@ -275,7 +280,10 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		switch r.Method {
-		case "GET":
+		case http.MethodHead:
+			headDefaultResponse(w, r)
+			return
+		case http.MethodGet:
 			var seq int
 			r.ParseForm()
 			if s, found := r.Form["sequence"]; found {
@@ -333,7 +341,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				shoveyResponse["is_last"] = stream[len(stream)-1].IsLast
 			}
 			shoveyResponse["output"] = combinedOutput
-		case "PUT":
+		case http.MethodPut:
 			if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return

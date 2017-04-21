@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/report"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -61,7 +62,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -78,7 +79,11 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	reportResponse := make(map[string]interface{})
 
 	switch r.Method {
-	case "GET":
+	case http.MethodHead:
+		// HEAD doesn't seem real meaningful here, just return 200
+		headDefaultResponse(w, r)
+		return
+	case http.MethodGet:
 		// Making an informed guess that admin rights are needed
 		// to see the node run reports
 		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
@@ -192,7 +197,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 			return
 		}
-	case "POST":
+	case http.MethodPost:
 		// Can't use the usual parseObjJSON function here, since
 		// the reporting "run_list" type is a string rather
 		// than []interface{}.

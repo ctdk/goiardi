@@ -1,5 +1,3 @@
-// +build !windows
-
 /*
  * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
@@ -16,21 +14,24 @@
  * limitations under the License.
  */
 
-package config
+package gerror
 
 import (
-	"github.com/tideland/golib/logger"
+	"net/http"
+	"testing"
 )
 
-func setLogger(useSyslog bool) error {
-	if useSyslog {
-		sl, err := logger.NewSysLogger("goiardi")
-		if err != nil {
-			return err
-		}
-		logger.SetLogger(sl)
-	} else {
-		logger.SetLogger(logger.NewGoLogger())
+func TestGerror(t *testing.T) {
+	errmsg := "foo bar"
+	err := Errorf(errmsg)
+	if err.Error() != errmsg {
+		t.Errorf("expected %s to match %s", err.Error(), errmsg)
 	}
-	return nil
+	if err.Status() != http.StatusBadRequest {
+		t.Errorf("err.Status() did not return expected default")
+	}
+	err.SetStatus(http.StatusNotFound)
+	if err.Status() != http.StatusNotFound {
+		t.Errorf("SetStatus did not set Status correctly")
+	}
 }

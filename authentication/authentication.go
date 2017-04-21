@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,16 +23,17 @@ package authentication
 import (
 	"bytes"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
-	"github.com/ctdk/goiardi/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 
+	"hash"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -41,7 +42,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	//"github.com/ctdk/chefcrypto"
+	"github.com/ctdk/chefcrypto"
 )
 
 // CheckHeader checks the signed headers sent by the client against the expected
@@ -121,7 +122,10 @@ func AuthenticateHeader(publicKey string, timeSlew time.Duration, r *http.Reques
 	shaRe := regexp.MustCompile(`algorithm=(\w+)`)
 	if verChk := re.FindStringSubmatch(xopssign); verChk != nil {
 		apiVer = verChk[1]
-		if apiVer != "1.0" && apiVer != "1.1" && apiVer != "1.2" {
+		switch apiVer {
+		case "1.0", "1.1", "1.2", "1.3":
+
+		default:
 			gerr := util.Errorf("Bad version number '%s' in X-Ops-Header", apiVer)
 			return gerr
 		}
@@ -133,13 +137,13 @@ func AuthenticateHeader(publicKey string, timeSlew time.Duration, r *http.Reques
 	// if algorithm is missing, it uses sha1. Of course, no other
 	// hashing algorithm is supported yet...
 	if shaChk := shaRe.FindStringSubmatch(xopssign); shaChk != nil {
-		if shaChk[1] != "sha1" {
+		if shaChk[1] != "sha1" && !(shaChk[1] == "sha256" && apiVer == "1.3") {
 			gerr := util.Errorf("Unsupported hashing algorithm '%s' specified in X-Ops-Header", shaChk[1])
 			return gerr
 		}
 	}
 
-	chkHash, chkerr := calcBodyHash(r)
+	chkHash, chkerr := calcBodyHash(r, apiVer)
 	if chkerr != nil {
 		return chkerr
 	}
@@ -155,9 +159,12 @@ func AuthenticateHeader(publicKey string, timeSlew time.Duration, r *http.Reques
 	}
 	headToCheck := assembleHeaderToCheck(r, chkHash, apiVer)
 
-	if apiVer == "1.2" {
+	switch apiVer {
+	case "1.3":
+		chkerr = checkAuth13Headers(publicKey, r, headToCheck, signedHeaders)
+	case "1.2":
 		chkerr = checkAuth12Headers(publicKey, r, headToCheck, signedHeaders)
-	} else {
+	default:
 		chkerr = checkAuthHeaders(publicKey, r, headToCheck, signedHeaders)
 	}
 
@@ -180,6 +187,20 @@ func checkAuth12Headers(publicKey string, r *http.Request, headToCheck, signedHe
 		gerr := util.CastErr(err)
 		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
+	}
+	return nil
+}
+
+func checkAuth13Headers(publicKey string, r *http.Request, headToCheck, signedHeaders string) util.Gerror {
+	sig, err := base64.StdEncoding.DecodeString(signedHeaders)
+	if err != nil {
+		gerr := util.CastErr(err)
+		return gerr
+	}
+	sigSha := sha256.Sum256([]byte(headToCheck))
+	err = chefcrypto.Auth13HeaderVerify(publicKey, sigSha[:], sig)
+	if err != nil {
+		return util.CastErr(err)
 	}
 	return nil
 }
@@ -274,25 +295,41 @@ func checkTimeStamp(timestamp string, slew time.Duration) (bool, util.Gerror) {
 
 func assembleHeaderToCheck(r *http.Request, cHash string, apiVer string) string {
 	method := r.Method
-	hashPath := hashStr(path.Clean(r.URL.Path))
+	cleanPath := path.Clean(r.URL.Path)
 	timestamp := r.Header.Get("x-ops-timestamp")
 	userID := r.Header.Get("x-ops-userid")
-	if apiVer != "1.0" {
+	if apiVer != "1.0" && apiVer != "1.3" {
 		userID = hashStr(userID)
 	}
+	var headStr string
+	if apiVer == "1.3" {
+		headerXopsApiVersion := r.Header.Get("x-ops-server-api-version")
+		headStr = fmt.Sprintf("Method:%s\nPath:%s\nX-Ops-Content-Hash:%s\nX-Ops-Sign:version=%s\nX-Ops-Timestamp:%s\nX-Ops-UserId:%s\nX-Ops-Server-API-Version:%s", method, cleanPath, cHash, apiVer, timestamp, userID, headerXopsApiVersion)
+	} else {
+		hashPath := hashStr(cleanPath)
+		headStr = fmt.Sprintf("Method:%s\nHashed Path:%s\nX-Ops-Content-Hash:%s\nX-Ops-Timestamp:%s\nX-Ops-UserId:%s", method, hashPath, cHash, timestamp, userID)
+	}
 
-	headStr := fmt.Sprintf("Method:%s\nHashed Path:%s\nX-Ops-Content-Hash:%s\nX-Ops-Timestamp:%s\nX-Ops-UserId:%s", method, hashPath, cHash, timestamp, userID)
 	return headStr
 }
 
 func hashStr(toHash string) string {
 	h := sha1.New()
+	return hashStrBase(toHash, h)
+}
+
+func hashSha256Str(toHash string) string {
+	h := sha256.New()
+	return hashStrBase(toHash, h)
+}
+
+func hashStrBase(toHash string, h hash.Hash) string {
 	io.WriteString(h, toHash)
 	hashed := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	return hashed
 }
 
-func calcBodyHash(r *http.Request) (string, util.Gerror) {
+func calcBodyHash(r *http.Request, apiVer string) (string, util.Gerror) {
 	var bodyStr string
 	if r.Body == nil {
 		bodyStr = ""
@@ -310,6 +347,12 @@ func calcBodyHash(r *http.Request) (string, util.Gerror) {
 		bodyStr = buf.String()
 		r.Body = save
 	}
-	chkHash := hashStr(bodyStr)
+	var chkHash string
+	if apiVer == "1.3" {
+		chkHash = hashSha256Str(bodyStr)
+	} else {
+		chkHash = hashStr(bodyStr)
+	}
+
 	return chkHash, nil
 }

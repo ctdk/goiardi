@@ -1,7 +1,7 @@
 /* The client object */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -162,6 +162,23 @@ func Get(org *organization.Organization, clientname string) (*Client, util.Gerro
 		}
 	}
 	return client, nil
+}
+
+// DoesExist checks if the client in question exists or not.
+func DoesExist(clientname string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var cerr error
+		found, cerr = checkForClientSQL(datastore.Dbh, clientname)
+		if cerr != nil {
+			err := util.CastErr(cerr)
+			return false, err
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get("client", clientname)
+	}
+	return found, nil
 }
 
 // GetMulti gets multiple clients from a given slice of client names.

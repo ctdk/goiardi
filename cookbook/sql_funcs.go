@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,14 @@ import (
 )
 
 func (c *Cookbook) numVersionsSQL() *int {
+	cn, err := c.numVer()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &cn
+}
+
+func (c *Cookbook) numVer() (int, error) {
 	var cbvCount int
 	var sqlStatement string
 	if config.Config.UseMySQL {
@@ -42,7 +50,7 @@ func (c *Cookbook) numVersionsSQL() *int {
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 
 	if err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(c.id).Scan(&cbvCount)
@@ -50,10 +58,10 @@ func (c *Cookbook) numVersionsSQL() *int {
 		if err == sql.ErrNoRows {
 			cbvCount = 0
 		} else {
-			log.Fatal(err)
+			return 0, err
 		}
 	}
-	return &cbvCount
+	return cbvCount, nil
 }
 
 func checkForCookbookSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -432,6 +440,50 @@ func (c *Cookbook) getCookbookVersionSQL(cbVersion string) (*CookbookVersion, er
 	}
 
 	return cbv, nil
+}
+
+func (c *Cookbook) checkCookbookVersionSQL(cbVersion string) (bool, error) {
+	var found bool
+
+	if cbVersion == "_latest" {
+		cn, err := c.numVer()
+		if err != nil {
+			return false, err
+		}
+		if cn != 0 {
+			found = true
+		}
+		return false, nil
+	}
+
+	var sqlStatement string
+
+	maj, min, patch, cverr := extractVerNums(cbVersion)
+	if cverr != nil {
+		return false, cverr
+	}
+	if config.Config.UseMySQL {
+		sqlStatement = "SELECT COUNT(cv.id) FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "SELECT COUNT(cv.id) FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 AND major_ver = $2 AND minor_ver = $3 AND patch_ver = $4"
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	var cn int
+	err = stmt.QueryRow(c.id, maj, min, patch).Scan(&c)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+	if cn != 0 {
+		found = true
+	}
+
+	return found, nil
 }
 
 func (cbv *CookbookVersion) deleteCookbookVersionSQL() util.Gerror {

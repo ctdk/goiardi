@@ -2,7 +2,7 @@
  * right now. */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/pborman/uuid"
 	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/gerror"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -38,7 +39,7 @@ import (
 
 // NoDBConfigured is an error for when no database has been configured for use,
 // yet an SQL function is being called.
-var NoDBConfigured = &gerror{msg: "no db configured, but you tried to use one", status: http.StatusInternalServerError}
+var NoDBConfigured = gerror.StatusError("no db configured, but you tried to use one", http.StatusInternalServerError)
 
 // GoiardiObj is an interface for helping goiardi/chef objects, like cookbooks,
 // roles, etc., be able to easily make URLs and be identified by name.
@@ -48,54 +49,21 @@ type GoiardiObj interface {
 	OrgName() string
 }
 
-type gerror struct {
-	msg    string
-	status int
-}
-
-// Gerror is an error type that includes an http status code (defaults to
-// http.BadRequest).
+// Gerror is an error type that wraps around the goiardi Error type.
 type Gerror interface {
-	String() string
-	Error() string
-	Status() int
-	SetStatus(int)
+	gerror.Error
 }
 
-// New makes a new Gerror. Usually you want Errorf.
-func New(text string) Gerror {
-	return &gerror{msg: text,
-		status: http.StatusBadRequest,
-	}
-}
-
-// Errorf creates a new Gerror, with a formatted error string.
+// Errorf creates a new Gerror, with a formatted error string. A convenience
+// wrapper around error.Errorf.
 func Errorf(format string, a ...interface{}) Gerror {
-	return New(fmt.Sprintf(format, a...))
+	return gerror.Errorf(format, a...)
 }
 
-// CastErr will easily cast a different kind of error to a Gerror.
+// CastErr will easily cast a different kind of error to a Gerror. A convenience
+// wrapper around error.CastErr.
 func CastErr(err error) Gerror {
-	return Errorf(err.Error())
-}
-
-// Error returns the Gerror error message.
-func (e *gerror) Error() string {
-	return e.msg
-}
-
-func (e *gerror) String() string {
-	return e.msg
-}
-
-// Set the Gerror HTTP status code.
-func (e *gerror) SetStatus(s int) {
-	e.status = s
-}
-
-// Returns the Gerror's HTTP status code.
-func (e *gerror) Status() int {
-	return e.status
+	return gerror.CastErr(err)
 }
 
 // ObjURL crafts a URL for an object.

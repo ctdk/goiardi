@@ -1,7 +1,7 @@
 /* Sandbox functions */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -40,7 +41,7 @@ func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -53,7 +54,7 @@ func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "POST":
+	case http.MethodPost:
 		if pathArrayLen != 1 {
 			jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 			return
@@ -101,7 +102,7 @@ func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 		sboxResponse["sandbox_id"] = sbox.ID
 		sboxResponse["checksums"] = sbox.UploadChkList()
 		w.WriteHeader(http.StatusCreated)
-	case "PUT":
+	case http.MethodPut:
 		if pathArrayLen != 2 {
 			jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 			return

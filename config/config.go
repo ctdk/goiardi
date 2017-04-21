@@ -1,7 +1,7 @@
 /* Goiardi configuration. */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -216,6 +216,7 @@ const Version = "1.0.0-dev"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
 const ChefVersion = "12.0.0"
+const ChefApiVersion = "0"
 
 // The default time difference allowed between the server's clock and the time
 // in the X-OPS-TIMESTAMP header.

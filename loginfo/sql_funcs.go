@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,6 +121,33 @@ func getLogEventSQL(id int) (*LogInfo, error) {
 	// conveniently, le.Actor does not seem to need to be populated after
 	// it's been saved.
 	return le, nil
+}
+
+func checkLogEventSQL(id int) (bool, error) {
+	var found bool
+	var sqlStmt string
+
+	if config.Config.UseMySQL {
+		sqlStmt = "SELECT COUNT(id) FROM log_infos WHERE id = ?"
+	} else if config.Config.UsePostgreSQL {
+		sqlStmt = "SELECT id FROM goiardi.log_infos WHERE id = $1"
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	var c int
+	err = stmt.QueryRow(id).Scan(&c)
+	// should be hard at best to get ErrNoRows in this situation
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+	if c != 0 {
+		found = true
+	}
+	return found, nil
 }
 
 func (le *LogInfo) deleteSQL() error {

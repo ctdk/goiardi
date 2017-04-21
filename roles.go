@@ -1,7 +1,7 @@
 /* Role functions */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -42,7 +43,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -55,7 +56,19 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 	pathArray := splitPath(r.URL.Path)[2:]
 	roleName := vars["name"]
 
-	chefRole, err := role.Get(org, roleName)
+	// get HEAD out of the way before the entire role is fetched
+	if r.Method == http.MethodHead {
+		permCheck := func(r *http.Request, roleName string, opUser actor.Actor) util.Gerror {
+			if opUser.IsValidator() {
+				return headForbidden()
+			}
+			return nil
+		}
+		headChecking(w, r, opUser, roleName, role.DoesExist, permCheck)
+		return
+	}
+
+	chefRole, err := role.Get(roleName)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 		return
@@ -77,13 +90,13 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 	if len(pathArray) == 2 {
 		/* Normal /roles/NAME case */
 		switch r.Method {
-		case "GET", "DELETE":
+		case http.MethodGet, http.MethodDelete:
 			delchk, ferr := containerACL.CheckPerm("delete", opUser)
 			if ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
 			}
-			if opUser.IsValidator() || (!delchk && r.Method == "DELETE") {
+			if opUser.IsValidator() || (!delchk && r.Method == http.MethodDelete) {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
@@ -92,7 +105,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
 				return
 			}
-			if r.Method == "DELETE" {
+			if r.Method == http.MethodDelete {
 				err = chefRole.Delete()
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
@@ -108,7 +121,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-		case "PUT":
+		case http.MethodPut:
 			if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
@@ -169,7 +182,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		/* only method for the /roles/NAME/environment stuff is GET */
 		switch r.Method {
-		case "GET":
+		case http.MethodGet:
 			/* If we have an environment name, return the
 			 * environment specific run_list. Otherwise,
 			 * return the environments we have run lists

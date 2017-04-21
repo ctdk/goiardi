@@ -1,7 +1,7 @@
 /* Client functions */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -41,14 +42,14 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	clientName := vars["name"]
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
 
 	switch r.Method {
-	case "DELETE":
+	case http.MethodDelete:
 		chefClient, gerr := client.Get(org, clientName)
 		if gerr != nil {
 			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
@@ -98,7 +99,23 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
 			return
 		}
-	case "GET":
+	case http.MethodHead:
+		permCheck := func(r *http.Request, clientName string, opUser actor.Actor) util.Gerror {
+			if !opUser.IsAdmin() {
+				chefClient, gerr := client.Get(org, clientName)
+				if gerr != nil {
+					return gerr
+				}
+				if !opUser.IsSelf(chefClient) {
+					return headForbidden()
+				}
+			}
+			return nil
+		}
+
+		headChecking(w, r, opUser, clientName, client.DoesExist, permCheck)
+		return
+	case http.MethodGet:
 		chefClient, gerr := client.Get(org, clientName)
 
 		if gerr != nil {
@@ -129,7 +146,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	case "PUT":
+	case http.MethodPut:
 		clientData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)

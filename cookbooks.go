@@ -1,7 +1,7 @@
 /* Cookbook functions */
 
 /*
- * Copyright (c) 2013-2016, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -43,7 +44,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -72,8 +73,8 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 
 	pathArrayLen := len(pathArray)
 
-	/* 1 and 2 length path arrays only support GET */
-	if pathArrayLen < 3 && r.Method != "GET" {
+	/* 1 and 2 length path arrays only support GET (or HEAD) */
+	if pathArrayLen < 3 && (r.Method != http.MethodGet && r.Method != http.MethodHead) {
 		jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 		return
 	} else if pathArrayLen < 3 && opUser.IsValidator() {
@@ -105,11 +106,30 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
 			return
 		}
+		if r.Method == http.MethodHead {
+			// not, uh, much else to do here
+			headResponse(w, r, http.StatusOK)
+			return
+		}
 		/* list all cookbooks */
 		cookbookResponse = cookbook.CookbookLister(org, numResults)
 	} else if pathArrayLen == 2 {
 		/* info about a cookbook and all its versions */
 		cookbookName := vars["name"]
+
+		// Handle HEAD responses here, and avoid wading into all that
+		// below
+		if r.Method == http.MethodHead {
+			// Until something better comes up with these, just send
+			// back 200 OK
+			if cookbookName == "_latest" || cookbookName == "_recipes" {
+				headResponse(w, r, http.StatusOK)
+				return
+			}
+			headChecking(w, r, opUser, cookbookName, cookbook.DoesExist, nilPermCheck)
+			return
+		}
+
 		/* Undocumented behavior - a cookbook name of _latest gets a
 		 * list of the latest versions of all the cookbooks, and _recipe
 		 * gets the recipes of the latest cookbooks. */
@@ -172,7 +192,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 		var cookbookVersion string
 		var vererr util.Gerror
 		vbase := vars["version"]
-		if r.Method == "GET" && vbase == "_latest" { // might be other special vers
+		if (r.Method == http.MethodGet || r.Method == http.MethodHead) && pathArray[2] == "_latest" { // might be other special vers
 			cookbookVersion = vbase
 		} else {
 			cookbookVersion, vererr = util.ValidateAsVersion(vbase)
@@ -183,7 +203,19 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		switch r.Method {
-		case "DELETE", "GET":
+		case http.MethodHead:
+			if opUser.IsValidator() {
+				headResponse(w, r, http.StatusForbidden)
+				return
+			}
+			cb, err := cookbook.Get(cookbookName)
+			if err != nil {
+				headResponse(w, r, err.Status())
+				return
+			}
+			headChecking(w, r, opUser, cookbookVersion, cb.DoesVersionExist, nilPermCheck)
+			return
+		case http.MethodDelete, http.MethodGet:
 			if opUser.IsValidator() {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
@@ -208,7 +240,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}
-			if r.Method == "DELETE" {
+			if r.Method == http.MethodDelete {
 				// do we need to track perms beyond the
 				// container ones?
 				if f, err := cbACL.CheckPerm("delete", opUser); err != nil {
@@ -274,7 +306,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-		case "PUT":
+		case http.MethodPut:
 			cbvData, jerr := parseObjJSON(r.Body)
 			if jerr != nil {
 				jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
