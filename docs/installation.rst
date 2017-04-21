@@ -5,7 +5,7 @@ Installation
 
 To install goiardi from source:
 
-1. Install go. (http://golang.org/doc/install.html) Officially goiardi only supports go 1.7+ at this time, but older versions may work. Goiardi should generally be able to be built with the latest version of Go, and this is generally recommended. Immediately after a minor release, of course, caution may be warranted.
+1. Install go. (http://golang.org/doc/install.html) Goiardi now requires go 1.7+ (because of the use of contexts). Goiardi should generally be able to be built with the latest version of Go, and this is generally recommended. Usually it will also build with the previous minor release, and may build with older versions as well, but this shouldn't be relied on. Immediately after a minor release, of course, caution may be warranted.
 
 2. Make sure your ``$GOROOT`` and ``$PATH`` are set up correctly per the Go installation instructions.
 
