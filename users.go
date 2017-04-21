@@ -53,7 +53,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	opUser, oerr := reqctx.CtxReqUser(r.Context())
-	
+
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return

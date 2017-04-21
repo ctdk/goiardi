@@ -33,6 +33,7 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 
+	"github.com/ctdk/chefcrypto"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -42,7 +43,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/ctdk/chefcrypto"
 )
 
 // CheckHeader checks the signed headers sent by the client against the expected
