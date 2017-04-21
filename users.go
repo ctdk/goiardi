@@ -59,7 +59,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		chefUser, err := user.Get(userName)
 		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
+			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
 		if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
@@ -90,7 +90,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		chefUser, err := user.Get(userName)
 
 		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
+			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
 		if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
