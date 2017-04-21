@@ -176,7 +176,7 @@ func Get(org *organization.Organization, id int) (*LogInfo, error) {
 // DoesExist checks if the particular event in question exists. To be compatible
 // with the interface for HEAD responses, this method receives a string rather
 // than an integer.
-func DoesExist(eventID string) (bool, util.Gerror) {
+func DoesExist(org *organization.Organization, eventID string) (bool, util.Gerror) {
 	id, err := strconv.Atoi(eventID)
 	if err != nil {
 		cerr := util.CastErr(err)
@@ -192,7 +192,7 @@ func DoesExist(eventID string) (bool, util.Gerror) {
 	}
 
 	ds := datastore.New()
-	c, err := ds.GetLogInfo(id)
+	c, err := ds.GetLogInfo(org.Name, id)
 	if err != nil {
 		cerr := util.CastErr(err)
 		return false, cerr

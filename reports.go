@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/acl"
-	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/reqctx"

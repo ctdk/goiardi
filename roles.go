@@ -64,11 +64,11 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return nil
 		}
-		headChecking(w, r, opUser, roleName, role.DoesExist, permCheck)
+		headChecking(w, r, opUser, org, roleName, role.DoesExist, permCheck)
 		return
 	}
 
-	chefRole, err := role.Get(roleName)
+	chefRole, err := role.Get(org, roleName)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 		return

@@ -57,7 +57,7 @@ func principalHandler(w http.ResponseWriter, r *http.Request) {
 		// Can't so easily get out of the full request for a user or
 		// client object here, so just go ahead and do that rather than
 		// dancing around.
-		chefActor, err := actor.GetReqUser(principalName)
+		chefActor, err := actor.GetReqUser(org, principalName)
 
 		if r.Method == http.MethodHead {
 			var status int

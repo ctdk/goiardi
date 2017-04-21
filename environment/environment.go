@@ -250,7 +250,7 @@ func Get(org *organization.Organization, envName string) (*ChefEnvironment, util
 }
 
 // DoesExist checks if the environment in question exists or not
-func DoesExist(environmentName string) (bool, util.Gerror) {
+func DoesExist(org *organization.Organization, environmentName string) (bool, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var cerr error
@@ -262,7 +262,7 @@ func DoesExist(environmentName string) (bool, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("env", environmentName)
+		_, found = ds.Get(org.DataKey("env"), environmentName)
 	}
 	return found, nil
 }

@@ -165,7 +165,7 @@ func Get(org *organization.Organization, clientname string) (*Client, util.Gerro
 }
 
 // DoesExist checks if the client in question exists or not.
-func DoesExist(clientname string) (bool, util.Gerror) {
+func DoesExist(org *organization.Organization, clientname string) (bool, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var cerr error
@@ -176,7 +176,7 @@ func DoesExist(clientname string) (bool, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("client", clientname)
+		_, found = ds.Get(org.DataKey("client"), clientname)
 	}
 	return found, nil
 }

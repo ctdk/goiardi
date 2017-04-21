@@ -296,7 +296,7 @@ func Get(org *organization.Organization, runID string) (*Shovey, util.Gerror) {
 }
 
 // DoesExist checks if there is a shovey instance with the given run id.
-func DoesExist(runID string) (bool, util.Gerror) {
+func DoesExist(org *organization.Organization, runID string) (bool, util.Gerror) {
 	if config.UsingDB() {
 		found, err := checkForShoveySQL(runID)
 		if err != nil {
@@ -306,7 +306,7 @@ func DoesExist(runID string) (bool, util.Gerror) {
 		return found, nil
 	}
 	ds := datastore.New()
-	_, found := ds.Get("shovey", runID)
+	_, found := ds.Get(org.DataKey("shovey"), runID)
 	return found, nil
 }
 

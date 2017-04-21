@@ -64,7 +64,7 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return nil
 		}
-		headChecking(w, r, opUser, nodeName, node.DoesExist, permCheck)
+		headChecking(w, r, opUser, org, nodeName, node.DoesExist, permCheck)
 		return
 	}
 

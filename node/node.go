@@ -139,7 +139,7 @@ func Get(org *organization.Organization, nodeName string) (*Node, util.Gerror) {
 }
 
 // DoesExist checks if the node in question exists or not
-func DoesExist(nodeName string) (bool, util.Gerror) {
+func DoesExist(org *organization.Organization, nodeName string) (bool, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var cerr error
@@ -151,7 +151,7 @@ func DoesExist(nodeName string) (bool, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("node", nodeName)
+		_, found = ds.Get(org.DataKey("node"), nodeName)
 	}
 	return found, nil
 }

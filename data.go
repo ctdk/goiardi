@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/acl"
-	"github.com/ctdk/goiardi/actor"
+	//"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
@@ -151,7 +151,8 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		/* chef-pedant is unhappy about not reporting the HTTP status
 		 * as 404 by fetching the data bag before we see if the method
 		 * is allowed, so do a quick check for that here. */
-		if (pathArrayLen == 2 && r.Method == http.MethodPut) || (pathArrayLen) == 3 && r.Method == http.MethodPost) {
+
+		if (pathArrayLen == 2 && r.Method == http.MethodPut) || (pathArrayLen == 3 && r.Method == http.MethodPost) {
 			var allowed string
 			if pathArrayLen == 2 {
 				allowed = "GET, POST, DELETE"
@@ -190,7 +191,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if len(pathArray) == 2 {
 
-				headChecking(w, r, opUser, dbName, databag.DoesExist, permCheck)
+				headChecking(w, r, opUser, org, dbName, databag.DoesExist, permCheck)
 			} else {
 				dbItemName := pathArray[2]
 				chefDbag, err := databag.Get(dbName)
@@ -198,13 +199,13 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 					headResponse(w, r, err.Status())
 					return
 				}
-				headChecking(w, r, opUser, dbItemName, chefDbag.DoesItemExist, permCheck)
+				headChecking(w, r, opUser, org, dbItemName, chefDbag.DoesItemExist, permCheck)
 				return
 			}
 			return
 		}
 		**************************************************************/
-		chefDbag, err := databag.Get(dbName)
+		chefDbag, err := databag.Get(org, dbName)
 		if err != nil {
 			var errMsg string
 			status := err.Status()

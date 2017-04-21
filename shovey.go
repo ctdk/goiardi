@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/acl"
-	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/reqctx"
@@ -85,7 +84,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 	case "jobs":
 		switch r.Method {
 		case http.MethodHead:
-			headChecking(w, r, opUser, pathArray[2], shovey.DoesExist, nilPermCheck)
+			headChecking(w, r, opUser, org, pathArray[2], shovey.DoesExist, nilPermCheck)
 			return
 		case http.MethodGet:
 			switch pathArrayLen {

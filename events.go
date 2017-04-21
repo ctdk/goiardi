@@ -226,13 +226,10 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return nil
 		}
-		if !opUser.IsAdmin() {
-			return
-		}
-		headChecking(w, r, opUser, eventIDstr, loginfo.DoesExist, pcheck)
+		headChecking(w, r, opUser, org, eventIDstr, loginfo.DoesExist, pcheck)
 		return
 	case http.MethodGet:
-		le, err := loginfo.Get(eventID)
+		le, err := loginfo.Get(org, eventID)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return

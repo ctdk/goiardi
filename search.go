@@ -21,7 +21,6 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/acl"
-	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/databag"

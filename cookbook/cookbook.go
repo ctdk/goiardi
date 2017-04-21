@@ -301,7 +301,7 @@ func Get(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 }
 
 // DoesExist checks if the cookbook in question exists or not
-func DoesExist(cookbookName string) (bool, util.Gerror) {
+func DoesExist(org *organization.Organization, cookbookName string) (bool, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var cerr error
@@ -313,7 +313,7 @@ func DoesExist(cookbookName string) (bool, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("cookbook", cookbookName)
+		_, found = ds.Get(org.DataKey("cookbook"), cookbookName)
 	}
 	return found, nil
 }
@@ -911,7 +911,7 @@ func (c *Cookbook) GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) 
 }
 
 // DoesVersionExist checks if a particular version of a cookbook exists
-func (c *Cookbook) DoesVersionExist(cbVersion string) (bool, util.Gerror) {
+func (c *Cookbook) DoesVersionExist(org *organization.Organization, cbVersion string) (bool, util.Gerror) {
 	if config.UsingDB() {
 		found, err := c.checkCookbookVersionSQL(cbVersion)
 		if err != nil {

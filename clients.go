@@ -113,7 +113,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			return nil
 		}
 
-		headChecking(w, r, opUser, clientName, client.DoesExist, permCheck)
+		headChecking(w, r, opUser, org, clientName, client.DoesExist, permCheck)
 		return
 	case http.MethodGet:
 		chefClient, gerr := client.Get(org, clientName)

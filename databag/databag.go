@@ -135,7 +135,7 @@ func Get(org *organization.Organization, dbName string) (*DataBag, util.Gerror) 
 }
 
 // DoesExist checks if the data bag in question exists or not.
-func DoesExist(dbName string) (bool, util.Gerror) {
+func DoesExist(org *organization.Organization, dbName string) (bool, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var cerr error
@@ -147,7 +147,7 @@ func DoesExist(dbName string) (bool, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("data_bag", dbName)
+		_, found = ds.Get(org.DataKey("data_bag"), dbName)
 	}
 	return found, nil
 }
@@ -380,7 +380,7 @@ func (db *DataBag) GetDBItem(dbItemName string) (*DataBagItem, error) {
 
 // DoesItemExist checks if the data bag item exists without returning the entire
 // data bag and all items.
-func (db *DataBag) DoesItemExist(dbItemName string) (bool, util.Gerror) {
+func (db *DataBag) DoesItemExist(org *organization.Organization, dbItemName string) (bool, util.Gerror) {
 	if config.UsingDB() {
 		found, err := db.checkDBItemSQL(dbItemName)
 		if err != nil {

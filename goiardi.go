@@ -442,6 +442,18 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Ops-Server-API-Version", config.ChefApiVersion)
 
 	userID := r.Header.Get("X-OPS-USERID")
+
+	pathArray := strings.Split(r.URL.Path[1:], "/")
+	var org *organization.Organization
+	if pathArray[0] == "organizations" {
+		var err util.Gerror
+		org, err = organization.Get(pathArray[1])
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+	}
+
 	if rs := r.Header.Get("X-Ops-Request-Source"); rs == "web" {
 		/* If use-auth is on and disable-webui is on, and this is a
 		 * webui connection, it needs to fail. */
@@ -454,16 +466,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		/* Check that the user in question with the web request exists.
 		 * If not, fail. */
-		pathArray := strings.Split(r.URL.Path[1:], "/")
-		var org *organization.Organization
-		if pathArray[0] == "organizations" {
-			var err util.Gerror
-			org, err = organization.Get(pathArray[1])
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-		}
+
 		u, uherr := actor.GetReqUser(org, userID)
 		if uherr != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -520,7 +523,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !skip {
-		opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
+		opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 		if oerr != nil {
 			w.Header().Set("Content-Type", "application/json")
 			jsonErrorReport(w, r, oerr.Error(), oerr.Status())

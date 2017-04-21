@@ -220,7 +220,7 @@ func Get(org *organization.Organization, roleName string) (*Role, util.Gerror) {
 }
 
 // DoesExist checks if this role exists or not
-func DoesExist(roleName string) (bool, util.Gerror) {
+func DoesExist(org *organization.Organization, roleName string) (bool, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var cerr error
@@ -232,7 +232,7 @@ func DoesExist(roleName string) (bool, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get("role", roleName)
+		_, found = ds.Get(org.DataKey("role"), roleName)
 	}
 	return found, nil
 }

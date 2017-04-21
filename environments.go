@@ -173,11 +173,11 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				return nil
 			}
-			headChecking(w, r, opUser, envName, environment.DoesExist, permCheck)
+			headChecking(w, r, opUser, org, envName, environment.DoesExist, permCheck)
 			return
 		}
 
-		env, err := environment.Get(envName)
+		env, err := environment.Get(org, envName)
 		delEnv := false /* Set this to delete the environment after
 		 * sending the json. */
 		if err != nil {

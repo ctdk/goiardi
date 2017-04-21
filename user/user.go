@@ -34,6 +34,7 @@ import (
 	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
@@ -165,8 +166,9 @@ func GetByEmail(email string) (*User, util.Gerror) {
 	return nil, util.Errorf("no user associated with email '%s' found", email)
 }
 
-// DoesExist checks if the user in question exists or not
-func DoesExist(userName string) (bool, util.Gerror) {
+// DoesExist checks if the user in question exists or not. The org doesn't
+// matter for users, but it needs to fulfill an interface.
+func DoesExist(org *organization.Organization, userName string) (bool, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var cerr error

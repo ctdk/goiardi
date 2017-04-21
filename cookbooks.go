@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/acl"
-	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
@@ -126,7 +125,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				headResponse(w, r, http.StatusOK)
 				return
 			}
-			headChecking(w, r, opUser, cookbookName, cookbook.DoesExist, nilPermCheck)
+			headChecking(w, r, opUser, org, cookbookName, cookbook.DoesExist, nilPermCheck)
 			return
 		}
 
@@ -208,12 +207,12 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				headResponse(w, r, http.StatusForbidden)
 				return
 			}
-			cb, err := cookbook.Get(cookbookName)
+			cb, err := cookbook.Get(org, cookbookName)
 			if err != nil {
 				headResponse(w, r, err.Status())
 				return
 			}
-			headChecking(w, r, opUser, cookbookVersion, cb.DoesVersionExist, nilPermCheck)
+			headChecking(w, r, opUser, org, cookbookVersion, cb.DoesVersionExist, nilPermCheck)
 			return
 		case http.MethodDelete, http.MethodGet:
 			if opUser.IsValidator() {

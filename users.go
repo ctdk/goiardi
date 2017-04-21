@@ -75,7 +75,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return nil
 		}
-		headChecking(w, r, opUser, userName, user.DoesExist, permCheck)
+		headChecking(w, r, opUser, org, userName, user.DoesExist, permCheck)
 		return
 	case http.MethodDelete:
 		chefUser, err := user.Get(userName)

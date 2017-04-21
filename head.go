@@ -19,6 +19,7 @@ package main
 import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/gerror"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
 	"net/http"
@@ -32,10 +33,10 @@ import (
 
 type headChecker interface {
 	actor.Actor
-	DoesExist(string) (bool, util.Gerror)
+	DoesExist(*organization.Organization, string) (bool, util.Gerror)
 }
 
-type exists func(resource string) (bool, util.Gerror)
+type exists func(org *organization.Organization, resource string) (bool, util.Gerror)
 
 type permChecker func(r *http.Request, resource string, obj actor.Actor) util.Gerror
 
@@ -55,8 +56,8 @@ func headDefaultResponse(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func headChecking(w http.ResponseWriter, r *http.Request, obj actor.Actor, resource string, doesExist exists, permCheck permChecker) {
-	found, err := doesExist(resource)
+func headChecking(w http.ResponseWriter, r *http.Request, obj actor.Actor, org *organization.Organization, resource string, doesExist exists, permCheck permChecker) {
+	found, err := doesExist(org, resource)
 	if err != nil {
 		headResponse(w, r, err.Status())
 	}
