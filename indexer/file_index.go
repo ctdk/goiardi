@@ -736,7 +736,7 @@ func (i *FileIndex) Save() error {
 	if !i.updated {
 		return nil
 	}
-	logger.Infof("Index has changed, saving to disk")
+	logger.Debugf("Index has changed, saving to disk")
 	fp, err := ioutil.TempFile(path.Dir(idxFile), "idx-build")
 	if err != nil {
 		return err

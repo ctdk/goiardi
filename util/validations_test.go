@@ -32,11 +32,10 @@ func TestValidateRunList(t *testing.T) {
 		"versioned_unqualified_recipe_name@1.0.0",
 		"unqualified_recipe_name",
 	}
-	rl, err := ValidateRunList(runList)
+	_, err := ValidateRunList(runList)
 	if err != nil {
 		t.Errorf("%v shoud have passed run list validation, but didn't.", runList)
 	}
-	t.Logf("%+v", rl)
 
 	falseFriends := []string{
 		"Recipe[recipe_name]",

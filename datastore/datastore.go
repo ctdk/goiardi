@@ -463,7 +463,7 @@ func (ds *DataStore) Save(dsFile string) error {
 	if !ds.updated {
 		return nil
 	}
-	logger.Infof("Data has changed, saving data store to disk")
+	logger.Debugf("Data has changed, saving data store to disk")
 	if dsFile == "" {
 		err := fmt.Errorf("Yikes! Cannot save data store to disk because no file was specified.")
 		return err
