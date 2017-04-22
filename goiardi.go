@@ -523,7 +523,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	rxstr := fmt.Sprintf(`^/organizations/[^/]*/(%s)`, strings.Join(noOpUserReqs, "|"))
 	if len(noOpUserRoot) > 0 {
-		rxstr = fmt.Sprintf(`%s|^/(%s)`, strings.Join(noOpUserRoot, "|"))
+		rxstr = fmt.Sprintf(`%s|^/(%s)`, rxstr, strings.Join(noOpUserRoot, "|"))
 	}
 	skipre := regexp.MustCompile(rxstr)
 
