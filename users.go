@@ -43,9 +43,9 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 	userName := vars["name"]
 
 	var org *organization.Organization
-	if orgName, ok := vars["org"]; ok {
+	if _, ok := vars["org"]; ok {
 		var orgerr util.Gerror
-		org, orgerr = organization.Get(orgName)
+		org, orgerr = reqctx.CtxOrg(r.Context())
 		if orgerr != nil {
 			jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 			return

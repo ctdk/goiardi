@@ -19,10 +19,9 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/acl"
-	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/container"
 	//"github.com/ctdk/goiardi/user"
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -35,14 +34,13 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 
-	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := reqctx.CtxOrg(r.Context())
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
 
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
@@ -108,16 +106,14 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 
 func containerListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	vars := mux.Vars(r)
 
-	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := reqctx.CtxOrg(r.Context())
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
 
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return

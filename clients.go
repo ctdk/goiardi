@@ -25,7 +25,6 @@ import (
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/loginfo"
-	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -35,7 +34,7 @@ import (
 func clientHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := reqctx.CtxOrg(r.Context())
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -283,8 +282,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 
 func clientListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := reqctx.CtxOrg(r.Context())
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -322,8 +320,7 @@ func clientListHandler(w http.ResponseWriter, r *http.Request) {
 
 func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := reqctx.CtxOrg(r.Context())
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -467,8 +464,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 func clientNoMethodHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	vars := mux.Vars(r)
-	_, orgerr := organization.Get(vars["org"])
+	_, orgerr := reqctx.CtxOrg(r.Context())
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
