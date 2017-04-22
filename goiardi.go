@@ -86,10 +86,13 @@ type apiTimerInfo struct {
 }
 
 var noOpUserReqs = []string{
-	"/authenticate_user",
-	"/file_store",
-	"/universe",
-	"/principals",
+	"file_store",
+	"universe",
+	"principals",
+}
+
+var noOpUserRoot = []string{
+	"authenticate_user",
 }
 
 var apiChan chan *apiTimerInfo
@@ -443,9 +446,11 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	userID := r.Header.Get("X-OPS-USERID")
 
+	// skip fetching the org for /principals, at least.
+	princre := regexp.MustCompile(`/organizations/[^/]*/principals`)
 	pathArray := strings.Split(r.URL.Path[1:], "/")
 	var org *organization.Organization
-	if pathArray[0] == "organizations" {
+	if pathArray[0] == "organizations" && len(pathArray) > 1 && !(princre.MatchString(r.URL.Path) && (r.Method == http.MethodGet || r.Method == http.MethodHead)) {
 		var err util.Gerror
 		org, err = organization.Get(pathArray[1])
 		if err != nil {
@@ -486,8 +491,8 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* Only perform the authorization check if that's configured. Bomb with
 	 * an error if the check of the headers, timestamps, etc. fails. */
 	/* No clue why /principals doesn't require authorization. Hrmph. */
-	princre := regexp.MustCompile(`/organizations/[^/]*/principals`)
-	if config.Config.UseAuth && !fstorere.MatchString(r.URL.Path) && !(princre.MatchString(r.URL.Path) && r.Method == "GET") {
+	
+	if config.Config.UseAuth && !fstorere.MatchString(r.URL.Path) && !(princre.MatchString(r.URL.Path) && (r.Method == http.MethodGet || r.Method == http.MethodHead)) {
 		herr := authentication.CheckHeader(userID, r)
 		if herr != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -515,14 +520,14 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// At this time the exceptions are "/file_store", "/universe", and
 	// "/authenticate_user".
 	ctx := r.Context()
-	var skip bool
-	for _, p := range noOpUserReqs {
-		if strings.HasPrefix(r.URL.Path, p) {
-			skip = true
-			break
-		}
+
+	rxstr := fmt.Sprintf(`^/organizations/[^/]*/(%s)`, strings.Join(noOpUserReqs, "|"))
+	if len(noOpUserRoot) > 0 {
+		rxstr = fmt.Sprintf(`%s|^/(%s)`, strings.Join(noOpUserRoot, "|"))
 	}
-	if !skip {
+	skipre := regexp.MustCompile(rxstr)
+
+	if !skipre.MatchString(r.URL.Path) {
 		opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 		if oerr != nil {
 			w.Header().Set("Content-Type", "application/json")
