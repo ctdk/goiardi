@@ -22,15 +22,24 @@ import (
 	"context"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/gerror"
+	"github.com/ctdk/goiardi/organization"
 )
 
 // OpUserCtxKey is a string type for a key for setting and fetching the request
 // user in the request's context.
 type OpUserCtxKey string
 
+// OrgCtxKey is a string type for setting and fetching the organization for a
+// request.
+type OrgCtxKey string
+
 // OpUserKey is the default context key for the opUser stored in a request
 // context.
 var OpUserKey OpUserCtxKey = "opUser"
+
+// OrgKey is the default context key for the organization stored in a request's
+// context.
+var OrgKey OrgCtxKey = "reqOrg"
 
 // CtxReqUser returns the actor associated with this context. As it currently
 // stands, this is not especially useful compared to how the actor executing the
@@ -43,4 +52,14 @@ func CtxReqUser(ctx context.Context) (actor.Actor, gerror.Error) {
 		return nil, err
 	}
 	return opUser, nil
+}
+
+// CtxOrg returns the organization associated with this context.
+func CtxOrg(ctx context.Context) (*organization.Organization, gerror.Error) {
+	org, ok := ctx.Value(OrgKey).(*organization.Organization)
+	if !ok {
+		err := gerror.New("No org found in this request context, but there should have been.")
+		return nil, err
+	}
+	return org, nil
 }

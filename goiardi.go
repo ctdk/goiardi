@@ -537,6 +537,12 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx = context.WithValue(ctx, reqctx.OpUserKey, opUser)
 	}
 
+	// and set the org, if there is one, in the context. A nil org is OK,
+	// since we fetched it above if needed, and if it's not there the
+	// handlers that don't expect an org won't be getting it anyway, whether
+	// from the context or the old way.
+	ctx = context.WithValue(ctx, reqctx.OrgKey, org)
+
 	// Now instead of using the default ServeHTTP, we use the gorilla mux
 	// one. We aren't able to use it directly, however, because the chef
 	// clients and knife get unhappy unless we're able to do the above work
