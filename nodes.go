@@ -197,18 +197,19 @@ func nodeListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
-		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
-		return
-	} else if !f {
-		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-		return
-	}
+	
 
 	switch r.Method {
 	case "GET":
 		if opUser.IsValidator() {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+			return
+		}
+		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
 			return
 		}
 		nodeList := node.GetList(org)
