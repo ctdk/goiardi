@@ -69,7 +69,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 		var err error
 		limit, err = strconv.Atoi(l[0])
 		if err != nil {
-			jsonErrorReport(w, r, "invalid limit converstion to int", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid limit conversion to int", http.StatusBadRequest)
 			return
 		}
 		if limit < 0 {
@@ -86,7 +86,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 		var err error
 		purgeFrom, err = strconv.Atoi(p[0])
 		if err != nil {
-			jsonErrorReport(w, r, "invalid purge from converstion to int", http.StatusBadRequest)
+			jsonErrorReport(w, r, "invalid purge from conversion to int", http.StatusBadRequest)
 			return
 		}
 		if purgeFrom < 0 {
