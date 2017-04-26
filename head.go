@@ -25,10 +25,24 @@ import (
 )
 
 // Functions and types for HEAD responses for various endpoints
-
-// Implements Chef RFCnnn (unassigned so far)
-
-// Full table of what everything means will be added when the RFC is finalized
+//
+// Implements Chef RFC090 -
+// (https://github.com/chef/chef-rfc/blob/master/rfc090-server-http-head.md)
+//
+// From the RFC:
+//
+// Code 	Reason
+// ---- 	------
+// 200 		object exists
+// 401 		request signature is invalid
+// 403 		requestor does not have READ on the object
+// 404 		object does not exist
+//
+// Obviously, the 403 bit will be a little bit different for goiardi 0.x.y vs.
+// the 1.0.0 branch because of the different permissions scheme.
+//
+// HEAD should be present everywhere GET is, even if the HEAD request isn't
+// particularly meaningful.
 
 type headChecker interface {
 	actor.Actor
