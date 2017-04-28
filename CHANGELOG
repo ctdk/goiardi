@@ -1,4 +1,4 @@
-0.??.? (unreleased, exact version number undetermined)
+0.11.4 (unreleased)
 ------
 * Implement Chef authentication version 1.3.
 * Move the custom goiardi error type out of util and into its own module.
@@ -6,8 +6,7 @@
   because the functions and interface are used all over the place.
 * Many endpoints now handle HEAD requests where appropriate. With some
   endpoints this is not especially useful, but with others it's a lightweight
-  way to see what resources exist and so forth. Implements Chef RFC XXX (number
-  unassigned as of yet).
+  way to see what resources exist and so forth. Implements Chef RFC 090.
 * Start using contexts with requests. This does mean that goiardi will require
   at least go 1.7. (As of 0.11.3 goiardi only supported go 1.7+, but it was
   likely to build with somewhat older versions anyway.)
