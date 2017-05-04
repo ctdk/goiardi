@@ -395,11 +395,7 @@ func ParseConfigOptions() error {
 		Config.PgSearch = opts.PgSearch
 	}
 
-	if Config.DataStoreFile != "" && (Config.UseMySQL || Config.UsePostgreSQL) {
-		err := fmt.Errorf("The MySQL or Postgres and data store options may not be specified together.")
-		log.Println(err)
-		os.Exit(1)
-	}
+
 
 	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || (Config.UseMySQL || Config.UsePostgreSQL)) && Config.IndexFile != "")) {
 		err := fmt.Errorf("-i and -D must either both be specified, or not specified")
@@ -408,7 +404,7 @@ func ParseConfigOptions() error {
 	}
 
 	if (Config.UseMySQL || Config.UsePostgreSQL) && (Config.IndexFile == "" && !Config.PgSearch) {
-		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend.")
+		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend (and not using the PostgreSQL search).")
 		log.Println(err)
 		os.Exit(1)
 	}
@@ -455,6 +451,13 @@ func ParseConfigOptions() error {
 	lerr := setLogger(Config.SysLog)
 	if lerr != nil {
 		log.Println(lerr.Error())
+		os.Exit(1)
+	}
+
+	// This used to cause an error, but now will just cause a warning. Also
+	// moved it down so we can use the configured logger.
+	if Config.DataStoreFile != "" && (Config.UseMySQL || Config.UsePostgreSQL) {
+		logger.Errorf("The MySQL or Postgres and file data store options should not be specified together. Overriding the file data store.")
 		os.Exit(1)
 	}
 

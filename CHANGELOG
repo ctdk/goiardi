@@ -15,6 +15,9 @@
   be Info level and removed a test log statement that was no longer necessary,
   updated copyright dates.
 * Add the Chef API version header to responses.
+* Change behavior if the data file and use-(mysql|postgresql) are specified
+  together; formerly it was a fatal error, but now it'll just emit a warning
+  in the error log and ignore the data file setting.
 
 0.11.3
 ------

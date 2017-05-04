@@ -31,7 +31,7 @@ If you really really don't want to install sqitch, apply each SQL patch in sql-f
 
 The above values are for illustration, of course; nothing requires goiardi's database to be named "goiardi". Just make sure the right database is specified in the config file.
 
-Set ``use-mysql = true`` in the configuration file, or specify ``--use-mysql`` on the command line. It is an error to specify both the ``-D``/``--data-file`` flag and ``--use-mysql`` at the same time.
+Set ``use-mysql = true`` in the configuration file, or specify ``--use-mysql`` on the command line. If both the ``-D``/``--data-file`` flag and ``--use-mysql`` are used at the same time, an error will be printed to the log and the data file option will be ignored.
 
 An example configuration is available in ``etc/goiardi.conf-sample``, and is given below::
 
@@ -64,7 +64,7 @@ After you've done that, or decided to use an existing database and user, deploy 
 
 The Postgres sqitch tutorial at https://metacpan.org/pod/sqitchtutorial explains more about how to use sqitch and Postgres.
 
-Set ``use-postgresql`` in the configuration file, or specify ``--use-postgresql`` on the command line. It's also an error to specify both ``-D``/``--data-file`` flag and ``--use-postgresql`` at the same time like it is in MySQL mode. MySQL and Postgres cannot be used at the same time, either.
+Set ``use-postgresql`` in the configuration file, or specify ``--use-postgresql`` on the command line. Specifying both ``-D``/``--data-file`` flag and ``--use-postgresql`` at the same time will print an error to the log and ignore the data file setting, like how it works in MySQL mode. MySQL and Postgres cannot be used at the same time, also, and will result in a fatal error.
 
 There is also an example Postgres configuration in the config file, and can be seen below::
 
