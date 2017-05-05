@@ -458,7 +458,6 @@ func ParseConfigOptions() error {
 	// moved it down so we can use the configured logger.
 	if Config.DataStoreFile != "" && (Config.UseMySQL || Config.UsePostgreSQL) {
 		logger.Errorf("The MySQL or Postgres and file data store options should not be specified together. Overriding the file data store.")
-		os.Exit(1)
 	}
 
 	/* Database options */
