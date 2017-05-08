@@ -1,4 +1,4 @@
-0.11.4 (unreleased)
+0.11.4
 ------
 * Implement Chef authentication version 1.3.
 * Move the custom goiardi error type out of util and into its own module.

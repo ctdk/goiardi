@@ -717,7 +717,7 @@ func (i *FileIndex) Load() error {
 		fp.Close()
 		return err
 	}
-	
+
 	tmpi.m.Lock()
 	defer tmpi.m.Unlock()
 	i.idxmap = tmpi.idxmap

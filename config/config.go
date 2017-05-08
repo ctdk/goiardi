@@ -212,7 +212,7 @@ type Options struct {
 }
 
 // The goiardi version.
-const Version = "0.11.4-pre2"
+const Version = "0.11.4"
 
 // The chef version we're at least aiming for, even if it's not complete yet.
 const ChefVersion = "11.1.7"
@@ -394,8 +394,6 @@ func ParseConfigOptions() error {
 		}
 		Config.PgSearch = opts.PgSearch
 	}
-
-
 
 	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || (Config.UseMySQL || Config.UsePostgreSQL)) && Config.IndexFile != "")) {
 		err := fmt.Errorf("-i and -D must either both be specified, or not specified")
