@@ -291,7 +291,6 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, s
 		q = fmt.Sprintf("%s(f%d.value %s _ARG_)", opStr, *tNum, cop)
 		args = []string{string(term.term)}
 	} else {
-		altQueryPath := fmt.Sprintf("%s.%s", string(field), string(originalTerm))
 		// For ltree, change this *back*.
 		// Strictly speaking, certain kinds of query won't have exactly
 		// the same behavior as you would get with solr, but it only
@@ -303,10 +302,36 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, s
 		// wildcard searches with * might not behave quite the way one
 		// expects (*maybe*). In practice it shouldn't be a huge
 		// problem.
-		altQueryPath = util.PgSearchQueryKey(string(altQueryPath))
-		q = fmt.Sprintf("%s((f%d.path OPERATOR(goiardi.~) _ARG_ AND f%d.value %s _ARG_) OR (f%d.path OPERATOR(goiardi.~) _ARG_))", opStr, *tNum, *tNum, cop, *tNum)
+		altQueryPath := craftAltQueryPath(string(field), string(originalTerm))
+		var clauseJoin string
+		var notPath bool
+		if term.mod == OpUnaryNot || term.mod == OpUnaryPro {
+			clauseJoin = "AND NOT"
+			notPath = true
+		} else {
+			clauseJoin = "OR"
+		}
+		// the extra part for negated queries:
+		// (<part below> OR NOT EXISTS (SELECT 1 FROM found_items WHERE
+		// i.item_name = found_items.item_name AND found_items.path 
+		// OPERATOR(goiardi.~) 'action'))
+
+		q = fmt.Sprintf("((f%d.path OPERATOR(goiardi.~) _ARG_ AND f%d.value %s _ARG_) %s (f%d.path OPERATOR(goiardi.~) _ARG_))", *tNum, *tNum, cop, clauseJoin, *tNum)
+		if notPath {
+			q = "(" + q + " OR NOT EXISTS (SELECT 1 FROM found_items WHERE i.item_name = found_items.item_name AND found_items.path OPERATOR(goiardi.~) _ARG_))"
+		}
+		/*******
+		q = fmt.Sprintf("%s((f%d.path OPERATOR(goiardi.~) _ARG_ AND f%d.value %s _ARG_) %s (f%d.path OPERATOR(goiardi.~) _ARG_))", opStr, *tNum, *tNum, cop, clauseJoin, *tNum)
+		*******/
+		q = opStr + q
+
 		args = append(args, string(term.term))
 		args = append(args, altQueryPath)
+
+		if notPath {
+		args = append(args, string(field))
+		}
+
 		xtraPath = altQueryPath
 	}
 
@@ -516,4 +541,8 @@ func escapeArg(arg string) string {
 	arg = strings.Replace(arg, "*", "%", -1)
 	arg = strings.Replace(arg, "?", "_", -1)
 	return arg
+}
+
+func craftAltQueryPath(a, b string) string {
+	return util.PgSearchQueryKey(strings.Join([]string{ a, b }, "."))
 }
