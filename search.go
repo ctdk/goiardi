@@ -293,6 +293,10 @@ func reindexAll() {
 		if err != nil {
 			continue
 		}
+		// Don't forget to create the collections, because we weren't
+		// for the postgres search index. (Somehow a regression snuck
+		// in here, but what do you do?
+		indexer.CreateNewCollection(dbag.GetName())
 		dbis := make([]indexer.Indexable, dbag.NumDBItems())
 		i := 0
 		allDBItems, derr := dbag.AllDBItems()
