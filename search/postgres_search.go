@@ -111,6 +111,9 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 		qq.Execute()
 		qchain := qq.Evaluate()
 
+		logger.Debugf("Syntax tree:")
+		qq.PrintSyntaxTree()
+
 		pgQ := &PgQuery{idx: idx, queryChain: qchain}
 
 		err := pgQ.execute()
@@ -201,6 +204,7 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 		t = startTableID[0]
 	}
 	for p != nil {
+		logger.Debugf("p: %T op %s %+v", p, opMap[p.Op()], p)
 		switch c := p.(type) {
 		case *BasicQuery:
 			// an empty field can only happen up here
