@@ -16,14 +16,16 @@ field_inc_range <- { p.StartRange(true) } field_name ':' open_incl range_value '
 field_exc_range <- { p.StartRange(false) } field_name ':' open_excl range_value ' TO ' range_value close_excl
 field_name <- < !keyword valid_letter+ > { p.AddField(buffer[begin:end]) }
 range_value <- < (valid_letter+ / '*' ) > { p.AddRange(buffer[begin:end]) }
-group <- space? { p.StartSubQuery() } open_paren body close_paren { p.EndSubQuery() } space?
+sub_q <- open_paren body close_paren 
+group <- space? { p.StartSubQuery() } sub_q { p.EndSubQuery() } space?
 operation <- binary_op / unary_op / fuzzy_op / boost_op
-unary_op <- { p.StartBasic() } not_op / required_op / prohibited_op
+unary_op <- not_op / not_sub_op / required_op / prohibited_op 
 binary_op <- ( group / field / field_range / term ) space? boolean_operator space+ body 
 boolean_operator <- or_operator { p.AddOp(OpBinOr) } / and_operator { p.AddOp(OpBinAnd) }
 or_operator <- 'OR' / '||'
 and_operator <- 'AND' / '&&'
-not_op <- not_operator space ( group / field / field_range / term / string ) / bang_operator space? ( group / field / field_range / term / string )
+not_op <- not_operator space (field / field_range / term / string ) / bang_operator space? ( field / field_range / term / string )
+not_sub_op <- { p.StartSubQuery() } not_operator space sub_q { p.EndSubQuery() }
 not_operator <- 'NOT' { p.AddTermOp(OpUnaryNot) }
 bang_operator <- '!' { p.AddTermOp(OpUnaryNot) }
 required_op <-  !valid_letter required_operator ( term / string ) / required_operator ( term / string )
