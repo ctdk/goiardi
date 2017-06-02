@@ -316,7 +316,7 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, s
 		}
 		// the extra part for negated queries:
 		// (<part below> OR NOT EXISTS (SELECT 1 FROM found_items WHERE
-		// i.item_name = found_items.item_name AND found_items.path 
+		// i.item_name = found_items.item_name AND found_items.path
 		// OPERATOR(goiardi.~) 'action'))
 
 		q = fmt.Sprintf("((f%d.path OPERATOR(goiardi.~) _ARG_ AND f%d.value %s _ARG_) %s (f%d.path OPERATOR(goiardi.~) _ARG_))", *tNum, *tNum, cop, clauseJoin, *tNum)
@@ -332,7 +332,7 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op) ([]string, s
 		args = append(args, altQueryPath)
 
 		if notPath {
-		args = append(args, string(field))
+			args = append(args, string(field))
 		}
 
 		xtraPath = altQueryPath
@@ -547,7 +547,7 @@ func escapeArg(arg string) string {
 }
 
 func craftAltQueryPath(a, b string) string {
-	return util.PgSearchQueryKey(strings.Join([]string{ a, b }, "."))
+	return util.PgSearchQueryKey(strings.Join([]string{a, b}, "."))
 }
 
 func searchQueryDebugf(format string, args ...interface{}) {

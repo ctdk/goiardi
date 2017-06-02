@@ -72,20 +72,20 @@ const (
 )
 
 var opMap = map[Op]string{
-	OpNotAnOp: "OpNotAnOp",
-	OpUnaryNot: "OpUnaryNot",
-	OpUnaryReq: "OpUnaryReq",
-	OpUnaryPro: "OpUnaryPro",
-	OpBinAnd: "OpBinAnd",
-	OpBinOr: "OpBinOr",
-	OpBoost: "OpBoost",
-	OpFuzzy: "OpFuzzy",
+	OpNotAnOp:    "OpNotAnOp",
+	OpUnaryNot:   "OpUnaryNot",
+	OpUnaryReq:   "OpUnaryReq",
+	OpUnaryPro:   "OpUnaryPro",
+	OpBinAnd:     "OpBinAnd",
+	OpBinOr:      "OpBinOr",
+	OpBoost:      "OpBoost",
+	OpFuzzy:      "OpFuzzy",
 	OpStartGroup: "OpStartGroup",
-	OpEndGroup: "OpEndGroup",
-	OpStartIncl: "OpStartIncl",
-	OpEndIncl: "OpEndIncl",
-	OpStartExcl: "OpStartExcl",
-	OpEndExcl: "OpEndExcl",
+	OpEndGroup:   "OpEndGroup",
+	OpStartIncl:  "OpStartIncl",
+	OpEndIncl:    "OpEndIncl",
+	OpStartExcl:  "OpStartExcl",
+	OpEndExcl:    "OpEndExcl",
 }
 
 // Token is a parsed token from the solr query.
