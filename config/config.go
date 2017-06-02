@@ -104,6 +104,7 @@ type Conf struct {
 	VaultShoveyKey    string   `toml:"vault-shovey-key"`
 	EnvVars           []string `toml:"env-vars"`
 	IndexValTrim      int      `toml:"index-val-trim"`
+	SearchQueryDebug  bool
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -209,6 +210,8 @@ type Options struct {
 	IndexValTrim      int          `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If not set or set <= 0, trimming is disabled. This behavior will change with the next major release." env:"GOIARDI_INDEX_VAL_TRIM"`
 	// hidden argument to print a formatted man page to stdout and exit
 	PrintManPage bool `long:"print-man-page" hidden:"true"`
+	// hidden argument to enable logging full postgres search queries
+	SearchQueryDebug bool `long:"sqdbg" hidden:"true"`
 }
 
 // The goiardi version.
@@ -812,6 +815,18 @@ func ParseConfigOptions() error {
 				os.Exit(1)
 			}
 		}
+	}
+
+	// Enable postgres search query debug statements, if desired
+	if opts.SearchQueryDebug {
+		Config.SearchQueryDebug = opts.SearchQueryDebug
+	}
+	if Config.SearchQueryDebug {
+		if logger.LogLevel(Config.DebugLevel) != logger.LevelDebug {
+			logger.Warningf("postgres search query debugging enabled -- overriding log level and setting it to 'debug'.")
+			logger.SetLevel(logger.LevelDebug)
+		}
+		logger.Debugf("Logging search query debug statements")
 	}
 
 	return nil

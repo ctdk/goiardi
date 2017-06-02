@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
@@ -76,7 +77,7 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 	var qresults []string
 
 	if q == "*:*" {
-		logger.Debugf("Searching '*:*' on %s, short circuiting", idx)
+		searchQueryDebugf("Searching '*:*' on %s, short circuiting", idx)
 
 		var builtinIdx bool
 		if idx == "node" || idx == "client" || idx == "environment" || idx == "role" {
@@ -110,16 +111,6 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 		}
 		qq.Execute()
 		qchain := qq.Evaluate()
-
-		logger.Debugf("Syntax tree:")
-		qq.PrintSyntaxTree()
-
-		logger.Debugf("spitting out the query chain as best we can")
-		y := qchain
-		for y != nil {
-			logger.Debugf("y: %T op %s %+#v", y, opMap[y.Op()], y)
-			y = y.Next()
-		}
 
 		pgQ := &PgQuery{idx: idx, queryChain: qchain}
 
@@ -211,8 +202,8 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 		t = startTableID[0]
 	}
 	for p != nil {
-		logger.Debugf("p: %T op %s %+v", p, opMap[p.Op()], p)
-		logger.Debugf("curOp: %s", opMap[curOp])
+		searchQueryDebugf("p: %T op %s %+v", p, opMap[p.Op()], p)
+		searchQueryDebugf("curOp: %s", opMap[curOp])
 		switch c := p.(type) {
 		case *BasicQuery:
 			// an empty field can only happen up here
@@ -266,9 +257,9 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 		p = p.Next()
 	}
 	fullQ, allArgs := craftFullQuery(1, pq.idx, pq.paths, pq.arguments, pq.queryStrs, t)
-	logger.Debugf("pg search info:")
-	logger.Debugf("full query: %s", fullQ)
-	logger.Debugf("all %d args: %v", len(allArgs), allArgs)
+	searchQueryDebugf("pg search info:")
+	searchQueryDebugf("full query: %s", fullQ)
+	searchQueryDebugf("all %d args: %v", len(allArgs), allArgs)
 	pq.fullQuery = fullQ
 	pq.allArgs = allArgs
 	return nil
@@ -557,4 +548,10 @@ func escapeArg(arg string) string {
 
 func craftAltQueryPath(a, b string) string {
 	return util.PgSearchQueryKey(strings.Join([]string{ a, b }, "."))
+}
+
+func searchQueryDebugf(format string, args ...interface{}) {
+	if config.Config.SearchQueryDebug {
+		logger.Debugf(format, args...)
+	}
 }
