@@ -1,3 +1,23 @@
+0.11.5 (unreleased)
+------
+* Several search fixes:
+  - With postgres search:
+    * Fixed reindexing after it broke with the previous update that eliminated
+    a lot of unneeded extra rows in the database.
+    * Fixed basic queries with NOT statements.
+    * Separately, fixed using NOT with subqueries. In a somewhat complicated
+      note, but in a way that appears to match standard Solr behavior, when
+      doing a query like "name:chef* AND NOT (admin:true OR admin:bleh)" it
+      works as is, but when a negated subquery is followed by another basic
+      query statement, it needs to have extra parentheses around the NOT +
+      subquery, like "name:chef* AND (NOT (admin:true OR admin:bleh)) AND
+      public_key:*". A convoluted and unlikely scenario, but it could happen.
+  - With in-memory search:
+    * NOT + subqueries was also broken with the in-mem search. The fixes for
+      the pg-search partially fixed it for in-mem in that it no longer made the
+      server panic, but it was returning incorrect results. Additional work
+      ended up being neeced for in-mem search.
+
 0.11.4
 ------
 * Implement Chef authentication version 1.3.
