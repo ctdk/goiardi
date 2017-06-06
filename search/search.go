@@ -210,7 +210,7 @@ func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 				sq.docs[k] = v
 			}
 		} else {
-			logger.Debugf("Somehow we got to what should have been an impossible state with search")
+			logger.Debugf("Somehow we got to what should have been an impossible state with search - sq.docs len was %d, op was %s", len(sq.docs), opMap[curOp])
 		}
 
 		curOp = s.Op()
