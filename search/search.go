@@ -84,6 +84,7 @@ type SolrQuery struct {
 	queryChain Queryable
 	idxName    string
 	docs       map[string]indexer.Document
+	parentOp   Op
 }
 
 var m *sync.Mutex
@@ -174,9 +175,16 @@ func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string
 func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 	s := sq.queryChain
 	curOp := OpNotAnOp
+
+	// set op for subqueries
+	if sq.parentOp != OpNotAnOp {
+		curOp = sq.parentOp
+	}
+
 	for s != nil {
 		var r map[string]indexer.Document
 		var err error
+
 		switch c := s.(type) {
 		case *SubQuery:
 			_ = c
@@ -191,7 +199,7 @@ func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 			} else {
 				d = make(map[string]indexer.Document)
 			}
-			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d}
+			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d, parentOp: curOp}
 			r, err = nsq.execute()
 		default:
 			if curOp == OpBinAnd {
@@ -203,6 +211,7 @@ func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		if len(sq.docs) == 0 || curOp == OpBinAnd { // nothing in place yet
 			sq.docs = r
 		} else if curOp == OpBinOr {
