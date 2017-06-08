@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"unicode"
 )
 
 const endSymbol rune = 1114112
@@ -352,16 +353,16 @@ func (p *Tokenizer) PrintSyntaxTree() {
 }
 
 func (p *Tokenizer) Execute() {
-	buffer, _buffer, text, begin, end := p.Buffer, p.buffer, "", 0, 0
+	buffer, _buffer, text, begin, end := p.buffer, p.Buffer, "", 0, 0
 	for _, token := range p.Tokens() {
 		switch token.pegRule {
 
 		case rulePegText:
 			begin, end = int(token.begin), int(token.end)
-			text = string(_buffer[begin:end])
+			text = string(buffer[begin:end])
 
 		case ruleAction0:
-			p.AddTerm(buffer[begin:end])
+			p.AddTerm(string(buffer[begin:end]))
 		case ruleAction1:
 			p.StartBasic()
 		case ruleAction2:
@@ -373,9 +374,9 @@ func (p *Tokenizer) Execute() {
 		case ruleAction5:
 			p.StartRange(false)
 		case ruleAction6:
-			p.AddField(buffer[begin:end])
+			p.AddField(string(buffer[begin:end]))
 		case ruleAction7:
-			p.AddRange(buffer[begin:end])
+			p.AddRange(string(buffer[begin:end]))
 		case ruleAction8:
 			p.StartSubQuery()
 		case ruleAction9:
@@ -401,9 +402,9 @@ func (p *Tokenizer) Execute() {
 		case ruleAction19:
 			p.AddOp(OpFuzzy)
 		case ruleAction20:
-			p.AddTerm(buffer[begin:end])
+			p.AddTerm(string(buffer[begin:end]))
 		case ruleAction21:
-			p.AddTerm(buffer[begin:end])
+			p.AddTerm(string(buffer[begin:end]))
 
 		}
 	}
@@ -1723,8 +1724,15 @@ func (p *Tokenizer) Init() {
 							}
 							position++
 							break
-						default:
+						//default:
+						case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
 							if c := buffer[position]; c < rune('A') || c > rune('Z') {
+								goto l193
+							}
+							position++
+							break
+						default:
+							if c := buffer[position]; !unicode.IsLetter(c) && !unicode.IsNumber(c) {
 								goto l193
 							}
 							position++
@@ -1780,8 +1788,14 @@ func (p *Tokenizer) Init() {
 								}
 								position++
 								break
-							default:
+							case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
 								if c := buffer[position]; c < rune('A') || c > rune('Z') {
+									goto l196
+								}
+								position++
+								break
+							default:
+								if c := buffer[position]; !unicode.IsLetter(c) && !unicode.IsNumber(c) {
 									goto l196
 								}
 								position++
@@ -1857,8 +1871,14 @@ func (p *Tokenizer) Init() {
 							}
 							position++
 							break
-						default:
+						case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
 							if c := buffer[position]; c < rune('A') || c > rune('Z') {
+								goto l202
+							}
+							position++
+							break
+						default:
+							if c := buffer[position]; !unicode.IsLetter(c) && !unicode.IsNumber(c) {
 								goto l202
 							}
 							position++
