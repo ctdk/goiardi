@@ -1,4 +1,4 @@
-0.11.5 (unreleased)
+0.11.5
 ------
 * Several search fixes:
   - With postgres search:
