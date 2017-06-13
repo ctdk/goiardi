@@ -108,6 +108,11 @@ func makeSearchItems() int {
 		dbu["id"] = fmt.Sprintf("dbagunic%d", k)
 		dbu["foo"] = fmt.Sprintf("dbagunic_thingamagic_%d", k)
 		dbu["blè"] = "üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü"
+		var dbgAdmin bool
+		if k % 15 == 0 {
+			dbgAdmin = true
+		}
+		dbu["admin"] = dbgAdmin
 		dbagunic.NewDBItem(dbu)
 	}
 	node1 = nodes[0]
@@ -291,6 +296,39 @@ func TestIndexDupes(t *testing.T) {
 	r.Default["notdupe"] = []string{"I", "am", "good"}
 	r.Default["dupes"] = []string{"I", "", "will", "", "cause", "problems", "I", ""}
 	r.Save()
+}
+
+func TestSearchNot(t *testing.T) {
+	expected := 466
+	d, err := searcher.Search("unicode", "id:* AND NOT admin:true", 1000, "id ASC", 0, nil)
+	if err != nil {
+		t.Errorf("NOT search error was %s", err.Error())
+	}
+	if len(d) != expected {
+		t.Errorf("NOT search: expected %d, got %d", expected, len(d))
+	}
+}
+
+func TestSearchSubquery(t *testing.T) {
+	expected := 34
+	d, err := searcher.Search("unicode", "id:* AND (admin:true OR admin:blugh)", 1000, "id ASC", 0, nil)
+	if err != nil {
+		t.Errorf("subquery search error was %s", err.Error())
+	}
+	if len(d) != expected {
+		t.Errorf("subquery search: expected %d, got %d", expected, len(d))
+	}
+}
+
+func TestSearchNotSubquery(t *testing.T) {
+	expected := 466
+	d, err := searcher.Search("unicode", "id:* AND NOT (admin:true OR admin:blugh)", 1000, "id ASC", 0, nil)
+	if err != nil {
+		t.Errorf("negated subquery search error was %s", err.Error())
+	}
+	if len(d) != expected {
+		t.Errorf("negated subquery search: expected %d, got %d", expected, len(d))
+	}
 }
 
 // Probably don't want this as an always test, but it's handy to have available.
