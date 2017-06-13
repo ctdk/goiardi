@@ -109,7 +109,7 @@ func makeSearchItems() int {
 		dbu["foo"] = fmt.Sprintf("dbagunic_thingamagic_%d", k)
 		dbu["blè"] = "üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü"
 		var dbgAdmin bool
-		if k % 15 == 0 {
+		if k%15 == 0 {
 			dbgAdmin = true
 		}
 		dbu["admin"] = dbgAdmin
