@@ -1,9 +1,7 @@
 Goiardi
 =======
 
-[![Circle CI](https://circleci.com/gh/ctdk/goiardi/tree/master.svg?style=svg&circle-token=849db1a2f08048be1253cfb876483949b4dc7d7e)](https://circleci.com/gh/ctdk/goiardi/tree/master)
-
-[![Documentation Status](https://readthedocs.org/projects/goiardi/badge/?version=latest)](http://goiardi.readthedocs.io/en/latest/?badge=latest)
+[![Circle CI](https://circleci.com/gh/ctdk/goiardi/tree/master.svg?style=svg&circle-token=849db1a2f08048be1253cfb876483949b4dc7d7e)](https://circleci.com/gh/ctdk/goiardi/tree/master) [![Documentation Status](https://readthedocs.org/projects/goiardi/badge/?version=latest)](http://goiardi.readthedocs.io/en/latest/?badge=latest)
 
 Goiardi is an implementation of the Chef server (http://www.chef.io) written
 in Go. It can either run entirely in memory with the option to save and load the
