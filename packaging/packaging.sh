@@ -220,7 +220,7 @@ mkdir -p usr/share/man/man8
 cp $MAN/goiardi.8 usr/share/man/man8
 cp -r $SHARE/* usr/share/goiardi
 mkdir -p var/lib/goiardi/lfs
-cp $BUILD/goiardi-$GOIARDI_VERSION-s390x usr/bin/goiardi
+cp $BUILD/goiardi-$GOIARDI_VERSION-linux-s390x usr/bin/goiardi
 cp -r $FILES_DIR/fs/lib .
 cp -r $COMMON_DIR/* .
 cp -r $CENTOS_COMMON_DIR/etc .

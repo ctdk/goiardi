@@ -104,6 +104,7 @@ type Conf struct {
 	VaultShoveyKey    string   `toml:"vault-shovey-key"`
 	EnvVars           []string `toml:"env-vars"`
 	IndexValTrim      int      `toml:"index-val-trim"`
+	SearchQueryDebug  bool
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -209,6 +210,8 @@ type Options struct {
 	IndexValTrim      int          `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If not set or set <= 0, trimming is disabled. This behavior will change with the next major release." env:"GOIARDI_INDEX_VAL_TRIM"`
 	// hidden argument to print a formatted man page to stdout and exit
 	PrintManPage bool `long:"print-man-page" hidden:"true"`
+	// hidden argument to enable logging full postgres search queries
+	SearchQueryDebug bool `long:"sqdbg" hidden:"true"`
 }
 
 // The goiardi version.
@@ -395,12 +398,6 @@ func ParseConfigOptions() error {
 		Config.PgSearch = opts.PgSearch
 	}
 
-	if Config.DataStoreFile != "" && (Config.UseMySQL || Config.UsePostgreSQL) {
-		err := fmt.Errorf("The MySQL or Postgres and data store options may not be specified together.")
-		log.Println(err)
-		os.Exit(1)
-	}
-
 	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || (Config.UseMySQL || Config.UsePostgreSQL)) && Config.IndexFile != "")) {
 		err := fmt.Errorf("-i and -D must either both be specified, or not specified")
 		log.Println(err)
@@ -408,7 +405,7 @@ func ParseConfigOptions() error {
 	}
 
 	if (Config.UseMySQL || Config.UsePostgreSQL) && (Config.IndexFile == "" && !Config.PgSearch) {
-		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend.")
+		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend (and not using the PostgreSQL search).")
 		log.Println(err)
 		os.Exit(1)
 	}
@@ -456,6 +453,12 @@ func ParseConfigOptions() error {
 	if lerr != nil {
 		log.Println(lerr.Error())
 		os.Exit(1)
+	}
+
+	// This used to cause an error, but now will just cause a warning. Also
+	// moved it down so we can use the configured logger.
+	if Config.DataStoreFile != "" && (Config.UseMySQL || Config.UsePostgreSQL) {
+		logger.Errorf("The MySQL or Postgres and file data store options should not be specified together. Overriding the file data store.")
 	}
 
 	/* Database options */
@@ -812,6 +815,18 @@ func ParseConfigOptions() error {
 				os.Exit(1)
 			}
 		}
+	}
+
+	// Enable postgres search query debug statements, if desired
+	if opts.SearchQueryDebug {
+		Config.SearchQueryDebug = opts.SearchQueryDebug
+	}
+	if Config.SearchQueryDebug {
+		if logger.LogLevel(Config.DebugLevel) != logger.LevelDebug {
+			logger.Warningf("postgres search query debugging enabled -- overriding log level and setting it to 'debug'.")
+			logger.SetLevel(logger.LevelDebug)
+		}
+		logger.Debugf("Logging search query debug statements")
 	}
 
 	return nil

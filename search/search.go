@@ -86,6 +86,7 @@ type SolrQuery struct {
 	idxName    string
 	docs       map[string]indexer.Document
 	org        *organization.Organization
+	parentOp   Op
 }
 
 var m *sync.Mutex
@@ -176,9 +177,16 @@ func (t *TrieSearch) Search(org *organization.Organization, idx string, query st
 func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 	s := sq.queryChain
 	curOp := OpNotAnOp
+
+	// set op for subqueries
+	if sq.parentOp != OpNotAnOp {
+		curOp = sq.parentOp
+	}
+
 	for s != nil {
 		var r map[string]indexer.Document
 		var err error
+
 		switch c := s.(type) {
 		case *SubQuery:
 			_ = c
@@ -193,7 +201,7 @@ func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 			} else {
 				d = make(map[string]indexer.Document)
 			}
-			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d, org: sq.org}
+			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d, org: sq.org, parentOp: curOp}
 			r, err = nsq.execute()
 		default:
 			if curOp == OpBinAnd {
@@ -205,6 +213,7 @@ func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		if len(sq.docs) == 0 || curOp == OpBinAnd { // nothing in place yet
 			sq.docs = r
 		} else if curOp == OpBinOr {
@@ -212,7 +221,7 @@ func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 				sq.docs[k] = v
 			}
 		} else {
-			logger.Debugf("Somehow we got to what should have been an impossible state with search")
+			logger.Debugf("Somehow we got to what should have been an impossible state with search - sq.docs len was %d, op was %s", len(sq.docs), opMap[curOp])
 		}
 
 		curOp = s.Op()

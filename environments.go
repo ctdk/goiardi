@@ -384,6 +384,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 					errMap["error"] = make([]map[string]interface{}, 1)
 					errMap["error"][0] = derr.ErrMap()
 					w.WriteHeader(http.StatusPreconditionFailed)
+					logger.Infof("Cookbook Depends Errors in %s: %+v", env.Name, derr.ErrMap())
 					enc := json.NewEncoder(w)
 					if jerr := enc.Encode(&errMap); jerr != nil {
 						logger.Errorf(jerr.Error())

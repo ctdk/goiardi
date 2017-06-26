@@ -303,6 +303,7 @@ func reindexAll() {
 		for _, v := range role.AllRoles(org) {
 			roleObjs = append(roleObjs, v)
 		}
+
 		logger.Debugf("reindexing %s roles", org.Name)
 		indexer.ReIndex(roleObjs, rCh)
 
@@ -323,6 +324,10 @@ func reindexAll() {
 			if err != nil {
 				continue
 			}
+			// Don't forget to create the collections, because we
+			// weren't for the postgres search index. (Somehow a
+			// regression snuck in here, but what do you do?
+			indexer.CreateNewCollection(org.Name, dbag.GetName())
 			dbis := make([]indexer.Indexable, dbag.NumDBItems())
 			i := 0
 			allDBItems, derr := dbag.AllDBItems()

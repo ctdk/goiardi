@@ -4,7 +4,27 @@
   and whatnot.
 * Refactor of HTTP handling to use gorilla-mux.
 
-0.??.? (unreleased, exact version number undetermined)
+0.11.5
+------
+* Several search fixes:
+  - With postgres search:
+    * Fixed reindexing after it broke with the previous update that eliminated
+    a lot of unneeded extra rows in the database.
+    * Fixed basic queries with NOT statements.
+    * Separately, fixed using NOT with subqueries. On a somewhat complicated
+      note, but in a way that appears to match standard Solr behavior, when
+      doing a query like "name:chef* AND NOT (admin:true OR admin:bleh)" it
+      works as is, but when a negated subquery is followed by another basic
+      query statement, it needs to have extra parentheses around the NOT +
+      subquery, like "name:chef* AND (NOT (admin:true OR admin:bleh)) AND
+      public_key:*". A convoluted and unlikely scenario, but it could happen.
+  - With in-memory search:
+    * NOT + subqueries was also broken with the in-mem search. The fixes for
+      the pg-search partially fixed it for in-mem in that it no longer made the
+      server panic, but it was returning incorrect results. Additional work
+      ended up being needed for in-mem search.
+
+0.11.4
 ------
 * Implement Chef authentication version 1.3.
 * Move the custom goiardi error type out of util and into its own module.
@@ -12,8 +32,7 @@
   because the functions and interface are used all over the place.
 * Many endpoints now handle HEAD requests where appropriate. With some
   endpoints this is not especially useful, but with others it's a lightweight
-  way to see what resources exist and so forth. Implements Chef RFC XXX (number
-  unassigned as of yet).
+  way to see what resources exist and so forth. Implements Chef RFC 090.
 * Start using contexts with requests. This does mean that goiardi will require
   at least go 1.7. (As of 0.11.3 goiardi only supported go 1.7+, but it was
   likely to build with somewhat older versions anyway.)
@@ -22,6 +41,9 @@
   be Info level and removed a test log statement that was no longer necessary,
   updated copyright dates.
 * Add the Chef API version header to responses.
+* Change behavior if the data file and use-(mysql|postgresql) are specified
+  together; formerly it was a fatal error, but now it'll just emit a warning
+  in the error log and ignore the data file setting.
 
 0.11.3
 ------
