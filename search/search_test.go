@@ -330,7 +330,7 @@ func TestIndexDupes(t *testing.T) {
 
 func TestSearchNot(t *testing.T) {
 	expected := 466
-	d, err := searcher.Search("unicode", "id:* AND NOT admin:true", 1000, "id ASC", 0, nil)
+	d, err := searcher.Search(org, "unicode", "id:* AND NOT admin:true", 1000, "id ASC", 0, nil)
 	if err != nil {
 		t.Errorf("NOT search error was %s", err.Error())
 	}
@@ -341,7 +341,7 @@ func TestSearchNot(t *testing.T) {
 
 func TestSearchSubquery(t *testing.T) {
 	expected := 34
-	d, err := searcher.Search("unicode", "id:* AND (admin:true OR admin:blugh)", 1000, "id ASC", 0, nil)
+	d, err := searcher.Search(org, "unicode", "id:* AND (admin:true OR admin:blugh)", 1000, "id ASC", 0, nil)
 	if err != nil {
 		t.Errorf("subquery search error was %s", err.Error())
 	}
@@ -352,7 +352,7 @@ func TestSearchSubquery(t *testing.T) {
 
 func TestSearchNotSubquery(t *testing.T) {
 	expected := 466
-	d, err := searcher.Search("unicode", "id:* AND NOT (admin:true OR admin:blugh)", 1000, "id ASC", 0, nil)
+	d, err := searcher.Search(org, "unicode", "id:* AND NOT (admin:true OR admin:blugh)", 1000, "id ASC", 0, nil)
 	if err != nil {
 		t.Errorf("negated subquery search error was %s", err.Error())
 	}
