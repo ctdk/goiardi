@@ -354,7 +354,6 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Chef-Version", config.ChefVersion)
 	apiInfo := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
 	w.Header().Set("X-Ops-API-Info", apiInfo)
-	w.Header().Set("X-Ops-Server-API-Version", config.ChefApiVersion)
 
 	userID := r.Header.Get("X-OPS-USERID")
 	if rs := r.Header.Get("X-Ops-Request-Source"); rs == "web" {
