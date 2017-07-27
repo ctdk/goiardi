@@ -109,6 +109,7 @@ type BasicQuery struct {
 	term     QueryTerm
 	op       Op
 	next     Queryable
+	prev Queryable
 	complete bool
 }
 
@@ -118,6 +119,7 @@ type GroupedQuery struct {
 	terms    []QueryTerm
 	op       Op
 	next     Queryable
+	prev Queryable
 	complete bool
 }
 
@@ -129,7 +131,9 @@ type RangeQuery struct {
 	inclusive bool
 	op        Op
 	next      Queryable
+	prev Queryable
 	complete  bool
+	negated bool
 }
 
 // SubQuery is really just a marker in the chain of queries. Later it will be
@@ -140,6 +144,13 @@ type SubQuery struct {
 	op       Op
 	complete bool
 	next     Queryable
+	prev Queryable
+}
+
+type NotQuery struct {
+	op Op
+	next      Queryable
+	prev Queryable
 }
 
 // Queryable defines an interface of methods all the query chain types have to
@@ -161,8 +172,12 @@ type Queryable interface {
 	AddTermOp(Op)
 	// Set the next query in the query chain.
 	SetNext(Queryable)
+	// Set the previous query token in the query chain.
+	SetPrev(Queryable)
 	// Get the next link in the query chain.
 	Next() Queryable
+	// Get the previous link in the query chain.
+	Prev() Queryable
 	// Is the query chain incomplete?
 	IsIncomplete() bool
 	// Sets the completed flag for this query chain on this link.
@@ -180,7 +195,7 @@ type groupQueryHolder struct {
 
 func (q *BasicQuery) SearchIndex(idxName string) (map[string]indexer.Document, error) {
 	notop := false
-	if (q.term.mod == OpUnaryNot) || (q.term.mod == OpUnaryPro) {
+	if q.Prev() != nil && (q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro) {
 		notop = true
 	}
 	i := indexer.GetIndex()
@@ -196,7 +211,7 @@ func (q *BasicQuery) SearchIndex(idxName string) (map[string]indexer.Document, e
 
 func (q *BasicQuery) SearchResults(curRes map[string]indexer.Document) (map[string]indexer.Document, error) {
 	notop := false
-	if (q.term.mod == OpUnaryNot) || (q.term.mod == OpUnaryPro) {
+	if q.Prev() != nil && (q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro) {
 		notop = true
 	}
 	// TODO: add field == ""
@@ -238,6 +253,14 @@ func (q *BasicQuery) SetNext(n Queryable) {
 
 func (q *BasicQuery) Next() Queryable {
 	return q.next
+}
+
+func (q *BasicQuery) SetPrev(n Queryable) {
+	q.prev = n
+}
+
+func (q *BasicQuery) Prev() Queryable {
+	return q.prev
 }
 
 func (q *BasicQuery) IsIncomplete() bool {
@@ -293,6 +316,14 @@ func (q *GroupedQuery) Next() Queryable {
 	return q.next
 }
 
+func (q *GroupedQuery) SetPrev(n Queryable) {
+	q.prev = n
+}
+
+func (q *GroupedQuery) Prev() Queryable {
+	return q.prev
+}
+
 func (q *GroupedQuery) IsIncomplete() bool {
 	return !q.complete
 }
@@ -343,6 +374,14 @@ func (q *RangeQuery) SetNext(n Queryable) {
 
 func (q *RangeQuery) Next() Queryable {
 	return q.next
+}
+
+func (q *RangeQuery) SetPrev(n Queryable) {
+	q.prev = n
+}
+
+func (q *RangeQuery) Prev() Queryable {
+	return q.prev
 }
 
 func (q *RangeQuery) IsIncomplete() bool {
@@ -482,6 +521,14 @@ func (q *SubQuery) Next() Queryable {
 	return q.next
 }
 
+func (q *SubQuery) SetPrev(n Queryable) {
+	q.next = n
+}
+
+func (q *SubQuery) Prev() Queryable {
+	return q.next
+}
+
 func (q *SubQuery) IsIncomplete() bool {
 	return !q.complete
 }
@@ -495,6 +542,80 @@ func (q *SubQuery) AddFuzzBoost(o Op) {
 
 func (q *SubQuery) AddFuzzParam(s string) {
 
+}
+
+func (q *NotQuery) SearchIndex(idxName string) (map[string]indexer.Document, error) {
+	if q.Next() == nil {
+		err := fmt.Errorf("No next link present in query chain after unary NOT operator!")
+		return nil, err
+	}
+	return q.Next().SearchIndex(idxName)
+}
+
+func (q *NotQuery) SearchResults(results map[string]indexer.Document) (map[string]indexer.Document, error) {
+	if q.Next() == nil {
+		err := fmt.Errorf("No next link present in query chain searching results after unary NOT operator!")
+		return nil, err
+	}
+	return q.Next().SearchResults(results)
+}
+
+func (q *NotQuery) AddOp(op Op) {
+	q.op = op
+}
+
+func (q *NotQuery) Op() Op {
+	return q.op
+}
+
+func (q *NotQuery) AddField(f Field) {
+	// noop
+	return
+}
+
+func (q *NotQuery) AddTerm(t Term) {
+	// noop
+	return
+}
+
+func (q *NotQuery) AddTermOp(op Op) {
+	// noop
+	return
+}
+
+func (q *NotQuery) SetNext(n Queryable) {
+	q.next = n
+}
+
+func (q *NotQuery) Next() Queryable {
+	return q.next
+}
+
+func (q *NotQuery) SetPrev(n Queryable) {
+	q.prev = n
+}
+
+func (q *NotQuery) Prev() Queryable {
+	return q.prev
+}
+
+func (q *NotQuery) IsIncomplete() bool {
+	return false
+}
+
+func (q *NotQuery) SetCompleted() {
+	// noop
+	return
+}
+
+func (q *NotQuery) AddFuzzBoost(op Op) {
+	// noop
+	return
+}
+
+func (q *NotQuery) AddFuzzParam(s string) {
+	// noop
+	return
 }
 
 func (z *Token) AddOp(o Op) {
@@ -530,6 +651,7 @@ func (z *Token) StartBasic() {
 		un.op = OpBinOr
 		if z.Latest != nil {
 			z.Latest.SetNext(un)
+			un.SetPrev(z.Latest)
 		}
 		if z.QueryChain == nil {
 			z.QueryChain = un
@@ -547,6 +669,7 @@ func (z *Token) StartRange(inclusive bool) {
 	}
 	if z.Latest != nil {
 		z.Latest.SetNext(rn)
+		rn.SetPrev(z.Latest)
 	}
 	z.Latest = rn
 }
@@ -561,6 +684,7 @@ func (z *Token) StartGrouped() {
 		}
 		if z.Latest != nil {
 			z.Latest.SetNext(gn)
+			gn.SetPrev(z.Latest)
 		}
 		z.Latest = gn
 	}
@@ -578,6 +702,7 @@ func (z *Token) StartSubQuery() {
 		sq.complete = true
 		if z.Latest != nil {
 			z.Latest.SetNext(sq)
+			sq.SetPrev(z.Latest)
 		}
 		z.Latest = sq
 	}
@@ -591,8 +716,23 @@ func (z *Token) EndSubQuery() {
 		sq.complete = true
 		if z.Latest != nil {
 			z.Latest.SetNext(sq)
+			sq.SetPrev(z.Latest)
 		}
 		z.Latest = sq
+	}
+}
+
+func (z *Token) SetNotQuery(op Op) {
+	// See if we can add the negated query token without being concerned
+	// about if existing queries in the query chain are complete or not
+	nq := new(NotQuery)
+	nq.op = op
+	if z.Latest != nil {
+		z.Latest.SetNext(nq)
+		nq.SetPrev(z.Latest)
+	}
+	if z.QueryChain == nil {
+		z.QueryChain = nq
 	}
 }
 

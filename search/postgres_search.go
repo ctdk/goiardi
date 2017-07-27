@@ -110,6 +110,8 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 			return nil, err
 		}
 		qq.Execute()
+		logger.Debugf("search query syntax tree")
+		qq.PrintSyntaxTree()
 		qchain := qq.Evaluate()
 
 		pgQ := &PgQuery{idx: idx, queryChain: qchain}
