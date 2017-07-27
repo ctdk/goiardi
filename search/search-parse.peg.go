@@ -389,13 +389,13 @@ func (p *Tokenizer) Execute() {
 		case ruleAction13:
 			p.EndSubQuery()
 		case ruleAction14:
-			p.AddTermOp(OpUnaryNot)
+			p.SetNotQuery(OpUnaryNot)
 		case ruleAction15:
-			p.AddTermOp(OpUnaryNot)
+			p.SetNotQuery(OpUnaryNot)
 		case ruleAction16:
 			p.AddTermOp(OpUnaryReq)
 		case ruleAction17:
-			p.AddTermOp(OpUnaryPro)
+			p.SetNotQuery(OpUnaryPro)
 		case ruleAction18:
 			p.AddOp(OpBoost)
 		case ruleAction19:
@@ -2124,13 +2124,13 @@ func (p *Tokenizer) Init() {
 		nil,
 		/* 59 Action13 <- <{ p.EndSubQuery() }> */
 		nil,
-		/* 60 Action14 <- <{ p.AddTermOp(OpUnaryNot) }> */
+		/* 60 Action14 <- <{ p.SetNotQuery(OpUnaryNot) }> */
 		nil,
-		/* 61 Action15 <- <{ p.AddTermOp(OpUnaryNot) }> */
+		/* 61 Action15 <- <{ p.SetNotQuery(OpUnaryNot) }> */
 		nil,
 		/* 62 Action16 <- <{ p.AddTermOp(OpUnaryReq) }> */
 		nil,
-		/* 63 Action17 <- <{ p.AddTermOp(OpUnaryPro) }> */
+		/* 63 Action17 <- <{ p.SetNotQuery(OpUnaryPro) }> */
 		nil,
 		/* 64 Action18 <- <{ p.AddOp(OpBoost) }> */
 		nil,

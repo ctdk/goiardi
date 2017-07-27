@@ -23,6 +23,7 @@ package search
 
 import (
 	"fmt"
+	"log"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
@@ -723,6 +724,7 @@ func (z *Token) EndSubQuery() {
 }
 
 func (z *Token) SetNotQuery(op Op) {
+	log.Printf("Setting a not query")
 	// See if we can add the negated query token without being concerned
 	// about if existing queries in the query chain are complete or not
 	nq := new(NotQuery)
