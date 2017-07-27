@@ -620,6 +620,7 @@ func (q *NotQuery) AddFuzzParam(s string) {
 }
 
 func (z *Token) AddOp(o Op) {
+	log.Printf("Adding op %s", opMap[o])
 	z.Latest.AddOp(o)
 }
 

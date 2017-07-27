@@ -1,6 +1,7 @@
 package search
 
 import (
+	"log"
 	"fmt"
 	"math"
 	"sort"
@@ -352,8 +353,10 @@ func (p *Tokenizer) PrintSyntaxTree() {
 }
 
 func (p *Tokenizer) Execute() {
+	log.Printf("executing query. Tokens:")
 	buffer, _buffer, text, begin, end := p.Buffer, p.buffer, "", 0, 0
 	for _, token := range p.Tokens() {
+		log.Printf("%+v", token)
 		switch token.pegRule {
 
 		case rulePegText:
@@ -407,6 +410,8 @@ func (p *Tokenizer) Execute() {
 
 		}
 	}
+	log.Printf("executing finished")
+	
 	_, _, _, _, _ = buffer, _buffer, text, begin, end
 }
 

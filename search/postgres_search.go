@@ -114,6 +114,13 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 		qq.PrintSyntaxTree()
 		qchain := qq.Evaluate()
 
+		qpqp := qchain
+		logger.Debugf("qchain:")
+		for qpqp != nil {
+			logger.Debugf("%+v", qpqp)
+			qpqp = qpqp.Next()
+		}
+
 		pgQ := &PgQuery{idx: idx, queryChain: qchain}
 
 		err := pgQ.execute()
