@@ -198,7 +198,7 @@ type groupQueryHolder struct {
 
 func (q *BasicQuery) SearchIndex(idxName string) (map[string]indexer.Document, error) {
 	notop := false
-	if q.Prev() != nil && (q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro) {
+	if q.Prev() != nil && ((q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro)) {
 		notop = true
 	}
 	i := indexer.GetIndex()
@@ -214,7 +214,7 @@ func (q *BasicQuery) SearchIndex(idxName string) (map[string]indexer.Document, e
 
 func (q *BasicQuery) SearchResults(curRes map[string]indexer.Document) (map[string]indexer.Document, error) {
 	notop := false
-	if q.Prev() != nil && (q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro) {
+	if q.Prev() != nil && ((q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro)) {
 		notop = true
 	}
 	// TODO: add field == ""
@@ -247,8 +247,9 @@ func (q *BasicQuery) AddField(s Field) {
 func (q *BasicQuery) AddTerm(s Term) {
 	log.Printf("running %s", mycaller())
 	log.Printf("q in basic add term: %+v", q)
+	log.Printf("s in AddTerm: %s", s)
 	q.term.term = s
-	if q.Prev() != nil && (q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro) {
+	if q.Prev() != nil && ((q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro)) {
 		q.AddTermOp(q.Prev().Op())
 	}
 
@@ -700,6 +701,10 @@ func (z *Token) StartRange(inclusive bool) {
 	if z.Latest != nil {
 		z.Latest.SetNext(rn)
 		rn.SetPrev(z.Latest)
+		// Don't think the prohibited operator would be allowed here
+		if z.Latest.Op() == OpUnaryNot {
+			rn.negated = true
+		}
 	}
 	z.Latest = rn
 }
