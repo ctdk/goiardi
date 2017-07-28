@@ -705,6 +705,11 @@ func (z *Token) StartRange(inclusive bool) {
 		if z.Latest.Op() == OpUnaryNot {
 			rn.negated = true
 		}
+		if z.Latest.Prev() != nil {
+			rn.op = z.Latest.Prev().Op()
+		} else {
+			rn.op = OpNotAnOp
+		}
 	}
 	z.Latest = rn
 }

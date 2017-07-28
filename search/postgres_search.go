@@ -237,7 +237,7 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 			*t++
 		case *RangeQuery:
 			pq.paths = append(pq.paths, string(c.field))
-			args, xtraPath, qstr := buildRangeQuery(c.field, c.start, c.end, c.inclusive, t, curOp)
+			args, xtraPath, qstr := buildRangeQuery(c.field, c.start, c.end, c.inclusive, t, curOp, p.(*RangeQuery).negated)
 			if xtraPath != "" {
 				pq.paths = append(pq.paths, xtraPath)
 			}
@@ -261,9 +261,7 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 		case *NotQuery: // skip to the next thing...?
 			// act to preserve the previous query's op (if there was
 			// one.
-			if curOp != OpNotAnOp {
-				p.AddOp(curOp)
-			}
+			p.AddOp(curOp)
 		default:
 			err := fmt.Errorf("Unknown type %T for query", c)
 			return err
@@ -419,7 +417,7 @@ func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op) ([]stri
 	return args, xtraPath, q
 }
 
-func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool, tNum *int, op Op) ([]string, string, string) {
+func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool, tNum *int, op Op, negated bool) ([]string, string, string) {
 	if start > end {
 		start, end = end, start
 	}
@@ -429,6 +427,13 @@ func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool
 	xtraPath := fmt.Sprintf("%s.*", string(field))
 
 	opStr := binOp(op)
+	logger.Debugf("op in building range query: %s str: '%s'", opMap[op], opStr)
+
+	var notRange string
+	if negated {
+		notRange = " NOT "
+	}
+
 	var equals string
 	if inclusive {
 		equals = "="
@@ -465,7 +470,7 @@ func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool
 		// from shooting off into the distance
 		rangePathStr = fmt.Sprintf(" OR (f%d.path OPERATOR(goiardi.~) _ARG_ AND %s)", *tNum, strings.Join(rangePaths, " AND "))
 	}
-	q = fmt.Sprintf("%s(f%d.path OPERATOR(goiardi.~) _ARG_%s%s)", opStr, *tNum, rangeStr, rangePathStr)
+	q = fmt.Sprintf("%s%s(f%d.path OPERATOR(goiardi.~) _ARG_%s%s)", opStr, notRange, *tNum, rangeStr, rangePathStr)
 	return args, xtraPath, q
 }
 
