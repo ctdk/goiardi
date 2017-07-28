@@ -258,6 +258,12 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 			pq.paths = append(pq.paths, np.paths...)
 			pq.arguments = append(pq.arguments, np.arguments...)
 			pq.queryStrs = append(pq.queryStrs, fmt.Sprintf("%s(%s)", binOp(curOp), strings.Join(np.queryStrs, " ")))
+		case *NotQuery: // skip to the next thing...?
+			// act to preserve the previous query's op (if there was
+			// one.
+			if curOp != OpNotAnOp {
+				p.AddOp(curOp)
+			}
 		default:
 			err := fmt.Errorf("Unknown type %T for query", c)
 			return err

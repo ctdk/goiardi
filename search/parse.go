@@ -24,6 +24,8 @@ package search
 import (
 	"fmt"
 	"log"
+	"runtime"
+	"strings"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
@@ -225,14 +227,17 @@ func (q *BasicQuery) SearchResults(curRes map[string]indexer.Document) (map[stri
 }
 
 func (q *BasicQuery) AddOp(o Op) {
+	log.Printf("running %s", mycaller())
 	q.op = o
 }
 
 func (q *BasicQuery) Op() Op {
+	log.Printf("running %s", mycaller())
 	return q.op
 }
 
 func (q *BasicQuery) AddField(s Field) {
+	log.Printf("running %s", mycaller())
 	if config.Config.ConvertSearch {
 		s = Field(util.PgSearchQueryKey(string(s)))
 	}
@@ -240,42 +245,57 @@ func (q *BasicQuery) AddField(s Field) {
 }
 
 func (q *BasicQuery) AddTerm(s Term) {
+	log.Printf("running %s", mycaller())
+	log.Printf("q in basic add term: %+v", q)
 	q.term.term = s
+	if q.Prev() != nil && (q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro) {
+		q.AddTermOp(q.Prev().Op())
+	}
+
 	q.SetCompleted()
 }
 
 func (q *BasicQuery) AddTermOp(o Op) {
+	log.Printf("running %s", mycaller())
 	q.term.mod = o
 }
 
 func (q *BasicQuery) SetNext(n Queryable) {
+	log.Printf("running %s", mycaller())
 	q.next = n
 }
 
 func (q *BasicQuery) Next() Queryable {
+	log.Printf("running %s", mycaller())
 	return q.next
 }
 
 func (q *BasicQuery) SetPrev(n Queryable) {
+	log.Printf("running %s", mycaller())
 	q.prev = n
 }
 
 func (q *BasicQuery) Prev() Queryable {
+	log.Printf("running %s", mycaller())
 	return q.prev
 }
 
 func (q *BasicQuery) IsIncomplete() bool {
+	log.Printf("running %s", mycaller())
 	return !q.complete
 }
 
 func (q *BasicQuery) SetCompleted() {
+	log.Printf("running %s", mycaller())
 	q.complete = true
 }
 func (q *BasicQuery) AddFuzzBoost(o Op) {
+	log.Printf("running %s", mycaller())
 	q.term.fuzzboost = o
 }
 
 func (q *BasicQuery) AddFuzzParam(s string) {
+	log.Printf("running %s", mycaller())
 	q.term.fuzzparam = s
 }
 
@@ -629,6 +649,7 @@ func (z *Token) AddField(s string) {
 }
 
 func (z *Token) AddTerm(s string) {
+	log.Printf("term: %s", s)
 	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
 		z.StartBasic()
 	}
@@ -648,6 +669,7 @@ func (z *Token) AddRange(s string) {
 
 func (z *Token) StartBasic() {
 	/* See if we need to make a new query; sometimes we don't */
+	log.Printf("z.Latest in basic q: %+v", z.Latest)
 	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
 		un := new(BasicQuery)
 		un.op = OpBinOr
@@ -659,6 +681,12 @@ func (z *Token) StartBasic() {
 			z.QueryChain = un
 		}
 		z.Latest = un
+	}
+	log.Printf("basic query qchain:")
+	qpqp := z.QueryChain
+	for qpqp != nil {
+		log.Printf("%+v", qpqp)
+		qpqp = qpqp.Next()
 	}
 }
 
@@ -737,8 +765,39 @@ func (z *Token) SetNotQuery(op Op) {
 	if z.QueryChain == nil {
 		z.QueryChain = nq
 	}
+	z.Latest = nq
+	log.Printf("not query qchain:")
+	qpqp := z.QueryChain
+	for qpqp != nil {
+		log.Printf("%+v", qpqp)
+		qpqp = qpqp.Next()
+	}
 }
 
 func (z *Token) Evaluate() Queryable {
 	return z.QueryChain
+}
+
+func mycaller() string {
+    fpcs := make([]uintptr, 2)
+
+    // skip 3 levels to get to the caller of whoever called Caller()
+    n := runtime.Callers(2, fpcs)
+    if n == 0 {
+       return "n/a" // proper error her would be better
+    }
+
+    // get the info of the actual function that's in the pointer
+	var calls []string
+for i, _ := range fpcs {
+    fun := runtime.FuncForPC(fpcs[i]-1)
+    var cer string
+    if fun == nil {
+      cer = "n/a"
+    } else {
+	cer = fun.Name()
+    }
+    calls = append(calls, cer)
+}
+	return strings.Join(calls, "---")
 }
