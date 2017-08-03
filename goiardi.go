@@ -35,6 +35,7 @@ import (
 	"os/signal"
 	"path"
 	"runtime"
+	//"runtime/debug" // remove before merging into master
 	"strings"
 	"syscall"
 	"time"
@@ -80,6 +81,7 @@ var noOpUserReqs = []string{
 	"/file_store",
 	"/universe",
 	"/principals",
+	"/debug",
 }
 
 var apiChan chan *apiTimerInfo
@@ -144,6 +146,14 @@ func main() {
 
 	setSaveTicker()
 	setLogEventPurgeTicker()
+	// Debugging mem usage only - remove before merging into master
+	/* go func() {
+		tt := time.NewTicker(time.Second * time.Duration(15))
+		for _ = range tt.C {
+			logger.Debugf("forcibly freeing OS memory...")
+			debug.FreeOSMemory()
+		}
+	}() */
 
 	/* handle import/export */
 	if config.Config.DoExport {
@@ -313,7 +323,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			xFIP := net.ParseIP(xForwarded)
 			logger.Debugf("ips now: '%q' '%q'", rIP, xFIP)
 			logger.Debugf("local? '%q' '%q'", rIP.IsLoopback(), xFIP.IsLoopback())
-			if !rIP.IsLoopback() && !xFIP.IsLoopback() {
+			if !rIP.IsLoopback() && !xFIP.IsLoopback() && !config.PprofWhitelisted(rIP) && !config.PprofWhitelisted(xFIP) {
 				logger.Debugf("blocked %s (x-forwarded-for: %s) from accessing /debug/pprof!", rIP.String(), xFIP.String())
 				block = true
 			}
@@ -379,7 +389,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* Only perform the authorization check if that's configured. Bomb with
 	 * an error if the check of the headers, timestamps, etc. fails. */
 	/* No clue why /principals doesn't require authorization. Hrmph. */
-	if config.Config.UseAuth && !strings.HasPrefix(r.URL.Path, "/file_store") && !(strings.HasPrefix(r.URL.Path, "/principals") && r.Method == "GET") {
+	if config.Config.UseAuth && !strings.HasPrefix(r.URL.Path, "/file_store") && !strings.HasPrefix(r.URL.Path, "/debug") && !(strings.HasPrefix(r.URL.Path, "/principals") && r.Method == "GET") {
 		herr := authentication.CheckHeader(userID, r)
 		if herr != nil {
 			w.Header().Set("Content-Type", "application/json")
