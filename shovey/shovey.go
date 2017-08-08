@@ -366,7 +366,7 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 	jsonPayload, _ := json.Marshal(payload)
 	ackCh := make(chan string, len(nodeNames))
 	q := &serfclient.QueryParam{Name: "shovey", Payload: jsonPayload, FilterNodes: nodeNames, RequestAck: true, AckCh: ackCh}
-	err := serfin.Serfer.Query(q)
+	err := serfin.Query(q)
 	if err != nil {
 		return util.CastErr(err)
 	}
@@ -451,7 +451,7 @@ func (s *Shovey) startJobs() Qerror {
 		ackCh := make(chan string, len(tagNodes))
 		respCh := make(chan serfclient.NodeResponse, len(tagNodes))
 		q := &serfclient.QueryParam{Name: "shovey", Payload: jsonPayload, FilterNodes: tagNodes, RequestAck: true, AckCh: ackCh, RespCh: respCh}
-		qerr := serfin.Serfer.Query(q)
+		qerr := serfin.Query(q)
 		if qerr != nil {
 			errch <- qerr
 			return

@@ -556,7 +556,7 @@ func handleSignals() {
 					datastore.Dbh.Close()
 				}
 				if config.Config.UseSerf {
-					serfin.Serfer.Close()
+					serfin.CloseAll()
 				}
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
@@ -665,7 +665,7 @@ func setLogEventPurgeTicker() {
 func startEventMonitor(serfAddr string, errch chan<- error) {
 	// Initial setup of serf. If this bombs go ahead and return so we can
 	// die
-	sc, err := serfclient.NewRPCClient(serfAddr)
+	sc, err := serfin.NewRPCClient(serfAddr)
 	if err != nil {
 		errch <- err
 		return
@@ -681,7 +681,7 @@ func startEventMonitor(serfAddr string, errch chan<- error) {
 		// course, the client will be fine. It's simpler to have the
 		// check up here, though, rather than at the end
 		if sc.IsClosed() {
-			sc, err = serfclient.NewRPCClient(serfAddr)
+			sc, err = serfin.NewRPCClient(serfAddr)
 			if err != nil {
 				logger.Errorf("Error recreating serf client, waiting %d seconds before recreating", recreateSerfWait, err.Error())
 				time.Sleep(recreateSerfWait * time.Second)

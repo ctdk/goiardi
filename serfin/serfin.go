@@ -24,16 +24,55 @@ import (
 	"github.com/ctdk/goiardi/config"
 	serfclient "github.com/hashicorp/serf/client"
 	"github.com/tideland/golib/logger"
+	"sync"
 )
 
-// Serfer is the common serf client for goiardi.
+// Serfer is the common serf client for goiardi. NB: moving away from doing it
+// this way.
 var Serfer *serfclient.RPCClient
+
+type serfClientMap struct {
+	serfs map[string]*serfclient.RPCClient
+	m sync.Mutex 
+}
+
+var serfClients *serfClientMap
+
+func init() {
+	serfClients = new(serfClientMap)
+	serfClients.serfs = make(map[string]*serfclient.RPCClient)
+}
+
+func (scm *serfClientMap) addSerfClient(sc *serfclient.RPCClient, serfAddr string) {
+	scm.m.Lock()
+	defer scm.m.Unlock()
+	scm.serfs[serfAddr] = sc
+	return
+}
+
+func (scm *serfClientMap) closeAllSerfs() {
+	scm.m.Lock()
+	defer scm.m.Unlock()
+	for addr, sc := range scm.serfs {
+		sc.Close()
+		delete(scm.serfs, addr)
+	}
+}
+
+func (scm *serfClientMap) closeSerf(serfAddr string) {
+	scm.m.Lock()
+	defer scm.m.Unlock()
+	if sc, ok := scm.serfs[serfAddr]; ok {
+		sc.Close()
+		delete(scm.serfs, serfAddr)
+	}
+}
 
 // StartSerfin sets up the serf instance and starts listening for events and
 // queries from other serf instances.
 func StartSerfin() error {
 	var err error
-	Serfer, err = serfclient.NewRPCClient(config.Config.SerfAddr)
+	Serfer, err = NewRPCClient(config.Config.SerfAddr)
 	if err != nil {
 		logger.Criticalf(err.Error())
 		os.Exit(1)
@@ -48,6 +87,43 @@ func StartSerfin() error {
 	}
 
 	return nil
+}
+
+// Query makes a query to the default serf client, reconnecting if it's been 
+// closed.
+func Query(q *serfclient.QueryParam) error {
+	var err error
+	
+	if Serfer.IsClosed() {
+		serfClients.closeSerf(config.Config.SerfAddr)
+		Serfer, err = NewRPCClient(config.Config.SerfAddr)
+		if err != nil {
+			return err
+		}
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func NewRPCClient(serfAddr string) (*serfclient.RPCClient, error) {
+	sc, err := serfclient.NewRPCClient(serfAddr)
+	if err != nil {
+		return nil, err
+	}
+	serfClients.addSerfClient(sc, serfAddr)
+	return sc, nil
+}
+
+// CloseAll closes all active serf clients
+func CloseAll() {
+	serfClients.closeAllSerfs()
+}
+
+// CloseSerfClient closes one serf client.
+func CloseSerfClient(serfAddr string) {
+	serfClients.closeSerf(serfAddr)
 }
 
 // SendEvent sends a serf event out from goiardi.
