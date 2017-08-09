@@ -35,7 +35,7 @@ var Serfer *serfclient.RPCClient
 
 type serfClientMap struct {
 	serfs map[string]*serfclient.RPCClient
-	m sync.Mutex 
+	m     sync.Mutex
 }
 
 var serfClients *serfClientMap
@@ -91,7 +91,7 @@ func StartSerfin() error {
 	return nil
 }
 
-// Query makes a query to the default serf client, reconnecting if it's been 
+// Query makes a query to the default serf client, reconnecting if it's been
 // closed.
 func Query(q *serfclient.QueryParam, errch chan<- error) {
 	var err error
@@ -100,23 +100,23 @@ func Query(q *serfclient.QueryParam, errch chan<- error) {
 	// probably should make this configurable eventually.
 	retryDelay := time.Duration(5)
 	retryNum := 60
-	
+
 	if Serfer == nil || Serfer.IsClosed() {
 		serfClients.closeSerf(config.Config.SerfAddr)
 		var ns *serfclient.RPCClient
 		for i := 0; i < retryNum; i++ {
-			logger.Debugf("reconnecting to serf try #%d...", i + 1)
+			logger.Debugf("reconnecting to serf try #%d...", i+1)
 			ns, err = NewRPCClient(config.Config.SerfAddr)
 			if err == nil {
 				Serfer = ns
 				logger.Debugf("reconnected to serf!")
 				break
 			}
-			logger.Debugf("Failed to reconnect to serf on try #%d, waiting %d seconds", i + 1, retryDelay)
+			logger.Debugf("Failed to reconnect to serf on try #%d, waiting %d seconds", i+1, retryDelay)
 			time.Sleep(retryDelay * time.Second)
 		}
 		// if we got here we never managed to reconnect
-		qErr := fmt.Errorf("Could not reconnect to serf after %d seconds. Last error: %s", int(retryDelay) * retryNum, err.Error())
+		qErr := fmt.Errorf("Could not reconnect to serf after %d seconds. Last error: %s", int(retryDelay)*retryNum, err.Error())
 		errch <- qErr
 		close(errch)
 		return
@@ -126,7 +126,7 @@ func Query(q *serfclient.QueryParam, errch chan<- error) {
 
 	errch <- nil
 	close(errch)
-	return 
+	return
 }
 
 func NewRPCClient(serfAddr string) (*serfclient.RPCClient, error) {

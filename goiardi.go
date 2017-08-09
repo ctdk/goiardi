@@ -689,7 +689,7 @@ func startEventMonitor(serfAddr string, errch chan<- error) {
 			}
 		}
 		go runEventMonitor(sc, ech)
-		e := <- ech
+		e := <-ech
 		if e != nil {
 			logger.Errorf("Error from event monitor: %s", e.Error())
 		}
