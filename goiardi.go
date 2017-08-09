@@ -673,17 +673,17 @@ func startEventMonitor(serfAddr string, errch chan<- error) {
 	errch <- nil
 
 	ech := make(chan error)
-	recreateSerfWait := time.Duration(10)
+	recreateSerfWait := time.Duration(5)
 
 	for {
 		// Make sure the serf client is actually closed before creating
 		// a new one. The very first time this loop is kicked off, of
 		// course, the client will be fine. It's simpler to have the
 		// check up here, though, rather than at the end
-		if sc.IsClosed() {
+		if sc == nil || sc.IsClosed() {
 			sc, err = serfin.NewRPCClient(serfAddr)
 			if err != nil {
-				logger.Errorf("Error recreating serf client, waiting %d seconds before recreating", recreateSerfWait, err.Error())
+				logger.Errorf("Error recreating serf client, waiting %d seconds before recreating: %s", recreateSerfWait, err.Error())
 				time.Sleep(recreateSerfWait * time.Second)
 				continue
 			}
@@ -711,7 +711,17 @@ func runEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 	for {
 		select {
 		case e := <-ch:
-			logger.Debugf("Got an event: %v", e)
+			eNil := e == nil
+			logger.Debugf("Got an event: %v nil? %v", e, eNil)
+			if eNil {
+				if sc.IsClosed() {
+					logger.Debugf("Serf client has been closed, returning from runEventMonitor in hopes of being able to reconnect")
+					err := fmt.Errorf("serf client closed")
+					errch <- err
+					return
+				}
+				continue
+			}
 			eName, _ := e["Name"]
 			switch eName {
 			case "node_status":

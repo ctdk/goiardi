@@ -19,12 +19,14 @@ package serfin
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/ctdk/goiardi/config"
 	serfclient "github.com/hashicorp/serf/client"
 	"github.com/tideland/golib/logger"
 	"sync"
+	"time"
 )
 
 // Serfer is the common serf client for goiardi. NB: moving away from doing it
@@ -91,20 +93,40 @@ func StartSerfin() error {
 
 // Query makes a query to the default serf client, reconnecting if it's been 
 // closed.
-func Query(q *serfclient.QueryParam) error {
+func Query(q *serfclient.QueryParam, errch chan<- error) {
 	var err error
+
+	// retry connecting to serf for 5 minutes, every 5 seconds. TODO:
+	// probably should make this configurable eventually.
+	retryDelay := time.Duration(5)
+	retryNum := 60
 	
-	if Serfer.IsClosed() {
+	if Serfer == nil || Serfer.IsClosed() {
 		serfClients.closeSerf(config.Config.SerfAddr)
-		Serfer, err = NewRPCClient(config.Config.SerfAddr)
-		if err != nil {
-			return err
+		var ns *serfclient.RPCClient
+		for i := 0; i < retryNum; i++ {
+			logger.Debugf("reconnecting to serf try #%d...", i + 1)
+			ns, err = NewRPCClient(config.Config.SerfAddr)
+			if err == nil {
+				Serfer = ns
+				logger.Debugf("reconnected to serf!")
+				break
+			}
+			logger.Debugf("Failed to reconnect to serf on try #%d, waiting %d seconds", i + 1, retryDelay)
+			time.Sleep(retryDelay * time.Second)
 		}
+		// if we got here we never managed to reconnect
+		qErr := fmt.Errorf("Could not reconnect to serf after %d seconds. Last error: %s", int(retryDelay) * retryNum, err.Error())
+		errch <- qErr
+		close(errch)
+		return
 	}
-	if err != nil {
-		return err
-	}
-	return nil
+
+	err = Serfer.Query(q)
+
+	errch <- nil
+	close(errch)
+	return 
 }
 
 func NewRPCClient(serfAddr string) (*serfclient.RPCClient, error) {
