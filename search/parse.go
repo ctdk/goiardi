@@ -477,7 +477,7 @@ func mergeResults(tmpRes []groupQueryHolder) (map[string]indexer.Document, error
 
 func (q *RangeQuery) SearchIndex(idxName string) (map[string]indexer.Document, error) {
 	i := indexer.GetIndex()
-	res, err := i.SearchRange(idxName, string(q.field), string(q.start), string(q.end), q.inclusive)
+	res, err := i.SearchRange(idxName, string(q.field), string(q.start), string(q.end), q.inclusive, q.negated)
 	return res, err
 }
 
@@ -507,7 +507,7 @@ func (q *GroupedQuery) SearchResults(curRes map[string]indexer.Document) (map[st
 
 func (q *RangeQuery) SearchResults(curRes map[string]indexer.Document) (map[string]indexer.Document, error) {
 	i := indexer.GetIndex()
-	res, err := i.SearchResultsRange(string(q.field), string(q.start), string(q.end), q.inclusive, curRes)
+	res, err := i.SearchResultsRange(string(q.field), string(q.start), string(q.end), q.inclusive, q.negated, curRes)
 	return res, err
 }
 

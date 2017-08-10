@@ -240,12 +240,6 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 							cookbookResponse[cd] = make([]map[string]interface{}, 0)
 						}
 					}
-				} else if apiVer := r.Header.Get("X-Ops-Server-API-Version"); apiVer != "" {
-					// convert apiVer to a number, it looks
-					// like 2+, at least, wants all_files
-					// rather than the old way. This may end
-					// up causing other problems though.
-					
 				}
 			}
 		case http.MethodPut:
