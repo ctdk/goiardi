@@ -117,7 +117,7 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 		qpqp := qchain
 		logger.Debugf("qchain:")
 		for qpqp != nil {
-			logger.Debugf("%+v", qpqp)
+			logger.Debugf("%T addr %p: %+v", qpqp, qpqp, qpqp)
 			qpqp = qpqp.Next()
 		}
 

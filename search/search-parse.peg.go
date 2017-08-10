@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"log"
 )
 
 const endSymbol rune = 1114112
@@ -338,6 +339,12 @@ func (e *parseError) Error() string {
 			translations[begin].line, translations[begin].symbol,
 			translations[end].line, translations[end].symbol,
 			strconv.Quote(string(e.p.buffer[begin:end])))
+	}
+	log.Printf("parse error query chain:")
+	jp := e.p.QueryChain
+	for jp != nil {
+		log.Printf("%T %+v", jp, jp)
+		jp = jp.Next()
 	}
 
 	return error

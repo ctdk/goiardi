@@ -536,6 +536,7 @@ func (q *SubQuery) AddTermOp(o Op) {
 }
 
 func (q *SubQuery) SetNext(n Queryable) {
+	log.Printf("running %s", mycaller())
 	q.next = n
 }
 
@@ -544,11 +545,12 @@ func (q *SubQuery) Next() Queryable {
 }
 
 func (q *SubQuery) SetPrev(n Queryable) {
-	q.next = n
+	log.Printf("running %s", mycaller())
+	q.prev = n
 }
 
 func (q *SubQuery) Prev() Queryable {
-	return q.next
+	return q.prev
 }
 
 func (q *SubQuery) IsIncomplete() bool {
@@ -670,7 +672,7 @@ func (z *Token) AddRange(s string) {
 
 func (z *Token) StartBasic() {
 	/* See if we need to make a new query; sometimes we don't */
-	log.Printf("z.Latest in basic q: %+v", z.Latest)
+	log.Printf("z.Latest in basic q: %T %+v", z.Latest, z.Latest)
 	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
 		un := new(BasicQuery)
 		un.op = OpBinOr
@@ -686,7 +688,7 @@ func (z *Token) StartBasic() {
 	log.Printf("basic query qchain:")
 	qpqp := z.QueryChain
 	for qpqp != nil {
-		log.Printf("%+v", qpqp)
+		log.Printf("%T %+v", qpqp, qpqp)
 		qpqp = qpqp.Next()
 	}
 }
@@ -736,7 +738,9 @@ func (z *Token) SetCompleted() {
 
 func (z *Token) StartSubQuery() {
 	// we don't want to start a subquery if we're in a field group query
+	log.Printf("Starting a subquery!")
 	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
+		log.Printf("... and actually starting the subquery.")
 		sq := new(SubQuery)
 		sq.start = true
 		sq.complete = true
@@ -745,6 +749,9 @@ func (z *Token) StartSubQuery() {
 			sq.SetPrev(z.Latest)
 		}
 		z.Latest = sq
+		if z.QueryChain == nil {
+			z.QueryChain = sq
+		}
 	}
 }
 
@@ -758,6 +765,9 @@ func (z *Token) EndSubQuery() {
 			z.Latest.SetNext(sq)
 			sq.SetPrev(z.Latest)
 		}
+		log.Printf("subquery end term: %+v", z.Latest)
+		log.Printf("end subquery: %+v", sq)
+		
 		z.Latest = sq
 	}
 }
