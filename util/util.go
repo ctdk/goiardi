@@ -32,6 +32,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"log"
 )
 
 // NoDBConfigured is an error for when no database has been configured for use,
@@ -193,12 +194,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 				topLev[n] = k
 				n++
 			}
-			var nkey string
-			if key == "" {
-				nkey = k
-			} else {
-				nkey = fmt.Sprintf("%s%s%s", key, sep, k)
-			}
+			nkey := getNKey(key, k, sep)
 			nm := DeepMerge(nkey, u)
 			for j, q := range nm {
 				merger[j] = q
@@ -217,12 +213,8 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 				topLev[n] = k
 				n++
 			}
-			var nkey string
-			if key == "" {
-				nkey = k
-			} else {
-				nkey = fmt.Sprintf("%s%s%s", key, sep, k)
-			}
+			nkey := getNKey(key, k, sep)
+
 			merger[nkey] = u
 		}
 		if key != "" && !config.Config.UsePostgreSQL {
@@ -230,9 +222,46 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 		}
 
 	case []interface{}:
-		km := make([]string, len(v))
+		km := make([]string, 0, len(v))
+		mapMerge := make(map[string][]string)
 		for i, w := range v {
-			km[i] = stringify(w)
+			// If it's an array of maps or arrays, deep merge them 
+			// properly. Otherwise, stringify as best we can.
+			vRef := reflect.ValueOf(w)
+			if vRef.Kind() == reflect.Map {
+				interMap := DeepMerge("", w)
+				log.Printf("[]interface{} %d map: %+v", i, interMap)
+				for imk, imv := range interMap {
+					nk := getNKey(key, imk, sep)
+					// Anything that's come back from
+					// DeepMerge should be a string.
+					mapMerge[nk] = mergeInterfaceMapChildren(mapMerge[nk], imv)
+				}
+			/*
+			} else if vRef.Kind() == reflect.Slice {
+				for _, sv := range wSlice {
+					smMerge := DeepMerge("", sv)
+					// WARNING: This *may* be a little iffy
+					// still, there are some very weird
+					// possibilities under this that need
+					// more testing.
+					for smk, smv := range smMerge {
+						if smk == "" {
+							km = mergeInterfaceMapChildren(km, smv)
+						} else {
+							nk := getNKey(key, smk, sep)
+							mapMerge[nk] = mergeInterfaceMapChildren(mapMerge[nk], smv)
+						}
+					}
+				}
+			*/
+			} else {
+				s := stringify(w)
+				km = append(km, s)
+			}
+		}
+		for mmi, mmv := range mapMerge {
+			merger[mmi] = mmv
 		}
 		merger[key] = km
 	case []string:
@@ -270,6 +299,25 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 		merger[key] = stringify(v)
 	}
 	return merger
+}
+
+func getNKey(key string, subkey string, sep string) string {
+	var nkey string
+	if key == "" {
+		nkey = subkey
+	} else {
+		nkey = strings.Join([]string{key,subkey}, sep)
+	}
+	return nkey
+}
+
+func mergeInterfaceMapChildren(strArr []string, val interface{}) []string {
+	if reflect.ValueOf(val).Kind() == reflect.Slice {
+		strArr = append(strArr, val.([]string)...)
+	} else {
+		strArr = append(strArr, val.(string))
+	}
+	return strArr
 }
 
 func stringify(source interface{}) string {
