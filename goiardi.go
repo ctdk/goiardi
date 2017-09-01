@@ -35,7 +35,6 @@ import (
 	"os/signal"
 	"path"
 	"runtime"
-	//"runtime/debug" // remove before merging into master
 	"strings"
 	"syscall"
 	"time"
@@ -146,14 +145,6 @@ func main() {
 
 	setSaveTicker()
 	setLogEventPurgeTicker()
-	// Debugging mem usage only - remove before merging into master
-	/* go func() {
-		tt := time.NewTicker(time.Second * time.Duration(15))
-		for _ = range tt.C {
-			logger.Debugf("forcibly freeing OS memory...")
-			debug.FreeOSMemory()
-		}
-	}() */
 
 	/* handle import/export */
 	if config.Config.DoExport {

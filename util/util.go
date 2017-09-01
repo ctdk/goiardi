@@ -35,6 +35,29 @@ import (
 	"log"
 )
 
+// hopefully a reasonable starting map allocation for DeepMerge if the type
+// isn't a map
+const defaultMapCap = 4
+
+// declare some postgres search key regexps once up here, so they aren't
+// reallocated every time the function is called.
+
+var re *regexp.Regexp
+var reQuery *regexp.Regexp
+var bs *regexp.Regexp
+var ps *regexp.Regexp
+
+// And a regexp for matching roles in DeepMerge
+var roleMatch *regexp.Regexp
+
+func init() {
+	re = regexp.MustCompile(`[^\pL\pN_\.]`)
+	reQuery = regexp.MustCompile(`[^\pL\pN_\.\*\?]`)
+	bs = regexp.MustCompile(`_{2,}`)
+	ps = regexp.MustCompile(`\.{2,}`) // repeated . will cause trouble too
+	roleMatch = regexp.MustCompile(`^(recipe|role)\[(.*)\]`)
+}
+
 // NoDBConfigured is an error for when no database has been configured for use,
 // yet an SQL function is being called.
 var NoDBConfigured = gerror.StatusError("no db configured, but you tried to use one", http.StatusInternalServerError)
@@ -93,8 +116,9 @@ func chkPath(p *string) {
 // up replacement for local mode. Objects fed into this function *must* have the
 // "json" tag set for their struct members.
 func FlattenObj(obj interface{}) map[string]interface{} {
-	expanded := make(map[string]interface{})
 	s := reflect.ValueOf(obj).Elem()
+	expanded := make(map[string]interface{}, s.NumField())
+	
 	for i := 0; i < s.NumField(); i++ {
 		if !s.Field(i).CanInterface() {
 			continue
@@ -144,7 +168,7 @@ func Indexify(flattened map[string]interface{}) []string {
 		case string:
 			//v = IndexEscapeStr(v)
 			v = TrimStringMax(v, maxValLen)
-			line := fmt.Sprintf("%s:%s", k, v)
+			line := strings.Join([]string{k, v}, ":")
 			readyToIndex = append(readyToIndex, line)
 		case []string:
 			sort.Strings(v)
@@ -152,7 +176,7 @@ func Indexify(flattened map[string]interface{}) []string {
 			for _, w := range v {
 				//w = IndexEscapeStr(w)
 				w = TrimStringMax(w, maxValLen)
-				line := fmt.Sprintf("%s:%s", k, w)
+				line := strings.Join([]string{k, w}, ":")
 				readyToIndex = append(readyToIndex, line)
 			}
 		default:
@@ -176,7 +200,15 @@ func IndexEscapeStr(s string) string {
 
 // DeepMerge merges disparate data structures into a flat hash.
 func DeepMerge(key string, source interface{}) map[string]interface{} {
-	merger := make(map[string]interface{})
+	refIface := reflect.ValueOf(source)
+	var mapCap int
+	if refIface.Kind() == reflect.Map {
+		mapCap = refIface.Len()
+	} else {
+		mapCap = defaultMapCap
+	}
+
+	merger := make(map[string]interface{}, mapCap)
 	var sep string
 	if config.Config.DotSearch {
 		sep = "."
@@ -237,9 +269,9 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 					// DeepMerge should be a string.
 					mapMerge[nk] = mergeInterfaceMapChildren(mapMerge[nk], imv)
 				}
-			/*
 			} else if vRef.Kind() == reflect.Slice {
-				for _, sv := range wSlice {
+				log.Printf("v is a slice: %+v\n", v)
+				for _, sv := range w.([]interface{}) {
 					smMerge := DeepMerge("", sv)
 					// WARNING: This *may* be a little iffy
 					// still, there are some very weird
@@ -254,7 +286,6 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 						}
 					}
 				}
-			*/
 			} else {
 				s := stringify(w)
 				km = append(km, s)
@@ -358,19 +389,13 @@ func stringify(source interface{}) string {
 // than raw ASCII alnum however because it's better behavior and because
 // Postgres does accept at least some other alphabets as being alphanumeric.
 func PgSearchKey(key string) string {
-	re := regexp.MustCompile(`[^\pL\pN_\.]`)
-	bs := regexp.MustCompile(`_{2,}`)
-	ps := regexp.MustCompile(`\.{2,}`) // repeated . will cause trouble too
 	return pgKeyReplace(key, re, bs, ps)
 }
 
 // PgSearchQueryKey is very similar to PgSearchKey, except that it preserves the
 // Solr wildcard charactes '*' and '?' in the queries.
 func PgSearchQueryKey(key string) string {
-	re := regexp.MustCompile(`[^\pL\pN_\.\*\?]`)
-	bs := regexp.MustCompile(`_{2,}`)
-	ps := regexp.MustCompile(`\.{2,}`)
-	return pgKeyReplace(key, re, bs, ps)
+	return pgKeyReplace(key, reQuery, bs, ps)
 }
 
 func pgKeyReplace(key string, re, bs, ps *regexp.Regexp) string {
