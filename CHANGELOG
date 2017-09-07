@@ -4,6 +4,7 @@
 * Properly index arrays of hashes, arrays of arrays, etc. in object attributes.
 * Pretty serious memory usage improvements with search (both the in-memory
   and postgres searches).
+* Fix reconnecting to serf if the connection is somehow interrupted.
 
 0.11.5
 ------
