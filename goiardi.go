@@ -309,11 +309,8 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if len(fwded) != 0 {
 				xForwarded = fwded[len(fwded)-1]
 			}
-			logger.Debugf("remote ip candidates: ra: '%s', '%s'", remoteIP, xForwarded)
 			rIP := net.ParseIP(remoteIP)
 			xFIP := net.ParseIP(xForwarded)
-			logger.Debugf("ips now: '%q' '%q'", rIP, xFIP)
-			logger.Debugf("local? '%q' '%q'", rIP.IsLoopback(), xFIP.IsLoopback())
 			if !rIP.IsLoopback() && !xFIP.IsLoopback() && !config.PprofWhitelisted(rIP) && !config.PprofWhitelisted(xFIP) {
 				logger.Debugf("blocked %s (x-forwarded-for: %s) from accessing /debug/pprof!", rIP.String(), xFIP.String())
 				block = true

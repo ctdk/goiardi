@@ -32,7 +32,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"log"
 )
 
 // hopefully a reasonable starting map allocation for DeepMerge if the type
@@ -262,7 +261,6 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 			vRef := reflect.ValueOf(w)
 			if vRef.Kind() == reflect.Map {
 				interMap := DeepMerge("", w)
-				log.Printf("[]interface{} %d map: %+v", i, interMap)
 				for imk, imv := range interMap {
 					nk := getNKey(key, imk, sep)
 					// Anything that's come back from
@@ -270,7 +268,6 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 					mapMerge[nk] = mergeInterfaceMapChildren(mapMerge[nk], imv)
 				}
 			} else if vRef.Kind() == reflect.Slice {
-				log.Printf("v is a slice: %+v\n", v)
 				for _, sv := range w.([]interface{}) {
 					smMerge := DeepMerge("", sv)
 					// WARNING: This *may* be a little iffy
