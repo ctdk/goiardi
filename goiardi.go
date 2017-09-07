@@ -189,7 +189,7 @@ func main() {
 			os.Exit(1)
 		}
 		errch := make(chan error)
-		go startEventMonitor(serfin.Serfer, errch)
+		go startEventMonitor(config.Config.SerfAddr, errch)
 		err := <-errch
 		if err != nil {
 			logger.Criticalf(err.Error())
@@ -554,7 +554,7 @@ func handleSignals() {
 					datastore.Dbh.Close()
 				}
 				if config.Config.UseSerf {
-					serfin.Serfer.Close()
+					serfin.CloseAll()
 				}
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
@@ -659,51 +659,106 @@ func setLogEventPurgeTicker() {
 	}
 }
 
-func startEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
-	ch := make(chan map[string]interface{}, 10)
-	sh, err := sc.Stream("*", ch)
+// The serf functionality needs some cleaning up. This is a start on that.
+func startEventMonitor(serfAddr string, errch chan<- error) {
+	// Initial setup of serf. If this bombs go ahead and return so we can
+	// die
+	sc, err := serfin.NewRPCClient(serfAddr)
 	if err != nil {
 		errch <- err
 		return
 	}
 	errch <- nil
 
+	ech := make(chan error)
+	recreateSerfWait := time.Duration(5)
+
+	for {
+		// Make sure the serf client is actually closed before creating
+		// a new one. The very first time this loop is kicked off, of
+		// course, the client will be fine. It's simpler to have the
+		// check up here, though, rather than at the end
+		if sc == nil || sc.IsClosed() {
+			sc, err = serfin.NewRPCClient(serfAddr)
+			if err != nil {
+				logger.Errorf("Error recreating serf client, waiting %d seconds before recreating: %s", recreateSerfWait, err.Error())
+				time.Sleep(recreateSerfWait * time.Second)
+				continue
+			}
+		}
+		go runEventMonitor(sc, ech)
+		e := <-ech
+		if e != nil {
+			logger.Errorf("Error from event monitor: %s", e.Error())
+		}
+	}
+}
+
+func runEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
+	ch := make(chan map[string]interface{}, 10)
+	sh, err := sc.Stream("*", ch)
+	if err != nil {
+		errch <- err
+		return
+	}
+
 	defer sc.Stop(sh)
+	checkClientSec := time.Duration(15)
+
 	// watch the events and queries
-	for e := range ch {
-		logger.Debugf("Got an event: %v", e)
-		eName, _ := e["Name"]
-		switch eName {
-		case "node_status":
-			jsonPayload := make(map[string]string)
-			err = json.Unmarshal(e["Payload"].([]byte), &jsonPayload)
-			if err != nil {
-				logger.Errorf(err.Error())
+	for {
+		select {
+		case e := <-ch:
+			eNil := e == nil
+			logger.Debugf("Got an event: %v nil? %v", e, eNil)
+			if eNil {
+				if sc.IsClosed() {
+					logger.Debugf("Serf client has been closed, returning from runEventMonitor in hopes of being able to reconnect")
+					err := fmt.Errorf("serf client closed")
+					errch <- err
+					return
+				}
 				continue
 			}
-			n, _ := node.Get(jsonPayload["node"])
-			if n == nil {
-				logger.Errorf("No node %s", jsonPayload["node"])
-				continue
+			eName, _ := e["Name"]
+			switch eName {
+			case "node_status":
+				jsonPayload := make(map[string]string)
+				err = json.Unmarshal(e["Payload"].([]byte), &jsonPayload)
+				if err != nil {
+					logger.Errorf(err.Error())
+					continue
+				}
+				n, _ := node.Get(jsonPayload["node"])
+				if n == nil {
+					logger.Errorf("No node %s", jsonPayload["node"])
+					continue
+				}
+				err = n.UpdateStatus(jsonPayload["status"])
+				if err != nil {
+					logger.Errorf(err.Error())
+					continue
+				}
+				r := map[string]string{"response": "ok"}
+				response, _ := json.Marshal(r)
+				var id uint64
+				switch t := e["ID"].(type) {
+				case int64:
+					id = uint64(t)
+				case uint64:
+					id = t
+				default:
+					logger.Errorf("node_status ID %v type %T not int64 or uint64", e["ID"], e["ID"])
+					continue
+				}
+				sc.Respond(id, response)
 			}
-			err = n.UpdateStatus(jsonPayload["status"])
-			if err != nil {
-				logger.Errorf(err.Error())
-				continue
+		case <-time.After(checkClientSec * time.Second):
+			if sc.IsClosed() {
+				clerr := fmt.Errorf("serf client found to be closed, recreating")
+				errch <- clerr
+				return
 			}
-			r := map[string]string{"response": "ok"}
-			response, _ := json.Marshal(r)
-			var id uint64
-			switch t := e["ID"].(type) {
-			case int64:
-				id = uint64(t)
-			case uint64:
-				id = t
-			default:
-				logger.Errorf("node_status ID %v type %T not int64 or uint64", e["ID"], e["ID"])
-				continue
-			}
-			sc.Respond(id, response)
 		}
 	}
 	return
