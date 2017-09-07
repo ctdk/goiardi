@@ -5,6 +5,8 @@
 * Pretty serious memory usage improvements with search (both the in-memory
   and postgres searches).
 * Fix reconnecting to serf if the connection is somehow interrupted.
+* Fix negated range queries (it turns out they *do* have a use after all), and 
+  refactor how NOT queries are handled generally.
 
 0.11.5
 ------
