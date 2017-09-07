@@ -1,3 +1,10 @@
+0.11.6 (not released yet)
+------
+* Allow access to /debug/pprof with a whitelist of IP addresses
+* Properly index arrays of hashes, arrays of arrays, etc. in object attributes.
+* Pretty serious memory usage improvements with search (both the in-memory
+  and postgres searches).
+
 0.11.5
 ------
 * Several search fixes:
