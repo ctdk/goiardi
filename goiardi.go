@@ -684,6 +684,8 @@ func startEventMonitor(serfAddr string, errch chan<- error) {
 				logger.Errorf("Error recreating serf client, waiting %d seconds before recreating: %s", recreateSerfWait, err.Error())
 				time.Sleep(recreateSerfWait * time.Second)
 				continue
+			} else {
+				logger.Errorf("reconnected to serf after being disconnected")
 			}
 		}
 		go runEventMonitor(sc, ech)
