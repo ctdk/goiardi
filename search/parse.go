@@ -23,6 +23,9 @@ package search
 
 import (
 	"fmt"
+	"log"
+	"runtime"
+	"strings"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
@@ -109,6 +112,7 @@ type BasicQuery struct {
 	term     QueryTerm
 	op       Op
 	next     Queryable
+	prev Queryable
 	complete bool
 }
 
@@ -118,6 +122,7 @@ type GroupedQuery struct {
 	terms    []QueryTerm
 	op       Op
 	next     Queryable
+	prev Queryable
 	complete bool
 }
 
@@ -129,7 +134,9 @@ type RangeQuery struct {
 	inclusive bool
 	op        Op
 	next      Queryable
+	prev Queryable
 	complete  bool
+	negated bool
 }
 
 // SubQuery is really just a marker in the chain of queries. Later it will be
@@ -140,6 +147,13 @@ type SubQuery struct {
 	op       Op
 	complete bool
 	next     Queryable
+	prev Queryable
+}
+
+type NotQuery struct {
+	op Op
+	next      Queryable
+	prev Queryable
 }
 
 // Queryable defines an interface of methods all the query chain types have to
@@ -161,8 +175,12 @@ type Queryable interface {
 	AddTermOp(Op)
 	// Set the next query in the query chain.
 	SetNext(Queryable)
+	// Set the previous query token in the query chain.
+	SetPrev(Queryable)
 	// Get the next link in the query chain.
 	Next() Queryable
+	// Get the previous link in the query chain.
+	Prev() Queryable
 	// Is the query chain incomplete?
 	IsIncomplete() bool
 	// Sets the completed flag for this query chain on this link.
@@ -180,7 +198,7 @@ type groupQueryHolder struct {
 
 func (q *BasicQuery) SearchIndex(idxName string) (map[string]indexer.Document, error) {
 	notop := false
-	if (q.term.mod == OpUnaryNot) || (q.term.mod == OpUnaryPro) {
+	if q.Prev() != nil && ((q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro)) {
 		notop = true
 	}
 	i := indexer.GetIndex()
@@ -196,7 +214,7 @@ func (q *BasicQuery) SearchIndex(idxName string) (map[string]indexer.Document, e
 
 func (q *BasicQuery) SearchResults(curRes map[string]indexer.Document) (map[string]indexer.Document, error) {
 	notop := false
-	if (q.term.mod == OpUnaryNot) || (q.term.mod == OpUnaryPro) {
+	if q.Prev() != nil && ((q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro)) {
 		notop = true
 	}
 	// TODO: add field == ""
@@ -209,14 +227,17 @@ func (q *BasicQuery) SearchResults(curRes map[string]indexer.Document) (map[stri
 }
 
 func (q *BasicQuery) AddOp(o Op) {
+	log.Printf("running %s", mycaller())
 	q.op = o
 }
 
 func (q *BasicQuery) Op() Op {
+	log.Printf("running %s", mycaller())
 	return q.op
 }
 
 func (q *BasicQuery) AddField(s Field) {
+	log.Printf("running %s", mycaller())
 	if config.Config.ConvertSearch {
 		s = Field(util.PgSearchQueryKey(string(s)))
 	}
@@ -224,34 +245,58 @@ func (q *BasicQuery) AddField(s Field) {
 }
 
 func (q *BasicQuery) AddTerm(s Term) {
+	log.Printf("running %s", mycaller())
+	log.Printf("q in basic add term: %+v", q)
+	log.Printf("s in AddTerm: %s", s)
 	q.term.term = s
+	if q.Prev() != nil && ((q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro)) {
+		q.AddTermOp(q.Prev().Op())
+	}
+
 	q.SetCompleted()
 }
 
 func (q *BasicQuery) AddTermOp(o Op) {
+	log.Printf("running %s", mycaller())
 	q.term.mod = o
 }
 
 func (q *BasicQuery) SetNext(n Queryable) {
+	log.Printf("running %s", mycaller())
 	q.next = n
 }
 
 func (q *BasicQuery) Next() Queryable {
+	log.Printf("running %s", mycaller())
 	return q.next
 }
 
+func (q *BasicQuery) SetPrev(n Queryable) {
+	log.Printf("running %s", mycaller())
+	q.prev = n
+}
+
+func (q *BasicQuery) Prev() Queryable {
+	log.Printf("running %s", mycaller())
+	return q.prev
+}
+
 func (q *BasicQuery) IsIncomplete() bool {
+	log.Printf("running %s", mycaller())
 	return !q.complete
 }
 
 func (q *BasicQuery) SetCompleted() {
+	log.Printf("running %s", mycaller())
 	q.complete = true
 }
 func (q *BasicQuery) AddFuzzBoost(o Op) {
+	log.Printf("running %s", mycaller())
 	q.term.fuzzboost = o
 }
 
 func (q *BasicQuery) AddFuzzParam(s string) {
+	log.Printf("running %s", mycaller())
 	q.term.fuzzparam = s
 }
 
@@ -291,6 +336,14 @@ func (q *GroupedQuery) SetNext(n Queryable) {
 
 func (q *GroupedQuery) Next() Queryable {
 	return q.next
+}
+
+func (q *GroupedQuery) SetPrev(n Queryable) {
+	q.prev = n
+}
+
+func (q *GroupedQuery) Prev() Queryable {
+	return q.prev
 }
 
 func (q *GroupedQuery) IsIncomplete() bool {
@@ -343,6 +396,14 @@ func (q *RangeQuery) SetNext(n Queryable) {
 
 func (q *RangeQuery) Next() Queryable {
 	return q.next
+}
+
+func (q *RangeQuery) SetPrev(n Queryable) {
+	q.prev = n
+}
+
+func (q *RangeQuery) Prev() Queryable {
+	return q.prev
 }
 
 func (q *RangeQuery) IsIncomplete() bool {
@@ -416,7 +477,7 @@ func mergeResults(tmpRes []groupQueryHolder) (map[string]indexer.Document, error
 
 func (q *RangeQuery) SearchIndex(idxName string) (map[string]indexer.Document, error) {
 	i := indexer.GetIndex()
-	res, err := i.SearchRange(idxName, string(q.field), string(q.start), string(q.end), q.inclusive)
+	res, err := i.SearchRange(idxName, string(q.field), string(q.start), string(q.end), q.inclusive, q.negated)
 	return res, err
 }
 
@@ -446,7 +507,7 @@ func (q *GroupedQuery) SearchResults(curRes map[string]indexer.Document) (map[st
 
 func (q *RangeQuery) SearchResults(curRes map[string]indexer.Document) (map[string]indexer.Document, error) {
 	i := indexer.GetIndex()
-	res, err := i.SearchResultsRange(string(q.field), string(q.start), string(q.end), q.inclusive, curRes)
+	res, err := i.SearchResultsRange(string(q.field), string(q.start), string(q.end), q.inclusive, q.negated, curRes)
 	return res, err
 }
 
@@ -475,11 +536,21 @@ func (q *SubQuery) AddTermOp(o Op) {
 }
 
 func (q *SubQuery) SetNext(n Queryable) {
+	log.Printf("running %s", mycaller())
 	q.next = n
 }
 
 func (q *SubQuery) Next() Queryable {
 	return q.next
+}
+
+func (q *SubQuery) SetPrev(n Queryable) {
+	log.Printf("running %s", mycaller())
+	q.prev = n
+}
+
+func (q *SubQuery) Prev() Queryable {
+	return q.prev
 }
 
 func (q *SubQuery) IsIncomplete() bool {
@@ -497,7 +568,82 @@ func (q *SubQuery) AddFuzzParam(s string) {
 
 }
 
+func (q *NotQuery) SearchIndex(idxName string) (map[string]indexer.Document, error) {
+	if q.Next() == nil {
+		err := fmt.Errorf("No next link present in query chain after unary NOT operator!")
+		return nil, err
+	}
+	return q.Next().SearchIndex(idxName)
+}
+
+func (q *NotQuery) SearchResults(results map[string]indexer.Document) (map[string]indexer.Document, error) {
+	if q.Next() == nil {
+		err := fmt.Errorf("No next link present in query chain searching results after unary NOT operator!")
+		return nil, err
+	}
+	return q.Next().SearchResults(results)
+}
+
+func (q *NotQuery) AddOp(op Op) {
+	q.op = op
+}
+
+func (q *NotQuery) Op() Op {
+	return q.op
+}
+
+func (q *NotQuery) AddField(f Field) {
+	// noop
+	return
+}
+
+func (q *NotQuery) AddTerm(t Term) {
+	// noop
+	return
+}
+
+func (q *NotQuery) AddTermOp(op Op) {
+	// noop
+	return
+}
+
+func (q *NotQuery) SetNext(n Queryable) {
+	q.next = n
+}
+
+func (q *NotQuery) Next() Queryable {
+	return q.next
+}
+
+func (q *NotQuery) SetPrev(n Queryable) {
+	q.prev = n
+}
+
+func (q *NotQuery) Prev() Queryable {
+	return q.prev
+}
+
+func (q *NotQuery) IsIncomplete() bool {
+	return false
+}
+
+func (q *NotQuery) SetCompleted() {
+	// noop
+	return
+}
+
+func (q *NotQuery) AddFuzzBoost(op Op) {
+	// noop
+	return
+}
+
+func (q *NotQuery) AddFuzzParam(s string) {
+	// noop
+	return
+}
+
 func (z *Token) AddOp(o Op) {
+	log.Printf("Adding op %s", opMap[o])
 	z.Latest.AddOp(o)
 }
 
@@ -506,6 +652,7 @@ func (z *Token) AddField(s string) {
 }
 
 func (z *Token) AddTerm(s string) {
+	log.Printf("term: %s", s)
 	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
 		z.StartBasic()
 	}
@@ -525,16 +672,24 @@ func (z *Token) AddRange(s string) {
 
 func (z *Token) StartBasic() {
 	/* See if we need to make a new query; sometimes we don't */
+	log.Printf("z.Latest in basic q: %T %+v", z.Latest, z.Latest)
 	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
 		un := new(BasicQuery)
 		un.op = OpBinOr
 		if z.Latest != nil {
 			z.Latest.SetNext(un)
+			un.SetPrev(z.Latest)
 		}
 		if z.QueryChain == nil {
 			z.QueryChain = un
 		}
 		z.Latest = un
+	}
+	log.Printf("basic query qchain:")
+	qpqp := z.QueryChain
+	for qpqp != nil {
+		log.Printf("%T %+v", qpqp, qpqp)
+		qpqp = qpqp.Next()
 	}
 }
 
@@ -547,6 +702,16 @@ func (z *Token) StartRange(inclusive bool) {
 	}
 	if z.Latest != nil {
 		z.Latest.SetNext(rn)
+		rn.SetPrev(z.Latest)
+		// Don't think the prohibited operator would be allowed here
+		if z.Latest.Op() == OpUnaryNot {
+			rn.negated = true
+		}
+		if z.Latest.Prev() != nil {
+			rn.op = z.Latest.Prev().Op()
+		} else {
+			rn.op = OpNotAnOp
+		}
 	}
 	z.Latest = rn
 }
@@ -561,6 +726,7 @@ func (z *Token) StartGrouped() {
 		}
 		if z.Latest != nil {
 			z.Latest.SetNext(gn)
+			gn.SetPrev(z.Latest)
 		}
 		z.Latest = gn
 	}
@@ -572,14 +738,20 @@ func (z *Token) SetCompleted() {
 
 func (z *Token) StartSubQuery() {
 	// we don't want to start a subquery if we're in a field group query
+	log.Printf("Starting a subquery!")
 	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
+		log.Printf("... and actually starting the subquery.")
 		sq := new(SubQuery)
 		sq.start = true
 		sq.complete = true
 		if z.Latest != nil {
 			z.Latest.SetNext(sq)
+			sq.SetPrev(z.Latest)
 		}
 		z.Latest = sq
+		if z.QueryChain == nil {
+			z.QueryChain = sq
+		}
 	}
 }
 
@@ -591,11 +763,61 @@ func (z *Token) EndSubQuery() {
 		sq.complete = true
 		if z.Latest != nil {
 			z.Latest.SetNext(sq)
+			sq.SetPrev(z.Latest)
 		}
+		log.Printf("subquery end term: %+v", z.Latest)
+		log.Printf("end subquery: %+v", sq)
+		
 		z.Latest = sq
+	}
+}
+
+func (z *Token) SetNotQuery(op Op) {
+	log.Printf("Setting a not query")
+	// See if we can add the negated query token without being concerned
+	// about if existing queries in the query chain are complete or not
+	nq := new(NotQuery)
+	nq.op = op
+	if z.Latest != nil {
+		z.Latest.SetNext(nq)
+		nq.SetPrev(z.Latest)
+	}
+	if z.QueryChain == nil {
+		z.QueryChain = nq
+	}
+	z.Latest = nq
+	log.Printf("not query qchain:")
+	qpqp := z.QueryChain
+	for qpqp != nil {
+		log.Printf("%+v", qpqp)
+		qpqp = qpqp.Next()
 	}
 }
 
 func (z *Token) Evaluate() Queryable {
 	return z.QueryChain
+}
+
+func mycaller() string {
+    fpcs := make([]uintptr, 2)
+
+    // skip 3 levels to get to the caller of whoever called Caller()
+    n := runtime.Callers(2, fpcs)
+    if n == 0 {
+       return "n/a" // proper error her would be better
+    }
+
+    // get the info of the actual function that's in the pointer
+	var calls []string
+for i, _ := range fpcs {
+    fun := runtime.FuncForPC(fpcs[i]-1)
+    var cer string
+    if fun == nil {
+      cer = "n/a"
+    } else {
+	cer = fun.Name()
+    }
+    calls = append(calls, cer)
+}
+	return strings.Join(calls, "---")
 }

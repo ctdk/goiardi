@@ -48,7 +48,7 @@ type IndexCollection interface {
 	allDocs() map[string]Document
 	searchCollection(string, bool) (map[string]Document, error)
 	searchTextCollection(string, bool) (map[string]Document, error)
-	searchRange(string, string, string, bool) (map[string]Document, error)
+	searchRange(string, string, string, bool, bool) (map[string]Document, error)
 }
 
 // IdxCollection holds a map of documents.
@@ -165,7 +165,7 @@ func (i *FileIndex) SearchText(idx string, term string, notop bool) (map[string]
 	return results, err
 }
 
-func (i *FileIndex) SearchRange(idx string, field string, start string, end string, inclusive bool) (map[string]Document, error) {
+func (i *FileIndex) SearchRange(idx string, field string, start string, end string, inclusive bool, negated bool) (map[string]Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
 	idc, found := i.idxmap[idx]
@@ -173,7 +173,7 @@ func (i *FileIndex) SearchRange(idx string, field string, start string, end stri
 		err := fmt.Errorf("I don't know how to search for %s data objects.", idx)
 		return nil, err
 	}
-	results, err := idc.searchRange(field, start, end, inclusive)
+	results, err := idc.searchRange(field, start, end, inclusive, negated)
 	return results, err
 }
 
@@ -205,12 +205,12 @@ func docToIdxDoc(docs map[string]Document) map[string]*IdxDoc {
 
 // SearchResultsRange does a range search on a collection of search results,
 // rather than the full index.
-func (i *FileIndex) SearchResultsRange(field string, start string, end string, inclusive bool, docs map[string]Document) (map[string]Document, error) {
+func (i *FileIndex) SearchResultsRange(field string, start string, end string, inclusive bool, negated bool, docs map[string]Document) (map[string]Document, error) {
 	i.m.RLock()
 	defer i.m.RUnlock()
 	d := docToIdxDoc(docs)
 	idc := &IdxCollection{docs: d}
-	res, err := idc.searchRange(field, start, end, inclusive)
+	res, err := idc.searchRange(field, start, end, inclusive, negated)
 	return res, err
 }
 
@@ -360,7 +360,7 @@ func (ic *IdxCollection) searchTextCollection(term string, notop bool) (map[stri
 	return rsafe, nil
 }
 
-func (ic *IdxCollection) searchRange(field string, start string, end string, inclusive bool) (map[string]Document, error) {
+func (ic *IdxCollection) searchRange(field string, start string, end string, inclusive bool, negated bool) (map[string]Document, error) {
 	results := make(map[string]Document)
 	ic.m.RLock()
 	defer ic.m.RUnlock()
@@ -369,7 +369,7 @@ func (ic *IdxCollection) searchRange(field string, start string, end string, inc
 	resCh := make(chan *searchRes, l)
 	for k, v := range ic.docs {
 		go func(k string, v *IdxDoc) {
-			m, err := v.RangeSearch(field, start, end, inclusive)
+			m, err := v.RangeSearch(field, start, end, inclusive, negated)
 			if err != nil {
 				errCh <- err
 				resCh <- nil
@@ -493,8 +493,10 @@ func (idoc *IdxDoc) TextSearch(term string) (bool, error) {
 }
 
 // RangeSearch searches for a range of values.
-func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusive bool) (bool, error) {
+func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusive bool, negated bool) (bool, error) {
 	// The parser should catch a lot of possible errors, happily
+
+	logger.Debugf("Negated range? %v", negated)
 
 	// "*" is permitted as a range that indicates anything bigger or smaller
 	// than the other range, depending
@@ -520,32 +522,71 @@ func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusiv
 	if n, _ := trie.HasPrefix(key); n != nil {
 		kids := n.ChildKeys()
 		for _, child := range kids {
-			if inclusive {
-				if wildStart {
-					if child <= end {
-						return true, nil
-					}
-				} else if wildEnd {
-					if child >= start {
-						return true, nil
+			// Seems like there ought to be a more straightforward
+			// way to do this.
+			logger.Debugf("start %s end %s child %s", start, end, child)
+			if !negated {
+				if inclusive {
+					if wildStart {
+						if child <= end {
+							return true, nil
+						}
+					} else if wildEnd {
+						if child >= start {
+							return true, nil
+						}
+					} else {
+						if child >= start && child <= end {
+							return true, nil
+						}
 					}
 				} else {
-					if child >= start && child <= end {
-						return true, nil
+					if wildStart {
+						if child < end {
+							return true, nil
+						}
+					} else if wildEnd {
+						if child > start {
+							return true, nil
+						}
+					} else {
+						if child > start && child < end {
+							return true, nil
+						}
 					}
 				}
 			} else {
-				if wildStart {
-					if child < end {
-						return true, nil
-					}
-				} else if wildEnd {
-					if child > start {
-						return true, nil
+				logger.Debugf("inspecting index for negated range")
+				if inclusive {
+					if wildStart {
+						if child >= end {
+							return true, nil
+						}
+					} else if wildEnd {
+						if child <= start {
+							return true, nil
+						}
+					} else {
+						if child <= start || child >= end {
+							logger.Debugf("child passes: %s", child)
+							return true, nil
+						}
 					}
 				} else {
-					if child > start && child < end {
-						return true, nil
+					if wildStart {
+						if child > end {
+							return true, nil
+						}
+					} else if wildEnd {
+						if child < start {
+							return true, nil
+						}
+					} else {
+						if child < start || child > end {
+							logger.Debugf("child passes: %s", child)
+							
+							return true, nil
+						}
 					}
 				}
 			}

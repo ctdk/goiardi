@@ -26,12 +26,12 @@ or_operator <- 'OR' / '||'
 and_operator <- 'AND' / '&&'
 not_op <- not_operator space (field / field_range / term / string ) / bang_operator space? ( field / field_range / term / string )
 not_sub_op <- { p.StartSubQuery() } not_operator space sub_q { p.EndSubQuery() }
-not_operator <- 'NOT' { p.AddTermOp(OpUnaryNot) }
-bang_operator <- '!' { p.AddTermOp(OpUnaryNot) }
+not_operator <- 'NOT' { p.SetNotQuery(OpUnaryNot) }
+bang_operator <- '!' { p.SetNotQuery(OpUnaryNot) }
 required_op <-  !valid_letter required_operator ( term / string ) / required_operator ( term / string )
 required_operator <- '+' { p.AddTermOp(OpUnaryReq) }
 prohibited_op <- !valid_letter prohibited_operator ( field / field_range / term / string ) 
-prohibited_operator <- '-' { p.AddTermOp(OpUnaryPro) }
+prohibited_operator <- '-' { p.SetNotQuery(OpUnaryPro) }
 boost_op <- ( term / string ) '^' { p.AddOp(OpBoost) } fuzzy_param 
 fuzzy_op <- ( term / string ) '~' { p.AddOp(OpFuzzy) } fuzzy_param? ( space / !valid_letter ) 
 fuzzy_param <- < [0-9] '.?' [0-9] / [0-9]+ > { p.AddTerm(buffer[begin:end]) }

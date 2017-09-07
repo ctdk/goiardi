@@ -152,6 +152,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			var qerr error
 			paramQuery, qerr = url.QueryUnescape(paramQuery)
+			logger.Debugf("search query: %s", paramQuery)
 			if qerr != nil {
 				jsonErrorReport(w, r, qerr.Error(), http.StatusBadRequest)
 				return
