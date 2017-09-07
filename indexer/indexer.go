@@ -175,19 +175,23 @@ func ReIndex(objects []Indexable, rCh chan struct{}) error {
 			rCh <- struct{}{}
 			riM.Unlock()
 		}()
-		ch := make(chan struct{}, runtime.NumCPU())
+		ch := make(chan Indexable, runtime.NumCPU())
 		fCh := make(chan struct{}, z)
 		for i := 0; i < runtime.NumCPU(); i++ {
-			ch <- struct{}{}
+			go func() {
+				for obj := range ch {
+					objIndex.SaveItem(obj)
+					fCh <- struct{}{}
+				}
+				return
+			}()
 		}
+
 		for _, o := range objects {
-			go func(obj Indexable) {
-				<-ch
-				objIndex.SaveItem(obj)
-				ch <- struct{}{}
-				fCh <- struct{}{}
-			}(o)
+			ch <- o
 		}
+		close(ch)
+
 		if z > 0 {
 			for y := 0; y < z; y++ {
 				<-fCh

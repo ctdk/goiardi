@@ -104,6 +104,7 @@ type Conf struct {
 	VaultShoveyKey    string   `toml:"vault-shovey-key"`
 	EnvVars           []string `toml:"env-vars"`
 	IndexValTrim      int      `toml:"index-val-trim"`
+	PprofWhitelist []string `toml:"pprof-whitelist"`
 	SearchQueryDebug  bool
 }
 
@@ -119,6 +120,8 @@ var Key = &SigningKeys{}
 // GitHash is the git hash (supplied with '-ldflags "-X config.GitHash=<hash>"')
 // of goiardi when it was compiled.
 var GitHash = "unknown"
+
+var pprofWhitelist []net.IP
 
 // LogLevelNames give convenient, easier to remember than number name for the
 // different levels of logging.
@@ -208,6 +211,7 @@ type Options struct {
 	VaultAddr         string       `long:"vault-addr" description:"Specify address of vault server (i.e. https://127.0.0.1:8200). Defaults to the value of VAULT_ADDR."`
 	VaultShoveyKey    string       `long:"vault-shovey-key" description:"Specify a path in vault holding shovey's private key. The key must be put in vault as 'privateKey=<contents>'." env:"GOIARDI_VAULT_SHOVEY_KEY"`
 	IndexValTrim      int          `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If not set or set <= 0, trimming is disabled. This behavior will change with the next major release." env:"GOIARDI_INDEX_VAL_TRIM"`
+	PprofWhitelist []string `short:"y" long:"pprof-whitelist" description:"Address to allow to access /debug/pprof (in addition to localhost). Specify multiple times to allow more addresses." env:"GOIARDI_PPROF_WHITELIST" env-delim:","`
 	// hidden argument to print a formatted man page to stdout and exit
 	PrintManPage bool `long:"print-man-page" hidden:"true"`
 	// hidden argument to enable logging full postgres search queries
@@ -800,6 +804,19 @@ func ParseConfigOptions() error {
 		logger.Infof("Trimming values in search index to %d characters", Config.IndexValTrim)
 	}
 
+	if len(opts.PprofWhitelist) > 0 {
+		Config.PprofWhitelist = opts.PprofWhitelist
+	}
+	
+	pprofWhitelist = make([]net.IP, len(Config.PprofWhitelist))
+	for i, ppr := range Config.PprofWhitelist {
+		wladdr := net.ParseIP(ppr)
+		if wladdr == nil {
+			logger.Criticalf("Pprof whitelisted address %s is invalid, aborting!", ppr)
+		}
+		pprofWhitelist[i] = wladdr
+	}
+
 	// Environment variables
 	if len(Config.EnvVars) != 0 {
 		for _, v := range Config.EnvVars {
@@ -865,4 +882,13 @@ func UsingDB() bool {
 
 func UsingExternalSecrets() bool {
 	return Config.UseExtSecrets
+}
+
+func PprofWhitelisted(remoteIP net.IP) bool {
+	for _, wl := range pprofWhitelist {
+		if remoteIP.Equal(wl) {
+			return true
+		}
+	}
+	return false
 }
