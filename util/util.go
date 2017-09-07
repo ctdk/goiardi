@@ -255,7 +255,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 	case []interface{}:
 		km := make([]string, 0, len(v))
 		mapMerge := make(map[string][]string)
-		for i, w := range v {
+		for _, w := range v {
 			// If it's an array of maps or arrays, deep merge them 
 			// properly. Otherwise, stringify as best we can.
 			vRef := reflect.ValueOf(w)

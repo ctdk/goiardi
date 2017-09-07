@@ -235,7 +235,6 @@ func extractSubQuery(s Queryable) (Queryable, Queryable, error) {
 	prev := s
 	s = s.Next()
 	top := s
-	logger.Debugf("top: %+v", top)
 	for {
 		logger.Debugf("n: %d s: %T %+v", n, s, s)
 		switch q := s.(type) {

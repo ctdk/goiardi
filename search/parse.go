@@ -22,13 +22,11 @@
 package search
 
 import (
-	"fmt"
-	"log"
-	"runtime"
-	"strings"
+	"errors"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
+	"strings"
 )
 
 // Op is a search operator
@@ -206,7 +204,7 @@ func (q *BasicQuery) SearchIndex(idxName string) (map[string]indexer.Document, e
 		res, err := i.SearchText(idxName, string(q.term.term), notop)
 		return res, err
 	}
-	searchTerm := fmt.Sprintf("%s:%s", q.field, q.term.term)
+	searchTerm := makeSearchTerm(q.field, q.term.term)
 	res, err := i.Search(idxName, searchTerm, notop)
 
 	return res, err
@@ -219,7 +217,7 @@ func (q *BasicQuery) SearchResults(curRes map[string]indexer.Document) (map[stri
 	}
 	// TODO: add field == ""
 
-	searchTerm := fmt.Sprintf("%s:%s", q.field, q.term.term)
+	searchTerm := makeSearchTerm(q.field, q.term.term)
 	i := indexer.GetIndex()
 	res, err := i.SearchResults(searchTerm, notop, curRes)
 
@@ -227,17 +225,14 @@ func (q *BasicQuery) SearchResults(curRes map[string]indexer.Document) (map[stri
 }
 
 func (q *BasicQuery) AddOp(o Op) {
-	log.Printf("running %s", mycaller())
 	q.op = o
 }
 
 func (q *BasicQuery) Op() Op {
-	log.Printf("running %s", mycaller())
 	return q.op
 }
 
 func (q *BasicQuery) AddField(s Field) {
-	log.Printf("running %s", mycaller())
 	if config.Config.ConvertSearch {
 		s = Field(util.PgSearchQueryKey(string(s)))
 	}
@@ -245,9 +240,6 @@ func (q *BasicQuery) AddField(s Field) {
 }
 
 func (q *BasicQuery) AddTerm(s Term) {
-	log.Printf("running %s", mycaller())
-	log.Printf("q in basic add term: %+v", q)
-	log.Printf("s in AddTerm: %s", s)
 	q.term.term = s
 	if q.Prev() != nil && ((q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro)) {
 		q.AddTermOp(q.Prev().Op())
@@ -257,46 +249,37 @@ func (q *BasicQuery) AddTerm(s Term) {
 }
 
 func (q *BasicQuery) AddTermOp(o Op) {
-	log.Printf("running %s", mycaller())
 	q.term.mod = o
 }
 
 func (q *BasicQuery) SetNext(n Queryable) {
-	log.Printf("running %s", mycaller())
 	q.next = n
 }
 
 func (q *BasicQuery) Next() Queryable {
-	log.Printf("running %s", mycaller())
 	return q.next
 }
 
 func (q *BasicQuery) SetPrev(n Queryable) {
-	log.Printf("running %s", mycaller())
 	q.prev = n
 }
 
 func (q *BasicQuery) Prev() Queryable {
-	log.Printf("running %s", mycaller())
 	return q.prev
 }
 
 func (q *BasicQuery) IsIncomplete() bool {
-	log.Printf("running %s", mycaller())
 	return !q.complete
 }
 
 func (q *BasicQuery) SetCompleted() {
-	log.Printf("running %s", mycaller())
 	q.complete = true
 }
 func (q *BasicQuery) AddFuzzBoost(o Op) {
-	log.Printf("running %s", mycaller())
 	q.term.fuzzboost = o
 }
 
 func (q *BasicQuery) AddFuzzParam(s string) {
-	log.Printf("running %s", mycaller())
 	q.term.fuzzparam = s
 }
 
@@ -433,7 +416,7 @@ func (q *GroupedQuery) SearchIndex(idxName string) (map[string]indexer.Document,
 		if v.mod == OpUnaryNot || v.mod == OpUnaryPro {
 			notop = true
 		}
-		searchTerm := fmt.Sprintf("%s:%s", q.field, v.term)
+		searchTerm := makeSearchTerm(q.field, v.term)
 		ix := indexer.GetIndex()
 		r, err := ix.Search(idxName, searchTerm, notop)
 		if err != nil {
@@ -493,7 +476,7 @@ func (q *GroupedQuery) SearchResults(curRes map[string]indexer.Document) (map[st
 		if v.mod == OpUnaryNot || v.mod == OpUnaryPro {
 			notop = true
 		}
-		searchTerm := fmt.Sprintf("%s:%s", q.field, v.term)
+		searchTerm := makeSearchTerm(q.field, v.term)
 		ix := indexer.GetIndex()
 		r, err := ix.SearchResults(searchTerm, notop, curRes)
 		if err != nil {
@@ -536,7 +519,6 @@ func (q *SubQuery) AddTermOp(o Op) {
 }
 
 func (q *SubQuery) SetNext(n Queryable) {
-	log.Printf("running %s", mycaller())
 	q.next = n
 }
 
@@ -545,7 +527,6 @@ func (q *SubQuery) Next() Queryable {
 }
 
 func (q *SubQuery) SetPrev(n Queryable) {
-	log.Printf("running %s", mycaller())
 	q.prev = n
 }
 
@@ -570,7 +551,7 @@ func (q *SubQuery) AddFuzzParam(s string) {
 
 func (q *NotQuery) SearchIndex(idxName string) (map[string]indexer.Document, error) {
 	if q.Next() == nil {
-		err := fmt.Errorf("No next link present in query chain after unary NOT operator!")
+		err := errors.New("No next link present in query chain after unary NOT operator!")
 		return nil, err
 	}
 	return q.Next().SearchIndex(idxName)
@@ -578,7 +559,7 @@ func (q *NotQuery) SearchIndex(idxName string) (map[string]indexer.Document, err
 
 func (q *NotQuery) SearchResults(results map[string]indexer.Document) (map[string]indexer.Document, error) {
 	if q.Next() == nil {
-		err := fmt.Errorf("No next link present in query chain searching results after unary NOT operator!")
+		err := errors.New("No next link present in query chain searching results after unary NOT operator!")
 		return nil, err
 	}
 	return q.Next().SearchResults(results)
@@ -643,7 +624,6 @@ func (q *NotQuery) AddFuzzParam(s string) {
 }
 
 func (z *Token) AddOp(o Op) {
-	log.Printf("Adding op %s", opMap[o])
 	z.Latest.AddOp(o)
 }
 
@@ -652,7 +632,6 @@ func (z *Token) AddField(s string) {
 }
 
 func (z *Token) AddTerm(s string) {
-	log.Printf("term: %s", s)
 	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
 		z.StartBasic()
 	}
@@ -672,7 +651,6 @@ func (z *Token) AddRange(s string) {
 
 func (z *Token) StartBasic() {
 	/* See if we need to make a new query; sometimes we don't */
-	log.Printf("z.Latest in basic q: %T %+v", z.Latest, z.Latest)
 	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
 		un := new(BasicQuery)
 		un.op = OpBinOr
@@ -684,12 +662,6 @@ func (z *Token) StartBasic() {
 			z.QueryChain = un
 		}
 		z.Latest = un
-	}
-	log.Printf("basic query qchain:")
-	qpqp := z.QueryChain
-	for qpqp != nil {
-		log.Printf("%T %+v", qpqp, qpqp)
-		qpqp = qpqp.Next()
 	}
 }
 
@@ -738,9 +710,7 @@ func (z *Token) SetCompleted() {
 
 func (z *Token) StartSubQuery() {
 	// we don't want to start a subquery if we're in a field group query
-	log.Printf("Starting a subquery!")
 	if z.Latest == nil || (z.Latest != nil && !z.Latest.IsIncomplete()) {
-		log.Printf("... and actually starting the subquery.")
 		sq := new(SubQuery)
 		sq.start = true
 		sq.complete = true
@@ -765,15 +735,12 @@ func (z *Token) EndSubQuery() {
 			z.Latest.SetNext(sq)
 			sq.SetPrev(z.Latest)
 		}
-		log.Printf("subquery end term: %+v", z.Latest)
-		log.Printf("end subquery: %+v", sq)
 		
 		z.Latest = sq
 	}
 }
 
 func (z *Token) SetNotQuery(op Op) {
-	log.Printf("Setting a not query")
 	// See if we can add the negated query token without being concerned
 	// about if existing queries in the query chain are complete or not
 	nq := new(NotQuery)
@@ -786,38 +753,12 @@ func (z *Token) SetNotQuery(op Op) {
 		z.QueryChain = nq
 	}
 	z.Latest = nq
-	log.Printf("not query qchain:")
-	qpqp := z.QueryChain
-	for qpqp != nil {
-		log.Printf("%+v", qpqp)
-		qpqp = qpqp.Next()
-	}
 }
 
 func (z *Token) Evaluate() Queryable {
 	return z.QueryChain
 }
 
-func mycaller() string {
-    fpcs := make([]uintptr, 2)
-
-    // skip 3 levels to get to the caller of whoever called Caller()
-    n := runtime.Callers(2, fpcs)
-    if n == 0 {
-       return "n/a" // proper error her would be better
-    }
-
-    // get the info of the actual function that's in the pointer
-	var calls []string
-for i, _ := range fpcs {
-    fun := runtime.FuncForPC(fpcs[i]-1)
-    var cer string
-    if fun == nil {
-      cer = "n/a"
-    } else {
-	cer = fun.Name()
-    }
-    calls = append(calls, cer)
-}
-	return strings.Join(calls, "---")
+func makeSearchTerm(field Field, term Term) string {
+	return strings.Join([]string{string(field), string(term)}, ":")
 }

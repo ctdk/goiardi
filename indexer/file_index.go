@@ -496,8 +496,6 @@ func (idoc *IdxDoc) TextSearch(term string) (bool, error) {
 func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusive bool, negated bool) (bool, error) {
 	// The parser should catch a lot of possible errors, happily
 
-	logger.Debugf("Negated range? %v", negated)
-
 	// "*" is permitted as a range that indicates anything bigger or smaller
 	// than the other range, depending
 	wildStart := false
@@ -524,7 +522,6 @@ func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusiv
 		for _, child := range kids {
 			// Seems like there ought to be a more straightforward
 			// way to do this.
-			logger.Debugf("start %s end %s child %s", start, end, child)
 			if !negated {
 				if inclusive {
 					if wildStart {
@@ -556,7 +553,6 @@ func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusiv
 					}
 				}
 			} else {
-				logger.Debugf("inspecting index for negated range")
 				if inclusive {
 					if wildStart {
 						if child >= end {
@@ -568,7 +564,6 @@ func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusiv
 						}
 					} else {
 						if child <= start || child >= end {
-							logger.Debugf("child passes: %s", child)
 							return true, nil
 						}
 					}
@@ -583,8 +578,6 @@ func (idoc *IdxDoc) RangeSearch(field string, start string, end string, inclusiv
 						}
 					} else {
 						if child < start || child > end {
-							logger.Debugf("child passes: %s", child)
-							
 							return true, nil
 						}
 					}

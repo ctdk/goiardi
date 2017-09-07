@@ -110,16 +110,7 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 			return nil, err
 		}
 		qq.Execute()
-		logger.Debugf("search query syntax tree")
-		qq.PrintSyntaxTree()
 		qchain := qq.Evaluate()
-
-		qpqp := qchain
-		logger.Debugf("qchain:")
-		for qpqp != nil {
-			logger.Debugf("%T addr %p: %+v", qpqp, qpqp, qpqp)
-			qpqp = qpqp.Next()
-		}
 
 		pgQ := &PgQuery{idx: idx, queryChain: qchain}
 
@@ -427,7 +418,6 @@ func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool
 	xtraPath := fmt.Sprintf("%s.*", string(field))
 
 	opStr := binOp(op)
-	logger.Debugf("op in building range query: %s str: '%s'", opMap[op], opStr)
 
 	var notRange string
 	if negated {
