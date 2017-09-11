@@ -117,7 +117,7 @@ func chkPath(p *string) {
 func FlattenObj(obj interface{}) map[string]interface{} {
 	s := reflect.ValueOf(obj).Elem()
 	expanded := make(map[string]interface{}, s.NumField())
-	
+
 	for i := 0; i < s.NumField(); i++ {
 		if !s.Field(i).CanInterface() {
 			continue
@@ -256,7 +256,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 		km := make([]string, 0, len(v))
 		mapMerge := make(map[string][]string)
 		for _, w := range v {
-			// If it's an array of maps or arrays, deep merge them 
+			// If it's an array of maps or arrays, deep merge them
 			// properly. Otherwise, stringify as best we can.
 			vRef := reflect.ValueOf(w)
 			if vRef.Kind() == reflect.Map {
@@ -334,7 +334,7 @@ func getNKey(key string, subkey string, sep string) string {
 	if key == "" {
 		nkey = subkey
 	} else {
-		nkey = strings.Join([]string{key,subkey}, sep)
+		nkey = strings.Join([]string{key, subkey}, sep)
 	}
 	return nkey
 }

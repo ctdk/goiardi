@@ -1736,7 +1736,7 @@ func (p *Tokenizer) Init() {
 							}
 							position++
 							break
- 						}
+						}
 					}
 
 					add(rulestart_letter, position197)
@@ -1795,10 +1795,10 @@ func (p *Tokenizer) Init() {
 								break
 							default:
 								if c := buffer[position]; !unicode.IsLetter(c) && !unicode.IsNumber(c) {
-								goto l196
+									goto l196
 								}
-							position++
-							break
+								position++
+								break
 							}
 						}
 

@@ -110,7 +110,7 @@ type BasicQuery struct {
 	term     QueryTerm
 	op       Op
 	next     Queryable
-	prev Queryable
+	prev     Queryable
 	complete bool
 }
 
@@ -120,7 +120,7 @@ type GroupedQuery struct {
 	terms    []QueryTerm
 	op       Op
 	next     Queryable
-	prev Queryable
+	prev     Queryable
 	complete bool
 }
 
@@ -132,9 +132,9 @@ type RangeQuery struct {
 	inclusive bool
 	op        Op
 	next      Queryable
-	prev Queryable
+	prev      Queryable
 	complete  bool
-	negated bool
+	negated   bool
 }
 
 // SubQuery is really just a marker in the chain of queries. Later it will be
@@ -145,12 +145,12 @@ type SubQuery struct {
 	op       Op
 	complete bool
 	next     Queryable
-	prev Queryable
+	prev     Queryable
 }
 
 type NotQuery struct {
-	op Op
-	next      Queryable
+	op   Op
+	next Queryable
 	prev Queryable
 }
 
@@ -735,7 +735,7 @@ func (z *Token) EndSubQuery() {
 			z.Latest.SetNext(sq)
 			sq.SetPrev(z.Latest)
 		}
-		
+
 		z.Latest = sq
 	}
 }
