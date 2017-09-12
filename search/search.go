@@ -202,7 +202,8 @@ func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d, parentOp: curOp}
 			r, err = nsq.execute()
 		case *NotQuery:
-			s.AddOp(curOp)
+			s = s.Next()
+			continue
 		default:
 			if curOp == OpBinAnd {
 				r, err = s.SearchResults(sq.docs)
