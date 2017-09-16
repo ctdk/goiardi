@@ -763,7 +763,6 @@ func runEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 			}
 		}
 	}
-	return
 }
 
 func startNodeMonitor() {
