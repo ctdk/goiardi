@@ -132,7 +132,6 @@ func TestReportCleaning(t *testing.T) {
 		r.EndTime = et
 		r.Save()
 	}
-	q := AllReports()
 	del, err := DeleteByAge(from)
 	if err != nil {
 		t.Error(err)

@@ -237,7 +237,7 @@ func DeleteNodeStatusesByAge(dur time.Duration) (int, error) {
 
 		err = ds.ReplaceNodeStatuses(node.Name, statusesIface)
 		if err != nil {
-			return 0, nil
+			return 0, err
 		}
 		j += oldStatLen - len(statuses)
 	}
