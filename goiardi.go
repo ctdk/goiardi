@@ -793,6 +793,40 @@ func startNodeMonitor() {
 	return
 }
 
+func startReportPurge() {
+	go func() {
+		// purge reports after 2 hours, I guess.
+		ticker := time.NewTicker(2 * time.Hour)
+		for _ = range ticker.C {
+			del, err := report.DeleteByAge(config.Config.PurgeReportsDur)
+			if err != nil {
+				logger.Errorf("Purging reports had an error: %s", err.Error())
+			} else {
+				logger.Debugf("Purged %d reports", del)
+			}
+		}
+	}()
+}
+
+func startNodeStatusPurge() {
+	// don't do it if there aren't going to be node statuses to purge
+	if !config.Config.UseSerf || config.Config.PurgeNodeStatusDur == 0 {
+		return
+	}
+	go func() {
+		// check every 2 hours for statuses to purge
+		ticker := time.NewTicker(2 * time.Hour)
+		for _ = range ticker.C {
+			del, err := node.DeleteNodeStatusesByAge(config.Config.PurgeNodeStatusDur)
+			if err != nil {
+				logger.Errorf("Purging node statuses had an error: %s", err.Error())
+			} else {
+				logger.Debugf("Purged %d node statuses", del)
+			}
+		}
+	}()
+}
+
 func initGeneralStatsd(metricsBackend met.Backend) {
 	if !config.Config.UseStatsd {
 		return
