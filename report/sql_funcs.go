@@ -110,6 +110,33 @@ func (r *Report) deleteSQL() error {
 	return nil
 }
 
+func deleteByAgeSQL(dur time.Duration) (int, error) {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return 0, err
+	}
+	from := time.Now().Add(-dur)
+
+	var sqlStmt string
+	if config.Config.UseMySQL {
+		sqlStmt = "DELETE FROM reports WHERE end_time >= ?"
+	} else if config.Config.UsePostgreSQL {
+		sqlStmt = "DELETE FROM goiardi.reports WHERE end_time >= $1"
+	}
+
+	res, err := tx.Exec(sqlStmt, from)
+	if err != nil {
+		terr := tx.Rollback()
+		if terr != nil {
+			err = fmt.Errorf("deleting reports for the last %s had an error '%s', and then rolling back the transaction gave another error '%s'", from, err.Error(), terr.Error())
+		}
+		return 0, err
+	}
+	tx.Commit()
+	rows, _ := res.RowsAffected()
+	return int(rows), nil
+}
+
 func getListSQL() []string {
 	var reportList []string
 

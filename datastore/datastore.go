@@ -234,6 +234,55 @@ func (ds *DataStore) SetNodeStatus(nodeName string, obj interface{}, nsID ...int
 	return nil
 }
 
+// ReplaceNodeStatuses replaces the node statuses being stored in the data store
+// with the provided statuses that have been ordered by age already. This is
+// most useful when purging old statuses.
+func (ds *DataStore) ReplaceNodeStatuses(nodeName string, objs []interface{}) error {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	ds.updated = true
+
+	// Delete the old statuses
+	err := ds.deleteStatuses(nodeName)
+	if err != nil {
+		return err
+	}
+
+	// and put the ones we want to keep, if any, back in.
+	if len(objs) == 0 {
+		return nil
+	}
+	nsKey := ds.makeKey("nodestatus", "nodestatuses")
+	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
+	a, _ := ds.dsc.Get(nsKey)
+	if a == nil {
+		a = make(map[int]interface{})
+	}
+	ns := a.(map[int]interface{})
+	a, _ = ds.dsc.Get(nsListKey)
+	if a == nil {
+		a = make(map[string][]int)
+	}
+	nslist := a.(map[string][]int)
+
+	for _, o := range objs {
+		nextID := getNextID(ns)
+		if config.Config.UseUnsafeMemStore {
+			ns[nextID] = o
+		} else {
+			n, err := encodeSafeVal(o)
+			if err != nil {
+				return err
+			}
+			ns[nextID] = n
+		}
+		nslist[nodeName] = append(nslist[nodeName], nextID)
+	}
+	ds.dsc.Set(nsKey, ns, -1)
+	ds.dsc.Set(nsListKey, nslist, -1)
+	return nil
+}
+
 // AllNodeStatuses returns a list of all statuses known for the given node from
 // the in-memory data store.
 func (ds *DataStore) AllNodeStatuses(nodeName string) ([]interface{}, error) {
@@ -314,6 +363,10 @@ func (ds *DataStore) DeleteNodeStatus(nodeName string) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	ds.updated = true
+	return ds.deleteStatuses(nodeName)
+}
+
+func (ds *DataStore) deleteStatuses(nodeName string) error {
 	nsKey := ds.makeKey("nodestatus", "nodestatuses")
 	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)

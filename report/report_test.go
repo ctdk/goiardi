@@ -20,6 +20,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/ctdk/goiardi/node"
+	"github.com/pborman/uuid"
 	"testing"
 	"time"
 )
@@ -104,5 +105,43 @@ func TestReportListing(t *testing.T) {
 	}
 	if len(zs) != 0 {
 		t.Errorf("Searching for successful runs should have returned zero results, but returned %d instead", len(zs))
+	}
+}
+
+func TestReportCleaning(t *testing.T) {
+	// clean out any reports from other tests
+	dr := AllReports()
+	for _, r := range dr {
+		r.Delete()
+	}
+	n, _ := node.New("deleting_node")
+	now := time.Now()
+
+	durations := []time.Duration{ 1, 2, 5, 2, 4, 10, 7, 14, 15, 19, 20, 26, 100, 320, 24 }
+	gtTwoWeeks := 8
+
+	from := 14 * 24 * time.Hour
+	day := 24 * time.Hour
+	for i, d := range durations {
+		age := (d * day) + (time.Duration(i) * d * time.Minute)
+		st := now.Add(-(age - (5 * time.Minute)))
+		et := now.Add(-age)
+		u := uuid.New()
+		r, _ := New(u, n.Name)
+		r.StartTime = st
+		r.EndTime = et
+		r.Save()
+	}
+	q := AllReports()
+	del, err := DeleteByAge(from)
+	if err != nil {
+		t.Error(err)
+	}
+	if del != gtTwoWeeks {
+		t.Errorf("%d reports should have been deleted, but reported %d", gtTwoWeeks, del)
+	}
+	z := AllReports()
+	if len(z) != len(durations) - gtTwoWeeks {
+		t.Errorf("should have had %d reports left after deleting ones older than two weeks, but had %d", len(durations) - gtTwoWeeks, len(z))
 	}
 }
