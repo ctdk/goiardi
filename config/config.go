@@ -105,6 +105,10 @@ type Conf struct {
 	EnvVars           []string `toml:"env-vars"`
 	IndexValTrim      int      `toml:"index-val-trim"`
 	PprofWhitelist    []string `toml:"pprof-whitelist"`
+	PurgeNodeStatusAfter string `toml:"purge-status-after"`
+	PurgeReportsAfter string `toml:"purge-reports-after"`
+	PurgeNodeStatusDur time.Duration
+	PurgeReportsDur time.Duration
 	SearchQueryDebug  bool
 }
 
@@ -212,6 +216,8 @@ type Options struct {
 	VaultShoveyKey    string       `long:"vault-shovey-key" description:"Specify a path in vault holding shovey's private key. The key must be put in vault as 'privateKey=<contents>'." env:"GOIARDI_VAULT_SHOVEY_KEY"`
 	IndexValTrim      int          `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If not set or set <= 0, trimming is disabled. This behavior will change with the next major release." env:"GOIARDI_INDEX_VAL_TRIM"`
 	PprofWhitelist    []string     `short:"y" long:"pprof-whitelist" description:"Address to allow to access /debug/pprof (in addition to localhost). Specify multiple times to allow more addresses." env:"GOIARDI_PPROF_WHITELIST" env-delim:","`
+	PurgeReportsAfter string `long:"purge-reports-after" description:"Time to purge old reports after, given in golang duration format (e.g. \"720h\"). Default is not to purge them at all." env:"GOIARDI_PURGE_REPORTS_AFTER"`
+	PurgeNodeStatusAfter string `long:"purge-status-after" description:"Time to purge old node statuses after, given in golang duration format (e.g. \"720h\"). Default is not to purge them at all." env:"GOIARDI_PURGE_STATUS_AFTER"`
 	// hidden argument to print a formatted man page to stdout and exit
 	PrintManPage bool `long:"print-man-page" hidden:"true"`
 	// hidden argument to enable logging full postgres search queries
@@ -843,6 +849,30 @@ func ParseConfigOptions() error {
 			logger.SetLevel(logger.LevelDebug)
 		}
 		logger.Debugf("Logging search query debug statements")
+	}
+
+	if opts.PurgeNodeStatusAfter != "" {
+		Config.PurgeNodeStatusAfter = opts.PurgeNodeStatusAfter
+	}
+	if Config.PurgeNodeStatusAfter != "" {
+		d, derr := time.ParseDuration(Config.PurgeNodeStatusAfter)
+		if derr != nil {
+			logger.Fatalf("Error parsing purge-status-after: %s", derr.Error())
+			os.Exit(1)
+		}
+		Config.PurgeNodeStatusDur = d
+	}
+
+	if opts.PurgeReportsAfter != "" {
+		Config.PurgeReportsAfter = opts.PurgeReportsAfter
+	}
+	if Config.PurgeReportsAfter != "" {
+		d, derr := time.ParseDuration(Config.PurgeReportsAfter)
+		if derr != nil {
+			logger.Fatalf("Error parsing purge-reports-after: %s", derr.Error())
+			os.Exit(1)
+		}
+		Config.PurgeReportsDur = d
 	}
 
 	return nil
