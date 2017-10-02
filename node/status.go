@@ -211,12 +211,21 @@ func DeleteNodeStatusesByAge(dur time.Duration) (int, error) {
 		return 0, nil
 	}
 
+	nsErrChk := func(err error) bool {
+		if err != nil {
+			if _, ok := err.(datastore.ErrorNodeStatus); ok {
+				return true
+			}
+		}
+		return false
+	}
+
 	ds := datastore.New()
 
 	j := 0
 	for _, node := range nodes {
 		statuses, err := node.AllStatuses()
-		if err != nil {
+		if nsErrChk(err) {
 			return 0, err
 		}
 		oldStatLen := len(statuses)
@@ -236,7 +245,7 @@ func DeleteNodeStatusesByAge(dur time.Duration) (int, error) {
 		}
 
 		err = ds.ReplaceNodeStatuses(node.Name, statusesIface)
-		if err != nil {
+		if nsErrChk(err) {
 			return 0, err
 		}
 		j += oldStatLen - len(statuses)
