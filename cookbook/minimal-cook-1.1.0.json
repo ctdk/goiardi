@@ -1,0 +1,66 @@
+{
+  "attributes": [
+    {
+      "checksum": "0ab75b43c726c3e7c00d7950dd6c3577",
+      "name": "default.rb",
+      "path": "attributes/default.rb",
+      "specificity": "default",
+      "url": "http://mah-goiardi.local:4545/file_store/0ab75b43c726c3e7c00d7950dd6c3577"
+    }
+  ],
+  "chef_type": "cookbook_version",
+  "cookbook_name": "minimal",
+  "frozen?": false,
+  "json_class": "Chef::CookbookVersion",
+  "metadata": {
+    "name": "minimal",
+    "description": "Does nothing, really.",
+    "long_description": "A longer description saying that yes, this doesn't really do anything.",
+    "maintainer": "Foo McFooerson",
+    "maintainer_email": "foo@example.com",
+    "license": "Apache 2.0",
+    "platforms": {
+    },
+    "dependencies": {
+    },
+    "recommendations": {
+    },
+    "suggestions": {
+    },
+    "conflicting": {
+    },
+    "providing": {
+      "minimal": ">= 0.0.0"
+    },
+    "replacing": {
+    },
+    "attributes": {
+    },
+    "groupings": {
+    },
+    "recipes": {
+      "minimal": ""
+    },
+    "version": "1.1.0"
+  },
+  "name": "minimal-1.1.0",
+  "recipes": [
+    {
+      "checksum": "b43166991a65cc7e711a018b93105544",
+      "name": "default.rb",
+      "path": "recipes/default.rb",
+      "specificity": "default",
+      "url": "http://mah-goiardi.local:4545/file_store/b43166991a65cc7e711a018b93105544"
+    }
+  ],
+  "root_files": [
+    {
+      "checksum": "5822b0e3808ed57308a0eff8b61f7dc2",
+      "name": "metadata.rb",
+      "path": "metadata.rb",
+      "specificity": "default",
+      "url": "http://mah-goiardi.local:4545/file_store/5822b0e3808ed57308a0eff8b61f7dc2"
+    }
+  ],
+  "version": "1.1.0"
+}
