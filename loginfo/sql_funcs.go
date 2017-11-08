@@ -123,6 +123,54 @@ func getLogEventSQL(id int) (*LogInfo, error) {
 	return le, nil
 }
 
+func getMostRecentEventSQL(name string, objectType string) (*LogInfo, error) {
+	le := new(LogInfo)
+
+	var sqlStmt string
+	if config.Config.UseMySQL {
+		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos WHERE name = ? AND object_type = ? ORDER BY time DESC LIMIT 1"
+	} else if config.Config.UsePostgreSQL {
+		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos WHERE object_name = $1 AND object_type = $2 ORDER BY time DESC LIMIT 1"
+	}
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	row := stmt.QueryRow(name, objectType)
+
+	if config.Config.UseMySQL {
+		err = le.fillLogEventFromMySQL(row)
+	} else if config.Config.UsePostgreSQL {
+		err = le.fillLogEventFromPostgreSQL(row)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return le, nil
+}
+
+func (le *LogInfo) clearExtendedInfoSQL() error {
+	var sqlStmt string
+	if config.Config.UseMySQL {
+		sqlStmt = "UPDATE log_infos SET extended_info = NULL WHERE id = ?"
+	} else if config.Config.UsePostgreSQL {
+		sqlStmt = "UPDATE goiardi.log_infos SET extended_info = NULL WHERE id = $1"
+	}
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(sqlStmt, le.ID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+
+	return nil
+}
+
 func checkLogEventSQL(id int) (bool, error) {
 	var found bool
 	var sqlStmt string

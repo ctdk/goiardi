@@ -23,8 +23,10 @@ import (
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"reflect"
 	"testing"
 	"time"
+	"log"
 )
 
 func TestLogEvent(t *testing.T) {
@@ -76,15 +78,22 @@ func TestLogEvent(t *testing.T) {
 	}
 	ds.DeleteLogInfo(1)
 	arr5 := ds.GetLogInfoList()
+	log.Printf("arr5: %d", len(arr5))
 	if len(arr5) != 0 {
 		t.Errorf("Doesn't look like the logged event got deleted")
 	}
 	for i := 0; i < 10; i++ {
+		
+		log.Printf("modify event %d", i)
 		LogEvent(doer, obj, "modify")
 	}
 	arr6 := ds.GetLogInfoList()
 	if len(arr6) != 10 {
-		t.Errorf("Something went wrong with creating 10 events")
+		t.Errorf("Something went wrong with creating 10 events, got %d", len(arr6))
+		log.Printf("events are:")
+		for yy, lw := range arr6 {
+			log.Printf("%d: %+v", yy, lw)
+		}
 	}
 	ds.PurgeLogInfoBefore(5)
 	arr7 := ds.GetLogInfoList()
@@ -106,4 +115,27 @@ func TestLogEvent(t *testing.T) {
 	if len(searching) != 10 {
 		t.Errorf("len(searching) for log events by doer2 should have returned 10 items, but returned %d instead", len(searching))
 	}
+}
+
+func TestDiffExtendedInfo(t *testing.T) {
+	aktor, _ := client.New("aktor")
+	receever, _ := client.New("receever")
+	err := LogEvent(aktor, receever, "create")
+	if err != nil {
+		t.Error(err)
+	}
+	receever.Admin = true
+	err = LogEvent(aktor, receever, "modify")
+	if err != nil {
+		t.Error(err)
+	}
+	params := make(map[string]string)
+	params["object_type"] = reflect.TypeOf(receever).String()
+	params["object_name"] = receever.GetName()
+
+	lInfos, err := GetLogInfos(params)
+	if len(lInfos) == 0 {
+		t.Errorf("got no results from GetLogInfos for %s", receever.GetName())
+	}
+	log.Printf("what lInfos looks like: %+v", lInfos)
 }
