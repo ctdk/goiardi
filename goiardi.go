@@ -198,6 +198,14 @@ func main() {
 		startNodeMonitor()
 	}
 
+	if config.Config.PurgeNodeStatusAfter != "" {
+		startNodeStatusPurge()
+	}
+
+	if config.Config.PurgeReportsAfter != "" {
+		startReportPurge()
+	}
+
 	/* Create default clients and users. Currently chef-validator,
 	 * chef-webui, and admin. */
 	createDefaultActors()
