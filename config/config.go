@@ -73,6 +73,7 @@ type Conf struct {
 	LocalFstoreDir    string       `toml:"local-filestore-dir"`
 	LogEvents         bool         `toml:"log-events"`
 	LogEventKeep      int          `toml:"log-event-keep"`
+	SkipLogExtended bool `toml:"skip-log-extended"`
 	DoExport          bool
 	DoImport          bool
 	ImpExFile         string
@@ -186,6 +187,7 @@ type Options struct {
 	LocalFstoreDir    string       `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* (unless using S3 uploads) for SQL mode." env:"GOIARDI_LOCAL_FILESTORE_DIR"`
 	LogEvents         bool         `long:"log-events" description:"Log changes to chef objects." env:"GOIARDI_LOG_EVENTS"`
 	LogEventKeep      int          `short:"K" long:"log-event-keep" description:"Number of events to keep in the event log. If set, the event log will be checked periodically and pruned to this number of entries." env:"GOIARDI_LOG_EVENT_KEEP"`
+	SkipLogExtended bool `long:"skip-log-extended" description:"If set, do not save a JSON encoded blob of the object being logged when logging an event." env:"GOIARDI_SKIP_LOG_EXTENDED"`
 	Export            string       `short:"x" long:"export" description:"Export all server data to the given file, exiting afterwards. Should be used with caution. Cannot be used at the same time as -m/--import."`
 	Import            string       `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Cannot be used at the same time as -x/--export."`
 	ObjMaxSize        int64        `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)." env:"GOIARDI_OBJ_MAX_SIZE"`
@@ -653,6 +655,10 @@ func ParseConfigOptions() error {
 
 	if opts.LogEventKeep != 0 {
 		Config.LogEventKeep = opts.LogEventKeep
+	}
+
+	if opts.SkipLogExtended {
+		Config.SkipLogExtended = opts.SkipLogExtended
 	}
 
 	// Set max sizes for objects and json requests.
