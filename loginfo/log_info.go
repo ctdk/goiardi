@@ -21,14 +21,12 @@ package loginfo
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-	"log"
 
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
@@ -36,11 +34,7 @@ import (
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
-	diff "github.com/yudai/gojsondiff"
-	"github.com/yudai/gojsondiff/formatter"
 )
-
-var noEventFound = errors.New("event not found")
 
 // LogInfo holds log information about events.
 type LogInfo struct {
@@ -52,14 +46,12 @@ type LogInfo struct {
 	ObjectType   string      `json:"object_type"`
 	ObjectName   string      `json:"object_name"`
 	ExtendedInfo string      `json:"extended_info"`
-	Diff string `json:"diff"`
 	ID           int         `json:"id"`
 }
 
 // LogEvent writes an event of the action type, performed by the given actor,
 // against the given object.
 func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
-	log.Printf("calling LogEvent")
 	if !config.Config.LogEvents {
 		logger.Debugf("Not logging this event")
 		return nil
@@ -83,32 +75,6 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 	if err != nil {
 		return err
 	}
-
-	// get the most recent logged event, if one is present
-	mostRecent, err := getMostRecentEvent(le.ObjectName, le.ObjectType)
-
-	// If there is a logged event for this object in the database:
-	// make a diff of the json between the object at the last event and
-	// this one, clear the extended info for the previous event, and save.
-	if err != nil && err != noEventFound {
-		return err
-	} else if err == nil { // don't try making a diff if there's no previous
-		oldExtInfo := mostRecent.ExtendedInfo
-		differ := diff.New()
-		df, err := differ.Compare([]byte(oldExtInfo), []byte(extInfo))
-		if err != nil {
-			return err
-		}
-		fmtr := formatter.NewDeltaFormatter()
-		dstr, err := fmtr.Format(df)
-		// shouldn't be able to happen, but...
-		if err != nil {
-			return err
-		}
-
-		le.Diff = dstr
-	}
-
 	le.ExtendedInfo = extInfo
 	actorInfo, err := datastore.EncodeToJSON(doer)
 	if err != nil {
@@ -122,13 +88,6 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 		qle["object_type"] = le.ObjectType
 		qle["object_name"] = le.ObjectName
 		go serfin.SendEvent("log-event", qle)
-	}
-
-	if mostRecent != nil {
-		err = mostRecent.clearExtendedInfo()
-		if err != nil {
-			return err
-		}
 	}
 
 	if config.UsingDB() {
@@ -174,19 +133,6 @@ func (le *LogInfo) writeEventInMem() error {
 func (le *LogInfo) importEventInMem() error {
 	ds := datastore.New()
 	return ds.SetLogInfo(le, le.ID)
-}
-
-func (le *LogInfo) clearExtendedInfo() error {
-	if config.UsingDB() {
-		return le.clearExtendedInfoSQL()
-	}
-
-	// clear this in in-mem too, eh. At least we can use an existing
-	// method, although it may be better to rename it.
-	le.ExtendedInfo = ""
-	return le.importEventInMem()
-
-	return nil 
 }
 
 // Get a particular event by its id.
@@ -351,40 +297,6 @@ func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, err
 		limit = n
 	}
 	return lis[offset:limit], nil
-}
-
-func getMostRecentEvent(name string, objectType string) (*LogInfo, error) {
-	if config.UsingDB() {
-		e, err := getMostRecentEventSQL(name, objectType)
-		if err != nil && err == sql.ErrNoRows {
-			err = noEventFound
-		}
-		return e, err
-	}
-	// It remains to be seen if this will be too terrible for words for the
-	// in-mem log info storage, or if the performance will end up being
-	// acceptable. A separate index may end up being necessary.
-	ds := datastore.New()
-	arr := ds.GetLogInfoList()
-	var keys []int
-	for k := range arr {
-		keys = append(keys, k)
-	}
-	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
-	var mRecent *LogInfo
-	for _, i := range keys {
-		if k, ok := arr[i]; ok {
-			item := k.(*LogInfo)
-			if item.ObjectType == objectType && item.ObjectName == name {
-				mRecent = item
-				break
-			}
-		}
-	}
-	if mRecent == nil {
-		return nil, noEventFound
-	}
-	return mRecent, nil
 }
 
 func (le *LogInfo) checkTimeRange(from, until time.Time) bool {
