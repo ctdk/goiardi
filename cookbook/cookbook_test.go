@@ -17,16 +17,16 @@
 package cookbook
 
 import (
-	"encoding/json"
 	"encoding/gob"
+	"encoding/json"
 	"github.com/ctdk/goiardi/filestore"
 	"os"
 	"testing"
 )
 
 type constraintTest struct {
-	constraint string
-	expectedVersion string
+	constraint         string
+	expectedVersion    string
 	expectedNumResults int
 }
 
@@ -47,7 +47,7 @@ func TestLatestConstrained(t *testing.T) {
 	rm := make(map[string]interface{})
 	gob.Register(rm)
 
-	a := []string{"0ab75b43c726c3e7c00d7950dd6c3577", "b43166991a65cc7e711a018b93105544", "e2ff77580f69d7612e6a67640fdc2fe0", "5822b0e3808ed57308a0eff8b61f7dc2" }
+	a := []string{"0ab75b43c726c3e7c00d7950dd6c3577", "b43166991a65cc7e711a018b93105544", "e2ff77580f69d7612e6a67640fdc2fe0", "5822b0e3808ed57308a0eff8b61f7dc2"}
 	var data []byte
 	for _, chk := range a {
 		f := &filestore.FileStore{Chksum: chk, Data: &data}
@@ -61,7 +61,7 @@ func TestLatestConstrained(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	
+
 	if _, cerr := cb.NewVersion("1.0.0", mc); cerr != nil {
 		t.Error(cerr)
 	}
@@ -76,14 +76,14 @@ func TestLatestConstrained(t *testing.T) {
 		t.Error(cerr)
 	}
 
-	conTests := []*constraintTest{ 
-		&constraintTest{ "= 1.0.0", "1.0.0", 1},
-		&constraintTest{ "= 1.1.0", "1.1.0", 1},
-		&constraintTest{ "~> 1.0.0", "1.0.0", 1},
-		&constraintTest{ "~> 1.1.0", "1.1.0", 1},
-		&constraintTest{ "< 1.1.0", "1.0.0", 1},
-		&constraintTest{ "= 0.1.0", "0.1.0", 0},
-		&constraintTest{ "> 1.1.0", "1.0.0", 0},
+	conTests := []*constraintTest{
+		&constraintTest{"= 1.0.0", "1.0.0", 1},
+		&constraintTest{"= 1.1.0", "1.1.0", 1},
+		&constraintTest{"~> 1.0.0", "1.0.0", 1},
+		&constraintTest{"~> 1.1.0", "1.1.0", 1},
+		&constraintTest{"< 1.1.0", "1.0.0", 1},
+		&constraintTest{"= 0.1.0", "0.1.0", 0},
+		&constraintTest{"> 1.1.0", "1.0.0", 0},
 	}
 
 	for _, tc := range conTests {

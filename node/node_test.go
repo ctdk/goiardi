@@ -116,8 +116,8 @@ func TestNodeStatusDelete(t *testing.T) {
 		t.Errorf("Expected %d deleted statuses, but got %d", expected, del)
 	}
 	an := AllNodeStatuses()
-	
-	if len(an) != nStats - expected {
-		t.Errorf("expected to have %d statuses left, but there were %d", nStats - del, len(an))
+
+	if len(an) != nStats-expected {
+		t.Errorf("expected to have %d statuses left, but there were %d", nStats-del, len(an))
 	}
 }

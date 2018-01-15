@@ -71,8 +71,8 @@ type privReport struct {
 // data store.
 type ByTime []*Report
 
-func (b ByTime) Len() int { return len(b) }
-func (b ByTime) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
+func (b ByTime) Len() int           { return len(b) }
+func (b ByTime) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b ByTime) Less(i, j int) bool { return b[i].EndTime.Before(b[j].EndTime) }
 
 // statsd metric holders
@@ -180,7 +180,7 @@ func (r *Report) Delete() error {
 	return nil
 }
 
-// DeleteByAge deletes reports older than the given duration. It returns the 
+// DeleteByAge deletes reports older than the given duration. It returns the
 // number of reports deleted, and an error if any.
 func DeleteByAge(dur time.Duration) (int, error) {
 	if config.UsingDB() {
@@ -197,7 +197,7 @@ func DeleteByAge(dur time.Duration) (int, error) {
 		return 0, nil
 	}
 
-	i := sort.Search(len(reports), func(i int) bool { return reports[i].EndTime.After(now) } )
+	i := sort.Search(len(reports), func(i int) bool { return reports[i].EndTime.After(now) })
 	for x := 0; x < i; x++ {
 		reports[x].Delete()
 	}

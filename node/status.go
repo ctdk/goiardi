@@ -38,8 +38,9 @@ type NodeStatus struct {
 }
 
 type ByTime []*NodeStatus
-func (b ByTime) Len() int { return len(b) }
-func (b ByTime) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
+
+func (b ByTime) Len() int           { return len(b) }
+func (b ByTime) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b ByTime) Less(i, j int) bool { return b[i].UpdatedAt.Before(b[j].UpdatedAt) }
 
 // UpdateStatus updates a node's current status (up, down, or new).

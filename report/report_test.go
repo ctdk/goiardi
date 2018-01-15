@@ -117,7 +117,7 @@ func TestReportCleaning(t *testing.T) {
 	n, _ := node.New("deleting_node")
 	now := time.Now()
 
-	durations := []time.Duration{ 1, 2, 5, 2, 4, 10, 7, 14, 15, 19, 20, 26, 100, 320, 24 }
+	durations := []time.Duration{1, 2, 5, 2, 4, 10, 7, 14, 15, 19, 20, 26, 100, 320, 24}
 	gtTwoWeeks := 8
 
 	from := 14 * 24 * time.Hour
@@ -140,7 +140,7 @@ func TestReportCleaning(t *testing.T) {
 		t.Errorf("%d reports should have been deleted, but reported %d", gtTwoWeeks, del)
 	}
 	z := AllReports()
-	if len(z) != len(durations) - gtTwoWeeks {
-		t.Errorf("should have had %d reports left after deleting ones older than two weeks, but had %d", len(durations) - gtTwoWeeks, len(z))
+	if len(z) != len(durations)-gtTwoWeeks {
+		t.Errorf("should have had %d reports left after deleting ones older than two weeks, but had %d", len(durations)-gtTwoWeeks, len(z))
 	}
 }

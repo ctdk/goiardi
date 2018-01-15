@@ -61,7 +61,6 @@ var (
 	ErrNoStatusList ErrorNodeStatus = errors.New("No status lists in the datastore")
 )
 
-
 // DataStore is the main data store struct, holding the key/value store and list
 // of objects.
 type DataStore struct {
