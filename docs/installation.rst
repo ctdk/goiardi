@@ -119,6 +119,9 @@ Currently available command line and config file options::
                                 set, the event log will be checked periodically
                                 and pruned to this number of entries.
                                 [$GOIARDI_LOG_EVENT_KEEP]
+        --skip-log-extended     If set, do not save a JSON encoded blob of the
+                                object being logged when logging an event.
+                                [$GOIARDI_SKIP_LOG_EXTENDED]
     -x, --export=               Export all server data to the given file, exiting
                                 afterwards. Should be used with caution. Cannot
                                 be used at the same time as -m/--import.
@@ -218,6 +221,16 @@ Currently available command line and config file options::
                                 set <= 0, trimming is disabled. This behavior
                                 will change with the next major release.
                                 [$GOIARDI_INDEX_VAL_TRIM]
+    -y, --pprof-whitelist=      Address to allow to access /debug/pprof (in
+                                addition to localhost). Specify multiple times to
+                                allow more addresses. [$GOIARDI_PPROF_WHITELIST]
+        --purge-reports-after=  Time to purge old reports after, given in golang
+                                duration format (e.g. "720h"). Default is not to
+                                purge them at all. [$GOIARDI_PURGE_REPORTS_AFTER]
+        --purge-status-after=   Time to purge old node statuses after, given in
+                                golang duration format (e.g. "720h"). Default is
+                                not to purge them at all.
+                                [$GOIARDI_PURGE_STATUS_AFTER]
 
   MySQL connection options (requires --use-mysql):
         --mysql-username=       MySQL username [$GOIARDI_MYSQL_USERNAME]
