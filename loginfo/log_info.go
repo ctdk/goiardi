@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"log"
 
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
@@ -58,6 +59,7 @@ type LogInfo struct {
 // LogEvent writes an event of the action type, performed by the given actor,
 // against the given object.
 func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
+	log.Printf("calling LogEvent")
 	if !config.Config.LogEvents {
 		logger.Debugf("Not logging this event")
 		return nil
@@ -97,10 +99,7 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 		if err != nil {
 			return err
 		}
-
 		fmtr := formatter.NewDeltaFormatter()
-		fmtr.PrintIndent = false
-
 		dstr, err := fmtr.Format(df)
 		// shouldn't be able to happen, but...
 		if err != nil {
@@ -377,7 +376,6 @@ func getMostRecentEvent(name string, objectType string) (*LogInfo, error) {
 		if k, ok := arr[i]; ok {
 			item := k.(*LogInfo)
 			if item.ObjectType == objectType && item.ObjectName == name {
-				item.ID = i
 				mRecent = item
 				break
 			}
