@@ -107,3 +107,27 @@ func TestLogEvent(t *testing.T) {
 		t.Errorf("len(searching) for log events by doer2 should have returned 10 items, but returned %d instead", len(searching))
 	}
 }
+
+func TestSkipLogExtended(t *testing.T) {
+	config.Config.SkipLogExtended = true
+	doer, _ := client.New("doer-skip")
+	obj, _ := client.New("obj-skip")
+	err := LogEvent(doer, obj, "create")
+	if err != nil {
+		t.Error(err)
+	}
+	for i := 0; i < 5; i++ {
+		LogEvent(doer, obj, "modify")
+	}
+	searchParams := make(map[string]string)
+	searchParams["doer"] = doer.Name
+	searching, _ := GetLogInfos(searchParams, 0)
+	if len(searching) != 6 {
+		t.Errorf("Somehow searching for events to check skipping extended log info returned only %d events (should have returned 6).")
+	}
+	for z, e := range searching {
+		if e.ExtendedInfo != "" {
+			t.Errorf("Event %d should have had no extended info, but had '%s'.", z, e.ExtendedInfo)
+		}
+	}
+}
