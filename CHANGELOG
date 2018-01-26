@@ -1,4 +1,4 @@
-0.11.7 (not released yet)
+0.11.7
 ------
 * Allow access to /debug/pprof with a whitelist of IP addresses
 * Properly index arrays of hashes, arrays of arrays, etc. in object attributes.
@@ -10,6 +10,8 @@
 * Add options to purge old reports and node statuses.
 * Add option to skip logging extended object information in the event log.
 * A handful of other bugfixes.
+* Bump up to using golang 1.9.3 for builds.
+* Minor changes to the documentation.
 
 0.11.6 (cancelled)
 ------
