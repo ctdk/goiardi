@@ -5,7 +5,7 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 CURDIR=`pwd`
 GOIARDI_VERSION=`git describe --long --always`
 
-gem install package_cloud
+gem install package_cloud -v "0.2.43"
 
 if [ -z ${PACKAGECLOUD_REPO} ] ; then
   echo "The environment variable PACKAGECLOUD_REPO must be set."
