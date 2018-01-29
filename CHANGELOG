@@ -4,6 +4,26 @@
   and whatnot.
 * Refactor of HTTP handling to use gorilla-mux.
 
+0.11.7
+------
+* Allow access to /debug/pprof with a whitelist of IP addresses
+* Properly index arrays of hashes, arrays of arrays, etc. in object attributes.
+* Pretty serious memory usage improvements with search (both the in-memory
+  and postgres searches).
+* Fix reconnecting to serf if the connection is somehow interrupted.
+* Fix negated range queries (it turns out they *do* have a use after all), and 
+  refactor how NOT queries are handled generally.
+* Add options to purge old reports and node statuses.
+* Add option to skip logging extended object information in the event log.
+* A handful of other bugfixes.
+* Bump up to using golang 1.9.3 for builds.
+* Minor changes to the documentation.
+
+0.11.6 (cancelled)
+------
+* Skipped because of a miscommunication snafu involving Debian packaging and a
+  pre-release tag for 0.11.6.
+
 0.11.5
 ------
 * Several search fixes:

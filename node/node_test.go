@@ -20,9 +20,11 @@ package node
 import (
 	"encoding/gob"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
 	"testing"
+	"time"
 )
 
 var org *organization.Organization
@@ -87,5 +89,46 @@ func TestNodeStatus(t *testing.T) {
 	nses, _ = n.AllStatuses()
 	if len(nses) != 0 {
 		t.Errorf("AllStatuses should have returned 0 after calling DeleteStatuses, but instead it returned %d", len(nses))
+	}
+}
+
+func TestNodeStatusDelete(t *testing.T) {
+	// clear out any existing node statuses
+	nodes := AllNodes()
+	ds := datastore.New()
+	for _, n := range nodes {
+		ds.DeleteNodeStatus(n.Name)
+	}
+	dNode, _ := New("deleting_node")
+	dNode.Save()
+	now := time.Now()
+	day := 24 * time.Hour
+	nStats := 28
+	for i := nStats; i > 0; i-- {
+		t := now.Add(-((time.Duration(i) * day) + (5 * time.Minute)))
+		var status string
+		switch i % 2 {
+		case 0:
+			status = "up"
+		default:
+			status = "down"
+		}
+		ns := &NodeStatus{Node: dNode, Status: status, UpdatedAt: t}
+		ds.SetNodeStatus(dNode.Name, ns)
+	}
+
+	from := 14 * day
+	expected := 15
+	del, err := DeleteNodeStatusesByAge(from)
+	if err != nil {
+		t.Error(err)
+	}
+	if del != expected {
+		t.Errorf("Expected %d deleted statuses, but got %d", expected, del)
+	}
+	an := AllNodeStatuses()
+
+	if len(an) != nStats-expected {
+		t.Errorf("expected to have %d statuses left, but there were %d", nStats-del, len(an))
 	}
 }

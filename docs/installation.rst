@@ -119,6 +119,9 @@ Currently available command line and config file options::
                                 set, the event log will be checked periodically
                                 and pruned to this number of entries.
                                 [$GOIARDI_LOG_EVENT_KEEP]
+        --skip-log-extended     If set, do not save a JSON encoded blob of the
+                                object being logged when logging an event.
+                                [$GOIARDI_SKIP_LOG_EXTENDED]
     -x, --export=               Export all server data to the given file, exiting
                                 afterwards. Should be used with caution. Cannot
                                 be used at the same time as -m/--import.
@@ -218,6 +221,16 @@ Currently available command line and config file options::
                                 set <= 0, trimming is disabled. This behavior
                                 will change with the next major release.
                                 [$GOIARDI_INDEX_VAL_TRIM]
+    -y, --pprof-whitelist=      Address to allow to access /debug/pprof (in
+                                addition to localhost). Specify multiple times to
+                                allow more addresses. [$GOIARDI_PPROF_WHITELIST]
+        --purge-reports-after=  Time to purge old reports after, given in golang
+                                duration format (e.g. "720h"). Default is not to
+                                purge them at all. [$GOIARDI_PURGE_REPORTS_AFTER]
+        --purge-status-after=   Time to purge old node statuses after, given in
+                                golang duration format (e.g. "720h"). Default is
+                                not to purge them at all.
+                                [$GOIARDI_PURGE_STATUS_AFTER]
 
   MySQL connection options (requires --use-mysql):
         --mysql-username=       MySQL username [$GOIARDI_MYSQL_USERNAME]
@@ -258,6 +271,8 @@ For more documentation on Chef, see http://docs.chef.io.
 Binaries and Packages
 =====================
 
-There are other options for installing goiardi, in case you don't want to build it from scratch. Binaries for several platforms are provided with each release, and there are .debs available as well at https://packagecloud.io/ct/goiardi. At the moment packages are only being built for Debian wheezy, Ubuntu 14.04, and raspbian (which is under Debian wheezy) for Raspberry Pi and Raspberry Pi 2. Other versions of Debian, Ubuntu, CentOS and friends, and perhaps others are on the roadmap. As of this writing, debs for goiardi 0.11.2 can be `found in Debian sid and stretch <https://packages.qa.debian.org/g/goiardi.html>`_ (stretch is still ``testing``, but it's in the home stretch for being released), and in Ubuntu's "Zesty Zapus" ``universe`` repository.
+There are other options for installing goiardi, in case you don't want to build it from scratch. Binaries for several platforms are provided with each release, and there are .debs available as well at https://packagecloud.io/ct/goiardi. At the moment packages are being built for Debian wheezy and later, Ubuntu 14.04 and later current and upcoming releases, raspbian (which is under the Debian versions) for various Raspberry Pi computers, and CentOS 6 and 7. Packages for other platforms may happen down the road. As of this writing, debs for goiardi 0.11.2 can be `found in Debian stretch (a.k.a stable) <https://packages.qa.debian.org/g/goiardi.html>`_. More current versions of goiardi can be found in Debian's ``testing`` and ``unstable`` branches as well as in Ubuntu's ``universe`` repository since "Zesty Zapus".
+
+**NB:** `wheezy` is currently (as of this writing) supported by the `Debian LTS <https://wiki.debian.org/LTS>`_ project. Sometime after that ends, which is scheduled for May 31st, 2018, it'll be dropped from the packagecloud.io builds and the supporting files removed from the repository.
 
 There is also a `homebrew tap <https://github.com/ctdk/homebrew-ctdk>`_ that includes goiardi now, for folks running Mac OS X and using homebrew.

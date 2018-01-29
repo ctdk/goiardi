@@ -73,11 +73,15 @@ func LogEvent(org *organization.Organization, doer actor.Actor, obj util.Goiardi
 	le.ObjectName = obj.GetName()
 	le.ObjectType = reflect.TypeOf(obj).String()
 	le.Time = time.Now()
-	extInfo, err := datastore.EncodeToJSON(obj)
-	if err != nil {
-		return err
+
+	if !config.Config.SkipLogExtended {
+		extInfo, err := datastore.EncodeToJSON(obj)
+		if err != nil {
+			return err
+		}
+		le.ExtendedInfo = extInfo
 	}
-	le.ExtendedInfo = extInfo
+
 	actorInfo, err := datastore.EncodeToJSON(doer)
 	if err != nil {
 		return err

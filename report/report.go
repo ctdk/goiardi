@@ -30,6 +30,7 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/raintank/met"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -67,6 +68,14 @@ type privReport struct {
 	NodeName       *string
 	OrganizationID *int
 }
+
+// sorting routines for the benefit of purging old records with the in-memory
+// data store.
+type ByTime []*Report
+
+func (b ByTime) Len() int           { return len(b) }
+func (b ByTime) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+func (b ByTime) Less(i, j int) bool { return b[i].EndTime.Before(b[j].EndTime) }
 
 // statsd metric holders
 var (
@@ -173,6 +182,35 @@ func (r *Report) Delete() error {
 	ds := datastore.New()
 	ds.Delete(r.org.DataKey("report"), r.RunID)
 	return nil
+}
+
+// DeleteByAge deletes reports older than the given duration. It returns the
+// number of reports deleted, and an error if any.
+func DeleteByAge(dur time.Duration) (int, error) {
+	if config.UsingDB() {
+		return deleteByAgeSQL(dur)
+	}
+	// hoo-boy.
+	orgs := organization.AllOrganizations()
+	var ret int
+	for _, org := range orgs {
+		reports := AllReports(org)
+		if len(reports) == 0 {
+			continue
+		}
+		sort.Sort(ByTime(reports))
+		now := time.Now().Add(-dur)
+		if reports[0].EndTime.After(now) {
+			continue
+		}
+
+		i := sort.Search(len(reports), func(i int) bool { return reports[i].EndTime.After(now) })
+		ret += i
+		for x := 0; x < i; x++ {
+			reports[x].Delete()
+		}
+	}
+	return ret, nil
 }
 
 // NewFromJSON creates a new report from the given uploaded JSON.

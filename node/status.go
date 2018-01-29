@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/organization"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/ctdk/goiardi/config"
@@ -36,6 +37,12 @@ type NodeStatus struct {
 	Status    string
 	UpdatedAt time.Time
 }
+
+type ByTime []*NodeStatus
+
+func (b ByTime) Len() int           { return len(b) }
+func (b ByTime) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+func (b ByTime) Less(i, j int) bool { return b[i].UpdatedAt.Before(b[j].UpdatedAt) }
 
 // UpdateStatus updates a node's current status (up, down, or new).
 func (n *Node) UpdateStatus(status string) error {
@@ -197,4 +204,62 @@ func GetNodesByStatus(org *organization.Organization, nodeNames []string, status
 		}
 	}
 	return statNodes, nil
+}
+
+// DeleteNodeStatusesByAge deletes node status older than the given duration. It
+// returns the number of statuses deleted, and an error if any.
+func DeleteNodeStatusesByAge(dur time.Duration) (int, error) {
+	if config.UsingDB() {
+		return deleteByAgeSQL(dur)
+	}
+
+	ds := datastore.New()
+	j := 0
+
+	nsErrChk := func(err error) bool {
+		if err != nil {
+			if _, ok := err.(datastore.ErrorNodeStatus); ok {
+				return true
+			}
+		}
+		return false
+	}
+
+	orgs := organization.AllOrganizations()
+	for _, org := range orgs {
+		nodes := AllNodes(org)
+		if len(nodes) == 0 {
+			continue
+		}
+
+		for _, node := range nodes {
+			statuses, err := node.AllStatuses()
+			if nsErrChk(err) {
+				return 0, err
+			}
+			oldStatLen := len(statuses)
+			if oldStatLen == 0 {
+				continue
+			}
+			sort.Sort(ByTime(statuses))
+			cutoff := time.Now().Add(-dur)
+			if statuses[0].UpdatedAt.After(cutoff) {
+				continue
+			}
+			i := sort.Search(len(statuses), func(i int) bool { return statuses[i].UpdatedAt.After(cutoff) })
+			statuses = statuses[i:]
+			statusesIface := make([]interface{}, len(statuses))
+			for z, v := range statuses {
+				statusesIface[z] = v
+			}
+
+			err = ds.ReplaceNodeStatuses(node.Name, org.Name, statusesIface)
+			if nsErrChk(err) {
+				return 0, err
+			}
+			j += oldStatLen - len(statuses)
+		}
+	}
+
+	return j, nil
 }

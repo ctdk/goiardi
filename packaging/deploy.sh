@@ -18,8 +18,14 @@ package_cloud push ${PACKAGECLOUD_REPO}/debian/wheezy ${DIR}/artifacts/wheezy/*.
 # debian/jessie
 package_cloud push ${PACKAGECLOUD_REPO}/debian/jessie ${DIR}/artifacts/jessie/*.deb
 package_cloud push ${PACKAGECLOUD_REPO}/debian/stretch ${DIR}/artifacts/jessie/*.deb
-package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/xenial ${DIR}/artifacts/jessie/*amd64.deb
-package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/yakkety ${DIR}/artifacts/jessie/*amd64.deb
+
+# systemd based ubuntus. This will push up artifacts for whatever ubuntu
+# versions are current or on deck when a goiardi release is made (since
+# non-LTS Ubuntu releases drop off so quickly, we don't make much effort to
+# provide packages for older versions).
+for UBUNTU_REL in xenial artful bionic; do
+  package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/${UBUNTU_REL} ${DIR}/artifacts/jessie/*amd64.deb
+done
 
 # older upstart-based ubuntu
 package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/trusty ${DIR}/artifacts/trusty/*.deb

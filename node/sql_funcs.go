@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"log"
 	"strings"
+	"time"
 )
 
 func checkForNodeSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -213,6 +214,33 @@ func (n *Node) deleteSQL() error {
 	}
 	tx.Commit()
 	return err
+}
+
+func deleteByAgeSQL(dur time.Duration) (int, error) {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return 0, err
+	}
+	from := time.Now().Add(-dur)
+
+	var sqlStmt string
+	if config.Config.UseMySQL {
+		sqlStmt = "DELETE FROM node_statuses WHERE updated_at >= ?"
+	} else if config.Config.UsePostgreSQL {
+		sqlStmt = "DELETE FROM goiardi.node_statuses WHERE updated_at >= $1"
+	}
+
+	res, err := tx.Exec(sqlStmt, from)
+	if err != nil {
+		terr := tx.Rollback()
+		if terr != nil {
+			err = fmt.Errorf("deleting node statuses for the last %s had an error '%s', and then rolling back the transaction gave another error '%s'", from, err.Error(), terr.Error())
+		}
+		return 0, err
+	}
+	tx.Commit()
+	rows, _ := res.RowsAffected()
+	return int(rows), nil
 }
 
 func (ns *NodeStatus) updateNodeStatusSQL() error {

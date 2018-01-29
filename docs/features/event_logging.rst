@@ -7,6 +7,8 @@ Goiardi has optional event logging. When enabled with the ``--log-events`` comma
 
 If the ``-K``/``--log-event-keep`` option is set, then once a minute the event log will be automatically purged, leaving that many events in the log. This is particularly recommended when using the event log in in-memory mode.
 
+If the ``--skip-log-extended`` option is set, then the JSON encoded blob of the object being logged will not be stored.
+
 The easiest way to use the event log is with the knife-goiardi-event-log knife plugin. It's available on rubygems, or at github at https://github.com/ctdk/knife-goiardi-event-log.
 
 The event API endpoints work as follows:

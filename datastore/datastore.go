@@ -29,6 +29,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -42,6 +43,22 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/pmylund/go-cache"
 	"github.com/tideland/golib/logger"
+)
+
+// ErrorNodeStatus is for errors specific to the absence of node statuses in the
+// system
+type ErrorNodeStatus error
+
+// Errors that may come up with the node statuses.
+var (
+	// ErrNoStatuses is returned where there are no node statuses in the
+	// datastore at all.
+	ErrNoStatuses ErrorNodeStatus = errors.New("No statuses in the datastore")
+
+	// ErrNoStatusList is returned when there are statuses in the datastore,
+	// but somehow the map of int slices associating a status with a node is
+	// missing.
+	ErrNoStatusList ErrorNodeStatus = errors.New("No status lists in the datastore")
 )
 
 // DataStore is the main data store struct, holding the key/value store and list
@@ -238,6 +255,55 @@ func (ds *DataStore) SetNodeStatus(nodeName string, orgName string, obj interfac
 	return nil
 }
 
+// ReplaceNodeStatuses replaces the node statuses being stored in the data store
+// with the provided statuses that have been ordered by age already. This is
+// most useful when purging old statuses.
+func (ds *DataStore) ReplaceNodeStatuses(nodeName string, orgName string, objs []interface{}) error {
+	ds.m.Lock()
+	defer ds.m.Unlock()
+	ds.updated = true
+
+	// Delete the old statuses
+	err := ds.deleteStatuses(nodeName, orgName)
+	if err != nil {
+		return err
+	}
+
+	// and put the ones we want to keep, if any, back in.
+	if len(objs) == 0 {
+		return nil
+	}
+	nsKey := ds.makeKey("nodestatus", "nodestatuses")
+	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
+	a, _ := ds.dsc.Get(nsKey)
+	if a == nil {
+		a = make(map[int]interface{})
+	}
+	ns := a.(map[int]interface{})
+	a, _ = ds.dsc.Get(nsListKey)
+	if a == nil {
+		a = make(map[string][]int)
+	}
+	nslist := a.(map[string][]int)
+
+	for _, o := range objs {
+		nextID := getNextID(ns)
+		if config.Config.UseUnsafeMemStore {
+			ns[nextID] = o
+		} else {
+			n, err := encodeSafeVal(o)
+			if err != nil {
+				return err
+			}
+			ns[nextID] = n
+		}
+		nslist[nodeName] = append(nslist[nodeName], nextID)
+	}
+	ds.dsc.Set(nsKey, ns, -1)
+	ds.dsc.Set(nsListKey, nslist, -1)
+	return nil
+}
+
 // AllNodeStatuses returns a list of all statuses known for the given node from
 // the in-memory data store.
 func (ds *DataStore) AllNodeStatuses(nodeName string, orgName string) ([]interface{}, error) {
@@ -247,14 +313,12 @@ func (ds *DataStore) AllNodeStatuses(nodeName string, orgName string) ([]interfa
 	nsListKey := ds.makeKey(joinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
-		err := fmt.Errorf("No statuses in the datastore")
-		return nil, err
+		return nil, ErrNoStatuses
 	}
 	ns := a.(map[int]interface{})
 	a, _ = ds.dsc.Get(nsListKey)
 	if a == nil {
-		err := fmt.Errorf("No status lists in the datastore")
-		return nil, err
+		return nil, ErrNoStatusList
 	}
 	nslist := a.(map[string][]int)
 	arr := make([]interface{}, len(nslist[nodeName]))
@@ -281,20 +345,18 @@ func (ds *DataStore) LatestNodeStatus(nodeName string, orgName string) (interfac
 	nsListKey := ds.makeKey(joinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
-		err := fmt.Errorf("No statuses in the datastore")
-		return nil, err
+		return nil, ErrNoStatuses
 	}
 	ns := a.(map[int]interface{})
 	a, _ = ds.dsc.Get(nsListKey)
 	if a == nil {
-		err := fmt.Errorf("No status lists in the datastore")
-		return nil, err
+		return nil, ErrNoStatusList
 	}
 	nslist := a.(map[string][]int)
 	nsarr := nslist[nodeName]
 	if nsarr == nil {
 		err := fmt.Errorf("no statuses found for node %s", nodeName)
-		return nil, err
+		return nil, ErrorNodeStatus(err)
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(nsarr)))
 	var n interface{}
@@ -318,18 +380,20 @@ func (ds *DataStore) DeleteNodeStatus(nodeName string, orgName string) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	ds.updated = true
+	return ds.deleteStatuses(nodeName, orgName)
+}
+
+func (ds *DataStore) deleteStatuses(nodeName string, orgName string) error {
 	nsKey := ds.makeKey(joinStr("nodestatus-", orgName), "nodestatuses")
 	nsListKey := ds.makeKey(joinStr("nodestatuslist-", orgName), "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
-		err := fmt.Errorf("No statuses in the datastore")
-		return err
+		return ErrNoStatuses
 	}
 	ns := a.(map[int]interface{})
 	a, _ = ds.dsc.Get(nsListKey)
 	if a == nil {
-		err := fmt.Errorf("No status lists in the datastore")
-		return err
+		return ErrNoStatusList
 	}
 	nslist := a.(map[string][]int)
 	for _, v := range nslist[nodeName] {

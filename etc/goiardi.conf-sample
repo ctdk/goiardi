@@ -91,6 +91,17 @@ log-events = true
 # keep the number of events stored to this number.
 #log-event-keep = 1000
 
+# Skip logging extended object information in the event log.
+# skip-log-extended = false
+
+# Purge old reports after this period. Specified in golang's duration format
+# (like, "720h15m30s").
+# purge-reports-after = "720h" 
+
+# Purge old node statuses after this period of time. Like the above, specified
+# in the golang time format.
+# purge-status-after = "720h"
+
 # Maximum object size in bytes for the file store. Default 10485760 bytes (10MB).
 #obj-max-size = 10485760
 

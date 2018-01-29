@@ -203,6 +203,9 @@ func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 			}
 			nsq := &SolrQuery{queryChain: newq, idxName: sq.idxName, docs: d, org: sq.org, parentOp: curOp}
 			r, err = nsq.execute()
+		case *NotQuery:
+			s = s.Next()
+			continue
 		default:
 			if curOp == OpBinAnd {
 				r, err = s.SearchResults(sq.docs)
@@ -236,6 +239,7 @@ func extractSubQuery(s Queryable) (Queryable, Queryable, error) {
 	s = s.Next()
 	top := s
 	for {
+		logger.Debugf("n: %d s: %T %+v", n, s, s)
 		switch q := s.(type) {
 		case *SubQuery:
 			if q.start {

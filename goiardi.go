@@ -93,6 +93,7 @@ var noOpUserReqs = []string{
 
 var noOpUserRoot = []string{
 	"authenticate_user",
+	"debug",
 }
 
 var apiChan chan *apiTimerInfo
@@ -201,13 +202,21 @@ func main() {
 			os.Exit(1)
 		}
 		errch := make(chan error)
-		go startEventMonitor(serfin.Serfer, errch)
+		go startEventMonitor(config.Config.SerfAddr, errch)
 		err := <-errch
 		if err != nil {
 			logger.Criticalf(err.Error())
 			os.Exit(1)
 		}
 		startNodeMonitor()
+	}
+
+	if config.Config.PurgeNodeStatusAfter != "" {
+		startNodeStatusPurge()
+	}
+
+	if config.Config.PurgeReportsAfter != "" {
+		startReportPurge()
 	}
 
 	/* Create default clients and users. Currently chef-validator,
@@ -395,12 +404,9 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if len(fwded) != 0 {
 				xForwarded = fwded[len(fwded)-1]
 			}
-			logger.Debugf("remote ip candidates: ra: '%s', '%s'", remoteIP, xForwarded)
 			rIP := net.ParseIP(remoteIP)
 			xFIP := net.ParseIP(xForwarded)
-			logger.Debugf("ips now: '%q' '%q'", rIP, xFIP)
-			logger.Debugf("local? '%q' '%q'", rIP.IsLoopback(), xFIP.IsLoopback())
-			if !rIP.IsLoopback() && !xFIP.IsLoopback() {
+			if !rIP.IsLoopback() && !xFIP.IsLoopback() && !config.PprofWhitelisted(rIP) && !config.PprofWhitelisted(xFIP) {
 				logger.Debugf("blocked %s (x-forwarded-for: %s) from accessing /debug/pprof!", rIP.String(), xFIP.String())
 				block = true
 			}
@@ -442,7 +448,6 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Chef-Version", config.ChefVersion)
 	apiInfo := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
 	w.Header().Set("X-Ops-API-Info", apiInfo)
-	w.Header().Set("X-Ops-Server-API-Version", config.ChefApiVersion)
 
 	userID := r.Header.Get("X-OPS-USERID")
 
@@ -492,7 +497,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	 * an error if the check of the headers, timestamps, etc. fails. */
 	/* No clue why /principals doesn't require authorization. Hrmph. */
 	
-	if config.Config.UseAuth && !fstorere.MatchString(r.URL.Path) && !(princre.MatchString(r.URL.Path) && (r.Method == http.MethodGet || r.Method == http.MethodHead)) {
+	if config.Config.UseAuth && !fstorere.MatchString(r.URL.Path) && !strings.HasPrefix(r.URL.Path, "/debug") && !(princre.MatchString(r.URL.Path) && (r.Method == http.MethodGet || r.Method == http.MethodHead)) {
 		herr := authentication.CheckHeader(userID, r)
 		if herr != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -698,7 +703,7 @@ func handleSignals() {
 					datastore.Dbh.Close()
 				}
 				if config.Config.UseSerf {
-					serfin.Serfer.Close()
+					serfin.CloseAll()
 				}
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
@@ -818,59 +823,115 @@ func setLogEventPurgeTicker() {
 	}
 }
 
-func startEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
-	ch := make(chan map[string]interface{}, 10)
-	sh, err := sc.Stream("*", ch)
+// The serf functionality needs some cleaning up. This is a start on that.
+func startEventMonitor(serfAddr string, errch chan<- error) {
+	// Initial setup of serf. If this bombs go ahead and return so we can
+	// die
+	sc, err := serfin.NewRPCClient(serfAddr)
 	if err != nil {
 		errch <- err
 		return
 	}
 	errch <- nil
 
-	defer sc.Stop(sh)
-	// watch the events and queries
-	for e := range ch {
-		logger.Debugf("Got an event: %v", e)
-		eName, _ := e["Name"]
-		switch eName {
-		case "node_status":
-			jsonPayload := make(map[string]string)
-			err = json.Unmarshal(e["Payload"].([]byte), &jsonPayload)
+	ech := make(chan error)
+	recreateSerfWait := time.Duration(5)
+
+	for {
+		// Make sure the serf client is actually closed before creating
+		// a new one. The very first time this loop is kicked off, of
+		// course, the client will be fine. It's simpler to have the
+		// check up here, though, rather than at the end
+		if sc == nil || sc.IsClosed() {
+			sc, err = serfin.NewRPCClient(serfAddr)
 			if err != nil {
-				logger.Errorf(err.Error())
+				logger.Errorf("Error recreating serf client, waiting %d seconds before recreating: %s", recreateSerfWait, err.Error())
+				time.Sleep(recreateSerfWait * time.Second)
 				continue
+			} else {
+				logger.Errorf("reconnected to serf after being disconnected")
 			}
-			org, err := organization.Get(jsonPayload["organization"])
-			if err != nil {
-				logger.Errorf(err.Error())
-				continue
-			}
-			n, _ := node.Get(org, jsonPayload["node"])
-			if n == nil {
-				logger.Errorf("No node %s", jsonPayload["node"])
-				continue
-			}
-			nerr := n.UpdateStatus(jsonPayload["status"])
-			if nerr != nil {
-				logger.Errorf(nerr.Error())
-				continue
-			}
-			r := map[string]string{"response": "ok"}
-			response, _ := json.Marshal(r)
-			var id uint64
-			switch t := e["ID"].(type) {
-			case int64:
-				id = uint64(t)
-			case uint64:
-				id = t
-			default:
-				logger.Errorf("node_status ID %v type %T not int64 or uint64", e["ID"], e["ID"])
-				continue
-			}
-			sc.Respond(id, response)
+		}
+		go runEventMonitor(sc, ech)
+		e := <-ech
+		if e != nil {
+			logger.Errorf("Error from event monitor: %s", e.Error())
 		}
 	}
-	return
+}
+
+func runEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
+	ch := make(chan map[string]interface{}, 10)
+	sh, err := sc.Stream("*", ch)
+	if err != nil {
+		errch <- err
+		return
+	}
+
+	defer sc.Stop(sh)
+	checkClientSec := time.Duration(15)
+
+	// watch the events and queries
+	for {
+		select {
+		case e := <-ch:
+			eNil := e == nil
+			logger.Debugf("Got an event: %v nil? %v", e, eNil)
+			if eNil {
+				if sc.IsClosed() {
+					logger.Debugf("Serf client has been closed, returning from runEventMonitor in hopes of being able to reconnect")
+					err := fmt.Errorf("serf client closed")
+					errch <- err
+					return
+				}
+				continue
+			}
+			eName, _ := e["Name"]
+			switch eName {
+			case "node_status":
+				jsonPayload := make(map[string]string)
+				err = json.Unmarshal(e["Payload"].([]byte), &jsonPayload)
+				if err != nil {
+					logger.Errorf(err.Error())
+					continue
+				}
+				org, err := organization.Get(jsonPayload["organization"])
+				if err != nil {
+					logger.Errorf(err.Error())
+					continue
+				}
+				n, _ := node.Get(org, jsonPayload["node"])
+				if n == nil {
+					logger.Errorf("No node %s", jsonPayload["node"])
+					continue
+				}
+				nerr := n.UpdateStatus(jsonPayload["status"])
+				if nerr != nil {
+					logger.Errorf(nerr.Error())
+					continue
+				}
+				r := map[string]string{"response": "ok"}
+				response, _ := json.Marshal(r)
+				var id uint64
+				switch t := e["ID"].(type) {
+				case int64:
+					id = uint64(t)
+				case uint64:
+					id = t
+				default:
+					logger.Errorf("node_status ID %v type %T not int64 or uint64", e["ID"], e["ID"])
+					continue
+				}
+				sc.Respond(id, response)
+			}
+		case <-time.After(checkClientSec * time.Second):
+			if sc.IsClosed() {
+				clerr := fmt.Errorf("serf client found to be closed, recreating")
+				errch <- clerr
+				return
+			}
+		}
+	}
 }
 
 func startNodeMonitor() {
@@ -899,6 +960,40 @@ func startNodeMonitor() {
 		}
 	}()
 	return
+}
+
+func startReportPurge() {
+	go func() {
+		// purge reports after 2 hours, I guess.
+		ticker := time.NewTicker(2 * time.Hour)
+		for _ = range ticker.C {
+			del, err := report.DeleteByAge(config.Config.PurgeReportsDur)
+			if err != nil {
+				logger.Errorf("Purging reports had an error: %s", err.Error())
+			} else {
+				logger.Debugf("Purged %d reports", del)
+			}
+		}
+	}()
+}
+
+func startNodeStatusPurge() {
+	// don't do it if there aren't going to be node statuses to purge
+	if !config.Config.UseSerf || config.Config.PurgeNodeStatusDur == 0 {
+		return
+	}
+	go func() {
+		// check every 2 hours for statuses to purge
+		ticker := time.NewTicker(2 * time.Hour)
+		for _ = range ticker.C {
+			del, err := node.DeleteNodeStatusesByAge(config.Config.PurgeNodeStatusDur)
+			if err != nil {
+				logger.Errorf("Purging node statuses had an error: %s", err.Error())
+			} else {
+				logger.Debugf("Purged %d node statuses", del)
+			}
+		}
+	}()
 }
 
 func initGeneralStatsd(metricsBackend met.Backend) {
