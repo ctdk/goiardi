@@ -94,12 +94,12 @@ func TestNodeStatus(t *testing.T) {
 
 func TestNodeStatusDelete(t *testing.T) {
 	// clear out any existing node statuses
-	nodes := AllNodes()
+	nodes := AllNodes(org)
 	ds := datastore.New()
 	for _, n := range nodes {
-		ds.DeleteNodeStatus(n.Name)
+		ds.DeleteNodeStatus(n.Name, org.Name)
 	}
-	dNode, _ := New("deleting_node")
+	dNode, _ := New(org, "deleting_node")
 	dNode.Save()
 	now := time.Now()
 	day := 24 * time.Hour
@@ -114,7 +114,7 @@ func TestNodeStatusDelete(t *testing.T) {
 			status = "down"
 		}
 		ns := &NodeStatus{Node: dNode, Status: status, UpdatedAt: t}
-		ds.SetNodeStatus(dNode.Name, ns)
+		ds.SetNodeStatus(dNode.Name, org.Name, ns)
 	}
 
 	from := 14 * day
@@ -126,9 +126,14 @@ func TestNodeStatusDelete(t *testing.T) {
 	if del != expected {
 		t.Errorf("Expected %d deleted statuses, but got %d", expected, del)
 	}
-	an := AllNodeStatuses()
+	orgs := organization.AllOrganizations()
+	var an int
+	for _, urg := range orgs {
+		nses := AllNodeStatuses(urg)
+		an += len(nses)
+	}
 
-	if len(an) != nStats-expected {
-		t.Errorf("expected to have %d statuses left, but there were %d", nStats-del, len(an))
+	if an != nStats-expected {
+		t.Errorf("expected to have %d statuses left, but there were %d", nStats-del, an)
 	}
 }

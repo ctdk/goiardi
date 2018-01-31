@@ -122,18 +122,18 @@ func TestLogEvent(t *testing.T) {
 
 func TestSkipLogExtended(t *testing.T) {
 	config.Config.SkipLogExtended = true
-	doer, _ := client.New("doer-skip")
-	obj, _ := client.New("obj-skip")
-	err := LogEvent(doer, obj, "create")
+	doer, _ := client.New(org, "doer-skip")
+	obj, _ := client.New(org, "obj-skip")
+	err := LogEvent(org, doer, obj, "create")
 	if err != nil {
 		t.Error(err)
 	}
 	for i := 0; i < 5; i++ {
-		LogEvent(doer, obj, "modify")
+		LogEvent(org, doer, obj, "modify")
 	}
 	searchParams := make(map[string]string)
 	searchParams["doer"] = doer.Name
-	searching, _ := GetLogInfos(searchParams, 0)
+	searching, _ := GetLogInfos(org, searchParams, 0)
 	if len(searching) != 6 {
 		t.Errorf("Somehow searching for events to check skipping extended log info returned only %d events (should have returned 6).")
 	}

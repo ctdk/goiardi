@@ -273,8 +273,9 @@ func (ds *DataStore) ReplaceNodeStatuses(nodeName string, orgName string, objs [
 	if len(objs) == 0 {
 		return nil
 	}
-	nsKey := ds.makeKey("nodestatus", "nodestatuses")
-	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
+	nsKey := ds.makeKey(joinStr("nodestatus-", orgName), "nodestatuses")
+	nsListKey := ds.makeKey(joinStr("nodestatuslist-", orgName), "nodestatuslists")
+
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
 		a = make(map[int]interface{})

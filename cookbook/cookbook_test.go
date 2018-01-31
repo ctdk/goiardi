@@ -19,7 +19,10 @@ package cookbook
 import (
 	"encoding/gob"
 	"encoding/json"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/filestore"
+	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/organization"
 	"os"
 	"testing"
 )
@@ -33,9 +36,17 @@ type constraintTest struct {
 const minimalCookPath string = "./minimal-cook.json"
 const minimal110CookPath string = "./minimal-cook-1.1.0.json"
 
+func init() {
+	indexer.Initialize(config.Config)
+}
+
 func TestLatestConstrained(t *testing.T) {
+	gob.Register(new(organization.Organization))
+	org, _ := organization.New("default", "boo")
+	org.Save()
+	indexer.Initialize(config.Config)
 	cbname := "minimal"
-	cb, _ := New(cbname)
+	cb, _ := New(org, cbname)
 
 	// "upload" files - make fake filestore entries
 	u := new(filestore.FileStore)
@@ -51,6 +62,7 @@ func TestLatestConstrained(t *testing.T) {
 	var data []byte
 	for _, chk := range a {
 		f := &filestore.FileStore{Chksum: chk, Data: &data}
+		f.SetOrgName(org.Name)
 		err := f.Save()
 		if err != nil {
 			t.Error(err)

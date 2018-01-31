@@ -257,6 +257,12 @@ func DeleteHashes(orgName string, fileHashes []string) {
 	}
 }
 
+// Explicitly set the org name for the filestore. Only here to support
+// cookbook tests.
+func (f *FileStore) SetOrgName(orgName string) {
+	f.orgName = orgName
+}
+
 // AllFilestores returns all file checksums and their contents, for exporting.
 func AllFilestores(orgName string) []*FileStore {
 	var filestores []*FileStore
