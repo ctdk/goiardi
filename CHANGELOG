@@ -1,3 +1,10 @@
+0.11.8 (unreleased)
+------
+* Made some small tweaks and updates to the depsolver to make that a little
+  better. NB: before 0.11.8 ends up getting released, there may be some
+  further changes to the depsolver, especially where 'most constrained'
+  cookbooks are concerned.
+
 0.11.7
 ------
 * Allow access to /debug/pprof with a whitelist of IP addresses
