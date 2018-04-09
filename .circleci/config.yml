@@ -1,25 +1,62 @@
-machine:
-  environment:
-    GODIST: "go1.9.3.linux-amd64.tar.gz"
-dependencies:
-  pre:
-    - mkdir -p download
-    - test -e download/$GODIST || curl -o download/$GODIST https://storage.googleapis.com/golang/$GODIST
-    - sudo rm -rf /usr/local/go
-    - sudo tar -C /usr/local -xzf download/$GODIST
-  post:
-    - gem install fpm
-    - sudo apt-get update
-    - sudo apt-get install rpm python-sphinx -y
-    - go get github.com/ctdk/gox
-test:
-  post:
-    - cd packaging && /bin/bash packaging.sh
-general:
-  artifacts:
-    - packaging/artifacts
-deployment:
-  production:
-    branch: releases
-    commands:
-      - cd packaging && /bin/bash deploy.sh
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.10.1
+
+    working_directory: /go/src/github.com/ctdk/goiardi
+
+    environment:
+      TEST_RESULTS: /tmp/test-results
+
+    steps:
+      - checkout
+      - run: mkdir -p $TEST_RESULTS
+
+      - restore_cache:
+          keys:
+            - v1-pkg-cache
+
+      - run: gem install fpm
+      - run: sudo apt-get update && sudo apt-get install rpm python-sphinx -y
+      - run: go get github.com/ctdk/gox
+      - run:
+        name: Run 'go test'
+        command: go test -v -race ./... 2>&1 | tee ${TEST_RESULTS}/goiardi-test.out
+
+      - run: go build .
+
+      - save_cache:
+        key: v1-pkg-cache
+        paths:
+          - "/go/pkg"
+  package:
+    working_directory: /go/src/github/ctdk/goiardi
+    steps:
+  deploy:
+    working_directory: /go/src/github/ctdk/goiardi
+    steps:
+
+
+    dependencies:
+      pre:
+        - mkdir -p download
+        - test -e download/$GODIST || curl -o download/$GODIST https://storage.googleapis.com/golang/$GODIST
+        - sudo rm -rf /usr/local/go
+        - sudo tar -C /usr/local -xzf download/$GODIST
+      post:
+        - gem install fpm
+        - sudo apt-get update
+        - sudo apt-get install rpm python-sphinx -y
+        - go get github.com/ctdk/gox
+    test:
+      post:
+        - cd packaging && /bin/bash packaging.sh
+    general:
+      artifacts:
+        - packaging/artifacts
+    deployment:
+      production:
+        branch: releases
+        commands:
+          - cd packaging && /bin/bash deploy.sh
