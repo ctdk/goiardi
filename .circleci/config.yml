@@ -30,7 +30,7 @@ jobs:
         key: v1-pkg-cache
         paths:
           - "/go/pkg"
-  package:
+  package_build:
     working_directory: /go/src/github/ctdk/goiardi/packaging
     steps:
       - run: /bin/bash packaging.sh
@@ -44,12 +44,12 @@ workflows:
   build_package_deploy:
     jobs:
       - build
-      - package:
+      - package_build:
         requires:
           - build
       - deploy:
           requires:
-            - package
+            - package_build
           filters:
             branches:
               only:
