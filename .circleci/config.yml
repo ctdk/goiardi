@@ -44,13 +44,3 @@ workflows:
   build-and-deploy:
     jobs:
       - build
-      - package_build:
-        requires:
-          - build
-      - deploy:
-          requires:
-            - package_build
-          filters:
-            branches:
-              only:
-                - releases
