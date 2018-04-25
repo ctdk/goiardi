@@ -21,8 +21,8 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install rpm python-sphinx -y
       - run: go get github.com/ctdk/gox
       - run:
-        name: Run 'go test'
-        command: go test -v -race ./... 2>&1 | tee ${TEST_RESULTS}/goiardi-test.out
+          name: Run 'go test'
+          command: go test -v -race ./... 2>&1 | tee ${TEST_RESULTS}/goiardi-test.out
 
       - run: go build .
 
@@ -30,14 +30,6 @@ jobs:
         key: v1-pkg-cache
         paths:
           - "/go/pkg"
-  package_build:
-    working_directory: /go/src/github/ctdk/goiardi/packaging
-    steps:
-      - run: /bin/bash packaging.sh
-  deploy:
-    working_directory: /go/src/github/ctdk/goiardi/packaging
-    steps:
-      - run: /bin/bash deploy.sh
 
 workflows:
   version: 2
