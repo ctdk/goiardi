@@ -52,4 +52,5 @@ workflows:
             - package
           filters:
             branches:
-              only: releases
+              only:
+                - releases
