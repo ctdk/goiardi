@@ -27,9 +27,9 @@ jobs:
       - run: go build .
 
       - save_cache:
-        key: v1-pkg-cache
-        paths:
-          - "/go/pkg"
+          key: v1-pkg-cache
+          paths:
+            - "/go/pkg"
 
 workflows:
   version: 2
