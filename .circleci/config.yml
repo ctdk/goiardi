@@ -31,32 +31,25 @@ jobs:
         paths:
           - "/go/pkg"
   package:
-    working_directory: /go/src/github/ctdk/goiardi
+    working_directory: /go/src/github/ctdk/goiardi/packaging
     steps:
+      - run: /bin/bash packaging.sh
   deploy:
-    working_directory: /go/src/github/ctdk/goiardi
+    working_directory: /go/src/github/ctdk/goiardi/packaging
     steps:
+      - run: /bin/bash deploy.sh
 
-
-    dependencies:
-      pre:
-        - mkdir -p download
-        - test -e download/$GODIST || curl -o download/$GODIST https://storage.googleapis.com/golang/$GODIST
-        - sudo rm -rf /usr/local/go
-        - sudo tar -C /usr/local -xzf download/$GODIST
-      post:
-        - gem install fpm
-        - sudo apt-get update
-        - sudo apt-get install rpm python-sphinx -y
-        - go get github.com/ctdk/gox
-    test:
-      post:
-        - cd packaging && /bin/bash packaging.sh
-    general:
-      artifacts:
-        - packaging/artifacts
-    deployment:
-      production:
-        branch: releases
-        commands:
-          - cd packaging && /bin/bash deploy.sh
+workflows:
+  version: 2
+  build_package_deploy:
+    jobs:
+      - build
+      - package:
+        requires:
+          - build
+      - deploy:
+          requires:
+            - package
+          filters:
+            branches:
+              only: releases
