@@ -17,8 +17,8 @@ jobs:
           keys:
             - v1-pkg-cache
 
+      - run: sudo apt-get update && sudo apt-get install rpm python-sphinx ruby rubygems -y
       - run: gem install fpm
-      - run: sudo apt-get update && sudo apt-get install rpm python-sphinx -y
       - run: go get github.com/ctdk/gox
       - run:
           name: Run 'go test'
