@@ -123,7 +123,7 @@ func TestSkipLogExtended(t *testing.T) {
 	searchParams["doer"] = doer.Name
 	searching, _ := GetLogInfos(searchParams, 0)
 	if len(searching) != 6 {
-		t.Errorf("Somehow searching for events to check skipping extended log info returned only %d events (should have returned 6).")
+		t.Errorf("Somehow searching for events to check skipping extended log info returned only %d events (should have returned 6).", len(searching))
 	}
 	for z, e := range searching {
 		if e.ExtendedInfo != "" {
