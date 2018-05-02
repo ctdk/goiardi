@@ -30,6 +30,20 @@ jobs:
           key: v1-pkg-cache
           paths:
             - "/go/pkg"
+      - store_artifacts:
+        path: /tmp/test-results
+
+  package_build:
+    docker:
+      - image: circleci/golang:1.10.1
+    working_directory: /go/src/github.com/ctdk/goiardi/packaging
+    steps:
+      - run: sudo apt-get update && sudo apt-get install rpm python-sphinx ruby rubygems ruby-dev -y
+      - run: sudo gem install fpm
+      - run: go get github.com/ctdk/gox
+      - run: /bin/bash packaging.sh
+      - store_artifacts:
+        path: /go/src/github.com/ctdk/goiardi/packaging/artifacts
 
 workflows:
   version: 2
