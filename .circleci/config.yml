@@ -46,11 +46,11 @@ jobs:
       - run:
           name: Build packages
           command: /bin/bash packaging.sh
-          working_directory: /go/src/github.com/ctdk/goiardi/packaging
+          working_directory: ~/project/packaging
       - store_artifacts:
-          path: /go/src/github.com/ctdk/goiardi/packaging/artifacts
+          path: ~/project/packaging/artifacts
       - persist_to_workspace:
-          root: /go/src/github.com/ctdk/goiardi/packaging
+          root: ~/project/packaging
           paths:
             - artifacts
 
