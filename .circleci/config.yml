@@ -31,7 +31,7 @@ jobs:
           paths:
             - "/go/pkg"
       - store_artifacts:
-        path: /tmp/test-results
+          path: /tmp/test-results
 
   package_build:
     docker:
@@ -43,7 +43,7 @@ jobs:
       - run: go get github.com/ctdk/gox
       - run: /bin/bash packaging.sh
       - store_artifacts:
-        path: /go/src/github.com/ctdk/goiardi/packaging/artifacts
+          path: /go/src/github.com/ctdk/goiardi/packaging/artifacts
 
 workflows:
   version: 2
