@@ -34,7 +34,7 @@ jobs:
   package_build:
     docker:
       - image: circleci/golang:1.10
-    working_directory: /go/src/github.com/ctdk/goiardi/packaging
+    
     steps:
       - checkout
       - restore_cache:
@@ -44,8 +44,13 @@ jobs:
       - run: sudo gem install fpm
       - run: go get github.com/ctdk/gox
       - run: /bin/bash packaging.sh
+          working_directory: /go/src/github.com/ctdk/goiardi/packaging
       - store_artifacts:
           path: /go/src/github.com/ctdk/goiardi/packaging/artifacts
+      - persist_to_workspace:
+          root: /go/src/github.com/ctdk/goiardi/packaging
+          paths:
+            - artifacts
 
 workflows:
   version: 2
