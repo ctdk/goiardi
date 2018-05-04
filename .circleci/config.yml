@@ -50,3 +50,4 @@ workflows:
   build-and-deploy:
     jobs:
       - build
+      - package_build
