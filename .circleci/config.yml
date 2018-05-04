@@ -47,10 +47,6 @@ jobs:
           working_directory: /go/src/github.com/ctdk/goiardi/packaging
       - store_artifacts:
           path: /go/src/github.com/ctdk/goiardi/packaging/artifacts
-      - persist_to_workspace:
-          root: /go/src/github.com/ctdk/goiardi/packaging
-          paths:
-            - artifacts
 
 workflows:
   version: 2
