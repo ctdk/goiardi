@@ -4,6 +4,7 @@
   better. NB: before 0.11.8 ends up getting released, there may be some
   further changes to the depsolver, especially where 'most constrained'
   cookbooks are concerned.
+* Update the circleci config to use the version 2.0 syntax.
 
 0.11.7
 ------
