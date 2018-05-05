@@ -31,7 +31,7 @@ jobs:
       - store_artifacts:
           path: /tmp/test-results
 
-  package_build:
+  package:
     docker:
       - image: circleci/golang:1.10
     
@@ -54,11 +54,34 @@ jobs:
           paths:
             - artifacts
 
+  deploy:
+    docker:
+      - image: circleci/golang:1.10
+    
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-pkg-cache
+      - run: sudo apt-get update && sudo apt-get install rpm python-sphinx ruby rubygems ruby-dev -y
+      - run: sudo gem install package_cloud -v "0.2.43"
+      - run:
+          name: Deploy packages
+          command: /bin/bash deploy.sh
+          working_directory: ~/project/packaging
+
 workflows:
   version: 2
   build-and-deploy:
     jobs:
       - build
-      - package_build:
+      - package:
           requires:
             - build
+      - deploy:
+          requires:
+            - package
+          filters:
+            branches:
+              only:
+                - releases
