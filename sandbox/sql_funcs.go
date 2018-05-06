@@ -80,10 +80,10 @@ func (s *Sandbox) deleteSQL() error {
 	return nil
 }
 
-func purgeSQL(olderThan time.Time) error {
+func purgeSQL(olderThan time.Time) (int, error) {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	var sqlStmt string
 	if config.Config.UseMySQL {
@@ -91,16 +91,17 @@ func purgeSQL(olderThan time.Time) error {
 	} else if config.Config.UsePostgreSQL {
 		sqlStmt = "DELETE FROM goiardi.sandboxes WHERE creation_time < $1"
 	}
-	_, err = tx.Exec(sqlStmt, olderThan)
+	res, err := tx.Exec(sqlStmt, olderThan)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
 			err = fmt.Errorf("deleting sandboxes older than %s had an error '%s', and then rolling back the transaction gave another error '%s'", olderThan.String(), err.Error(), terr.Error())
 		}
-		return err
+		return 0, err
 	}
 	tx.Commit()
-	return nil
+	rows, _ := res.RowsAffected()
+	return int(rows), nil
 }
 
 func getListSQL() []string {

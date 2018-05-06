@@ -288,7 +288,7 @@ func AllSandboxes() []*Sandbox {
 
 // Purge cleans out old sandboxes from the database older than the given
 // duration.
-func Purge(olderThan time.Duration) error {
+func Purge(olderThan time.Duration) (int, error) {
 	t := time.Now().Add(-olderThan)
 
 	if config.UsingDB() {
@@ -297,12 +297,12 @@ func Purge(olderThan time.Duration) error {
 
 	sandboxes := AllSandboxes()
 	if len(sandboxes) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	sort.Sort(ByDate(sandboxes))
 	if sandboxes[0].CreationTime.After(t) {
-		return nil
+		return 0, nil
 	}
 	i := sort.Search(len(sandboxes), func(i int) bool { return t.After(sandboxes[i].CreationTime) })
 
@@ -316,5 +316,5 @@ func Purge(olderThan time.Duration) error {
 	for _, s := range sandboxes[:i] {
 		ds.Delete("sandbox", s.ID)
 	}
-	return nil
+	return i, nil
 }
