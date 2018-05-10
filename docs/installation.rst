@@ -233,7 +233,7 @@ Currently available command line and config file options::
                                 [$GOIARDI_PURGE_STATUS_AFTER]
         --purge-sandboxes-after= Time to purge old reports after, given in golang
                                 duration format (e.g. "720h"). Default is to
-                                purge them after two weeks. Set this to '0s' to
+                                purge them after one week. Set this to '0s' to
                                 disable sandbox purging.
                                 [$GOIARDI_PURGE_SANDBOXES_AFTER]
 
