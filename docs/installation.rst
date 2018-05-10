@@ -231,6 +231,11 @@ Currently available command line and config file options::
                                 golang duration format (e.g. "720h"). Default is
                                 not to purge them at all.
                                 [$GOIARDI_PURGE_STATUS_AFTER]
+        --purge-sandboxes-after= Time to purge old reports after, given in golang
+                                duration format (e.g. "720h"). Default is to
+                                purge them after two weeks. Set this to '0s' to
+                                disable sandbox purging.
+                                [$GOIARDI_PURGE_SANDBOXES_AFTER]
 
   MySQL connection options (requires --use-mysql):
         --mysql-username=       MySQL username [$GOIARDI_MYSQL_USERNAME]
