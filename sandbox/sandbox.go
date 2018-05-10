@@ -301,10 +301,12 @@ func Purge(olderThan time.Duration) (int, error) {
 	}
 
 	sort.Sort(ByDate(sandboxes))
+
 	if sandboxes[0].CreationTime.After(t) {
 		return 0, nil
 	}
-	i := sort.Search(len(sandboxes), func(i int) bool { return t.After(sandboxes[i].CreationTime) })
+	
+	j := sort.Search(len(sandboxes), func(i int) bool { return !t.After(sandboxes[i].CreationTime) })
 
 	// If i == 0, it doesn't do anything. If i == len(sandboxes), it goes
 	// and deletes them all. Either way, no particularly strong need to
@@ -313,8 +315,8 @@ func Purge(olderThan time.Duration) (int, error) {
 	// and delete the sandboxes directly rather than calling s.Delete()
 	// repeatedly.
 	ds := datastore.New()
-	for _, s := range sandboxes[:i] {
+	for _, s := range sandboxes[:j] {
 		ds.Delete("sandbox", s.ID)
 	}
-	return i, nil
+	return j, nil
 }

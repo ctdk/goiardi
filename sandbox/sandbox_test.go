@@ -70,7 +70,7 @@ func randomHashes(num int) map[string]interface{} {
 	return h
 }
 
-func TestSandboxPurge(t *testing.T) {
+func TestSandboxPurgeWith3(t *testing.T) {
 	ss := new(Sandbox)
 	gob.Register(ss)
 
@@ -98,7 +98,7 @@ func TestSandboxPurge(t *testing.T) {
 	sb2.Save()
 	sb3.Save()
 
-	olderThan := -10 * 24 * time.Hour
+	olderThan := 5 * 24 * time.Hour
 	d, err := Purge(olderThan)
 	if err != nil {
 		t.Error(err)
@@ -111,4 +111,31 @@ func TestSandboxPurge(t *testing.T) {
 	if len(all) != 2 {
 		t.Errorf("After purging there should have been 2 sandboxes, but there are %d.", len(all))
 	}
+	sb2.Delete()
+	sb3.Delete()
+}
+
+func TestSandboxPurgeWith30(t *testing.T) {
+	tm := time.Now()
+
+	slen := 30
+	for si := 0; si < slen; si++ {
+		h := randomHashes(numChecksums)
+		sb, _ := New(h)
+		if (si % 5) == 0 {
+			sb.CreationTime = tm.Add(-7 * 24 * time.Hour)
+		}
+		sb.Save()
+	}
+	olderThan := 5 * 24 * time.Hour
+	d, _ := Purge(olderThan)
+
+	if d != 6 {
+		t.Errorf("should have purged 6 sandboxes, actually purged %d", d)
+	}
+	all := AllSandboxes()
+	if len(all) != 24 {
+		t.Errorf("After purging there should have been 24 sandboxes, but there were %d instead", len(all))
+	}
+
 }
