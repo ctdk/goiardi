@@ -5,6 +5,7 @@
   further changes to the depsolver, especially where 'most constrained'
   cookbooks are concerned.
 * Update the circleci config to use the version 2.0 syntax.
+* Add purging old sandboxes that have been hanging around for too long.
 
 0.11.7
 ------
