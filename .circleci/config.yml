@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.10
+      - image: ctdk/circleci:latest
 
     working_directory: /go/src/github.com/ctdk/goiardi
 
@@ -33,7 +33,7 @@ jobs:
 
   package:
     docker:
-      - image: circleci/golang:1.10
+      - image: ctdk/circleci:latest
     
     steps:
       - checkout
@@ -56,7 +56,7 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/golang:1.10
+      - image: ctdk/circleci:latest
     
     steps:
       - checkout
