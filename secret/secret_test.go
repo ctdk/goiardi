@@ -119,7 +119,7 @@ func TestMain(m *testing.M) {
 	numTries := 3
 	for si := 0; si < numTries; si++ {
 		time.Sleep(3)
-		mount := exec.Command(vaultPath, "mount", "-path=keys", "generic")
+		mount := exec.Command(vaultPath, "secrets", "enable", "-path=keys", "generic")
 		mount.Env = append(mount.Env, fmt.Sprintf("VAULT_ADDR=http://%s", vaultAddr))
 		mount.Env = append(mount.Env, fmt.Sprintf("VAULT_TOKEN=%s", token))
 		err = mount.Run()
