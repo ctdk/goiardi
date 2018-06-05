@@ -17,7 +17,6 @@ jobs:
           keys:
             - v1-pkg-cache
 
-      - run: sudo apt-get update && sudo apt-get install rpm python-sphinx ruby rubygems ruby-dev -y
       - run:
           name: Run 'go test'
           command: go test -v -race ./... 2>&1 | tee ${TEST_RESULTS}/goiardi-test.out
@@ -40,9 +39,6 @@ jobs:
       - restore_cache:
           keys:
             - v1-pkg-cache
-      - run: sudo apt-get update && sudo apt-get install rpm python-sphinx ruby rubygems ruby-dev -y
-      - run: sudo gem install fpm
-      - run: go get github.com/ctdk/gox
       - run:
           name: Build packages
           command: /bin/bash packaging.sh
@@ -63,8 +59,6 @@ jobs:
       - restore_cache:
           keys:
             - v1-pkg-cache
-      - run: sudo apt-get update && sudo apt-get install rpm python-sphinx ruby rubygems ruby-dev -y
-      - run: sudo gem install package_cloud -v "0.2.43"
       - run:
           name: Deploy packages
           command: /bin/bash deploy.sh
