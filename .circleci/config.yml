@@ -21,7 +21,7 @@ jobs:
           name: Run 'go test'
           command: go test -v -race ./... 2>&1 | tee ${TEST_RESULTS}/goiardi-test.out
 
-      - run: go build .
+      - run: go build -v .
 
       - save_cache:
           key: v1-pkg-cache
