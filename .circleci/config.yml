@@ -31,6 +31,7 @@ jobs:
           path: /tmp/test-results
 
   package:
+    working_directory: /go/src/github.com/ctdk/goiardi
     docker:
       - image: ctdk/circleci:latest
     
@@ -51,6 +52,7 @@ jobs:
             - artifacts
 
   deploy:
+    working_directory: /go/src/github.com/ctdk/goiardi
     docker:
       - image: ctdk/circleci:latest
     
