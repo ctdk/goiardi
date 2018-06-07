@@ -31,7 +31,6 @@ jobs:
           path: /tmp/test-results
 
   package:
-    working_directory: /go/src/github.com/ctdk/goiardi
     docker:
       - image: ctdk/circleci:latest
     
@@ -40,6 +39,9 @@ jobs:
       - restore_cache:
           keys:
             - v1-pkg-cache
+      - run:
+          name: Link project dir
+          command: mkdir -p /go/src/github.com/ctdk && ln -s ~/project /go/src/github.com/ctdk/goiardi
       - run:
           name: Build packages
           command: /bin/bash packaging.sh
@@ -52,7 +54,6 @@ jobs:
             - artifacts
 
   deploy:
-    working_directory: /go/src/github.com/ctdk/goiardi
     docker:
       - image: ctdk/circleci:latest
     
