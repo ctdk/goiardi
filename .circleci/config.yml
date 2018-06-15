@@ -63,6 +63,10 @@ jobs:
       - restore_cache:
           keys:
             - v1-pkg-cache
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          command: rmdir /go/src/github.com/ctdk/goiardi/packaging/artifacts || true && ln -sd /tmp/workspace/artifacts /go/src/github.com/ctdk/goiardi/packaging/artifacts
       - run:
           name: Deploy packages
           command: /bin/bash deploy.sh
