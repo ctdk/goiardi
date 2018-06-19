@@ -61,7 +61,7 @@ func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 	if tMeta.version == "" {
 		verr.ViolationType = CookbookNoVersion
 		// but what constraint isn't met?
-		cb, _ := Get(tail.Name)
+		cb, _ := Get(tMeta.organization, tail.Name)
 		if cb != nil {
 			badver := cb.badConstraints(v)
 			verr.Constraint = strings.Join(badver, ",")

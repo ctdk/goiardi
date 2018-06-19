@@ -19,6 +19,7 @@ package cookbook
 import (
 	"fmt"
 	"github.com/ctdk/goiardi/depgraph"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
 	"sort"
@@ -39,10 +40,12 @@ type depMeta struct {
 	constraint versionConstraint
 	notFound   bool
 	noVersion  bool
+	organization *organization.Organization
 }
 
 type DependsError struct {
 	depErr *depgraph.ConstraintError
+	organization *organization.Organization
 }
 
 func (d *DependsError) Error() string {
