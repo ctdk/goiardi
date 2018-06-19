@@ -123,13 +123,23 @@ func TestMain(m *testing.M) {
 	os.Setenv("VAULT_ADDR", fmt.Sprintf("http://%s", vaultAddr))
 	os.Setenv("VAULT_TOKEN", token)
 
-	time.Sleep(3)
-	mount := exec.Command(vaultPath, "mount", "-path=keys", "generic")
-	mount.Env = append(mount.Env, fmt.Sprintf("VAULT_ADDR=http://%s", vaultAddr))
-	mount.Env = append(mount.Env, fmt.Sprintf("VAULT_TOKEN=%s", token))
-	err = mount.Run()
+	// try to connect to vault 3 times before giving up.
+	numTries := 3
+	for si := 0; si < numTries; si++ {
+		time.Sleep(3)
+		mount := exec.Command(vaultPath, "secrets", "enable", "-path=keys", "generic")
+		mount.Env = append(mount.Env, fmt.Sprintf("VAULT_ADDR=http://%s", vaultAddr))
+		mount.Env = append(mount.Env, fmt.Sprintf("VAULT_TOKEN=%s", token))
+		err = mount.Run()
+		if err == nil {
+			break
+		} else {
+			log.Printf("try #%d to mount vault secrets failed, will try up to %d times.", si + 1, numTries)
+		}
+	}
+
 	if err != nil {
-		log.Fatalf("Err mounting path in vault: '%s'", err.Error())
+		log.Fatalf("Tried to mount vault secrets 3 times, but failed: '%s'", err.Error())
 	}
 
 	conf := vault.DefaultConfig()

@@ -4,6 +4,14 @@
   and whatnot.
 * Refactor of HTTP handling to use gorilla-mux.
 
+0.11.8
+------
+* Made some small tweaks and updates to the depsolver to make that a little
+  better. NB: Down the road, there may be some further changes to the depsolver,
+  especially where 'most constrained' cookbooks are concerned.
+* Update the circleci config to use the version 2.0 syntax.
+* Add purging old sandboxes that have been hanging around for too long.
+
 0.11.7
 ------
 * Allow access to /debug/pprof with a whitelist of IP addresses

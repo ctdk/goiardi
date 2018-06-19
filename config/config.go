@@ -108,8 +108,10 @@ type Conf struct {
 	PprofWhitelist       []string `toml:"pprof-whitelist"`
 	PurgeNodeStatusAfter string   `toml:"purge-status-after"`
 	PurgeReportsAfter    string   `toml:"purge-reports-after"`
+	PurgeSandboxesAfter  string   `toml:"purge-sandboxes-after"`
 	PurgeNodeStatusDur   time.Duration
 	PurgeReportsDur      time.Duration
+	PurgeSandboxesDur    time.Duration
 	SearchQueryDebug     bool
 }
 
@@ -220,6 +222,7 @@ type Options struct {
 	PprofWhitelist       []string     `short:"y" long:"pprof-whitelist" description:"Address to allow to access /debug/pprof (in addition to localhost). Specify multiple times to allow more addresses." env:"GOIARDI_PPROF_WHITELIST" env-delim:","`
 	PurgeReportsAfter    string       `long:"purge-reports-after" description:"Time to purge old reports after, given in golang duration format (e.g. \"720h\"). Default is not to purge them at all." env:"GOIARDI_PURGE_REPORTS_AFTER"`
 	PurgeNodeStatusAfter string       `long:"purge-status-after" description:"Time to purge old node statuses after, given in golang duration format (e.g. \"720h\"). Default is not to purge them at all." env:"GOIARDI_PURGE_STATUS_AFTER"`
+	PurgeSandboxesAfter  string 	  `long:"purge-sandboxes-after" description:"Time to purge old reports after, given in golang duration format (e.g. \"720h\"). Default is to purge them after one week. Set this to '0s' to disable sandbox purging." env:"GOIARDI_PURGE_SANDBOXES_AFTER"`
 	// hidden argument to print a formatted man page to stdout and exit
 	PrintManPage bool `long:"print-man-page" hidden:"true"`
 	// hidden argument to enable logging full postgres search queries
@@ -880,6 +883,20 @@ func ParseConfigOptions() error {
 			os.Exit(1)
 		}
 		Config.PurgeReportsDur = d
+	}
+
+	if opts.PurgeSandboxesAfter != "" {
+		Config.PurgeSandboxesAfter = opts.PurgeSandboxesAfter
+	}
+	if Config.PurgeSandboxesAfter == "" {
+		Config.PurgeSandboxesDur = time.Hour * 24 * 7
+	} else {
+		d, derr := time.ParseDuration(Config.PurgeSandboxesAfter)
+		if derr != nil {
+			logger.Fatalf("Error parsing purge-sandboxes-after: %s", derr.Error())
+			os.Exit(1)
+		}
+		Config.PurgeSandboxesDur = d
 	}
 
 	return nil
