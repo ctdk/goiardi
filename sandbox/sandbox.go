@@ -326,12 +326,12 @@ func Purge(olderThan time.Duration) (int, error) {
 		if sandboxes[0].CreationTime.After(t) {
 			continue
 		}
-		
+
 		j := sort.Search(len(sandboxes), func(i int) bool { return !t.After(sandboxes[i].CreationTime) })
 
 		// If i == 0, it doesn't do anything. If i == len(sandboxes), it
 		// goes and deletes them all. Either way, no particularly strong
-		// need to check either condition first. To reduce a little 
+		// need to check either condition first. To reduce a little
 		// overhead, though, just get the datastore once, and delete the
 		// sandboxes directly rather than calling s.Delete() repeatedly.
 		ret += j

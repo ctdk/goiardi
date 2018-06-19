@@ -222,7 +222,7 @@ type Options struct {
 	PprofWhitelist       []string     `short:"y" long:"pprof-whitelist" description:"Address to allow to access /debug/pprof (in addition to localhost). Specify multiple times to allow more addresses." env:"GOIARDI_PPROF_WHITELIST" env-delim:","`
 	PurgeReportsAfter    string       `long:"purge-reports-after" description:"Time to purge old reports after, given in golang duration format (e.g. \"720h\"). Default is not to purge them at all." env:"GOIARDI_PURGE_REPORTS_AFTER"`
 	PurgeNodeStatusAfter string       `long:"purge-status-after" description:"Time to purge old node statuses after, given in golang duration format (e.g. \"720h\"). Default is not to purge them at all." env:"GOIARDI_PURGE_STATUS_AFTER"`
-	PurgeSandboxesAfter  string 	  `long:"purge-sandboxes-after" description:"Time to purge old reports after, given in golang duration format (e.g. \"720h\"). Default is to purge them after one week. Set this to '0s' to disable sandbox purging." env:"GOIARDI_PURGE_SANDBOXES_AFTER"`
+	PurgeSandboxesAfter  string       `long:"purge-sandboxes-after" description:"Time to purge old reports after, given in golang duration format (e.g. \"720h\"). Default is to purge them after one week. Set this to '0s' to disable sandbox purging." env:"GOIARDI_PURGE_SANDBOXES_AFTER"`
 	// hidden argument to print a formatted man page to stdout and exit
 	PrintManPage bool `long:"print-man-page" hidden:"true"`
 	// hidden argument to enable logging full postgres search queries

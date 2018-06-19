@@ -36,15 +36,15 @@ const (
 var cookbookVerErr = map[int]string{CookbookNotFound: "not found", CookbookNoVersion: "no version"}
 
 type depMeta struct {
-	version    string
-	constraint versionConstraint
-	notFound   bool
-	noVersion  bool
+	version      string
+	constraint   versionConstraint
+	notFound     bool
+	noVersion    bool
 	organization *organization.Organization
 }
 
 type DependsError struct {
-	depErr *depgraph.ConstraintError
+	depErr       *depgraph.ConstraintError
 	organization *organization.Organization
 }
 

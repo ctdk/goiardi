@@ -197,7 +197,6 @@ func nodeListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
-	
 
 	switch r.Method {
 	case "GET":

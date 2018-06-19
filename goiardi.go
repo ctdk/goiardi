@@ -500,7 +500,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* Only perform the authorization check if that's configured. Bomb with
 	 * an error if the check of the headers, timestamps, etc. fails. */
 	/* No clue why /principals doesn't require authorization. Hrmph. */
-	
+
 	if config.Config.UseAuth && !fstorere.MatchString(r.URL.Path) && !strings.HasPrefix(r.URL.Path, "/debug") && !(princre.MatchString(r.URL.Path) && (r.Method == http.MethodGet || r.Method == http.MethodHead)) {
 		herr := authentication.CheckHeader(userID, r)
 		if herr != nil {

@@ -206,7 +206,7 @@ func (q *BasicQuery) SearchIndex(orgName string, idxName string) (map[string]ind
 	}
 	searchTerm := makeSearchTerm(q.field, q.term.term)
 	res, err := i.Search(orgName, idxName, searchTerm, notop)
-	
+
 	return res, err
 }
 
