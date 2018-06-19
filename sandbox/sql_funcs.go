@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"log"
+	"time"
 )
 
 func (s *Sandbox) fillSandboxFromSQL(row datastore.ResRow) error {
@@ -77,6 +78,30 @@ func (s *Sandbox) deleteSQL() error {
 	}
 	tx.Commit()
 	return nil
+}
+
+func purgeSQL(olderThan time.Time) (int, error) {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return 0, err
+	}
+	var sqlStmt string
+	if config.Config.UseMySQL {
+		sqlStmt = "DELETE FROM sandboxes WHERE creation_time < ?"
+	} else if config.Config.UsePostgreSQL {
+		sqlStmt = "DELETE FROM goiardi.sandboxes WHERE creation_time < $1"
+	}
+	res, err := tx.Exec(sqlStmt, olderThan)
+	if err != nil {
+		terr := tx.Rollback()
+		if terr != nil {
+			err = fmt.Errorf("deleting sandboxes older than %s had an error '%s', and then rolling back the transaction gave another error '%s'", olderThan.String(), err.Error(), terr.Error())
+		}
+		return 0, err
+	}
+	tx.Commit()
+	rows, _ := res.RowsAffected()
+	return int(rows), nil
 }
 
 func getListSQL() []string {

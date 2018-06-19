@@ -219,6 +219,10 @@ func main() {
 		startReportPurge()
 	}
 
+	if config.Config.PurgeSandboxesDur != 0 {
+		startSandboxPurge()
+	}
+
 	/* Create default clients and users. Currently chef-validator,
 	 * chef-webui, and admin. */
 	createDefaultActors()
@@ -972,6 +976,21 @@ func startReportPurge() {
 				logger.Errorf("Purging reports had an error: %s", err.Error())
 			} else {
 				logger.Debugf("Purged %d reports", del)
+			}
+		}
+	}()
+}
+
+func startSandboxPurge() {
+	go func() {
+		// check for sandboxes to purge every hour
+		ticker := time.NewTicker(time.Hour)
+		for _ = range ticker.C {
+			del, err := sandbox.Purge(config.Config.PurgeSandboxesDur)
+			if err != nil {
+				logger.Errorf("Purging sandboxes (somehow) had an error: %s", err.Error())
+			} else {
+				logger.Debugf("Purged %d sandboxes", del)
 			}
 		}
 	}()

@@ -1,0 +1,89 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: ctdk/circleci:latest
+
+    working_directory: /go/src/github.com/ctdk/goiardi
+
+    environment:
+      TEST_RESULTS: /tmp/test-results
+
+    steps:
+      - checkout
+      - run: mkdir -p $TEST_RESULTS
+
+      - restore_cache:
+          keys:
+            - v1-pkg-cache
+
+      - run:
+          name: Run 'go test'
+          command: go test -v -race ./... 2>&1 | tee ${TEST_RESULTS}/goiardi-test.out
+
+      - run: go build -v .
+
+      - save_cache:
+          key: v1-pkg-cache
+          paths:
+            - "/go/pkg"
+      - store_artifacts:
+          path: /tmp/test-results
+
+  package:
+    docker:
+      - image: ctdk/circleci:latest
+
+    working_directory: /go/src/github.com/ctdk/goiardi
+    
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-pkg-cache
+      - run:
+          name: Build packages
+          command: /bin/bash packaging.sh
+          working_directory: /go/src/github.com/ctdk/goiardi/packaging
+      - store_artifacts:
+          path: /go/src/github.com/ctdk/goiardi/packaging/artifacts
+      - persist_to_workspace:
+          root: /go/src/github.com/ctdk/goiardi/packaging
+          paths:
+            - artifacts
+
+  deploy:
+    docker:
+      - image: ctdk/circleci:latest
+
+    working_directory: /go/src/github.com/ctdk/goiardi
+    
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-pkg-cache
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          command: rmdir /go/src/github.com/ctdk/goiardi/packaging/artifacts || true && ln -sd /tmp/workspace/artifacts /go/src/github.com/ctdk/goiardi/packaging/artifacts
+      - run:
+          name: Deploy packages
+          command: /bin/bash deploy.sh
+          working_directory: /go/src/github.com/ctdk/goiardi/packaging
+
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build
+      - package:
+          requires:
+            - build
+      - deploy:
+          requires:
+            - package
+          filters:
+            branches:
+              only:
+                - releases

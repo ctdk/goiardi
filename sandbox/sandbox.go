@@ -27,6 +27,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"sort"
 	"time"
 
 	"github.com/ctdk/goiardi/config"
@@ -48,6 +49,13 @@ type Sandbox struct {
 	Checksums    []string
 	org          *organization.Organization
 }
+
+// ByDate is a type for sorting Sandboxes... by date.
+type ByDate []*Sandbox
+
+func (a ByDate) Len() int           { return len(a) }
+func (a ByDate) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByDate) Less(i, j int) bool { return a[j].CreationTime.After(a[i].CreationTime) }
 
 /* We actually generate the sandboxID ourselves, so we don't pass that in. */
 
@@ -294,4 +302,43 @@ func AllSandboxes(org *organization.Organization) []*Sandbox {
 		}
 	}
 	return sandboxes
+}
+
+// Purge cleans out old sandboxes from the database older than the given
+// duration.
+func Purge(olderThan time.Duration) (int, error) {
+	t := time.Now().Add(-olderThan)
+
+	if config.UsingDB() {
+		return purgeSQL(t)
+	}
+
+	orgs := organization.AllOrganizations()
+	var ret int
+	for _, org := range orgs {
+		sandboxes := AllSandboxes(org)
+		if len(sandboxes) == 0 {
+			continue
+		}
+
+		sort.Sort(ByDate(sandboxes))
+
+		if sandboxes[0].CreationTime.After(t) {
+			continue
+		}
+		
+		j := sort.Search(len(sandboxes), func(i int) bool { return !t.After(sandboxes[i].CreationTime) })
+
+		// If i == 0, it doesn't do anything. If i == len(sandboxes), it
+		// goes and deletes them all. Either way, no particularly strong
+		// need to check either condition first. To reduce a little 
+		// overhead, though, just get the datastore once, and delete the
+		// sandboxes directly rather than calling s.Delete() repeatedly.
+		ret += j
+		ds := datastore.New()
+		for _, s := range sandboxes[:j] {
+			ds.Delete("sandbox", s.ID)
+		}
+	}
+	return ret, nil
 }
