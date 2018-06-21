@@ -43,7 +43,7 @@ m = g(r.sub, p.sub, r.kind, r.subkind) && r.kind == p.kind && r.subkind == p.sub
 // to put convert this to a form suitable to put in the DB. We'll see what ends
 // up happening.
 
-const policySkelDefinition = strings.TrimSpace(`
+const defaultPolicySkel = strings.TrimSpace(`
 p, admins, containers, containers, default, create, allow
 p, admins, containers, containers, default, read, allow
 p, users, containers, containers, default, read, allow

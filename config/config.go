@@ -109,6 +109,7 @@ type Conf struct {
 	PurgeNodeStatusAfter string   `toml:"purge-status-after"`
 	PurgeReportsAfter    string   `toml:"purge-reports-after"`
 	PurgeSandboxesAfter  string   `toml:"purge-sandboxes-after"`
+	PolicyRoot string `toml:"policy-root"`
 	PurgeNodeStatusDur   time.Duration
 	PurgeReportsDur      time.Duration
 	PurgeSandboxesDur    time.Duration
@@ -223,6 +224,7 @@ type Options struct {
 	PurgeReportsAfter    string       `long:"purge-reports-after" description:"Time to purge old reports after, given in golang duration format (e.g. \"720h\"). Default is not to purge them at all." env:"GOIARDI_PURGE_REPORTS_AFTER"`
 	PurgeNodeStatusAfter string       `long:"purge-status-after" description:"Time to purge old node statuses after, given in golang duration format (e.g. \"720h\"). Default is not to purge them at all." env:"GOIARDI_PURGE_STATUS_AFTER"`
 	PurgeSandboxesAfter  string       `long:"purge-sandboxes-after" description:"Time to purge old reports after, given in golang duration format (e.g. \"720h\"). Default is to purge them after one week. Set this to '0s' to disable sandbox purging." env:"GOIARDI_PURGE_SANDBOXES_AFTER"`
+	PolicyRoot string `long:"policy-root"` description:"Root directory to store policy definitions in."`
 	// hidden argument to print a formatted man page to stdout and exit
 	PrintManPage bool `long:"print-man-page" hidden:"true"`
 	// hidden argument to enable logging full postgres search queries
@@ -897,6 +899,10 @@ func ParseConfigOptions() error {
 			os.Exit(1)
 		}
 		Config.PurgeSandboxesDur = d
+	}
+
+	if opts.PolicyRoot != "" {
+		Config.PolicyRoot = opts.PolicyRoot
 	}
 
 	return nil
