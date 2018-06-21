@@ -1,0 +1,15 @@
+p, admins, containers, default, default, create, allow
+p, admins, containers, default, read, allow
+p, users, containers, default, read, allow
+p, admins, containers, default, update, allow
+p, admins, containers, default, delete, allow
+p, admins, containers, default, grant, allow
+p, users, containers, default, clients, delete, allow
+p, users, containers, default, nodes, create, allow
+
+p, admins, groups, default, default, create, allow
+p, admins, groups, default, default, read, allow
+p, admins, groups, default, default, update, allow
+p, admins, groups, default, default, delete, allow
+p, admins, groups, default, default, grant, allow
+p, users, groups, default, clients, read, allow
