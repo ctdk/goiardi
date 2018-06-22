@@ -17,12 +17,49 @@
 package acl
 
 import (
+	"encoding/gob"
+	"github.com/casbin/casbin"
+	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/user"
+	"io/ioutil"
+	"log"
 	"testing"
 )
 
+var pivotal *user.User
+
 func init() {
+	gob.Register(new(organization.Organization))
+	gob.Register(new(user.User))
+	gob.Register(new(association.Association))
+	gob.Register(new(association.AssociationReq))
+	gob.Register(new(group.Group))
 	indexer.Initialize(config.Config)
 	config.Config.UseAuth = true
+	var err error
+	confDir, err := ioutil.TempDir("", "acl-test")
+	if err != nil {
+		panic(err)
+	}
+	config.Config.PolicyRoot = confDir
+}
+
+func TestInitACL(t *testing.T) {
+	u, _ := user.New("pivotal")
+	u.Admin = true
+	u.Save()
+	pivotal = u
+	org, _ := organization.New("florp", "mlorph normph")
+	group.MakeDefaultGroups(org)
+
+	m := casbin.NewModel(modelDefinition)
+	e, err := initializeACL(org, m)
+	if err != nil {
+		t.Error(err)
+	}
+	z := e.HasPermissionForUser(
 }
