@@ -18,6 +18,7 @@ package acl
 
 import (
 	"encoding/gob"
+	"fmt"
 	"github.com/casbin/casbin"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
@@ -26,7 +27,6 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"io/ioutil"
-	"log"
 	"testing"
 )
 
@@ -61,5 +61,14 @@ func TestInitACL(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	z := e.HasPermissionForUser(
+
+	z := e.HasPermissionForUser("test1", "groups", "containers", "default", "create", "allow")
+	fmt.Printf("z is? %v\n", z)
+	
+	q := e.Enforce("pivotal", "groups", "containers", "default", "create", "allow")
+	fmt.Printf("q is? %v\n", q)
+
+	h := e.Enforce("test1", "clients", "containers", "default", "read", "allow")
+	fmt.Printf("h is? %v\n", h)
+	
 }

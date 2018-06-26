@@ -22,29 +22,28 @@ import (
 
 // Define the casbin RBAC model and the skeletal default policy.
 
-const modelDefinition = `
-[request_definition]
+const modelDefinition = `[request_definition]
 r = sub, obj, kind, subkind, act
 
 [policy_definition]
 p = sub, obj, kind, subkind, act, eft
 
 [role_definition]
-g = _, _, _, _
+g = _, _
+g2 = _, _
 
 [policy_effect]
 e = some(where (p.eft == allow)) && !some(where (p.eft == deny))
 
 [matchers]
-m = g(r.sub, p.sub, r.kind, r.subkind) && r.kind == p.kind && r.subkind == p.subkind && r.obj == p.obj && r.act == p.act || r.sub == "pivotal"
+m = r.sub == "pivotal" && p.eft != "deny" || g(r.sub, p.sub, r.kind, r.subkind) && r.kind == p.kind && r.subkind == p.subkind && r.obj == p.obj && r.act == p.act
 `
 
 // NOTE: MySQL/Postgres implementations of this may require some mild heroics
 // to put convert this to a form suitable to put in the DB. We'll see what ends
 // up happening.
 
-const defaultPolicySkel = `
-p, admins, containers, containers, default, create, allow
+const defaultPolicySkel = `p, admins, containers, containers, default, create, allow
 p, admins, containers, containers, default, read, allow
 p, users, containers, containers, default, read, allow
 p, admins, containers, containers, default, update, allow
@@ -181,4 +180,7 @@ p, admins, default, groups, default, update, allow
 p, admins, default, groups, default, delete, allow
 p, admins, default, groups, default, grant, allow
 p, users, default, groups, default, read, allow
+
+g, test1, admins
+g, test_user, users
 `

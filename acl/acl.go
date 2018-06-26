@@ -26,7 +26,6 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"os"
 	"path"
-	"strings"
 )
 
 var DefaultACLs = [5]string{
@@ -48,7 +47,7 @@ const policyFileFmt = "%s-policy.csv"
 var DefaultUser = "pivotal" // should this be configurable?
 
 func loadACL(org *organization.Organization) (*casbin.Enforcer, error) {
-	m := casbin.NewModel(strings.TrimSpace(modelDefinition))
+	m := casbin.NewModel(modelDefinition)
 	if !policyExists(org, config.Config.PolicyRoot) {
 		return initializeACL(org, m)
 	}
@@ -69,7 +68,7 @@ func initializeACL(org *organization.Organization, m model.Model) (*casbin.Enfor
 	if err != nil {
 		return nil, err
 	}
-	e := casbin.NewEnforcer(m, adp)
+	e := casbin.NewEnforcer(m, adp, true)
 	
 	return e, nil
 }
@@ -120,7 +119,7 @@ func initializePolicy(org *organization.Organization, policyRoot string) error {
 		return err
 	}
 	defer p.Close()
-	if _, err = p.WriteString(strings.TrimSpace(defaultPolicySkel)); err != nil {
+	if _, err = p.WriteString(defaultPolicySkel); err != nil {
 		return  err
 	}
 	return nil
