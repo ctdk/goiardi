@@ -30,13 +30,12 @@ p = sub, obj, kind, subkind, act, eft
 
 [role_definition]
 g = _, _
-g2 = _, _
 
 [policy_effect]
 e = some(where (p.eft == allow)) && !some(where (p.eft == deny))
 
 [matchers]
-m = r.sub == "pivotal" && p.eft != "deny" || g(r.sub, p.sub, r.kind, r.subkind) && r.kind == p.kind && r.subkind == p.subkind && r.obj == p.obj && r.act == p.act
+m = r.sub == "pivotal" && p.eft != "deny" || g(r.sub, p.sub) && r.kind == p.kind && r.subkind == p.subkind && r.obj == p.obj && r.act == p.act
 `
 
 // NOTE: MySQL/Postgres implementations of this may require some mild heroics

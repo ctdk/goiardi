@@ -70,5 +70,11 @@ func TestInitACL(t *testing.T) {
 
 	h := e.Enforce("test1", "clients", "containers", "default", "read", "allow")
 	fmt.Printf("h is? %v\n", h)
+
+	z = e.Enforce("test_user", "groups", "containers", "default", "read", "allow")
+	fmt.Printf("z1 is? %v\n", z)
+
+	r := e.GetRolesForUser("test1")
+	fmt.Printf("perms for test1: %+v\n", r)
 	
 }
