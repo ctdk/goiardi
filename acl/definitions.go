@@ -42,6 +42,8 @@ m = r.sub == "pivotal" && p.eft != "deny" || g(r.sub, p.sub) && r.kind == p.kind
 // to put convert this to a form suitable to put in the DB. We'll see what ends
 // up happening.
 
+// group, subkind, kind, name, perm, effect
+
 const defaultPolicySkel = `p, admins, containers, containers, default, create, allow
 p, admins, containers, containers, default, read, allow
 p, users, containers, containers, default, read, allow
