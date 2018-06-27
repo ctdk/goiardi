@@ -179,7 +179,4 @@ p, admins, default, groups, default, update, allow
 p, admins, default, groups, default, delete, allow
 p, admins, default, groups, default, grant, allow
 p, users, default, groups, default, read, allow
-
-g, test1, admins
-g, test_user, users
 `

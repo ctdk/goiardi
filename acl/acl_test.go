@@ -18,7 +18,6 @@ package acl
 
 import (
 	"encoding/gob"
-	"fmt"
 	"github.com/casbin/casbin"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
@@ -27,6 +26,8 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"io/ioutil"
+	"os"
+	"strings"
 	"testing"
 )
 
@@ -40,12 +41,27 @@ func init() {
 	gob.Register(new(group.Group))
 	indexer.Initialize(config.Config)
 	config.Config.UseAuth = true
-	var err error
+}
+
+func setup() {
 	confDir, err := ioutil.TempDir("", "acl-test")
 	if err != nil {
 		panic(err)
 	}
 	config.Config.PolicyRoot = confDir
+}
+
+func teardown() {
+	os.RemoveAll(config.Config.PolicyRoot)
+}
+
+func TestMain(m *testing.M) {
+	setup()
+	r := m.Run()
+	if r == 0 {
+		teardown()
+	}
+	os.Exit(r)
 }
 
 func TestInitACL(t *testing.T) {
@@ -62,19 +78,45 @@ func TestInitACL(t *testing.T) {
 		t.Error(err)
 	}
 
-	z := e.HasPermissionForUser("test1", "groups", "containers", "default", "create", "allow")
-	fmt.Printf("z is? %v\n", z)
-	
-	q := e.Enforce("pivotal", "groups", "containers", "default", "create", "allow")
-	fmt.Printf("q is? %v\n", q)
+	e.AddGroupingPolicy("test1", "admins")
+	e.AddGroupingPolicy("test_user", "users")
 
-	h := e.Enforce("test1", "clients", "containers", "default", "read", "allow")
-	fmt.Printf("h is? %v\n", h)
+	testingPolicies := [][]string{
+		{"true", "test1", "groups", "containers", "default", "create", "allow"},
+		{"true", "pivotal", "groups", "containers", "default", "create", "allow"},
+		{"true", "test1", "clients", "containers", "default", "read", "allow"},
+		{"false", "test_user", "groups", "containers", "default", "read", "allow"},
+		{"true", "test_user", "roles", "containers", "default", "read", "allow"},
+	}
 
-	z = e.Enforce("test_user", "groups", "containers", "default", "read", "allow")
-	fmt.Printf("z1 is? %v\n", z)
-
+	for _, policy := range testingPolicies {
+		var expected bool
+		if policy[0] == "true" {
+			expected = true
+		}
+		enforceP := make([]interface{}, len(policy[1:]))
+		for i, v := range policy[1:] {
+			enforceP[i] = v
+		}
+		z := e.Enforce(enforceP...)
+		if z != expected {
+			t.Errorf("Expected '%s' to evaluate as %v, got %v", strings.Join(policy[1:], ", "), expected, z)
+		}
+	}
 	r := e.GetRolesForUser("test1")
-	fmt.Printf("perms for test1: %+v\n", r)
-	
+	if r[0] != "admins" {
+		t.Errorf("test1 user should have been a member of the 'admins' group, but wasn't. These roles were found instead: %v", r)
+	}
+}
+
+func TestPermMethods(t *testing.T) {
+
+}
+
+func TestClients(t *testing.T) {
+
+}
+
+func TestMultipleOrgs(t *testing.T) {
+
 }

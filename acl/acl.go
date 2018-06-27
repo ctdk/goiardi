@@ -46,21 +46,34 @@ const policyFileFmt = "%s-policy.csv"
 
 var DefaultUser = "pivotal" // should this be configurable?
 
-func loadACL(org *organization.Organization) (*casbin.Enforcer, error) {
+var orgEnforcers map[string]*casbin.SyncedEnforcer
+
+func init() {
+	orgEnforcers = make(map[string]*casbin.SyncedEnforcer)
+}
+
+func loadACL(org *organization.Organization) error {
 	m := casbin.NewModel(modelDefinition)
 	if !policyExists(org, config.Config.PolicyRoot) {
-		return initializeACL(org, m)
+		newE, err := initializeACL(org, m)
+		if err != nil {
+			return err
+		}
+		orgEnforcers[org.Name] = newE
+		return nil
 	}
 	pa, err := loadPolicyAdapter(org)
 	_ = pa
 	if err != nil {
-		return nil, err
+		return err
 	}
+	e := casbin.NewSyncedEnforcer(m, pa, true)
+	orgEnforcers[org.Name] = e
 
-	return nil, nil
+	return nil
 }
 
-func initializeACL(org *organization.Organization, m model.Model) (*casbin.Enforcer, error) {
+func initializeACL(org *organization.Organization, m model.Model) (*casbin.SyncedEnforcer, error) {
 	if err := initializePolicy(org, config.Config.PolicyRoot); err != nil {
 		return nil, err
 	}
@@ -68,7 +81,7 @@ func initializeACL(org *organization.Organization, m model.Model) (*casbin.Enfor
 	if err != nil {
 		return nil, err
 	}
-	e := casbin.NewEnforcer(m, adp, true)
+	e := casbin.NewSyncedEnforcer(m, adp, true)
 	
 	return e, nil
 }
@@ -124,3 +137,9 @@ func initializePolicy(org *organization.Organization, policyRoot string) error {
 	}
 	return nil
 }
+
+/*
+func CheckItemPerm(org *organization.Organization, item ACLOwner, doer actor.Actor) (bool, util.Gerror) {
+	return false, nil
+}
+*/
