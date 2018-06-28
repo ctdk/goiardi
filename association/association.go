@@ -364,6 +364,22 @@ func SetAssoc(user *user.User, org *organization.Organization) (*Association, ut
 	return assoc, nil
 }
 
+func TestAssociation(doer actor.Actor, org *organization.Organization) (bool, util.Gerror) {
+	if doer.IsUser() {
+		_, err := GetAssoc(doer.(*user.User), org)
+		if err != nil {
+			return false, err
+		}
+	} else {
+		if doer.OrgName() != org.Name {
+			err := util.Errorf("client %s is not associated with org %s", doer.GetName(), org.Name)
+			err.SetStatus(http.StatusForbidden)
+			return false, err
+		}
+	}
+	return true, nil
+}
+
 func GetAssoc(user *user.User, org *organization.Organization) (*Association, util.Gerror) {
 	var assoc *Association
 	if config.UsingDB() {

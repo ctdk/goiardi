@@ -18,12 +18,14 @@ package acl
 
 import (
 	"encoding/gob"
+	"fmt"
 	"github.com/casbin/casbin"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/user"
 	"io/ioutil"
 	"os"
@@ -32,6 +34,7 @@ import (
 )
 
 var pivotal *user.User
+var orgCount int
 
 func init() {
 	gob.Register(new(organization.Organization))
@@ -39,6 +42,8 @@ func init() {
 	gob.Register(new(association.Association))
 	gob.Register(new(association.AssociationReq))
 	gob.Register(new(group.Group))
+	gob.Register(new(role.Role))
+	gob.Register(make(map[string]interface{}))
 	indexer.Initialize(config.Config)
 	config.Config.UseAuth = true
 }
@@ -49,10 +54,36 @@ func setup() {
 		panic(err)
 	}
 	config.Config.PolicyRoot = confDir
+	pivotal, _ = user.New("pivotal")
+	pivotal.Admin = true
+	pivotal.Save()
 }
 
 func teardown() {
 	os.RemoveAll(config.Config.PolicyRoot)
+}
+
+func buildOrg() (*organization.Organization, *user.User, *casbin.SyncedEnforcer) {
+	adminUser, _ := user.New(fmt.Sprintf("admin%d", orgCount))
+	adminUser.Admin = true
+	adminUser.Save()
+	org, _ := organization.New(fmt.Sprintf("org%d", orgCount), fmt.Sprintf("test org %d", orgCount))
+	orgCount++
+	ar, _ := association.SetReq(adminUser, org, pivotal)
+	ar.Accept()
+	group.MakeDefaultGroups(org)
+	admins, _ := group.Get(org, "admins")
+	admins.AddActor(adminUser)
+	admins.Save()
+
+	// m := casbin.NewModel(modelDefinition)
+	// e, _ := initializeACL(org, m)
+	loadACL(org)
+	e := orgEnforcers[org.Name]
+	// temporary
+	e.AddGroupingPolicy(adminUser.Username, "admins")
+
+	return org, adminUser, e
 }
 
 func TestMain(m *testing.M) {
@@ -65,10 +96,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestInitACL(t *testing.T) {
-	u, _ := user.New("pivotal")
-	u.Admin = true
-	u.Save()
-	pivotal = u
 	org, _ := organization.New("florp", "mlorph normph")
 	group.MakeDefaultGroups(org)
 
@@ -87,6 +114,7 @@ func TestInitACL(t *testing.T) {
 		{"true", "test1", "clients", "containers", "default", "read", "allow"},
 		{"false", "test_user", "groups", "containers", "default", "read", "allow"},
 		{"true", "test_user", "roles", "containers", "default", "read", "allow"},
+		{"false", "test_user", "roles", "containers", "default", "nonexistent_perm", "allow"},
 	}
 
 	for _, policy := range testingPolicies {
@@ -109,8 +137,57 @@ func TestInitACL(t *testing.T) {
 	}
 }
 
-func TestPermMethods(t *testing.T) {
+func TestCheckItemPerm(t *testing.T) {
+	org, adminUser, e := buildOrg()
+	r, _ := role.New(org, "chkitem")
+	r.Save()
+	chk, err := CheckItemPerm(org, r, adminUser, "create")
+	if err != nil {
+		t.Errorf("ChkItemPerm for role with adminUser failed: %s", err.Error())
+	}
+	if !chk {
+		t.Errorf("ChkItemPerm for role with adminUser should have been true, but was false.")
+	}
+	u, _ := user.New("test_user")
+	u.Save()
+	ar, _ := association.SetReq(u, org, adminUser)
+	ar.Accept()
+	us, _ := group.Get(org, "users")
+	us.AddActor(u)
+	us.Save()
+	// temporary again
+	e.AddGroupingPolicy(u.Username, "users")
 
+	chk, err = CheckItemPerm(org, r, u, "create")
+	if err != nil {
+		t.Errorf("ChkItemPerm for role with normal user failed: %s", err.Error())
+	}
+	if !chk {
+		t.Errorf("ChkItemPerm for role with normal user should have been true, but was false.")
+	}
+	chk, err = CheckItemPerm(org, r, u, "grant")
+	if err != nil {
+		t.Errorf("ChkItemPerm for role with normal user failed with an error (should have failed without one): %s", err.Error())
+	}
+	if chk {
+		t.Errorf("ChkItemPerm for role with normal user should have been false, but was true.")
+	}
+
+	chk, err = CheckItemPerm(org, r, u, "frobnatz")
+	if err == nil {
+		t.Error("ChkItemPerm for role with normal user with a non-existent perm failed without an error (should have failed with one)")
+	}
+	if chk {
+		t.Errorf("ChkItemPerm for role with normal user with a non-existent perm should have been false, but was true.")
+	}
+
+	chk, err = CheckItemPerm(org, r, adminUser, "frobnatz")
+	if err == nil {
+		t.Error("ChkItemPerm for role with admin user with a non-existent perm failed without an error (should have failed with one)")
+	}
+	if chk {
+		t.Errorf("ChkItemPerm for role with admin user with a non-existent perm should have been false, but was true.")
+	}
 }
 
 func TestClients(t *testing.T) {

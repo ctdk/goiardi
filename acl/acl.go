@@ -22,8 +22,11 @@ import (
 	"github.com/casbin/casbin/model"
 	"github.com/casbin/casbin/persist"
 	"github.com/casbin/casbin/persist/file-adapter"
+	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/util"
 	"os"
 	"path"
 )
@@ -41,6 +44,19 @@ type ACLOwner interface {
 	ContainerKind() string
 	ContainerType() string
 }
+
+type enforceCondition []interface{}
+
+// group, subkind, kind, name, perm, effect
+const (
+	condGroupPos = iota
+	condSubkindPos
+	condKindPos
+	condNamePos
+	condPermPos
+	condEffectPos
+)
+const enforceEffect = "allow"
 
 const policyFileFmt = "%s-policy.csv"
 
@@ -138,8 +154,53 @@ func initializePolicy(org *organization.Organization, policyRoot string) error {
 	return nil
 }
 
-/*
-func CheckItemPerm(org *organization.Organization, item ACLOwner, doer actor.Actor) (bool, util.Gerror) {
+func CheckItemPerm(org *organization.Organization, item ACLOwner, doer actor.Actor, perm string) (bool, util.Gerror) {
+	specific := buildEnforcingSlice(item, doer, perm)
+	var chkSucceeded bool
+
+	// try the specific check first, then the general
+	if chkSucceeded = orgEnforcers[org.Name].Enforce(specific...); !chkSucceeded {
+		chkSucceeded = orgEnforcers[org.Name].Enforce(specific.general()...)
+	}
+	if chkSucceeded {
+		return true, nil
+	}
+
+	// check out failure conditions
+	if !isPermValid(org, item, perm) {
+		err := util.Errorf("invalid perm %s for %s-%s", perm, item.ContainerKind(), item.ContainerType())
+		return false, err
+	}
+	_, err := association.TestAssociation(doer, org)
+	if err != nil {
+		return false, err
+	}
+
 	return false, nil
 }
-*/
+
+func buildEnforcingSlice(item ACLOwner, doer actor.Actor, perm string) enforceCondition {
+	cond := []interface{}{doer.GetName(), item.ContainerType(), item.ContainerKind(), item.GetName(), perm, enforceEffect}
+	return enforceCondition(cond)
+}
+
+func (e enforceCondition) general() enforceCondition {
+	g := make([]interface{}, len(e))
+	for i, v := range e {
+		g[i] = v
+	}
+	g[condNamePos] = "default"
+	return enforceCondition(g)
+}
+
+func isPermValid (org *organization.Organization, item ACLOwner, perm string) bool {
+	// pare down the list to check a little
+	fPass := orgEnforcers[org.Name].GetFilteredPolicy(condSubkindPos, item.ContainerType())
+	validPerms := make(map[string]bool)
+	for _, p := range fPass {
+		if p[condKindPos] == item.ContainerKind() {
+			validPerms[p[condPermPos]] = true
+		}
+	}
+	return validPerms[perm]
+}
