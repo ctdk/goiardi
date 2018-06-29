@@ -45,6 +45,12 @@ type ACLOwner interface {
 	ContainerType() string
 }
 
+type ACLMember interface {
+	IsACLRole() bool
+	ACLName() string
+	GetName() string
+}
+
 type enforceCondition []interface{}
 
 // group, subkind, kind, name, perm, effect
@@ -203,4 +209,14 @@ func isPermValid (org *organization.Organization, item ACLOwner, perm string) bo
 		}
 	}
 	return validPerms[perm]
+}
+
+func AddMembers(org *organization.Organization, gRole ACLMember, removing []ACLMember) error {
+
+	return nil
+}
+
+func RemoveMembers(org *organization.Organization, gRole ACLMember, removing []ACLMember) error {
+
+	return nil
 }

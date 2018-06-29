@@ -766,3 +766,11 @@ func chkInMemClient(name string) error {
 func (u *User) Authz() string {
 	return u.AuthzID
 }
+
+func (u *User) IsACLRole() bool {
+	return false
+}
+
+func (u *User) ACLName() string {
+	return u.GetName()
+}

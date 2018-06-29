@@ -712,3 +712,11 @@ func chkInMemUser(name string) util.Gerror {
 func (c *Client) Authz() string {
 	return c.AuthzID
 }
+
+func (c *Client) IsACLRole() bool {
+	return false
+}
+
+func (c *Client) ACLName() string {
+	return c.GetName()
+}

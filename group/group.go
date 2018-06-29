@@ -17,6 +17,8 @@
 package group
 
 import (
+	"fmt"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
@@ -211,6 +213,18 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 		// this later, when that's ready.
 		actors := make([]actor.Actor, 0)
 		groups := make([]*Group, 0)
+		newActors := make(map[string]bool)
+		newGroups := make(map[string]bool)
+		oldMembers := make([]string, len(g.Actors) + len(g.Groups))
+		oldGroups := make([]string, len(g.Groups))
+		for i, a := range g.Actors {
+			oldActors[i] = a
+		}
+		actLen := len(g.Actors)
+		for i, og := range g.Groups {
+			oldGroups[i+actLen] = og
+		}
+
 		if us, uok := acts["users"].([]interface{}); uok {
 			for _, un := range us {
 				unv, err := util.ValidateAsString(un)
@@ -221,6 +235,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 				if err != nil {
 					return err
 				}
+				newActors[unv] = true
 				actors = append(actors, u)
 			}
 		}
@@ -234,6 +249,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 				if err != nil {
 					return err
 				}
+				newActors[cnv] = true
 				actors = append(actors, c)
 			}
 		}
@@ -247,6 +263,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 				if err != nil {
 					return err
 				}
+				newGroups[gnv] = true
 				groups = append(groups, addGr)
 			}
 		}
@@ -254,6 +271,19 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 		defer g.m.Unlock()
 		g.Actors = actors
 		g.Groups = groups
+
+		// Remove any actors and groups from the relevant ACL grouping
+		// if they aren't present anymore.
+		toRemove := make([]acl.ACLMember, 0)
+		for _, x := range oldMembers {
+			if _, ok := newMembers[x.GetName()]; !ok {
+				toRemove = append(toRemove, x)
+			}
+		}
+		acl.RemoveMembers(org, g, toRemove)
+
+		// Add any new actors and groups to the ACL
+
 		err := g.save()
 		if err != nil {
 			return err
@@ -350,6 +380,14 @@ func (g *Group) ContainerType() string {
 
 func (g *Group) ContainerKind() string {
 	return "containers"
+}
+
+func (g *Group) IsACLRole() bool {
+	return true
+}
+
+func (g *Group) ACLName() string {
+	return fmt.Sprintf("role_%s", g.Name)
 }
 
 // should this actually return the groups?
