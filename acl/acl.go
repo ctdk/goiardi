@@ -27,6 +27,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"github.com/tideland/golib/logger"
 	"os"
 	"path"
 )
@@ -177,6 +178,7 @@ func CheckItemPerm(org *organization.Organization, item ACLOwner, doer actor.Act
 		err := util.Errorf("invalid perm %s for %s-%s", perm, item.ContainerKind(), item.ContainerType())
 		return false, err
 	}
+
 	_, err := association.TestAssociation(doer, org)
 	if err != nil {
 		return false, err
@@ -211,12 +213,50 @@ func isPermValid (org *organization.Organization, item ACLOwner, perm string) bo
 	return validPerms[perm]
 }
 
-func AddMembers(org *organization.Organization, gRole ACLMember, removing []ACLMember) error {
+// TODO: Determine what's actually needed with these...? There might not be much
+// for this.
+func AddACLRole(org *organization.Organization, gRole ACLMember) error {
+	if _, ok := orgEnforcers[org.Name]; !ok {
+		return checkForEnforcer(org)
+	}
+
+	return nil
+}
+
+func RemoveACLRole(org *organization.Organization, gRole ACLMember) error {
+	if _, ok := orgEnforcers[org.Name]; !ok {
+		return checkForEnforcer(org)
+	}
+
+	return nil
+}
+
+func AddMembers(org *organization.Organization, gRole ACLMember, adding []ACLMember) error {
+	if _, ok := orgEnforcers[org.Name]; !ok {
+		return checkForEnforcer(org)
+	}
+	for _, m := range adding {
+		orgEnforcers[org.Name].AddRoleForUser(m.ACLName(), gRole.ACLName())
+	}
+	logger.Debugf("added %d members to %s ACL role", len(adding), gRole.GetName())
 
 	return nil
 }
 
 func RemoveMembers(org *organization.Organization, gRole ACLMember, removing []ACLMember) error {
+	if _, ok := orgEnforcers[org.Name]; !ok {
+		return checkForEnforcer(org)
+	}
+	for _, m := range removing {
+		orgEnforcers[org.Name].DeleteRoleForUser(m.ACLName(), gRole.ACLName())
+	}
+	logger.Debugf("deleted %d members from %s ACL role", len(removing), gRole.GetName())
 
 	return nil
+}
+
+func checkForEnforcer(org *organization.Organization) error {
+	if _, ok := orgEnforcers[org.Name]; !ok {
+		return fmt.Errorf("enforcer for org %s not found!", org.Name)
+	}
 }

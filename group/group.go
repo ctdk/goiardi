@@ -216,13 +216,12 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 		newActors := make(map[string]bool)
 		newGroups := make(map[string]bool)
 		oldMembers := make([]string, len(g.Actors) + len(g.Groups))
-		oldGroups := make([]string, len(g.Groups))
 		for i, a := range g.Actors {
-			oldActors[i] = a
+			oldMembers[i] = a
 		}
 		actLen := len(g.Actors)
 		for i, og := range g.Groups {
-			oldGroups[i+actLen] = og
+			oldMembers[i+actLen] = og
 		}
 
 		if us, uok := acts["users"].([]interface{}); uok {
@@ -276,13 +275,20 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 		// if they aren't present anymore.
 		toRemove := make([]acl.ACLMember, 0)
 		for _, x := range oldMembers {
-			if _, ok := newMembers[x.GetName()]; !ok {
-				toRemove = append(toRemove, x)
+			if _, ok := newActors[x.GetName()]; !ok {
+				if _, gok := newGroups[x.GetName()]; !gok {
+					toRemove = append(toRemove, x)
+				}
 			}
 		}
-		acl.RemoveMembers(org, g, toRemove)
+		if merr := acl.RemoveMembers(org, g, toRemove); merr != nil {
+			return merr
+		}
 
 		// Add any new actors and groups to the ACL
+		toAdd := make([]acl.ACLMember, 0, len(g.Actors) + len(g.Groups))
+		toAdd = append(toAdd, g.Actors...)
+		toAdd = append(toAdd, g.Groups...)
 
 		err := g.save()
 		if err != nil {
