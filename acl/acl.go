@@ -22,7 +22,7 @@ import (
 	"github.com/casbin/casbin/model"
 	"github.com/casbin/casbin/persist"
 	"github.com/casbin/casbin/persist/file-adapter"
-	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/organization"
@@ -40,19 +40,12 @@ var DefaultACLs = [5]string{
 	"grant",
 }
 
-type ACLOwner interface {
-	GetName() string
-	ContainerKind() string
-	ContainerType() string
-}
-
-type ACLMember interface {
-	IsACLRole() bool
-	ACLName() string
-	GetName() string
-}
-
 type enforceCondition []interface{}
+
+type Checker struct {
+	org *organization.Organization
+	e *casbin.SyncedEnforcer
+}
 
 // group, subkind, kind, name, perm, effect
 const (
@@ -69,12 +62,6 @@ const policyFileFmt = "%s-policy.csv"
 
 var DefaultUser = "pivotal" // should this be configurable?
 
-var orgEnforcers map[string]*casbin.SyncedEnforcer
-
-func init() {
-	orgEnforcers = make(map[string]*casbin.SyncedEnforcer)
-}
-
 func loadACL(org *organization.Organization) error {
 	m := casbin.NewModel(modelDefinition)
 	if !policyExists(org, config.Config.PolicyRoot) {
@@ -82,16 +69,17 @@ func loadACL(org *organization.Organization) error {
 		if err != nil {
 			return err
 		}
-		orgEnforcers[org.Name] = newE
+		c := &Checker{org: org, e: newE}
+		org.PermCheck = c
 		return nil
 	}
 	pa, err := loadPolicyAdapter(org)
-	_ = pa
 	if err != nil {
 		return err
 	}
 	e := casbin.NewSyncedEnforcer(m, pa, true)
-	orgEnforcers[org.Name] = e
+	c := &Checker{org: org, e: e}
+	org.PermCheck = c
 
 	return nil
 }
@@ -161,25 +149,25 @@ func initializePolicy(org *organization.Organization, policyRoot string) error {
 	return nil
 }
 
-func CheckItemPerm(org *organization.Organization, item ACLOwner, doer actor.Actor, perm string) (bool, util.Gerror) {
+func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm string) (bool, util.Gerror) {
 	specific := buildEnforcingSlice(item, doer, perm)
 	var chkSucceeded bool
 
 	// try the specific check first, then the general
-	if chkSucceeded = orgEnforcers[org.Name].Enforce(specific...); !chkSucceeded {
-		chkSucceeded = orgEnforcers[org.Name].Enforce(specific.general()...)
+	if chkSucceeded = c.e.Enforce(specific...); !chkSucceeded {
+		chkSucceeded = c.e.Enforce(specific.general()...)
 	}
 	if chkSucceeded {
 		return true, nil
 	}
 
 	// check out failure conditions
-	if !isPermValid(org, item, perm) {
+	if !c.isPermValid(item, perm) {
 		err := util.Errorf("invalid perm %s for %s-%s", perm, item.ContainerKind(), item.ContainerType())
 		return false, err
 	}
 
-	_, err := association.TestAssociation(doer, org)
+	_, err := association.TestAssociation(doer, c.org)
 	if err != nil {
 		return false, err
 	}
@@ -187,7 +175,7 @@ func CheckItemPerm(org *organization.Organization, item ACLOwner, doer actor.Act
 	return false, nil
 }
 
-func buildEnforcingSlice(item ACLOwner, doer actor.Actor, perm string) enforceCondition {
+func buildEnforcingSlice(item aclhelper.Item, doer aclhelper.Actor, perm string) enforceCondition {
 	cond := []interface{}{doer.GetName(), item.ContainerType(), item.ContainerKind(), item.GetName(), perm, enforceEffect}
 	return enforceCondition(cond)
 }
@@ -201,9 +189,9 @@ func (e enforceCondition) general() enforceCondition {
 	return enforceCondition(g)
 }
 
-func isPermValid (org *organization.Organization, item ACLOwner, perm string) bool {
+func (c *Checker) isPermValid (item aclhelper.Item, perm string) bool {
 	// pare down the list to check a little
-	fPass := orgEnforcers[org.Name].GetFilteredPolicy(condSubkindPos, item.ContainerType())
+	fPass := c.e.GetFilteredPolicy(condSubkindPos, item.ContainerType())
 	validPerms := make(map[string]bool)
 	for _, p := range fPass {
 		if p[condKindPos] == item.ContainerKind() {
@@ -215,48 +203,34 @@ func isPermValid (org *organization.Organization, item ACLOwner, perm string) bo
 
 // TODO: Determine what's actually needed with these...? There might not be much
 // for this.
-func AddACLRole(org *organization.Organization, gRole ACLMember) error {
-	if _, ok := orgEnforcers[org.Name]; !ok {
-		return checkForEnforcer(org)
-	}
+func (c *Checker) AddACLRole(gRole aclhelper.Member) error {
 
 	return nil
 }
 
-func RemoveACLRole(org *organization.Organization, gRole ACLMember) error {
-	if _, ok := orgEnforcers[org.Name]; !ok {
-		return checkForEnforcer(org)
-	}
+func (c *Checker) RemoveACLRole(gRole aclhelper.Member) error {
 
 	return nil
 }
 
-func AddMembers(org *organization.Organization, gRole ACLMember, adding []ACLMember) error {
-	if _, ok := orgEnforcers[org.Name]; !ok {
-		return checkForEnforcer(org)
-	}
+func (c *Checker) AddMembers(gRole aclhelper.Member, adding []aclhelper.Member) error {
 	for _, m := range adding {
-		orgEnforcers[org.Name].AddRoleForUser(m.ACLName(), gRole.ACLName())
+		c.e.AddRoleForUser(m.ACLName(), gRole.ACLName())
 	}
 	logger.Debugf("added %d members to %s ACL role", len(adding), gRole.GetName())
 
 	return nil
 }
 
-func RemoveMembers(org *organization.Organization, gRole ACLMember, removing []ACLMember) error {
-	if _, ok := orgEnforcers[org.Name]; !ok {
-		return checkForEnforcer(org)
-	}
+func (c *Checker) RemoveMembers(gRole aclhelper.Member, removing []aclhelper.Member) error {
 	for _, m := range removing {
-		orgEnforcers[org.Name].DeleteRoleForUser(m.ACLName(), gRole.ACLName())
+		c.e.DeleteRoleForUser(m.ACLName(), gRole.ACLName())
 	}
 	logger.Debugf("deleted %d members from %s ACL role", len(removing), gRole.GetName())
 
 	return nil
 }
 
-func checkForEnforcer(org *organization.Organization) error {
-	if _, ok := orgEnforcers[org.Name]; !ok {
-		return fmt.Errorf("enforcer for org %s not found!", org.Name)
-	}
+func (c *Checker) Enforcer() *casbin.SyncedEnforcer {
+	return c.e
 }

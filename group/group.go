@@ -18,7 +18,7 @@ package group
 
 import (
 	"fmt"
-	"github.com/ctdk/goiardi/acl"
+	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
@@ -215,7 +215,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 		groups := make([]*Group, 0)
 		newActors := make(map[string]bool)
 		newGroups := make(map[string]bool)
-		oldMembers := make([]string, len(g.Actors) + len(g.Groups))
+		oldMembers := make([]aclhelper.Member, len(g.Actors) + len(g.Groups))
 		for i, a := range g.Actors {
 			oldMembers[i] = a
 		}
@@ -273,7 +273,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 
 		// Remove any actors and groups from the relevant ACL grouping
 		// if they aren't present anymore.
-		toRemove := make([]acl.ACLMember, 0)
+		toRemove := make([]aclhelper.Member, 0)
 		for _, x := range oldMembers {
 			if _, ok := newActors[x.GetName()]; !ok {
 				if _, gok := newGroups[x.GetName()]; !gok {
@@ -281,14 +281,24 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 				}
 			}
 		}
-		if merr := acl.RemoveMembers(org, g, toRemove); merr != nil {
-			return merr
+		if merr := g.Org.PermCheck.RemoveMembers(g, toRemove); merr != nil {
+			return util.CastErr(merr)
 		}
 
 		// Add any new actors and groups to the ACL
-		toAdd := make([]acl.ACLMember, 0, len(g.Actors) + len(g.Groups))
-		toAdd = append(toAdd, g.Actors...)
-		toAdd = append(toAdd, g.Groups...)
+		toAdd := make([]aclhelper.Member, 0, len(g.Actors) + len(g.Groups))
+		actLen = len(g.Actors)
+
+		for i, v := range g.Actors {
+			toAdd[i] = v
+		}
+		for i, v := range g.Groups {
+			toAdd[i + actLen] = v
+		}
+
+		if merr := g.Org.PermCheck.AddMembers(g, toAdd); merr != nil {
+			return util.CastErr(merr)
+		}
 
 		err := g.save()
 		if err != nil {

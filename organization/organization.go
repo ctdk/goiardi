@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
@@ -36,6 +37,7 @@ type Organization struct {
 	GUID     string `json:"guid"`
 	uuID     uuid.UUID
 	id       int
+	PermCheck aclhelper.PermChecker `json:"-"`
 }
 
 type privOrganization struct {

@@ -63,7 +63,7 @@ func teardown() {
 	os.RemoveAll(config.Config.PolicyRoot)
 }
 
-func buildOrg() (*organization.Organization, *user.User, *casbin.SyncedEnforcer) {
+func buildOrg() (*organization.Organization, *user.User) {
 	adminUser, _ := user.New(fmt.Sprintf("admin%d", orgCount))
 	adminUser.Admin = true
 	adminUser.Save()
@@ -76,14 +76,12 @@ func buildOrg() (*organization.Organization, *user.User, *casbin.SyncedEnforcer)
 	admins.AddActor(adminUser)
 	admins.Save()
 
-	// m := casbin.NewModel(modelDefinition)
-	// e, _ := initializeACL(org, m)
 	loadACL(org)
-	e := orgEnforcers[org.Name]
+	e := org.PermCheck.Enforcer()
 	// temporary
 	e.AddGroupingPolicy(adminUser.Username, "admins")
 
-	return org, adminUser, e
+	return org, adminUser
 }
 
 func TestMain(m *testing.M) {
@@ -138,10 +136,10 @@ func TestInitACL(t *testing.T) {
 }
 
 func TestCheckItemPerm(t *testing.T) {
-	org, adminUser, e := buildOrg()
+	org, adminUser := buildOrg()
 	r, _ := role.New(org, "chkitem")
 	r.Save()
-	chk, err := CheckItemPerm(org, r, adminUser, "create")
+	chk, err := org.PermCheck.CheckItemPerm(r, adminUser, "create")
 	if err != nil {
 		t.Errorf("ChkItemPerm for role with adminUser failed: %s", err.Error())
 	}
@@ -156,16 +154,16 @@ func TestCheckItemPerm(t *testing.T) {
 	us.AddActor(u)
 	us.Save()
 	// temporary again
-	e.AddGroupingPolicy(u.Username, "users")
+	org.PermCheck.Enforcer().AddGroupingPolicy(u.Username, "users")
 
-	chk, err = CheckItemPerm(org, r, u, "create")
+	chk, err = org.PermCheck.CheckItemPerm(r, u, "create")
 	if err != nil {
 		t.Errorf("ChkItemPerm for role with normal user failed: %s", err.Error())
 	}
 	if !chk {
 		t.Errorf("ChkItemPerm for role with normal user should have been true, but was false.")
 	}
-	chk, err = CheckItemPerm(org, r, u, "grant")
+	chk, err = org.PermCheck.CheckItemPerm(r, u, "grant")
 	if err != nil {
 		t.Errorf("ChkItemPerm for role with normal user failed with an error (should have failed without one): %s", err.Error())
 	}
@@ -173,7 +171,7 @@ func TestCheckItemPerm(t *testing.T) {
 		t.Errorf("ChkItemPerm for role with normal user should have been false, but was true.")
 	}
 
-	chk, err = CheckItemPerm(org, r, u, "frobnatz")
+	chk, err = org.PermCheck.CheckItemPerm(r, u, "frobnatz")
 	if err == nil {
 		t.Error("ChkItemPerm for role with normal user with a non-existent perm failed without an error (should have failed with one)")
 	}
@@ -181,7 +179,7 @@ func TestCheckItemPerm(t *testing.T) {
 		t.Errorf("ChkItemPerm for role with normal user with a non-existent perm should have been false, but was true.")
 	}
 
-	chk, err = CheckItemPerm(org, r, adminUser, "frobnatz")
+	chk, err = org.PermCheck.CheckItemPerm(r, adminUser, "frobnatz")
 	if err == nil {
 		t.Error("ChkItemPerm for role with admin user with a non-existent perm failed without an error (should have failed with one)")
 	}

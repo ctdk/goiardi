@@ -42,8 +42,9 @@ type Actor interface {
 	GetName() string
 	CheckPermEdit(map[string]interface{}, string) util.Gerror
 	OrgName() string
+	ACLName() string
 	Authz() string
-	UsesACLs() bool
+	IsACLRole() bool
 }
 
 // GetReqUser gets the actor making the request. If use-auth is not on, always

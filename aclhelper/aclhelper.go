@@ -1,0 +1,64 @@
+/*
+ * Copyright (c) 2013-2018, Jeremy Bingham (<jeremy@goiardi.gl>)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Package aclhelper is just an interface definition to allow access to the acl
+// methods in various packages that can't import it directly because of import
+// cycles.
+package aclhelper
+
+import (
+	"github.com/casbin/casbin"
+	"github.com/ctdk/goiardi/util"
+)
+
+type Member interface {
+	IsACLRole() bool
+	ACLName() string
+	GetName() string
+}
+
+type Item interface {
+	GetName() string
+	ContainerKind() string
+	ContainerType() string
+}
+
+// Actor is an interface for objects that can make requests to the server. This
+// is a duplicate of the Actor interface in github.com/ctdk/goiardi/actor.
+type Actor interface {
+	IsAdmin() bool
+	IsValidator() bool
+	IsSelf(interface{}) bool
+	IsUser() bool
+	IsClient() bool
+	PublicKey() string
+	SetPublicKey(interface{}) error
+	GetName() string
+	CheckPermEdit(map[string]interface{}, string) util.Gerror
+	OrgName() string
+	ACLName() string
+	Authz() string
+	IsACLRole() bool
+}
+
+type PermChecker interface {
+	CheckItemPerm(Item, Actor, string) (bool, util.Gerror)
+	AddMembers(Member, []Member) error
+	RemoveMembers(Member, []Member) error
+	AddACLRole(Member) error
+	RemoveACLRole(Member) error
+	Enforcer() *casbin.SyncedEnforcer
+}
