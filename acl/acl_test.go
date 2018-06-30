@@ -188,6 +188,10 @@ func TestCheckItemPerm(t *testing.T) {
 	}
 }
 
+func TestGroupOperations(t *testing.T) {
+
+}
+
 func TestClients(t *testing.T) {
 
 }
