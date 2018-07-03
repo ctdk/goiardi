@@ -209,7 +209,7 @@ func (c *Checker) AddACLRole(gRole aclhelper.Member) error {
 }
 
 func (c *Checker) RemoveACLRole(gRole aclhelper.Member) error {
-
+	c.e.DeleteRole(gRole.ACLName())
 	return nil
 }
 

@@ -19,7 +19,7 @@ package acl
 import (
 	"encoding/gob"
 	"fmt"
-	"github.com/casbin/casbin"
+	// "github.com/casbin/casbin"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/group"
@@ -69,6 +69,7 @@ func buildOrg() (*organization.Organization, *user.User) {
 	adminUser.Save()
 	org, _ := organization.New(fmt.Sprintf("org%d", orgCount), fmt.Sprintf("test org %d", orgCount))
 	orgCount++
+	loadACL(org)
 	ar, _ := association.SetReq(adminUser, org, pivotal)
 	ar.Accept()
 	group.MakeDefaultGroups(org)
@@ -76,10 +77,13 @@ func buildOrg() (*organization.Organization, *user.User) {
 	admins.AddActor(adminUser)
 	admins.Save()
 
+	/*
 	loadACL(org)
 	e := org.PermCheck.Enforcer()
 	// temporary
-	e.AddGroupingPolicy(adminUser.Username, "admins")
+	e.AddGroupingPolicy(adminUser.Username, "role##admins")
+	e.SavePolicy()
+	*/
 
 	return org, adminUser
 }
@@ -95,16 +99,21 @@ func TestMain(m *testing.M) {
 
 func TestInitACL(t *testing.T) {
 	org, _ := organization.New("florp", "mlorph normph")
+	loadACL(org)
 	group.MakeDefaultGroups(org)
 
+	/*
 	m := casbin.NewModel(modelDefinition)
 	e, err := initializeACL(org, m)
 	if err != nil {
 		t.Error(err)
 	}
+	*/
+	e := org.PermCheck.Enforcer()
 
-	e.AddGroupingPolicy("test1", "admins")
-	e.AddGroupingPolicy("test_user", "users")
+	e.AddGroupingPolicy("test1", "role##admins")
+	e.AddGroupingPolicy("test_user", "role##users")
+	e.SavePolicy()
 
 	testingPolicies := [][]string{
 		{"true", "test1", "groups", "containers", "default", "create", "allow"},
@@ -130,7 +139,7 @@ func TestInitACL(t *testing.T) {
 		}
 	}
 	r := e.GetRolesForUser("test1")
-	if r[0] != "admins" {
+	if r[0] != "role##admins" {
 		t.Errorf("test1 user should have been a member of the 'admins' group, but wasn't. These roles were found instead: %v", r)
 	}
 }
@@ -154,7 +163,7 @@ func TestCheckItemPerm(t *testing.T) {
 	us.AddActor(u)
 	us.Save()
 	// temporary again
-	org.PermCheck.Enforcer().AddGroupingPolicy(u.Username, "users")
+	org.PermCheck.Enforcer().AddGroupingPolicy(u.Username, "role##users")
 
 	chk, err = org.PermCheck.CheckItemPerm(r, u, "create")
 	if err != nil {
@@ -188,11 +197,27 @@ func TestCheckItemPerm(t *testing.T) {
 	}
 }
 
-func TestGroupOperations(t *testing.T) {
+func TestGroupAdd(t *testing.T) {
+
+}
+
+func TestUserAdd(t *testing.T) {
+
+}
+
+func TestGroupRemove(t *testing.T) {
+
+}
+
+func TestUserRemove(t *testing.T) {
 
 }
 
 func TestClients(t *testing.T) {
+
+}
+
+func TestRootACL(t *testing.T) {
 
 }
 

@@ -132,11 +132,41 @@ func (g *Group) Rename(newName string) util.Gerror {
 }
 
 func (g *Group) save() util.Gerror {
+	// Save the actors and groups in the ACL
+	if err := g.saveUsers(); err != nil {
+		return err
+	}
+
 	if config.UsingDB() {
 
 	}
+
 	ds := datastore.New()
 	ds.Set(g.Org.DataKey("group"), g.Name, g)
+	return nil
+}
+
+func (g *Group) saveUsers() util.Gerror {
+	toAdd := make([]aclhelper.Member, 0, len(g.Actors) + len(g.Groups))
+	for _, v := range g.Actors {
+		if v != nil {
+			toAdd = append(toAdd, v)
+		}
+	}
+	for _, v := range g.Groups {
+		if v != nil {
+			toAdd = append(toAdd, v)
+		}
+	}
+
+	if len(toAdd) == 0 {
+		return nil
+	}
+	fmt.Printf("org permcheck? %v\n", g.Org.PermCheck)
+
+	if err := g.Org.PermCheck.AddMembers(g, toAdd); err != nil {
+		return util.CastErr(err)
+	}
 	return nil
 }
 
@@ -285,7 +315,9 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 			return util.CastErr(merr)
 		}
 
-		// Add any new actors and groups to the ACL
+		// Add any new actors and groups to the ACL when saving the
+		// group.
+		/*
 		toAdd := make([]aclhelper.Member, 0, len(g.Actors) + len(g.Groups))
 		actLen = len(g.Actors)
 
@@ -299,6 +331,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 		if merr := g.Org.PermCheck.AddMembers(g, toAdd); merr != nil {
 			return util.CastErr(merr)
 		}
+		*/
 
 		err := g.save()
 		if err != nil {
@@ -403,7 +436,7 @@ func (g *Group) IsACLRole() bool {
 }
 
 func (g *Group) ACLName() string {
-	return fmt.Sprintf("role_%s", g.Name)
+	return fmt.Sprintf("role##%s", g.Name)
 }
 
 // should this actually return the groups?
