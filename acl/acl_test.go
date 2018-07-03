@@ -77,14 +77,6 @@ func buildOrg() (*organization.Organization, *user.User) {
 	admins.AddActor(adminUser)
 	admins.Save()
 
-	/*
-	loadACL(org)
-	e := org.PermCheck.Enforcer()
-	// temporary
-	e.AddGroupingPolicy(adminUser.Username, "role##admins")
-	e.SavePolicy()
-	*/
-
 	return org, adminUser
 }
 
@@ -202,7 +194,37 @@ func TestGroupAdd(t *testing.T) {
 }
 
 func TestUserAdd(t *testing.T) {
+	org, adminUser := buildOrg()
+	u1, _ := user.New("add_test1")
+	u1.Save()
+	ar, _ := association.SetReq(u1, org, adminUser)
+	ar.Accept()
+	us1, _ := group.Get(org, "users")
+	/* us1.AddActor(u1)
+	us1.Save() */
+	u2, _ := user.New("add_test2")
+	u2.Save()
+	ar2, _ := association.SetReq(u2, org, adminUser)
+	ar2.Accept()
+	us2, _ := group.Get(org, "admins")
+	us2.AddActor(u2)
+	us2.Save()
 
+	// check roles
+	r1 := org.PermCheck.Enforcer().GetRolesForUser(u1.Username)
+	if r1[0] != us1.ACLName() {
+		t.Errorf("Role %s not found for %s, got %v instead", us1.ACLName(), u1.GetName(), r1)
+	}
+	r2 := org.PermCheck.Enforcer().GetRolesForUser(u2.Username)
+	var roleFound bool
+	for _, r := range r2 {
+		if r == us2.ACLName() {
+			roleFound = true
+		}
+	}
+	if !roleFound {
+		t.Errorf("Role %s not found for %s, got %v instead", us2.ACLName(), u2.GetName(), r2)
+	}
 }
 
 func TestGroupRemove(t *testing.T) {

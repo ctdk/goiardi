@@ -92,6 +92,9 @@ func Get(org *organization.Organization, name string) (*Group, util.Gerror) {
 		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
+	group.Org = org // we're in the same org as the caller, go ahead and
+			// assign it to the group so we have access to the ACL
+			// stuff
 	return group, nil
 }
 
@@ -162,7 +165,6 @@ func (g *Group) saveUsers() util.Gerror {
 	if len(toAdd) == 0 {
 		return nil
 	}
-	fmt.Printf("org permcheck? %v\n", g.Org.PermCheck)
 
 	if err := g.Org.PermCheck.AddMembers(g, toAdd); err != nil {
 		return util.CastErr(err)
