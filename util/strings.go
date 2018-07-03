@@ -140,3 +140,13 @@ func delTwoPosElements(pos int, skip int, strs []string) []string {
 	strs = append(strs[:pos], strs[pos+skip:]...)
 	return strs
 }
+
+// take the easy way out at least for now
+func StringPresentInSlice(str string, chking []string) bool {
+	for _, s := range chking {
+		if str == s {
+			return true
+		}
+	}
+	return false
+}

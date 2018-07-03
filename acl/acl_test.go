@@ -195,14 +195,12 @@ func TestGroupAdd(t *testing.T) {
 
 func TestUserAdd(t *testing.T) {
 	org, adminUser := buildOrg()
-	u1, _ := user.New("add_test1")
+	u1, _ := user.New("rm_test1")
 	u1.Save()
 	ar, _ := association.SetReq(u1, org, adminUser)
 	ar.Accept()
 	us1, _ := group.Get(org, "users")
-	/* us1.AddActor(u1)
-	us1.Save() */
-	u2, _ := user.New("add_test2")
+	u2, _ := user.New("rm_test2")
 	u2.Save()
 	ar2, _ := association.SetReq(u2, org, adminUser)
 	ar2.Accept()
@@ -232,7 +230,26 @@ func TestGroupRemove(t *testing.T) {
 }
 
 func TestUserRemove(t *testing.T) {
+	org, adminUser := buildOrg()
+	u1, _ := user.New("add_test1")
+	u1.Save()
+	ar, _ := association.SetReq(u1, org, adminUser)
+	ar.Accept()
+	us1, _ := group.Get(org, "users")
+	u2, _ := user.New("add_test2")
+	u2.Save()
+	ar2, _ := association.SetReq(u2, org, adminUser)
+	ar2.Accept()
+	us2, _ := group.Get(org, "admins")
+	us2.AddActor(u2)
+	us2.Save()
 
+	// make a new group
+	gg, _ := group.New("rmgroup")
+	gg.Save()
+	// add the users in
+	gg.AddActor(us1)
+	gg.AccActor(us2)
 }
 
 func TestClients(t *testing.T) {
