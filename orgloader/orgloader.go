@@ -36,3 +36,15 @@ func Get(name string) (*organization.Organization, util.Gerror) {
 	}
 	return org, nil
 }
+
+func New(name, fullName string) (*organization.Organization, util.Gerror) {
+	org, err := organization.New(name, fullName)
+	if err != nil {
+		return nil, err
+	}
+	aclErr := acl.LoadACL(org)
+	if aclErr != nil {
+		return nil, util.CastErr(aclErr)
+	}
+	return org, nil
+}
