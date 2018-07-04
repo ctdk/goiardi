@@ -27,6 +27,7 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/util"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -69,7 +70,7 @@ func buildOrg() (*organization.Organization, *user.User) {
 	adminUser.Save()
 	org, _ := organization.New(fmt.Sprintf("org%d", orgCount), fmt.Sprintf("test org %d", orgCount))
 	orgCount++
-	loadACL(org)
+	LoadACL(org)
 	ar, _ := association.SetReq(adminUser, org, pivotal)
 	ar.Accept()
 	group.MakeDefaultGroups(org)
@@ -91,7 +92,7 @@ func TestMain(m *testing.M) {
 
 func TestInitACL(t *testing.T) {
 	org, _ := organization.New("florp", "mlorph normph")
-	loadACL(org)
+	LoadACL(org)
 	group.MakeDefaultGroups(org)
 
 	/*
@@ -131,7 +132,7 @@ func TestInitACL(t *testing.T) {
 		}
 	}
 	r := e.GetRolesForUser("test1")
-	if r[0] != "role##admins" {
+	if !util.StringPresentInSlice("role##admins", r) {
 		t.Errorf("test1 user should have been a member of the 'admins' group, but wasn't. These roles were found instead: %v", r)
 	}
 }
@@ -210,17 +211,11 @@ func TestUserAdd(t *testing.T) {
 
 	// check roles
 	r1 := org.PermCheck.Enforcer().GetRolesForUser(u1.Username)
-	if r1[0] != us1.ACLName() {
+	if !util.StringPresentInSlice(us1.ACLName(), r1) {
 		t.Errorf("Role %s not found for %s, got %v instead", us1.ACLName(), u1.GetName(), r1)
 	}
 	r2 := org.PermCheck.Enforcer().GetRolesForUser(u2.Username)
-	var roleFound bool
-	for _, r := range r2 {
-		if r == us2.ACLName() {
-			roleFound = true
-		}
-	}
-	if !roleFound {
+	if !util.StringPresentInSlice(us2.ACLName(), r2) {
 		t.Errorf("Role %s not found for %s, got %v instead", us2.ACLName(), u2.GetName(), r2)
 	}
 }
@@ -235,7 +230,6 @@ func TestUserRemove(t *testing.T) {
 	u1.Save()
 	ar, _ := association.SetReq(u1, org, adminUser)
 	ar.Accept()
-	us1, _ := group.Get(org, "users")
 	u2, _ := user.New("add_test2")
 	u2.Save()
 	ar2, _ := association.SetReq(u2, org, adminUser)
@@ -245,11 +239,40 @@ func TestUserRemove(t *testing.T) {
 	us2.Save()
 
 	// make a new group
-	gg, _ := group.New("rmgroup")
+	gg, _ := group.New(org, "rmgroup")
 	gg.Save()
 	// add the users in
-	gg.AddActor(us1)
-	gg.AccActor(us2)
+	gg.AddActor(u1)
+	gg.AddActor(u2)
+	gg.Save()
+
+	r1 := org.PermCheck.Enforcer().GetRolesForUser(u1.Username)
+	if !util.StringPresentInSlice(gg.ACLName(), r1) {
+		t.Errorf("Didn't find %s in %s's roles.", gg.ACLName(), u1.Username)
+	}
+	r2 := org.PermCheck.Enforcer().GetRolesForUser(u2.Username)
+	if !util.StringPresentInSlice(gg.ACLName(), r2) {
+		t.Errorf("Didn't find %s in %s's roles.", gg.ACLName(), u2.Username)
+	}
+
+	err := gg.DelActor(u1)
+	if err != nil {
+		t.Errorf("error removing %s from %s group: %s", u1.Username, gg.Name, err.Error())
+	}
+	err = gg.DelActor(u2)
+	if err != nil {
+		t.Errorf("error removing %s from %s group: %s", u2.Username, gg.Name, err.Error())
+	}
+	gg.Save()
+
+	r1 = org.PermCheck.Enforcer().GetRolesForUser(u1.Username)
+	if util.StringPresentInSlice(gg.ACLName(), r1) {
+		t.Errorf("Found %s in %s's roles, when it shouldn't have been.", gg.ACLName(), u1.Username)
+	}
+	r2 = org.PermCheck.Enforcer().GetRolesForUser(u2.Username)
+	if util.StringPresentInSlice(gg.ACLName(), r2) {
+		t.Errorf("Found %s in %s's roles, when it shouldn't have been.", gg.ACLName(), u2.Username)
+	}
 }
 
 func TestClients(t *testing.T) {

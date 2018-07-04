@@ -62,7 +62,7 @@ const policyFileFmt = "%s-policy.csv"
 
 var DefaultUser = "pivotal" // should this be configurable?
 
-func loadACL(org *organization.Organization) error {
+func LoadACL(org *organization.Organization) error {
 	m := casbin.NewModel(modelDefinition)
 	if !policyExists(org, config.Config.PolicyRoot) {
 		newE, err := initializeACL(org, m)
