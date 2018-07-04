@@ -206,6 +206,9 @@ func (g *Group) DelActor(a actor.Actor) util.Gerror {
 		defer g.m.Unlock()
 		g.Actors[pos] = nil
 		g.Actors = append(g.Actors[:pos], g.Actors[pos+1:]...)
+		if err := g.Org.PermCheck.RemoveMembers(g, []aclhelper.Member{a}); err != nil {
+			return util.CastErr(err)
+		}
 	} else {
 		return util.Errorf("actor %s not in group", a.GetName())
 	}
@@ -319,22 +322,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 
 		// Add any new actors and groups to the ACL when saving the
 		// group.
-		/*
-		toAdd := make([]aclhelper.Member, 0, len(g.Actors) + len(g.Groups))
-		actLen = len(g.Actors)
-
-		for i, v := range g.Actors {
-			toAdd[i] = v
-		}
-		for i, v := range g.Groups {
-			toAdd[i + actLen] = v
-		}
-
-		if merr := g.Org.PermCheck.AddMembers(g, toAdd); merr != nil {
-			return util.CastErr(merr)
-		}
-		*/
-
+	
 		err := g.save()
 		if err != nil {
 			return err
