@@ -21,6 +21,7 @@ import (
 	"fmt"
 	// "github.com/casbin/casbin"
 	"github.com/ctdk/goiardi/association"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/indexer"
@@ -42,6 +43,7 @@ func init() {
 	gob.Register(new(user.User))
 	gob.Register(new(association.Association))
 	gob.Register(new(association.AssociationReq))
+	gob.Register(new(client.Client))
 	gob.Register(new(group.Group))
 	gob.Register(new(role.Role))
 	gob.Register(make(map[string]interface{}))
@@ -276,7 +278,38 @@ func TestUserRemove(t *testing.T) {
 }
 
 func TestClients(t *testing.T) {
+	org, _ := buildOrg()
+	c, _ := client.New(org, "client1")
+	c.Save()
 
+	gg, _ := group.Get(org, "clients")
+	gg.AddActor(c)
+	gg.Save()
+
+	r1 := org.PermCheck.Enforcer().GetRolesForUser(c.GetName())
+	fmt.Printf("roles for client: %v\n", r1)
+
+	if !util.StringPresentInSlice(gg.ACLName(), r1) {
+		t.Errorf("Didn't find %s in %s's roles.", gg.ACLName(), c.GetName())
+	}
+	r, _ := role.New(org, "chkclient")
+	r.Save()
+
+	chk, err := org.PermCheck.CheckItemPerm(r, c, "read")
+	if err != nil {
+		t.Errorf("checking client role read perm failed: %s", err.Error())
+	}
+	if !chk {
+		t.Error("checking a role read perm for a client failed unexpectedly")
+	}
+
+	chk, err = org.PermCheck.CheckItemPerm(r, c, "update")
+	if err != nil {
+		t.Errorf("checking client role update perm failed: %s", err.Error())
+	}
+	if chk {
+		t.Error("checking a role update perm for a client passed unexpectedly")
+	}
 }
 
 func TestRootACL(t *testing.T) {
