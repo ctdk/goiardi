@@ -313,7 +313,37 @@ func TestClients(t *testing.T) {
 }
 
 func TestRootACL(t *testing.T) {
+	org, adminUser := buildOrg()
+	u1, _ := user.New("root_test1")
+	u1.Save()
+	ar, _ := association.SetReq(u1, org, adminUser)
+	ar.Accept()
+	
+	for _, p := range DefaultACLs {
+		s, err := org.PermCheck.RootCheckPerm(adminUser, p)
+		if !s {
+			t.Errorf("Root perm check %s failed for admin user", s)
+		}
+		if err != nil {
+			t.Errorf("Root perm check on %s for admin user had an error: %s", s, err.Error())
+		}
+	}
 
+	for _, p := range DefaultACLs {
+		s, err := org.PermCheck.RootCheckPerm(u1, p)
+		if p != "read" {
+			if s {
+				t.Errorf("Root perm check %s unexpectedly passed for normal user", s)
+			}
+		} else {
+			if !s {
+				t.Errorf("Root perm check %s unexpectedly failed for normal user", s)
+			}
+		}
+		if err != nil {
+			t.Errorf("Root perm check on %s for normal user had an error: %s", s, err.Error())
+		}
+	}
 }
 
 func TestMultipleOrgs(t *testing.T) {

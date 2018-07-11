@@ -54,6 +54,13 @@ p, role##users, containers, containers, clients, delete, allow
 p, role##users, containers, containers, nodes, create, allow
 p, role##users, containers, containers, environments, create, allow
 
+p, role##admins, $$root$$, containers, default, create, allow
+p, role##admins, $$root$$, containers, default, read, allow
+p, role##users, $$root$$, containers, default, read, allow
+p, role##admins, $$root$$, containers, default, update, allow
+p, role##admins, $$root$$, containers, default, delete, allow
+p, role##admins, $$root$$, containers, default, grant, allow
+
 p, role##admins, groups, containers, default, create, allow
 p, role##admins, groups, containers, default, read, allow
 p, role##admins, groups, containers, default, update, allow

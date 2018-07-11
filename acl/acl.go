@@ -175,6 +175,10 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 	return false, nil
 }
 
+func (c *Checker) RootCheckPerm(doer aclhelper.Actor, perm string) (bool, util.Gerror) {
+	return c.CheckItemPerm(c.org, doer, perm)
+}
+
 func buildEnforcingSlice(item aclhelper.Item, doer aclhelper.Actor, perm string) enforceCondition {
 	cond := []interface{}{doer.GetName(), item.ContainerType(), item.ContainerKind(), item.GetName(), perm, enforceEffect}
 	return enforceCondition(cond)

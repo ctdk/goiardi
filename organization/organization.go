@@ -215,3 +215,19 @@ func ExportAllOrgs() []map[string]interface{} {
 func Import(orgData map[string]interface{}) (*Organization, error) {
 	return nil, nil
 }
+
+// Turns out it's more straightforward to do the '$$root$$' perm checks against
+// the organization in question. Huh. That means orgs need to satisfy the
+// aclhelper interface.
+
+func (o *Organization) GetName() string {
+	return o.Name
+}
+
+func (o *Organization) ContainerKind() string {
+	return "containers"
+}
+
+func (o *Organization) ContainerType() string {
+	return "$$root$$"
+}

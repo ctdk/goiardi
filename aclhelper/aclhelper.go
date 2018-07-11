@@ -56,6 +56,7 @@ type Actor interface {
 
 type PermChecker interface {
 	CheckItemPerm(Item, Actor, string) (bool, util.Gerror)
+	RootCheckPerm(Actor, string) (bool, util.Gerror)
 	AddMembers(Member, []Member) error
 	RemoveMembers(Member, []Member) error
 	AddACLRole(Member) error
