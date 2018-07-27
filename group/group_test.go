@@ -40,19 +40,19 @@ func (f *fakeChecker) CheckItemPerm(i aclhelper.Item, a aclhelper.Actor, s strin
 	return true, nil
 }
 
-func (f *fakeChecker) AddMembers(m aclhelper.Member, mm []aclhelper.Member) error {
+func (f *fakeChecker) AddMembers(m aclhelper.Role, mm []aclhelper.Member) error {
 	return nil
 }
 
-func (f *fakeChecker) RemoveMembers(m aclhelper.Member, mm []aclhelper.Member) error {
+func (f *fakeChecker) RemoveMembers(m aclhelper.Role, mm []aclhelper.Member) error {
 	return nil
 }
 
-func (f *fakeChecker) AddACLRole(m aclhelper.Member) error {
+func (f *fakeChecker) AddACLRole(m aclhelper.Role) error {
 	return nil
 }
 
-func (f *fakeChecker) RemoveACLRole(m aclhelper.Member) error {
+func (f *fakeChecker) RemoveACLRole(m aclhelper.Role) error {
 	return nil
 }
 

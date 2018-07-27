@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -60,7 +61,7 @@ func orgACLEditHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -104,7 +105,7 @@ func containerACLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -127,7 +128,7 @@ func containerACLPermHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -152,7 +153,7 @@ func clientACLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -175,7 +176,7 @@ func clientACLPermHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -200,7 +201,7 @@ func cookbookACLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -223,7 +224,7 @@ func cookbookACLPermHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -247,7 +248,7 @@ func groupACLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -270,7 +271,7 @@ func groupACLPermHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -295,7 +296,7 @@ func environmentACLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -318,7 +319,7 @@ func environmentACLPermHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -343,7 +344,7 @@ func nodeACLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -366,7 +367,7 @@ func nodeACLPermHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -391,7 +392,7 @@ func roleACLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -414,7 +415,7 @@ func roleACLPermHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -439,7 +440,7 @@ func dataACLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -462,7 +463,7 @@ func dataACLPermHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -485,7 +486,7 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 		return
 	}
 
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -589,7 +590,7 @@ func _SKEL_ACLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -612,7 +613,7 @@ func _SKEL_ACLPermHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return

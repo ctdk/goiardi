@@ -34,6 +34,7 @@ type Role interface {
 	IsACLRole() bool
 	ACLName() string
 	GetName() string
+	AllMembers() []Member
 }
 
 type Item interface {
@@ -63,9 +64,9 @@ type Actor interface {
 type PermChecker interface {
 	CheckItemPerm(Item, Actor, string) (bool, util.Gerror)
 	RootCheckPerm(Actor, string) (bool, util.Gerror)
-	AddMembers(Member, []Member) error
-	RemoveMembers(Member, []Member) error
-	AddACLRole(Member) error
-	RemoveACLRole(Member) error
+	AddMembers(Role, []Member) error
+	RemoveMembers(Role, []Member) error
+	AddACLRole(Role) error
+	RemoveACLRole(Role) error
 	Enforcer() *casbin.SyncedEnforcer
 }

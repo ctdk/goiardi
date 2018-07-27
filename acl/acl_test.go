@@ -19,7 +19,6 @@ package acl
 import (
 	"encoding/gob"
 	"fmt"
-	// "github.com/casbin/casbin"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
@@ -111,12 +110,12 @@ func TestInitACL(t *testing.T) {
 	e.SavePolicy()
 
 	testingPolicies := [][]string{
-		{"true", "test1", "groups", "containers", "default", "create", "allow"},
-		{"true", "pivotal", "groups", "containers", "default", "create", "allow"},
-		{"true", "test1", "clients", "containers", "default", "read", "allow"},
-		{"false", "test_user", "groups", "containers", "default", "read", "allow"},
-		{"true", "test_user", "roles", "containers", "default", "read", "allow"},
-		{"false", "test_user", "roles", "containers", "default", "nonexistent_perm", "allow"},
+		{"true", "test1", "groups", "containers", "$$default$$", "create", "allow"},
+		{"true", "pivotal", "groups", "containers", "$$default$$", "create", "allow"},
+		{"true", "test1", "clients", "containers", "$$default$$", "read", "allow"},
+		{"false", "test_user", "groups", "containers", "$$default$$", "read", "allow"},
+		{"true", "test_user", "roles", "containers", "$$default$$", "read", "allow"},
+		{"false", "test_user", "roles", "containers", "$$default$$", "nonexistent_perm", "allow"},
 	}
 
 	for _, policy := range testingPolicies {

@@ -20,7 +20,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/group"
@@ -54,12 +53,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 			return
 		}
-		clientACL, gerr := acl.GetItemACL(org, chefClient)
-		if gerr != nil {
-			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
-			return
-		}
-		if f, err := clientACL.CheckPerm("delete", opUser); err != nil {
+		if f, err := org.PermCheck.CheckItemPerm(chefClient, opUser, "delete"); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		} else if !f && !opUser.IsSelf(chefClient) {
@@ -121,12 +115,8 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 			return
 		}
-		clientACL, gerr := acl.GetItemACL(org, chefClient)
-		if gerr != nil {
-			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
-			return
-		}
-		if f, err := clientACL.CheckPerm("read", opUser); err != nil {
+		
+		if f, err := org.PermCheck.CheckItemPerm(chefClient, opUser, "read"); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		} else if !f && !opUser.IsSelf(chefClient) {
@@ -164,12 +154,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		clientACL, gerr := acl.GetItemACL(org, chefClient)
-		if gerr != nil {
-			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
-			return
-		}
-		f, err := clientACL.CheckPerm("read", opUser)
+		f, err := org.PermCheck.CheckItemPerm(chefClient, opUser, "read")
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
@@ -293,13 +278,8 @@ func clientListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, err := acl.GetContainerACL(org, "clients")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
 
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+	if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "clients", "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -331,11 +311,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, err := acl.GetContainerACL(org, "clients")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
 
 	clientData, jerr := parseObjJSON(r.Body)
 	if jerr != nil {
@@ -346,7 +321,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, averr.Error(), averr.Status())
 		return
 	}
-	if f, err := containerACL.CheckPerm("create", opUser); err != nil {
+	if f, err := org.PermCheck.CheckContainerPerm(opUser, "clients", "create"); err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	} else if !f {
@@ -410,11 +385,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	clientResponse["public_key"] = chefClient.PublicKey()
 
 	chefClient.Save()
-	cACL, err := acl.GetItemACL(org, chefClient)
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
 	if !chefClient.IsValidator() {
 		g, err := group.Get(org, "clients")
 		if err != nil {
@@ -431,11 +401,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		err = cACL.AddActor("all", chefClient)
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
-		}
 	}
 	if !opUser.IsValidator() {
 		err = cACL.AddActor("all", opUser)
@@ -443,11 +408,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-	}
-	err = cACL.Save()
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
 	}
 	if lerr := loginfo.LogEvent(org, opUser, chefClient, "create"); lerr != nil {
 		jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)

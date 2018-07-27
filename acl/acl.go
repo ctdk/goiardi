@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/container"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
@@ -179,6 +180,14 @@ func (c *Checker) RootCheckPerm(doer aclhelper.Actor, perm string) (bool, util.G
 	return c.CheckItemPerm(c.org, doer, perm)
 }
 
+func (c *Checker) CheckContainerPerm(doer aclhelper.Actor, containerName string, perm string) (bool, util.Gerror) {
+	cont, err := container.Get(c.org, containerName)
+	if err != nil {
+		return false, err
+	}
+	return c.CheckItemPerm(cont, doer, perm) 
+}
+
 func buildEnforcingSlice(item aclhelper.Item, doer aclhelper.Actor, perm string) enforceCondition {
 	cond := []interface{}{doer.GetName(), item.ContainerType(), item.ContainerKind(), item.GetName(), perm, enforceEffect}
 	return enforceCondition(cond)
@@ -189,7 +198,7 @@ func (e enforceCondition) general() enforceCondition {
 	for i, v := range e {
 		g[i] = v
 	}
-	g[condNamePos] = "default"
+	g[condNamePos] = "$$default$$"
 	return enforceCondition(g)
 }
 
@@ -235,6 +244,10 @@ func (c *Checker) RemoveMembers(gRole aclhelper.Role, removing []aclhelper.Membe
 	logger.Debugf("deleted %d members from %s ACL role", len(removing), gRole.GetName())
 
 	return nil
+}
+
+func (c *Checker) RemoveItemACL(item aclhelper.Item) util.Gerror {
+
 }
 
 func (c *Checker) Enforcer() *casbin.SyncedEnforcer {

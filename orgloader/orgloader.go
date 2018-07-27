@@ -22,7 +22,6 @@ import (
 	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
-	"net/http"
 )
 
 func Get(name string) (*organization.Organization, util.Gerror) {
