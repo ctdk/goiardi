@@ -207,17 +207,19 @@ func (c *Checker) isPermValid (item aclhelper.Item, perm string) bool {
 
 // TODO: Determine what's actually needed with these...? There might not be much
 // for this.
-func (c *Checker) AddACLRole(gRole aclhelper.Member) error {
-
-	return nil
+func (c *Checker) AddACLRole(gRole aclhelper.Role) error {
+	// If there's any members in the role, add them. Otherwise, there's
+	// not anything to do.
+	logger.Debugf("Running AddACLRole, calling AddMembers on all members in group %s", gRole.GetName())
+	return c.AddMembers(gRole, gRole.AllMembers())
 }
 
-func (c *Checker) RemoveACLRole(gRole aclhelper.Member) error {
+func (c *Checker) RemoveACLRole(gRole aclhelper.Role) error {
 	c.e.DeleteRole(gRole.ACLName())
 	return nil
 }
 
-func (c *Checker) AddMembers(gRole aclhelper.Member, adding []aclhelper.Member) error {
+func (c *Checker) AddMembers(gRole aclhelper.Role, adding []aclhelper.Member) error {
 	for _, m := range adding {
 		c.e.AddRoleForUser(m.ACLName(), gRole.ACLName())
 	}
@@ -226,7 +228,7 @@ func (c *Checker) AddMembers(gRole aclhelper.Member, adding []aclhelper.Member) 
 	return nil
 }
 
-func (c *Checker) RemoveMembers(gRole aclhelper.Member, removing []aclhelper.Member) error {
+func (c *Checker) RemoveMembers(gRole aclhelper.Role, removing []aclhelper.Member) error {
 	for _, m := range removing {
 		c.e.DeleteRoleForUser(m.ACLName(), gRole.ACLName())
 	}

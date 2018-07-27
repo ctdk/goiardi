@@ -60,6 +60,10 @@ func (f *fakeChecker) Enforcer() *casbin.SyncedEnforcer {
 	return nil
 }
 
+func (f *fakeChecker) RootCheckPerm(a aclhelper.Actor, s string) (bool, util.Gerror) {
+	return true, nil
+}
+
 // More group tests will be coming, as
 
 func TestGroupCreation(t *testing.T) {

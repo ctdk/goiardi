@@ -125,6 +125,7 @@ func (g *Group) Rename(newName string) util.Gerror {
 			return err
 		}
 		ds.Delete(g.Org.DataKey("group"), g.Name)
+		g.Org.PermCheck.RemoveACLRole(g)
 		g.Name = newName
 		err := g.save()
 		if err != nil {
@@ -150,17 +151,7 @@ func (g *Group) save() util.Gerror {
 }
 
 func (g *Group) saveUsers() util.Gerror {
-	toAdd := make([]aclhelper.Member, 0, len(g.Actors) + len(g.Groups))
-	for _, v := range g.Actors {
-		if v != nil {
-			toAdd = append(toAdd, v)
-		}
-	}
-	for _, v := range g.Groups {
-		if v != nil {
-			toAdd = append(toAdd, v)
-		}
-	}
+	toAdd := g.AllMembers()
 
 	if len(toAdd) == 0 {
 		return nil
@@ -175,6 +166,7 @@ func (g *Group) saveUsers() util.Gerror {
 func (g *Group) Delete() util.Gerror {
 	g.m.RLock()
 	defer g.m.RUnlock()
+	g.Org.PermCheck.RemoveACLRole(g)
 	if config.UsingDB() {
 
 	}
@@ -196,6 +188,9 @@ func (g *Group) AddActor(a actor.Actor) util.Gerror {
 		g.m.Lock()
 		defer g.m.Unlock()
 		g.Actors = append(g.Actors, a)
+		if err := g.Org.PermCheck.AddMembers(g, []aclhelper.Member{a}); err != nil {
+			return util.CastErr(err)
+		}
 	}
 	return nil
 }
@@ -220,6 +215,9 @@ func (g *Group) AddGroup(a *Group) util.Gerror {
 		g.m.Lock()
 		defer g.m.Unlock()
 		g.Groups = append(g.Groups, a)
+		if err := g.Org.PermCheck.AddMembers(g, []aclhelper.Member{a}); err != nil {
+			return util.CastErr(err)
+		}
 	}
 	return nil
 }
@@ -230,6 +228,7 @@ func (g *Group) DelGroup(a *Group) util.Gerror {
 		defer g.m.Unlock()
 		g.Groups[pos] = nil
 		g.Groups = append(g.Groups[:pos], g.Groups[pos+1:]...)
+		g.Org.PermCheck.RemoveMembers(g, []aclhelper.Member{a})
 	} else {
 		return util.Errorf("group %s not in group", a.GetName())
 	}
@@ -250,14 +249,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 		groups := make([]*Group, 0)
 		newActors := make(map[string]bool)
 		newGroups := make(map[string]bool)
-		oldMembers := make([]aclhelper.Member, len(g.Actors) + len(g.Groups))
-		for i, a := range g.Actors {
-			oldMembers[i] = a
-		}
-		actLen := len(g.Actors)
-		for i, og := range g.Groups {
-			oldMembers[i+actLen] = og
-		}
+		oldMembers := g.AllMembers()
 
 		if us, uok := acts["users"].([]interface{}); uok {
 			for _, un := range us {
@@ -496,4 +488,25 @@ func (g *Group) SeekActor(actr actor.Actor) bool {
 		return false
 	}
 	return actChk(g)
+}
+
+func (g *Group) AllMembers() []aclhelper.Member {
+	x := len(g.Actors) + len(g.Groups)
+
+	if x == 0 {
+		return nil
+	}
+
+	members := make([]aclhelper.Member, 0, x)
+	for _, a := range g.Actors {
+		if a != nil {
+			members = append(members, a)
+		}
+	}
+	for _, mg := range g.Groups {
+		if mg != nil {
+			members = append(members, mg)
+		}
+	}
+	return members
 }

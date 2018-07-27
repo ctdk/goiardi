@@ -30,6 +30,12 @@ type Member interface {
 	GetName() string
 }
 
+type Role interface {
+	IsACLRole() bool
+	ACLName() string
+	GetName() string
+}
+
 type Item interface {
 	GetName() string
 	ContainerKind() string
