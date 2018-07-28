@@ -176,6 +176,17 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 	return false, nil
 }
 
+func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, perms []string) util.Gerror {
+	if len(perms) == 0 {
+		return util.Errorf("No permissions given to edit")
+	}
+	for _, p := range perms {
+		pcondition := buildEnforcingSlice(item, member, p)
+		c.e.AddPolicy(pcondition)
+	}
+	return nil
+}
+
 func (c *Checker) RootCheckPerm(doer aclhelper.Actor, perm string) (bool, util.Gerror) {
 	return c.CheckItemPerm(c.org, doer, perm)
 }
@@ -188,8 +199,8 @@ func (c *Checker) CheckContainerPerm(doer aclhelper.Actor, containerName string,
 	return c.CheckItemPerm(cont, doer, perm) 
 }
 
-func buildEnforcingSlice(item aclhelper.Item, doer aclhelper.Actor, perm string) enforceCondition {
-	cond := []interface{}{doer.GetName(), item.ContainerType(), item.ContainerKind(), item.GetName(), perm, enforceEffect}
+func buildEnforcingSlice(item aclhelper.Item, member aclhelper.Member, perm string) enforceCondition {
+	cond := []interface{}{member.ACLName(), item.ContainerType(), item.ContainerKind(), item.GetName(), perm, enforceEffect}
 	return enforceCondition(cond)
 }
 
@@ -247,7 +258,7 @@ func (c *Checker) RemoveMembers(gRole aclhelper.Role, removing []aclhelper.Membe
 }
 
 func (c *Checker) RemoveItemACL(item aclhelper.Item) util.Gerror {
-
+	return nil
 }
 
 func (c *Checker) Enforcer() *casbin.SyncedEnforcer {
