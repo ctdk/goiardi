@@ -57,9 +57,13 @@ const (
 	condPermPos
 	condEffectPos
 )
-const enforceEffect = "allow"
 
-const policyFileFmt = "%s-policy.csv"
+const (
+	enforceEffect = "allow"
+	policyFileFmt = "%s-policy.csv"
+	addPerm = "add"
+	removePerm = "remove"
+)
 
 var DefaultUser = "pivotal" // should this be configurable?
 
@@ -176,13 +180,27 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 	return false, nil
 }
 
-func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, perms []string) util.Gerror {
+func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, perms []string, action string) util.Gerror {
+	var policyFunc func(p ...interface{}) bool
+
+	switch action {
+	case addPerm:
+		policyFunc = c.e.AddPolicy
+	case removePerm:
+		policyFunc = c.e.RemovePolicy
+	default:
+		return util.Errorf("invalid edit perm action '%s'", action)
+	}
+
 	if len(perms) == 0 {
 		return util.Errorf("No permissions given to edit")
 	}
 	for _, p := range perms {
+		if !checkValidPerm(p) {
+			return util.Errorf("invalid perm '%s'", p)
+		}
 		pcondition := buildEnforcingSlice(item, member, p)
-		c.e.AddPolicy(pcondition)
+		policyFunc(pcondition...)
 	}
 	return nil
 }
@@ -263,4 +281,13 @@ func (c *Checker) RemoveItemACL(item aclhelper.Item) util.Gerror {
 
 func (c *Checker) Enforcer() *casbin.SyncedEnforcer {
 	return c.e
+}
+
+func checkValidPerm(perm string) bool {
+	for _, p := range DefaultACLs {
+		if p == perm {
+			return true
+		}
+	}
+	return false
 }

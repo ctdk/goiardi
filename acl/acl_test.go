@@ -311,6 +311,51 @@ func TestClients(t *testing.T) {
 	}
 }
 
+func TestEditItemPerms(t *testing.T) {
+	org, adminUser := buildOrg()
+	u1, _ := user.New("edit_test1")
+	u1.Save()
+	ar, _ := association.SetReq(u1, org, adminUser)
+	ar.Accept()
+
+	c, _ := client.New(org, "client1")
+	c.Save()
+
+	pre, err := org.PermCheck.CheckItemPerm(c, u1, "update")
+	if err != nil {
+		t.Errorf("checking user client update perm failed: %s", err.Error())
+	}
+	if pre {
+		t.Errorf("client update perm check passed unexpectedly")
+	}
+	org.PermCheck.EditItemPerm(c, u1, []string{"update"}, "add")
+	post, err := org.PermCheck.CheckItemPerm(c, u1, "update")
+	if err != nil {
+		t.Errorf("checking user client update perm after edit failed: %s", err.Error())
+	}
+	if !post {
+		t.Errorf("client update perm check after edit failed unexpectedly")
+	}
+
+	org.PermCheck.EditItemPerm(c, u1, []string{"update"}, "remove")
+
+	removed, err := org.PermCheck.CheckItemPerm(c, u1, "update")
+	if err != nil {
+		t.Errorf("checking user client update perm after removing failed: %s", err.Error())
+	}
+	if removed {
+		t.Errorf("client update perm check after removing succeeded unexpectedly")
+	}
+
+	if merr := org.PermCheck.EditItemPerm(c, u1, []string{"update"}, "flareg"); merr == nil {
+		t.Errorf("non-existent action 'flareg' for EditItemPerm did not fail")
+	}
+
+	if merr := org.PermCheck.EditItemPerm(c, u1, []string{"glerp"}, "add"); merr == nil {
+		t.Errorf("non-existent perm 'glerp' for EditItemPerm did not fail")
+	}
+}
+
 func TestRootACL(t *testing.T) {
 	org, adminUser := buildOrg()
 	u1, _ := user.New("root_test1")
