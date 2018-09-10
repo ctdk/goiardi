@@ -31,6 +31,7 @@ import (
 	"github.com/tideland/golib/logger"
 	"os"
 	"path"
+	"strings"
 )
 
 var DefaultACLs = [5]string{
@@ -281,6 +282,44 @@ func (c *Checker) RemoveItemACL(item aclhelper.Item) util.Gerror {
 
 func (c *Checker) Enforcer() *casbin.SyncedEnforcer {
 	return c.e
+}
+
+func (c *Checker) GetItemPolicy(item aclhelper.Item) (map[string]map[string][]string, error) {
+	// Hrmph, it'd be nice if this was a little easier. At least here we
+	// can get it by name and do the kind/subkind checks afterwards.
+	filtered := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+	if filtered == nil || len(filtered) == 0 {
+		err := fmt.Errorf("item not found")
+		return nil, err
+	}
+
+	tmpMap := make(map[string]map[string][]string)
+
+	for _, p := range filtered {
+		if p[condKindPos] == item.ContainerKind() && p[condSubkindPos] == item.ContainerType {
+			perm := p[condPermPos]
+			subj := p[condGroupPos]
+
+			// skip over "deny" for now I suppose
+			if p[condEffectPos] == "deny" {
+				continue
+			}
+
+			if _, ok := tmpMap[perm]; !ok {
+				tmpMap[perm] = make(map[string][]string)
+				tmpMap[perm]["Actors"] = make([]string, 0)
+				tmpMap[perm]["Groups"] = make([]string, 0)
+			}
+			if strings.HasPrefix(subj, "roles##") {
+				gname := strings.TrimPrefix(subj, "roles##")
+				tmpMap[perm]["Groups"] = append(tmp[perm]["Groups"], gname)
+			} else {
+				tmpMap[perm]["Actors"] = append(tmp[perm]["Actors"], subj)
+			}
+		}
+	}
+
+	return tmpMap, nil
 }
 
 func checkValidPerm(perm string) bool {

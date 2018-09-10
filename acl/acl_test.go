@@ -393,3 +393,15 @@ func TestRootACL(t *testing.T) {
 func TestMultipleOrgs(t *testing.T) {
 
 }
+
+func TestGetItemAcl(t *testing.T) {
+	org, _ := buildOrg()
+	r, _ := role.New(org, "getitemacl")
+	r.Save()
+
+	m, err := org.PermCheck.GetItemACL(r)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("m: %+v\n", m)
+}

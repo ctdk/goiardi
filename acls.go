@@ -491,6 +491,20 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
+
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+	if pok, perr := org.PermCheck(opUser, "grant"); if perr != nil {
+		jsonErrorReport(w, r, perr.Error(), perr.Status())
+		return
+	} else if !pok {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		return
+	}
+
 	a, rerr := acl.Get(org, kind, subkind)
 	if rerr != nil {
 		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
