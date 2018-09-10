@@ -64,6 +64,10 @@ func (f *fakeChecker) RootCheckPerm(a aclhelper.Actor, s string) (bool, util.Ger
 	return true, nil
 }
 
+func (f *fakeChecker) EditItemPerm(i aclhelper.Item, m aclhelper.Member, perms []string, action string) util.Gerror {
+	return nil
+}
+
 // More group tests will be coming, as
 
 func TestGroupCreation(t *testing.T) {
