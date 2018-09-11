@@ -43,6 +43,18 @@ type Item interface {
 	ContainerType() string
 }
 
+// Pretty sure this will be useful in only one or two places, but so it goes.
+type ACL struct {
+	Perms map[string]*ACLItem
+}
+
+type ACLItem struct {
+	perm string
+	effect string
+	Actors []string
+	Groups []string
+}
+
 // Actor is an interface for objects that can make requests to the server. This
 // is a duplicate of the Actor interface in github.com/ctdk/goiardi/actor.
 type Actor interface {
@@ -70,4 +82,10 @@ type PermChecker interface {
 	AddACLRole(Role) error
 	RemoveACLRole(Role) error
 	Enforcer() *casbin.SyncedEnforcer
+	GetItemACL(Item) (*ACL, error)
+}
+
+
+func (a *ACL) ToJSON() map[string]map[string][]string {
+	return nil
 }

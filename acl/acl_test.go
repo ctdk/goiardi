@@ -403,5 +403,30 @@ func TestGetItemAcl(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Printf("m: %+v\n", m)
+
+	if m == nil {
+		t.Error("No elements were found in item ACL")
+	} else {
+		// Check for the usual suspects in the ACL
+		for _, p := range DefaultACLs {
+			if a := m.Perms[p].Actors; a == nil {
+				t.Errorf("Array for actors in ACL perm '%s' was not found.", p)
+			} else {
+				if len(a) != 0 {
+					t.Errorf("Array of actors in ACL perm '%s' should have had no members, but it had %d members.", p, len(a))
+				}
+			}
+			if g, ok :=  m.Perms[p].Groups; !ok {
+				t.Errorf("Array for groups in ACL perm '%s' should have been found, but it wasn't!", p)
+			} else {
+				if len(g) == 0 {
+					t.Errorf("Array of groups in ACL perm '%s' should have had members, but it did not.", p)
+				} else {
+					if g[0] != "role##admins" {
+						t.Errorf("The first member of the Groups array in %s should have been 'role##admins', but was '%s'.", p, g[0])
+					}
+				}
+			}
+		}
+	}
 }

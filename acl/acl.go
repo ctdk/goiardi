@@ -284,42 +284,61 @@ func (c *Checker) Enforcer() *casbin.SyncedEnforcer {
 	return c.e
 }
 
-func (c *Checker) GetItemPolicy(item aclhelper.Item) (map[string]map[string][]string, error) {
+func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 	// Hrmph, it'd be nice if this was a little easier. At least here we
 	// can get it by name and do the kind/subkind checks afterwards.
-	filtered := c.e.GetFilteredPolicy(condNamePos, item.GetName())
-	if filtered == nil || len(filtered) == 0 {
-		err := fmt.Errorf("item not found")
+	filteredItem := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+	filteredType := c.e.GetFilteredPolicy(condSubkindPos, item.ContainerType())
+
+	if (filteredItem == nil || len(filteredItem) == 0) && (filteredType == nil || len(filteredType) == 0) {
+		err := fmt.Errorf("item '%s' (and overall type '%s') not found in ACL", item.GetName(), item.ContainerType())
 		return nil, err
 	}
 
+	itemCompare := func(i aclhelper.Item, pol []string) bool {
+		return pol[condKindPos] == i.ContainerKind() && pol[condSubkindPos] == i.ContainerType()
+	}
+	genCompare := func(i aclhelper.Item, pol []string) bool {
+		return pol[condKindPos] == i.ContainerKind()
+	}
+
+	itemPerms := assembleACL(item, filteredItem, itemCompare)
+	genPerms := assembleACL(item, filteredType, genCompare)
+
+	// Override general permissions with the specifics
+	for k, v := range itemPerms.Perms {
+		genPerms.Perms[k] = v
+	}
+	return genPerms, nil
+}
+
+func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelper.Item, []string) bool) *aclhelper.ACL {
 	tmpMap := make(map[string]map[string][]string)
+	tmpACL := new(aclhelper.ACL)
+	tmpACL.Perms = make(map[string]*aclhelper.ACLItem)
 
 	for _, p := range filtered {
-		if p[condKindPos] == item.ContainerKind() && p[condSubkindPos] == item.ContainerType {
+		if comparer(item, p) {
 			perm := p[condPermPos]
 			subj := p[condGroupPos]
 
-			// skip over "deny" for now I suppose
-			if p[condEffectPos] == "deny" {
-				continue
+			if _, ok := tmpACL.Perms[perm]; !ok {
+				tmpACL.Perms[perm] = new(ACLItem)
+				tmpACL.Perms[perm].Actors = make([]string, 0)
+				tmpACL.Perms[perm].Groups = make([]string, 0)
+				tmpACL.Perms[perm].perm = perm
+				tmpACL.Perms[perm].effect = p[condEffectPos]
 			}
-
-			if _, ok := tmpMap[perm]; !ok {
-				tmpMap[perm] = make(map[string][]string)
-				tmpMap[perm]["Actors"] = make([]string, 0)
-				tmpMap[perm]["Groups"] = make([]string, 0)
-			}
-			if strings.HasPrefix(subj, "roles##") {
+			if strings.HasPrefix(subj, "role##") {
 				gname := strings.TrimPrefix(subj, "roles##")
-				tmpMap[perm]["Groups"] = append(tmp[perm]["Groups"], gname)
+				tmpACL.Perms[perm].Groups = append(tmpACL.Perms[perm].Groups, gname)
 			} else {
-				tmpMap[perm]["Actors"] = append(tmp[perm]["Actors"], subj)
+				tmpACL.Perms[perm].Actors = append(tmpACL.Perms[perm].Actors, subj)
 			}
 		}
 	}
 
-	return tmpMap, nil
+	return tmpACL
 }
 
 func checkValidPerm(perm string) bool {
