@@ -45,6 +45,9 @@ type Item interface {
 
 // Pretty sure this will be useful in only one or two places, but so it goes.
 type ACL struct {
+	Name string
+	Kind string
+	Subkind string
 	Perms map[string]*ACLItem
 }
 
@@ -88,7 +91,7 @@ type PermChecker interface {
 // This might be better moved back to the acl module, and made available as
 // a module. Hmm.
 func (a *ACL) ToJSON() map[string]interface{} {
-	jsMap := make(map[string]map[string][]string
+	jsMap := make(map[string]interface{})
 	populate := func(a []string) []string {
 		p := make([]string, len(a))
 		for i, s := range a {
@@ -103,5 +106,38 @@ func (a *ACL) ToJSON() map[string]interface{} {
 		permData["groups"] = populate(v.Groups)
 		jsMap[k] = permData
 	}
-	return permData
+	return jsMap
+}
+
+// this might be useful.
+func (a *ACL) Policies() [][]interface{} {
+	pols := make([][]interface{}, 0)
+	for k, p := range a.Perms {
+		s := p.buildPolicyDefs(a.Name, a.Kind, a.Subkind, k)
+		pols = append(pols, s...)
+	}
+	return pols
+}
+
+func (i *ACLItem) buildPolicyDefs(name string, kind string, subkind string, perm string) [][]interface{} {
+	var policyDefs [][]interface{}
+	apol := pslice(name, kind, subkind, perm, i.Effect, i.Actors)
+	gpol := pslice(name, kind, subkind, perm, i.Effect, i.Groups)
+	policyDefs = append(policyDefs, apol...)
+	policyDefs = append(policyDefs, gpol...)
+
+	return policyDefs
+}
+
+func pslice(name string, kind string, subkind string, perm string, effect string, subjs []string) [][]interface{} {
+	if len(subjs) == 0 {
+		return nil
+	}
+	policies := make([][]interface{}, len(subjs))
+
+	for i, s := range subjs {
+		ipol := []interface{}{s, subkind, kind, name, perm, effect}
+		policies[i] = ipol
+	}
+	return policies
 }
