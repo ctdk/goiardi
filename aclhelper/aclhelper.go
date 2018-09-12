@@ -85,7 +85,23 @@ type PermChecker interface {
 	GetItemACL(Item) (*ACL, error)
 }
 
+// This might be better moved back to the acl module, and made available as
+// a module. Hmm.
+func (a *ACL) ToJSON() map[string]interface{} {
+	jsMap := make(map[string]map[string][]string
+	populate := func(a []string) []string {
+		p := make([]string, len(a))
+		for i, s := range a {
+			p[i] = s
+		}
+		return p
+	}
 
-func (a *ACL) ToJSON() map[string]map[string][]string {
-	return nil
+	for k, v := range a.Perms {
+		permData := make(map[string][]string)
+		permData["actors"] = populate(v.Actors)
+		permData["groups"] = populate(v.Groups)
+		jsMap[k] = permData
+	}
+	return permData
 }
