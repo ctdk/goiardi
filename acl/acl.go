@@ -23,9 +23,11 @@ import (
 	"github.com/casbin/casbin/persist"
 	"github.com/casbin/casbin/persist/file-adapter"
 	"github.com/ctdk/goiardi/aclhelper"
+	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/container"
+	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
@@ -204,6 +206,30 @@ func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, per
 		policyFunc(pcondition...)
 	}
 	return nil
+}
+
+func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{}) util.Gerror {
+	switch data := data.(type) {
+	case map[string]interface{}:
+		if _, ok := data[perm]; !ok {
+			return util.Errorf("acl %s missing from JSON", perm)
+		}
+		switch aclEdit := data[perm].(type) {
+		case map[string]interface{}:
+// ----------
+			// Implementation note: for each doer already in the
+			// ACL, we'll need to check and see if they're present
+			// in the new list. If not, they'll need to be removed.
+			filteredItem := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+
+// ----------
+		default:
+			return util.Errorf("invalid acl %s data", perm)
+		}
+	default:
+		return util.Errorf("invalid acl data")
+	}
+
 }
 
 func (c *Checker) RootCheckPerm(doer aclhelper.Actor, perm string) (bool, util.Gerror) {

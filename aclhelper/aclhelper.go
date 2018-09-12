@@ -43,6 +43,25 @@ type Item interface {
 	ContainerType() string
 }
 
+// dummy Item type for root ACLs
+type RootACL struct {
+	Name string
+	Kind string
+	Subkind string
+}
+
+func (r *RootACL) GetName() string {
+	return r.Name
+}
+
+func (r *RootACL) ContainerKind() string {
+	return r.Kind
+}
+
+func (r *RootACL) ContainerType() string {
+	return r.Subkind
+}
+
 // Pretty sure this will be useful in only one or two places, but so it goes.
 type ACL struct {
 	Name string
