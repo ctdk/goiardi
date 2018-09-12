@@ -68,6 +68,10 @@ func (f *fakeChecker) EditItemPerm(i aclhelper.Item, m aclhelper.Member, perms [
 	return nil
 }
 
+func (f *fakeChecker) GetItemACL(i aclhelper.Item) (*aclhelper.ACL, error) {
+	return nil, nil
+}
+
 // More group tests will be coming, as
 
 func TestGroupCreation(t *testing.T) {

@@ -416,7 +416,7 @@ func TestGetItemAcl(t *testing.T) {
 					t.Errorf("Array of actors in ACL perm '%s' should have had no members, but it had %d members.", p, len(a))
 				}
 			}
-			if g, ok :=  m.Perms[p].Groups; !ok {
+			if g :=  m.Perms[p].Groups; g == nil {
 				t.Errorf("Array for groups in ACL perm '%s' should have been found, but it wasn't!", p)
 			} else {
 				if len(g) == 0 {

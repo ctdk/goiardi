@@ -49,8 +49,8 @@ type ACL struct {
 }
 
 type ACLItem struct {
-	perm string
-	effect string
+	Perm string
+	Effect string
 	Actors []string
 	Groups []string
 }

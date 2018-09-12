@@ -313,7 +313,6 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 }
 
 func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelper.Item, []string) bool) *aclhelper.ACL {
-	tmpMap := make(map[string]map[string][]string)
 	tmpACL := new(aclhelper.ACL)
 	tmpACL.Perms = make(map[string]*aclhelper.ACLItem)
 
@@ -323,11 +322,11 @@ func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelp
 			subj := p[condGroupPos]
 
 			if _, ok := tmpACL.Perms[perm]; !ok {
-				tmpACL.Perms[perm] = new(ACLItem)
+				tmpACL.Perms[perm] = new(aclhelper.ACLItem)
 				tmpACL.Perms[perm].Actors = make([]string, 0)
 				tmpACL.Perms[perm].Groups = make([]string, 0)
-				tmpACL.Perms[perm].perm = perm
-				tmpACL.Perms[perm].effect = p[condEffectPos]
+				tmpACL.Perms[perm].Perm = perm
+				tmpACL.Perms[perm].Effect = p[condEffectPos]
 			}
 			if strings.HasPrefix(subj, "role##") {
 				gname := strings.TrimPrefix(subj, "roles##")
