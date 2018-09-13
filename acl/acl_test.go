@@ -97,11 +97,11 @@ func TestInitACL(t *testing.T) {
 	group.MakeDefaultGroups(org)
 
 	/*
-	m := casbin.NewModel(modelDefinition)
-	e, err := initializeACL(org, m)
-	if err != nil {
-		t.Error(err)
-	}
+		m := casbin.NewModel(modelDefinition)
+		e, err := initializeACL(org, m)
+		if err != nil {
+			t.Error(err)
+		}
 	*/
 	e := org.PermCheck.Enforcer()
 
@@ -362,7 +362,7 @@ func TestRootACL(t *testing.T) {
 	u1.Save()
 	ar, _ := association.SetReq(u1, org, adminUser)
 	ar.Accept()
-	
+
 	for _, p := range DefaultACLs {
 		s, err := org.PermCheck.RootCheckPerm(adminUser, p)
 		if !s {
@@ -412,7 +412,7 @@ func TestGetItemAcl(t *testing.T) {
 					t.Errorf("Array of actors in ACL perm '%s' should have had no members, but it had %d members.", p, len(a))
 				}
 			}
-			if g :=  m.Perms[p].Groups; g == nil {
+			if g := m.Perms[p].Groups; g == nil {
 				t.Errorf("Array for groups in ACL perm '%s' should have been found, but it wasn't!", p)
 			} else {
 				if len(g) == 0 {

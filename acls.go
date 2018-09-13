@@ -497,7 +497,7 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if pok, perr := org.PermCheck(opUser, "grant"); if perr != nil {
+	if pok, perr := org.PermCheck(opUser, "grant"); perr != nil {
 		jsonErrorReport(w, r, perr.Error(), perr.Status())
 		return
 	} else if !pok {

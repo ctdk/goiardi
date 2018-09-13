@@ -93,8 +93,8 @@ func Get(org *organization.Organization, name string) (*Group, util.Gerror) {
 		return nil, err
 	}
 	group.Org = org // we're in the same org as the caller, go ahead and
-			// assign it to the group so we have access to the ACL
-			// stuff
+	// assign it to the group so we have access to the ACL
+	// stuff
 	return group, nil
 }
 
@@ -314,7 +314,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 
 		// Add any new actors and groups to the ACL when saving the
 		// group.
-	
+
 		err := g.save()
 		if err != nil {
 			return err

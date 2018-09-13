@@ -32,11 +32,11 @@ import (
 )
 
 type Organization struct {
-	Name     string `json:"name"`
-	FullName string `json:"full_name"`
-	GUID     string `json:"guid"`
-	uuID     uuid.UUID
-	id       int
+	Name      string `json:"name"`
+	FullName  string `json:"full_name"`
+	GUID      string `json:"guid"`
+	uuID      uuid.UUID
+	id        int
 	PermCheck aclhelper.PermChecker `json:"-"`
 }
 

@@ -115,7 +115,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 			return
 		}
-		
+
 		if f, err := org.PermCheck.CheckItemPerm(chefClient, opUser, "read"); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return

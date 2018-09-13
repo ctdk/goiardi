@@ -16,9 +16,7 @@
 
 package acl
 
-import (
-
-)
+import ()
 
 // Define the casbin RBAC model and the skeletal $$default$$ policy.
 

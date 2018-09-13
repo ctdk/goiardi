@@ -45,8 +45,8 @@ type Item interface {
 
 // dummy Item type for root ACLs
 type RootACL struct {
-	Name string
-	Kind string
+	Name    string
+	Kind    string
 	Subkind string
 }
 
@@ -64,14 +64,14 @@ func (r *RootACL) ContainerType() string {
 
 // Pretty sure this will be useful in only one or two places, but so it goes.
 type ACL struct {
-	Name string
-	Kind string
+	Name    string
+	Kind    string
 	Subkind string
-	Perms map[string]*ACLItem
+	Perms   map[string]*ACLItem
 }
 
 type ACLItem struct {
-	Perm string
+	Perm   string
 	Effect string
 	Actors []string
 	Groups []string

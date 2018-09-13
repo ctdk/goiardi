@@ -48,7 +48,7 @@ type enforceCondition []interface{}
 
 type Checker struct {
 	org *organization.Organization
-	e *casbin.SyncedEnforcer
+	e   *casbin.SyncedEnforcer
 }
 
 // group, subkind, kind, name, perm, effect
@@ -64,8 +64,8 @@ const (
 const (
 	enforceEffect = "allow"
 	policyFileFmt = "%s-policy.csv"
-	addPerm = "add"
-	removePerm = "remove"
+	addPerm       = "add"
+	removePerm    = "remove"
 )
 
 var DefaultUser = "pivotal" // should this be configurable?
@@ -101,11 +101,11 @@ func initializeACL(org *organization.Organization, m model.Model) (*casbin.Synce
 		return nil, err
 	}
 	e := casbin.NewSyncedEnforcer(m, adp, true)
-	
+
 	return e, nil
 }
 
-// TODO: When 1.0.0-dev starts wiring in the DBs, set up DB adapters for 
+// TODO: When 1.0.0-dev starts wiring in the DBs, set up DB adapters for
 // policies. Until that time, set up a file backed one.
 func loadPolicyAdapter(org *organization.Organization) (persist.Adapter, error) {
 	if config.UsingDB() {
@@ -152,7 +152,7 @@ func initializePolicy(org *organization.Organization, policyRoot string) error {
 	}
 	defer p.Close()
 	if _, err = p.WriteString(defaultPolicySkel); err != nil {
-		return  err
+		return err
 	}
 	return nil
 }
@@ -216,7 +216,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 		}
 		switch aclEdit := data[perm].(type) {
 		case map[string]interface{}:
-// ----------
+			// ----------
 			// Implementation note: for each doer already in the
 			// ACL, we'll need to check and see if they're present
 			// in the new list. If not, they'll need to be removed.
@@ -296,7 +296,7 @@ func (c *Checker) CheckContainerPerm(doer aclhelper.Actor, containerName string,
 	if err != nil {
 		return false, err
 	}
-	return c.CheckItemPerm(cont, doer, perm) 
+	return c.CheckItemPerm(cont, doer, perm)
 }
 
 func buildEnforcingSlice(item aclhelper.Item, member aclhelper.Member, perm string) enforceCondition {
@@ -313,7 +313,7 @@ func (e enforceCondition) general() enforceCondition {
 	return enforceCondition(g)
 }
 
-func (c *Checker) isPermValid (item aclhelper.Item, perm string) bool {
+func (c *Checker) isPermValid(item aclhelper.Item, perm string) bool {
 	// pare down the list to check a little
 	fPass := c.e.GetFilteredPolicy(condSubkindPos, item.ContainerType())
 	validPerms := make(map[string]bool)
