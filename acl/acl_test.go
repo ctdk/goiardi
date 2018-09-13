@@ -390,10 +390,6 @@ func TestRootACL(t *testing.T) {
 	}
 }
 
-func TestMultipleOrgs(t *testing.T) {
-
-}
-
 func TestGetItemAcl(t *testing.T) {
 	org, _ := buildOrg()
 	r, _ := role.New(org, "getitemacl")
@@ -429,4 +425,63 @@ func TestGetItemAcl(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestEditFromJSON(t *testing.T) {
+	org, adminUser := buildOrg()
+	r, _ := role.New(org, "editfromjson")
+	r.Save()
+	u1, _ := user.New("editjson")
+	u1.Save()
+	ar, _ := association.SetReq(u1, org, adminUser)
+	ar.Accept()
+
+	m, err := org.PermCheck.GetItemACL(r)
+	if err != nil {
+		t.Error(err)
+	}
+
+	mj := m.ToJSON()
+
+	// Man, this is a lot of hoops to jump through to simulate some JSON.
+	granters, _ := mj["grant"].(map[string][]string)["actors"]
+	granters = append(granters, u1.Name)
+
+	// Something's fishy here.
+	groupers, _ := mj["grant"].(map[string][]string)["groups"]
+
+	grantActors := make([]interface{}, len(granters))
+	grantGroupers := make([]interface{}, len(groupers))
+
+	for i, v := range granters {
+		grantActors[i] = v
+	}
+	for i, v := range groupers {
+		grantGroupers[i] = v
+	}
+
+	mj["grant"].(map[string][]string)["actors"] = granters
+	grantOp := make(map[string]interface{})
+	grantOp["actors"] = grantActors
+	grantOp["groups"] = grantGroupers
+	jsonContainer := make(map[string]interface{})
+	jsonContainer["grant"] = grantOp
+
+	jerr := org.PermCheck.EditFromJSON(r, "grant", jsonContainer)
+	if jerr != nil {
+		t.Errorf("EditFromJSON failed: %s", jerr.Error())
+	}
+
+	permitted, err := org.PermCheck.CheckItemPerm(r, u1, "grant")
+	if err != nil {
+		t.Errorf("CheckItemPerm after EditFromJSON failed with an error: %s", err.Error())
+	}
+
+	if !permitted {
+		t.Error("test user should have had 'grant' permission after EditFromJSON, but didn't.")
+	}
+}
+
+func TestMultipleOrgs(t *testing.T) {
+
 }

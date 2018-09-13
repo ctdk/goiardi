@@ -72,6 +72,10 @@ func (f *fakeChecker) GetItemACL(i aclhelper.Item) (*aclhelper.ACL, error) {
 	return nil, nil
 }
 
+func (f *fakeChecker) EditFromJSON(i aclhelper.Item, perm string, data interface{}) util.Gerror {
+	return nil
+}
+
 // More group tests will be coming, as
 
 func TestGroupCreation(t *testing.T) {
