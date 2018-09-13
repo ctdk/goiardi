@@ -18,7 +18,7 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/acl"
+	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/container"
@@ -66,24 +66,25 @@ func orgACLEditHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	kind := "containers"
-	subkind := "$$root$$"
-	a, rerr := acl.Get(org, kind, subkind)
-	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+	
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
+
 	perm := vars["perm"]
-	if aerr := aclPermCheck(r, org, a, "grant"); aerr != nil {
+	if aerr := aclPermCheck(org, opUser, "grant"); aerr != nil {
 		jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 		return
 	}
+
 	aclData, jerr := parseObjJSON(r.Body)
 	if jerr != nil {
 		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 		return
 	}
-	err := a.EditFromJSON(perm, aclData)
+	err := org.PermCheck.EditFromJSON(perm, aclData)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
@@ -497,7 +498,7 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if pok, perr := org.PermCheck(opUser, "grant"); perr != nil {
+	if pok, perr := org.PermCheck.RootCheckPerm(opUser, "grant"); perr != nil {
 		jsonErrorReport(w, r, perr.Error(), perr.Status())
 		return
 	} else if !pok {
@@ -505,7 +506,9 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 		return
 	}
 
-	a, rerr := acl.Get(org, kind, subkind)
+	rootACL := &aclhelper.RootACL{Name: subkind, Kind: kind, Subkind: subkind}
+	a, rerr := org.PermCheck.GetItemACL(rootACL)
+
 	if rerr != nil {
 		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
 		return
@@ -522,27 +525,23 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 	}
 }
 
-func baseItemACLHandler(w http.ResponseWriter, r *http.Request, org *organization.Organization, aclOwner acl.ACLOwner) {
-	a, rerr := acl.GetItemACL(org, aclOwner)
-	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
+func baseItemACLHandler(w http.ResponseWriter, r *http.Request, org *organization.Organization, item aclhelper.Item) {
+	if err := aclPermCheck(r, item, opUser, "grant"); err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
-	if aerr := aclPermCheck(r, org, a, "grant"); aerr != nil {
-		jsonErrorReport(w, r, aerr.Error(), aerr.Status())
-		return
-	}
+
 	sendResponse(w, r, a)
 }
 
-func baseACLPermHandler(w http.ResponseWriter, r *http.Request, org *organization.Organization, aclOwner acl.ACLOwner, perm string) {
-	a, rerr := acl.GetItemACL(org, aclOwner)
-	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
-		return
+func baseACLPermHandler(w http.ResponseWriter, r *http.Request, org *organization.Organization, item aclhelper.Item, perm string) {
+	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
+	if oerr != nil {
+		return oerr
 	}
-	if aerr := aclPermCheck(r, org, a, "grant"); aerr != nil {
-		jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+
+	if err := aclPermCheck(r, item, opUser, "grant"); err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
 
@@ -552,17 +551,12 @@ func baseACLPermHandler(w http.ResponseWriter, r *http.Request, org *organizatio
 		return
 	}
 
-	ederr := a.EditFromJSON(perm, aclData)
+	ederr := a.EditFromJSON(item, perm, aclData)
 	if ederr != nil {
 		jsonErrorReport(w, r, ederr.Error(), ederr.Status())
 		return
 	}
 
-	p, ok := a.ACLitems[perm]
-	if !ok {
-		jsonErrorReport(w, r, "perm nonexistent", http.StatusBadRequest)
-		return
-	}
 	sendResponse(w, r, p)
 }
 
@@ -575,19 +569,19 @@ func sendResponse(w http.ResponseWriter, r *http.Request, resp responder) {
 	}
 }
 
-func aclPermCheck(r *http.Request, org *organization.Organization, objACL *acl.ACL, perm string) util.Gerror {
+func aclPermCheck(r *http.Request, org *organization.Organization, item aclhelper.Item, perm string) util.Gerror {
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		return oerr
 	}
-	if f, ferr := objACL.CheckPerm(perm, opUser); ferr != nil {
-		return ferr
-	} else if !f {
-		err := util.Errorf("You do not have permission to do that")
-		err.SetStatus(http.StatusForbidden)
-		return err
-	}
 
+	if ok, err := org.PermCheck.CheckItemPerm(item, opUser, "grant"); err != nil {
+		return err
+	} else if !ok {
+		derr := util.Errorf("You do not have permission to do that")
+		derr.SetStatus(http.StatusForbidden)
+		return derr
+	}
 	return nil
 }
 
