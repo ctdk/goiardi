@@ -422,7 +422,7 @@ func TestGetItemAcl(t *testing.T) {
 				if len(g) == 0 {
 					t.Errorf("Array of groups in ACL perm '%s' should have had members, but it did not.", p)
 				} else {
-					if g[0] != "role##admins" {
+					if g[0] != "admins" {
 						t.Errorf("The first member of the Groups array in %s should have been 'role##admins', but was '%s'.", p, g[0])
 					}
 				}

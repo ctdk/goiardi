@@ -221,15 +221,70 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 			// ACL, we'll need to check and see if they're present
 			// in the new list. If not, they'll need to be removed.
 			filteredItem := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+			newActRaw, ok := aclEdit["actors"].([]interface{})
+			if !ok {
+				return util.Errorf("invalid type for actor in acl")
+			}
+			newGroupsRaw, ok := aclEdit["groups"].([]interface{})
+			if !ok {
+				return util.Errorf("invalid type for group in acl")
+			}
+			newActors := make([]string, len(newActRaw))
+			newGroups := make([]string, len(newGroupsRaw))
+			for i, v := range newActRaw {
+				newActors[i] = v.(string)
+			}
+			for i, v := range newGroupsRaw {
+				newGroups[i] = v.(string)
+			}
 
-// ----------
+			for _, p := range filteredItem {
+				if p[condKindPos] == item.ContainerKind() && p[condSubkindPos] == item.ContainerType() {
+					subj := p[condGroupPos]
+					if strings.HasPrefix(subj, "role##") {
+						if !util.StringPresentInSlice(strings.TrimPrefix(subj, "role##"), newGroups) {
+							pi := make([]interface{}, len(p))
+							for i, v := range p {
+								pi[i] = v
+							}
+							c.e.RemovePolicy(pi...)
+						}
+					} else {
+						if !util.StringPresentInSlice(subj, newActors) {
+							pi := make([]interface{}, len(p))
+							for i, v := range p {
+								pi[i] = v
+							}
+							c.e.RemovePolicy(pi...)
+						}
+					}
+				}
+			}
+
+			// may need later to permit allow/deny effect editing
+			for _, act := range newActors {
+				a, err := actor.GetActor(c.org, act)
+				if err != nil {
+					return err
+				}
+				p := buildEnforcingSlice(item, a, perm)
+				c.e.AddPolicy(p...)
+			}
+			for _, gr := range newGroups {
+				g, err := group.Get(c.org, gr)
+				if err != nil {
+					return err
+				}
+				p := buildEnforcingSlice(item, g, perm)
+				c.e.AddPolicy(p...)
+			}
 		default:
 			return util.Errorf("invalid acl %s data", perm)
 		}
 	default:
 		return util.Errorf("invalid acl data")
 	}
-
+	return nil
 }
 
 func (c *Checker) RootCheckPerm(doer aclhelper.Actor, perm string) (bool, util.Gerror) {
@@ -355,7 +410,7 @@ func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelp
 				tmpACL.Perms[perm].Effect = p[condEffectPos]
 			}
 			if strings.HasPrefix(subj, "role##") {
-				gname := strings.TrimPrefix(subj, "roles##")
+				gname := strings.TrimPrefix(subj, "role##")
 				tmpACL.Perms[perm].Groups = append(tmpACL.Perms[perm].Groups, gname)
 			} else {
 				tmpACL.Perms[perm].Actors = append(tmpACL.Perms[perm].Actors, subj)
