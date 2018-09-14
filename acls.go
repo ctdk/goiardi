@@ -74,8 +74,11 @@ func orgACLEditHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	perm := vars["perm"]
-	if aerr := aclPermCheck(org, opUser, "grant"); aerr != nil {
+	if allowed, aerr := org.PermCheck.RootCheckPerm(opUser, "grant"); aerr != nil {
 		jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+		return
+	} else if !allowed {
+		jsonErrorReport(w, r, "You do not have permission to perform that action.", http.StatusBadRequest)
 		return
 	}
 
@@ -84,11 +87,17 @@ func orgACLEditHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 		return
 	}
-	err := org.PermCheck.EditFromJSON(perm, aclData)
+	err := org.PermCheck.EditFromJSON(org, perm, aclData)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
+	a, aclerr := org.PermCheck.GetItemACL(org)
+	if aclerr != nil {
+		jsonErrorReport(w, r, aclerr.Error(), http.StatusBadRequest)
+		return
+	}
+
 	response := a.ToJSON()
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
@@ -493,30 +502,17 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 		return
 	}
 
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return
-	}
-	if pok, perr := org.PermCheck.RootCheckPerm(opUser, "grant"); perr != nil {
-		jsonErrorReport(w, r, perr.Error(), perr.Status())
-		return
-	} else if !pok {
-		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-		return
-	}
-
-	rootACL := &aclhelper.RootACL{Name: subkind, Kind: kind, Subkind: subkind}
-	a, rerr := org.PermCheck.GetItemACL(rootACL)
-
-	if rerr != nil {
-		jsonErrorReport(w, r, rerr.Error(), rerr.Status())
-		return
-	}
-	if aerr := aclPermCheck(r, org, a, "grant"); aerr != nil {
+	rootACL := &aclhelper.RootACL{Name: "$$default$$", Kind: kind, Subkind: subkind}
+	if aerr := aclPermCheck(r, org, rootACL, "grant"); aerr != nil {
 		jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 		return
 	}
+	a, aclerr := org.PermCheck.GetItemACL(org)
+	if aclerr != nil {
+		jsonErrorReport(w, r, aclerr.Error(), http.StatusBadRequest)
+		return
+	}
+
 	response := a.ToJSON()
 
 	enc := json.NewEncoder(w)
@@ -526,21 +522,22 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 }
 
 func baseItemACLHandler(w http.ResponseWriter, r *http.Request, org *organization.Organization, item aclhelper.Item) {
-	if err := aclPermCheck(r, item, opUser, "grant"); err != nil {
+	if err := aclPermCheck(r, org, item, "grant"); err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
+	aclItem, aerr := org.PermCheck.GetItemACL(item)
+	if aerr != nil {
+		jsonErrorReport(w, r, aerr.Error(), http.StatusBadRequest)
+		return
+	}
+	a := aclItem.ToJSON()
 
 	sendResponse(w, r, a)
 }
 
 func baseACLPermHandler(w http.ResponseWriter, r *http.Request, org *organization.Organization, item aclhelper.Item, perm string) {
-	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
-	if oerr != nil {
-		return oerr
-	}
-
-	if err := aclPermCheck(r, item, opUser, "grant"); err != nil {
+	if err := aclPermCheck(r, org, item, "grant"); err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
@@ -551,18 +548,28 @@ func baseACLPermHandler(w http.ResponseWriter, r *http.Request, org *organizatio
 		return
 	}
 
-	ederr := a.EditFromJSON(item, perm, aclData)
+	ederr := org.PermCheck.EditFromJSON(item, perm, aclData)
 	if ederr != nil {
 		jsonErrorReport(w, r, ederr.Error(), ederr.Status())
+		return
+	}
+
+	aclItem, aerr := org.PermCheck.GetItemACL(item)
+	if aerr != nil {
+		jsonErrorReport(w, r, aerr.Error(), http.StatusBadRequest)
+		return
+	}
+	a := aclItem.ToJSON()
+	p, ok := a[perm]
+	if !ok {
+		jsonErrorReport(w, r, "perm nonexistent", http.StatusBadRequest)
 		return
 	}
 
 	sendResponse(w, r, p)
 }
 
-func sendResponse(w http.ResponseWriter, r *http.Request, resp responder) {
-	response := resp.ToJSON()
-
+func sendResponse(w http.ResponseWriter, r *http.Request, response interface{}) {
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
