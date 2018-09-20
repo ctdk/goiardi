@@ -393,6 +393,58 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 	return genPerms, nil
 }
 
+func (c *Checker) getItemPolicies(itemName string, itemKind string, itemType string) [][]interface{} {
+	filteredItem := c.e.GetFilteredPolicy(condNamePos, itemName)
+	if (filteredItem == nil || len(filteredItem) == 0) {
+		return nil
+	}
+	policies := make([][]interface{}, 0)
+	for _, p := range filteredItem {
+		if p[condKindPos] == itemKind && p[condSubkindPos] == itemType {
+			pface := make([]interface{}, len(p))
+			for i, v := range p {
+				pface[i] = v
+			}
+		}
+	}
+	return policies
+}
+
+func (c *Checker) RenameItemACL(item aclhelper.Item, oldName string) error {
+	oldPolicies := c.getItemPolicies(oldName, item.ContainerKind(), item.ContainerType())
+	if oldPolicies == nil || len(oldPolicies) == 0 {
+		return nil
+	}
+	for _, p := range oldPolicies {
+		newPolicy := make([]interface{}, len(p))
+		copy(newPolicy, p)
+		newPolicy[condNamePos] = item.GetName()
+		c.e.AddPolicy(newPolicy...)
+	}
+	// Wait until all new policies have been added before deleting the old
+	// ones.
+	for _, p := range oldPolicies {
+		if _, err := c.e.RemovePolicySafe(p...); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
+	policies := c.getItemPolicies(item.GetName(), item.ContainerKind(), item.ContainerType())
+
+	var rmok bool
+	var err error
+
+	for _, p := range policies {
+		if rmok, err = c.e.RemovePolicySafe(p...); err != nil {
+			return false, err
+		}
+	}
+	return rmok, nil
+}
+
 func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelper.Item, []string) bool) *aclhelper.ACL {
 	tmpACL := new(aclhelper.ACL)
 	tmpACL.Perms = make(map[string]*aclhelper.ACLItem)

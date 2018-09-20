@@ -482,6 +482,46 @@ func TestEditFromJSON(t *testing.T) {
 	}
 }
 
+func TestItemDelete(t *testing.T) {
+	org, _ := buildOrg()
+	c, _ := client.New(org, "itemdelete")
+	c.Save()
+	us, _ := group.Get(org, "users")
+	org.PermCheck.EditItemPerm(c, us, []string{"grant"}, "add")
+	cName := c.GetName()
+	cKind := c.ContainerKind()
+	cType := c.ContainerType()
+
+	pc := org.PermCheck.(*Checker)
+	cpol := pc.getItemPolicies(cName, cKind, cType)
+	if cpol == nil || len(cpol) == 0 {
+		t.Errorf("policies for client %s should not have been empty", cName)
+	} else {
+		var found bool
+		for _, p := range cpol {
+			if p[condPermPos] == "grant" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("policies for client %s should have included 'grant' permission, but didn't.")
+		}
+	}
+
+	if err := c.Delete(); err != nil {
+		t.Errorf("error deleting client during renaming test with ACLs: %s", err.Error())
+	}
+	delcpol := pc.getItemPolicies(cName, cKind, cType)
+	if delcpol != nil {
+		t.Errorf("Deleted client should not have had any policies in the ACL, but it had %d!", len(delcpol))
+	}
+}
+
+func TestItemRename(t *testing.T) {
+
+}
+
 func TestMultipleOrgs(t *testing.T) {
 
 }

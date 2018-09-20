@@ -76,6 +76,10 @@ func (f *fakeChecker) EditFromJSON(i aclhelper.Item, perm string, data interface
 	return nil
 }
 
+func (f *fakeChecker) DeleteItemACL(i aclhelper.Item) (bool, error) {
+	return false, nil
+}
+
 // More group tests will be coming, as
 
 func TestGroupCreation(t *testing.T) {

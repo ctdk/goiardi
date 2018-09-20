@@ -253,6 +253,13 @@ func (c *Client) Delete() util.Gerror {
 			return util.CastErr(err)
 		}
 	}
+
+	// And delete the ACL for this item.
+	_, aerr := c.org.PermCheck.DeleteItemACL(c)
+	if aerr != nil {
+		return util.CastErr(aerr)
+	}
+
 	return nil
 }
 

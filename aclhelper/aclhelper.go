@@ -106,6 +106,7 @@ type PermChecker interface {
 	RemoveACLRole(Role) error
 	Enforcer() *casbin.SyncedEnforcer
 	GetItemACL(Item) (*ACL, error)
+	DeleteItemACL(Item) (bool, error)
 	EditFromJSON(Item, string, interface{}) util.Gerror
 }
 

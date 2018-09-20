@@ -75,14 +75,6 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusForbidden)
 			return
 		}
-		// I really wish we could delete the ACL in the client object
-		// itself, but dependency loops prevent that from happening
-		// sadly.
-		err = clientACL.Delete()
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
-		}
 
 		// remove the client from any groups it's in
 		group.ClearActor(org, chefClient)
