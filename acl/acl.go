@@ -237,7 +237,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 						if !util.StringPresentInSlice(strings.TrimPrefix(subj, "role##"), newGroups) {
 							pi := make([]interface{}, len(p))
 							for i, v := range p {
-								pi[i] = v
+							pi[i] = v
 							}
 							c.e.RemovePolicy(pi...)
 						}
@@ -436,6 +436,13 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 		}
 	}
 	return rmok, nil
+}
+
+func (c *Checker) CreatorOnly(creator aclhelper.Actor) util.Gerror {
+	for _, p := range aclhelper.DefaultACLs {
+
+	}
+	return nil
 }
 
 func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelper.Item, []string) bool) *aclhelper.ACL {

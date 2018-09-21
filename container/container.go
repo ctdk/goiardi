@@ -98,6 +98,10 @@ func (c *Container) Delete() util.Gerror {
 	}
 	ds := datastore.New()
 	ds.Delete(c.Org.DataKey("container"), c.Name)
+	if _, err := c.org.PermCheck.DeleteItemACL(c); err != nil {
+		return err
+	}
+
 	return nil
 }
 

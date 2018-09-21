@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/container"
 	//"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/reqctx"
@@ -54,17 +53,11 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, gerr := acl.GetItemACL(org, con)
-	if gerr != nil {
-		jsonErrorReport(w, r, gerr.Error(), gerr.Status())
-		return
-	}
-
 	response := make(map[string]interface{})
 
 	switch r.Method {
 	case "GET":
-		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		if f, ferr := org.PermChecker.CheckItemPerm(con, opUser, "read"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
@@ -72,20 +65,15 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "DELETE":
-		if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
+		if f, ferr := org.PermChecker.CheckItemPerm(con, opUser, "delete"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
 			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
 			return
 		}
-		err := containerACL.Delete()
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
-		}
-		err = con.Delete()
-		if err != nil {
+
+		if err := con.Delete(); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
@@ -119,12 +107,7 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, err := acl.GetContainerACL(org, "containers")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+	if f, ferr := org.PermChecker.CheckContainerPerm(opUser, "containers", "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -144,7 +127,7 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		response = rp
 	case "POST":
-		if f, ferr := containerACL.CheckPerm("create", opUser); ferr != nil {
+		if f, ferr := org.PermChecker.CheckContainerPerm(opUser, "containers", "create"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
