@@ -20,6 +20,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/group"
@@ -188,11 +189,6 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			err := chefClient.Rename(jsonName)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-			err = clientACL.Renamed(chefClient)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
@@ -395,7 +391,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !opUser.IsValidator() {
-		err = cACL.AddActor("all", opUser)
+		err = org.PermCheck.EditItemPerm(chefClient, opUser, aclhelper.DefaultACLs[:], "add")
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return

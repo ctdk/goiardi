@@ -36,14 +36,6 @@ import (
 	"strings"
 )
 
-var DefaultACLs = [5]string{
-	"create",
-	"read",
-	"update",
-	"delete",
-	"grant",
-}
-
 type enforceCondition []interface{}
 
 type Checker struct {
@@ -405,6 +397,7 @@ func (c *Checker) getItemPolicies(itemName string, itemKind string, itemType str
 			for i, v := range p {
 				pface[i] = v
 			}
+		policies = append(policies, pface)
 		}
 	}
 	return policies
@@ -474,7 +467,7 @@ func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelp
 }
 
 func checkValidPerm(perm string) bool {
-	for _, p := range DefaultACLs {
+	for _, p := range aclhelper.DefaultACLs {
 		if p == perm {
 			return true
 		}

@@ -80,6 +80,10 @@ func (f *fakeChecker) DeleteItemACL(i aclhelper.Item) (bool, error) {
 	return false, nil
 }
 
+func (f *fakeChecker) RenameItemACL(i aclhelper.Item) error {
+	return nil
+}
+
 // More group tests will be coming, as
 
 func TestGroupCreation(t *testing.T) {

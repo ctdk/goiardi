@@ -342,6 +342,7 @@ func (c *Client) Rename(newName string) util.Gerror {
 		}
 		ds.Delete(c.org.DataKey("client"), c.Name)
 	}
+	oldName := c.Name
 	c.Name = newName
 	if config.UsingExternalSecrets() {
 		err := secret.SetPublicKey(c, pk)
@@ -349,6 +350,10 @@ func (c *Client) Rename(newName string) util.Gerror {
 			return util.CastErr(err)
 		}
 	}
+	if aerr := c.org.PermCheck.RenameItemACL(c, oldName); aerr != nil {
+		return util.CastErr(aerr)
+	}
+	
 	return nil
 }
 

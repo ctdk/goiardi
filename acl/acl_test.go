@@ -363,7 +363,7 @@ func TestRootACL(t *testing.T) {
 	ar, _ := association.SetReq(u1, org, adminUser)
 	ar.Accept()
 
-	for _, p := range DefaultACLs {
+	for _, p := range aclhelper.DefaultACLs {
 		s, err := org.PermCheck.RootCheckPerm(adminUser, p)
 		if !s {
 			t.Errorf("Root perm check %s failed for admin user", s)
@@ -373,7 +373,7 @@ func TestRootACL(t *testing.T) {
 		}
 	}
 
-	for _, p := range DefaultACLs {
+	for _, p := range aclhelper.DefaultACLs {
 		s, err := org.PermCheck.RootCheckPerm(u1, p)
 		if p != "read" {
 			if s {
@@ -404,7 +404,7 @@ func TestGetItemAcl(t *testing.T) {
 		t.Error("No elements were found in item ACL")
 	} else {
 		// Check for the usual suspects in the ACL
-		for _, p := range DefaultACLs {
+		for _, p := range aclhelper.DefaultACLs {
 			if a := m.Perms[p].Actors; a == nil {
 				t.Errorf("Array for actors in ACL perm '%s' was not found.", p)
 			} else {
@@ -513,13 +513,38 @@ func TestItemDelete(t *testing.T) {
 		t.Errorf("error deleting client during renaming test with ACLs: %s", err.Error())
 	}
 	delcpol := pc.getItemPolicies(cName, cKind, cType)
-	if delcpol != nil {
+	if delcpol != nil && len(delcpol) != 0 {
 		t.Errorf("Deleted client should not have had any policies in the ACL, but it had %d!", len(delcpol))
 	}
 }
 
 func TestItemRename(t *testing.T) {
+	oldName := "itemrename"
+	newName := "renamedclient"
 
+	org, _ := buildOrg()
+	c, _ := client.New(org, oldName)
+	c.Save()
+	us, _ := group.Get(org, "users")
+	org.PermCheck.EditItemPerm(c, us, []string{"grant"}, "add")
+
+	pc := org.PermCheck.(*Checker)
+	cpol := pc.getItemPolicies(c.Name, c.ContainerKind(), c.ContainerType())
+	if cpol == nil || len(cpol) == 0 {
+		t.Errorf("policies for client %s should not have been empty", c.Name)
+	}
+
+	c.Rename(newName)
+	c.Save()
+
+	npol := pc.getItemPolicies(newName, c.ContainerKind(), c.ContainerType())
+	if npol == nil || len(npol) == 0 {
+		t.Errorf("policies for renamed client %s (was %s) should not have been empty", c.Name, oldName)
+	}
+	opol := pc.getItemPolicies(oldName, c.ContainerKind(), c.ContainerType())
+	if opol != nil && len(opol) != 0 {
+		t.Errorf("old policies for client %s (was %s) should have been empty, but had %d elements", c.Name, oldName, len(opol))
+	}
 }
 
 func TestMultipleOrgs(t *testing.T) {

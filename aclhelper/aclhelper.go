@@ -24,6 +24,14 @@ import (
 	"github.com/ctdk/goiardi/util"
 )
 
+var DefaultACLs = [5]string{
+	"create",
+	"read",
+	"update",
+	"delete",
+	"grant",
+}
+
 type Member interface {
 	IsACLRole() bool
 	ACLName() string
@@ -107,6 +115,7 @@ type PermChecker interface {
 	Enforcer() *casbin.SyncedEnforcer
 	GetItemACL(Item) (*ACL, error)
 	DeleteItemACL(Item) (bool, error)
+	RenameItemACL(Item, string) error
 	EditFromJSON(Item, string, interface{}) util.Gerror
 }
 
