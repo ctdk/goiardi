@@ -440,7 +440,7 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 
 func (c *Checker) CreatorOnly(creator aclhelper.Actor) util.Gerror {
 	for _, p := range aclhelper.DefaultACLs {
-
+		_ = p
 	}
 	return nil
 }
