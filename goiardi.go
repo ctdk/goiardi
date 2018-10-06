@@ -365,6 +365,17 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	apiInfo := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
 	w.Header().Set("X-Ops-API-Info", apiInfo)
 
+	apiver := r.Header.Get("X-Ops-Server-API-Version")
+	if apiver == "0" || apiver == "1" {
+		w.Header().Set(
+			"X-Ops-Server-API-Version",
+			fmt.Sprintf(
+				`{"min_version":"0","max_version":"1","request_version":"%s","response_version":"%s"}`,
+				apiver,
+				apiver,
+			),
+		)
+	}
 	userID := r.Header.Get("X-OPS-USERID")
 	if rs := r.Header.Get("X-Ops-Request-Source"); rs == "web" {
 		/* If use-auth is on and disable-webui is on, and this is a
