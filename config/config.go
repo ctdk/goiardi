@@ -235,6 +235,15 @@ const Version = "0.11.8"
 // The chef version we're at least aiming for, even if it's not complete yet.
 const ChefVersion = "11.1.7"
 
+// Minimum supported API version
+const MinAPIVersion = "0"
+
+// Maximum supported API version
+const MaxAPIVersion = "1"
+
+// All supported API versions
+var SupportedAPIVersions = []string{"0","1"}
+
 // The default time difference allowed between the server's clock and the time
 // in the X-OPS-TIMESTAMP header.
 const DefaultTimeSlew = "15m"
