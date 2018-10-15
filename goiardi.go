@@ -366,11 +366,11 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Ops-API-Info", apiInfo)
 
 	apiver := r.Header.Get("X-Ops-Server-API-Version")
-	if apiver == "0" || apiver == "1" {
+	if matchSupportedVersion(apiver) {
 		w.Header().Set(
 			"X-Ops-Server-API-Version",
 			fmt.Sprintf(
-				`{"min_version":"0","max_version":"1","request_version":"%s","response_version":"%s"}`,
+				`{"min_version": config.MinAPIVersion ,"max_version": config.MaxAPIVersion, "request_version": "%s", "response_version": "%s"}`,
 				apiver,
 				apiver,
 			),
@@ -945,4 +945,13 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 			lastSampleTime = now
 		}
 	}()
+}
+
+func matchSupportedVersion(ver string) bool {
+	for _, v := range config.SupportedAPIVersions {
+		if ver == v {
+			return true
+		}
+	}
+	return false
 }
