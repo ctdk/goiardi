@@ -370,7 +370,9 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set(
 			"X-Ops-Server-API-Version",
 			fmt.Sprintf(
-				`{"min_version": config.MinAPIVersion ,"max_version": config.MaxAPIVersion, "request_version": "%s", "response_version": "%s"}`,
+				`{"min_version": "%s", "max_version": "%s", "request_version": "%s", "response_version": "%s"}`,
+				config.MinAPIVersion,
+				config.MaxAPIVersion,
 				apiver,
 				apiver,
 			),
