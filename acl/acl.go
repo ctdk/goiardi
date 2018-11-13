@@ -438,9 +438,12 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 	return rmok, nil
 }
 
-func (c *Checker) CreatorOnly(creator aclhelper.Actor) util.Gerror {
+func (c *Checker) CreatorOnly(item aclhelper.Item, creator aclhelper.Actor) util.Gerror {
 	for _, p := range aclhelper.DefaultACLs {
-		_ = p
+		err := c.EditItemPerm(item, creator, []{"grant"}, addPerm)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

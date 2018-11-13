@@ -117,6 +117,7 @@ type PermChecker interface {
 	DeleteItemACL(Item) (bool, error)
 	RenameItemACL(Item, string) error
 	EditFromJSON(Item, string, interface{}) util.Gerror
+	CreatorOnly(Item, Actor) util.Gerror
 }
 
 // This might be better moved back to the acl module, and made available as

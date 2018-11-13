@@ -57,7 +57,7 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		if f, ferr := org.PermChecker.CheckItemPerm(con, opUser, "read"); ferr != nil {
+		if f, ferr := org.PermCheck.CheckItemPerm(con, opUser, "read"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
@@ -65,7 +65,7 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "DELETE":
-		if f, ferr := org.PermChecker.CheckItemPerm(con, opUser, "delete"); ferr != nil {
+		if f, ferr := org.PermCheck.CheckItemPerm(con, opUser, "delete"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
@@ -107,7 +107,7 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if f, ferr := org.PermChecker.CheckContainerPerm(opUser, "containers", "read"); ferr != nil {
+	if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "containers", "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -127,7 +127,7 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		response = rp
 	case "POST":
-		if f, ferr := org.PermChecker.CheckContainerPerm(opUser, "containers", "create"); ferr != nil {
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "containers", "create"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
@@ -162,12 +162,7 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// newly created containers are only accessible by the creator
-		newACL, gerr := acl.GetItemACL(org, cont)
-		if gerr != nil {
-			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
-			return
-		}
-		gerr = newACL.CreatorOnly(opUser)
+		gerr := org.PermCheck.CreatorOnly(cont, opUser)
 		if gerr != nil {
 			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 			return

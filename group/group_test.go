@@ -84,6 +84,10 @@ func (f *fakeChecker) RenameItemACL(i aclhelper.Item) error {
 	return nil
 }
 
+func (f *fakeChecker) CreatorOnly(i aclhelper.Item, aclhelper.Actor) util.Gerror {
+	return nil
+} 
+
 // More group tests will be coming, as
 
 func TestGroupCreation(t *testing.T) {
