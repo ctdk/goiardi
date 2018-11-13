@@ -453,6 +453,19 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	apiInfo := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
 	w.Header().Set("X-Ops-API-Info", apiInfo)
 
+	apiver := r.Header.Get("X-Ops-Server-API-Version")
+	if matchSupportedVersion(apiver) {
+		w.Header().Set(
+			"X-Ops-Server-API-Version",
+			fmt.Sprintf(
+				`{"min_version": "%s", "max_version": "%s", "request_version": "%s", "response_version": "%s"}`,
+				config.MinAPIVersion,
+				config.MaxAPIVersion,
+				apiver,
+				apiver,
+			),
+		)
+	}
 	userID := r.Header.Get("X-OPS-USERID")
 
 	// skip fetching the org for /principals, at least.
@@ -1095,4 +1108,13 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 			lastSampleTime = now
 		}
 	}()
+}
+
+func matchSupportedVersion(ver string) bool {
+	for _, v := range config.SupportedAPIVersions {
+		if ver == v {
+			return true
+		}
+	}
+	return false
 }
