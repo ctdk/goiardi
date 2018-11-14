@@ -181,6 +181,11 @@ func (db *DataBag) Delete() error {
 		ds.Delete(db.org.DataKey("data_bag"), db.Name)
 	}
 	indexer.DeleteCollection(db.org.Name, db.Name)
+	_, aerr := db.org.PermCheck.DeleteItemACL(db)
+	if aerr != nil {
+		return aerr
+	}
+
 	return nil
 }
 

@@ -21,8 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/acl"
-
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/environment"
@@ -78,16 +76,10 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 	pathArrayLen := len(pathArray)
 
 	if pathArrayLen == 1 {
-		containerACL, conerr := acl.GetContainerACL(org, "environments")
-		if conerr != nil {
-			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-			return
-		}
-
 		// Somewhat weirdly, users can create environments even if they
 		// can't read them.
 		if r.Method != "POST" {
-			if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "environments", "read"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
 			} else if !f {
@@ -114,8 +106,8 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				envResponse[env] = util.CustomURL(util.JoinStr("/organizations/", org.Name, "/environments/", env))
 			}
 		case http.MethodPost:
-			if f, err := containerACL.CheckPerm("create", opUser); err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
+			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "environments", "create"); ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
 			} else if !f {
 				jsonErrorReport(w, r, "You are not allowed to perform this action.", http.StatusForbidden)
@@ -183,17 +175,12 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
-		containerACL, conerr := acl.GetItemACL(org, env)
-		if conerr != nil {
-			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-			return
-		}
 
 		switch r.Method {
 		case http.MethodGet, http.MethodDelete:
 			/* We don't actually have to do much here. */
 			if r.Method == http.MethodDelete {
-				if f, err := containerACL.CheckPerm("delete", opUser); err != nil {
+				if f, ferr := org.PermCheck.CheckItemPerm(env, opUser, "delete"); ferr != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				} else if !f {
@@ -206,7 +193,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				delEnv = true
 			} else {
-				if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+				if f, ferr := org.PermCheck.CheckItemPerm(env, opUser, "read"); ferr != nil {
 					jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 					return
 				} else if !f {
@@ -219,7 +206,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		case http.MethodPut:
-			if f, err := containerACL.CheckPerm("update", opUser); err != nil {
+			if f, ferr := org.PermCheck.CheckItemPerm(env, opUser, "update"); ferr != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			} else if !f {
@@ -264,10 +251,6 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				oldenv, olderr := environment.Get(org, envName)
 				if olderr == nil {
 					oldenv.Delete()
-					if aerr := containerACL.Renamed(env); aerr != nil {
-						jsonErrorReport(w, r, aerr.Error(), aerr.Status())
-						return
-					}
 				}
 			} else {
 				if jsonName == "" {
@@ -299,10 +282,6 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			err := env.Delete()
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			if aerr := containerACL.Delete(); aerr != nil {
-				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 				return
 			}
 			if lerr := loginfo.LogEvent(org, opUser, env, "delete"); lerr != nil {
@@ -338,12 +317,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		containerACL, conerr := acl.GetItemACL(org, env)
-		if conerr != nil {
-			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-			return
-		}
-		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		if f, ferr := org.PermCheck.CheckItemPerm(env, opUser, "read"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {

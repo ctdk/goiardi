@@ -21,7 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/acl"
 	//"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/loginfo"
@@ -53,12 +52,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	dbResponse := make(map[string]interface{})
 
 	if pathArrayLen == 1 {
-		containerACL, conerr := acl.GetContainerACL(org, "data")
-		if conerr != nil {
-			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-			return
-		}
-		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "data", "read"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
@@ -85,8 +79,8 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			headDefaultResponse(w, r)
 			return
 		case http.MethodPost:
-			if f, err := containerACL.CheckPerm("create", opUser); err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
+			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "data", "create"); ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
 			} else if !f {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
@@ -249,12 +243,8 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		containerACL, conerr := acl.GetItemACL(org, chefDbag)
-		if conerr != nil {
-			jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-			return
-		}
-		if f, err := containerACL.CheckPerm(permstr, opUser); err != nil {
+		
+		if f, ferr := org.PermCheck.CheckItemPerm(chefDbag, opUser, permstr); ferr != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		} else if !f {
@@ -281,10 +271,6 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				err := chefDbag.Delete()
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				if aerr := containerACL.Delete(); aerr != nil {
-					jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 					return
 				}
 				if lerr := loginfo.LogEvent(org, opUser, chefDbag, "delete"); lerr != nil {

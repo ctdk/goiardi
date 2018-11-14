@@ -367,6 +367,10 @@ func (e *ChefEnvironment) Delete() error {
 		ds.Delete(e.org.DataKey("env"), e.Name)
 	}
 	indexer.DeleteItemFromCollection(e.org.Name, "environment", e.Name)
+	_, aerr := e.org.PermCheck.DeleteItemACL(e)
+	if aerr != nil {
+		return aerr
+	}
 	return nil
 }
 

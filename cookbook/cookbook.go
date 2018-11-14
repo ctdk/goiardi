@@ -279,6 +279,10 @@ func (c *Cookbook) Delete() error {
 	if err != nil {
 		return err
 	}
+	_, aerr := c.org.PermCheck.DeleteItemACL(c)
+	if aerr != nil {
+		return aerr
+	}
 	return nil
 }
 

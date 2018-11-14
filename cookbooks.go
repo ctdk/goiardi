@@ -21,7 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
@@ -81,13 +80,6 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check container perms
-	containerACL, conerr := acl.GetContainerACL(org, "cookbooks")
-	if conerr != nil {
-		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-		return
-	}
-
 	/* chef-pedant is happier when checking if a validator can do something
 	 * surprisingly late in the game. It wants the perm checks to be
 	 * checked after the method for the end point is checked out as
@@ -98,7 +90,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	 */
 
 	if pathArrayLen == 1 || (pathArrayLen == 2 && pathArray[1] == "") {
-		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "cookbooks", "read"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
@@ -133,7 +125,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 		 * list of the latest versions of all the cookbooks, and _recipe
 		 * gets the recipes of the latest cookbooks. */
 		if cookbookName == "_latest" || cookbookName == "_recipes" {
-			if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "cookbooks", "read"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
 			} else if !f {
@@ -160,12 +152,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
-			cbACL, cberr := acl.GetItemACL(org, cb)
-			if cberr != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
-			if f, ferr := cbACL.CheckPerm("read", opUser); ferr != nil {
+			if f, ferr := org.PermCheck.CheckItemPerm(cb, opUser, "read"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
 			} else if !f {
@@ -234,15 +221,11 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 				return
 			}
-			cbACL, cberr := acl.GetItemACL(org, cb)
-			if cberr != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
+
 			if r.Method == http.MethodDelete {
 				// do we need to track perms beyond the
 				// container ones?
-				if f, err := cbACL.CheckPerm("delete", opUser); err != nil {
+				if f, ferr := org.PermCheck.CheckItemPerm(cb, opUser, "delete"); ferr != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				} else if !f {
@@ -267,10 +250,6 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 						jsonErrorReport(w, r, cerr.Error(), http.StatusInternalServerError)
 						return
 					}
-					if aerr := cbACL.Delete(); aerr != nil {
-						jsonErrorReport(w, r, aerr.Error(), aerr.Status())
-						return
-					}
 				}
 			} else {
 				/* Special JSON rendition of the
@@ -289,7 +268,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				 * resolved in a non-crazy manner, for
 				 * this only send that info back if it's
 				 * a webui request. */
-				if f, err := cbACL.CheckPerm("read", opUser); err != nil {
+				if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "cookbooks", "read"); ferr != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				} else if !f {
@@ -317,10 +296,8 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			 * so, update it, otherwise, create it and set
 			 * the latest version as needed. */
 			cb, err := cookbook.Get(org, cookbookName)
-			var cbACL *acl.ACL
-			var cberr util.Gerror
 			if err != nil {
-				if f, err := containerACL.CheckPerm("create", opUser); err != nil {
+				if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "cookbooks", "create"); ferr != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				} else if !f {
@@ -343,18 +320,8 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
-				cbACL, cberr = acl.GetItemACL(org, cb)
-				if cberr != nil {
-					jsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
 			} else {
-				cbACL, cberr = acl.GetItemACL(org, cb)
-				if cberr != nil {
-					jsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
-				if f, err := cbACL.CheckPerm("update", opUser); err != nil {
+				if f, ferr := org.PermCheck.CheckItemPerm(cb, opUser, "update"); ferr != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				} else if !f {
@@ -395,7 +362,6 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					// it needs to be deleted.
 					if cb.NumVersions() == 0 {
 						cb.Delete()
-						cbACL.Delete()
 					}
 					jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 					return
