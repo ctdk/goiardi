@@ -21,7 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
@@ -47,12 +46,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, conerr := acl.GetContainerACL(org, "log-infos")
-	if conerr != nil {
-		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+	if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "log-infos", "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -160,7 +154,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case http.MethodDelete:
-		if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "log-infos", "delete"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
@@ -198,12 +192,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, conerr := acl.GetContainerACL(org, "log-infos")
-	if conerr != nil {
-		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+	if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "log-infos", "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -240,7 +229,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case http.MethodDelete:
-		if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "log-infos", "delete"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {

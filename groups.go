@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
@@ -53,16 +52,11 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 		return
 	}
-	groupACL, gerr := acl.GetItemACL(org, g)
-	if gerr != nil {
-		jsonErrorReport(w, r, gerr.Error(), gerr.Status())
-		return
-	}
 
 	// hmm
 	switch r.Method {
 	case "GET":
-		if f, err := groupACL.CheckPerm("read", opUser); err != nil {
+		if f, err := org.PermCheck.CheckItemPerm(g, opUser, "read"); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		} else if !f {
@@ -70,27 +64,20 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "DELETE":
-		if f, err := groupACL.CheckPerm("delete", opUser); err != nil {
+		if f, err := org.PermCheck.CheckItemPerm(g, opUser, "delete"); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		} else if !f {
 			jsonErrorReport(w, r, "you are not allowed to perform that action", http.StatusForbidden)
 			return
 		}
-		// it would be easier to do this inside the group object, but
-		// we can't. :-(
-		err := groupACL.Delete()
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
-		}
-		err = g.Delete()
+		err := g.Delete()
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
 	case "PUT":
-		if f, err := groupACL.CheckPerm("update", opUser); err != nil {
+		if f, err := org.PermCheck.CheckItemPerm(g, opUser, "update"); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		} else if !f {
@@ -106,11 +93,6 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 		if gName, ok := gData["groupname"].(string); ok {
 			if gName != groupName {
 				err := g.Rename(gName)
-				if err != nil {
-					jsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
-				err = groupACL.Renamed(g)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
@@ -159,12 +141,7 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, err := acl.GetContainerACL(org, "groups")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+	if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "groups", "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -181,7 +158,7 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 			response[g.Name] = util.ObjURL(g)
 		}
 	case "POST":
-		if f, ferr := containerACL.CheckPerm("create", opUser); ferr != nil {
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "groups", "create"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {

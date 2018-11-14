@@ -115,6 +115,7 @@ func (g *Group) Rename(newName string) util.Gerror {
 	}
 	g.m.Lock()
 	defer g.m.Unlock()
+	oldName := g.Name
 	if config.UsingDB() {
 
 	} else {
@@ -131,6 +132,9 @@ func (g *Group) Rename(newName string) util.Gerror {
 		if err != nil {
 			return err
 		}
+	}
+	if aerr := g.Org.PermCheck.RenameItemACL(g, oldName); aerr != nil {
+		return util.CastErr(aerr)
 	}
 	return nil
 }
@@ -180,6 +184,11 @@ func (g *Group) Delete() util.Gerror {
 			cg.Save()
 		}
 	}
+	_, aerr := g.Org.PermCheck.DeleteItemACL(g)
+	if aerr != nil {
+		return util.CastErr(aerr)
+	}
+
 	return nil
 }
 

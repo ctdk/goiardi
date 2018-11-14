@@ -26,7 +26,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/acl"
+	"github.com/ctdk/goiardi/aclhelper"
 	"io"
 	"io/ioutil"
 	"net"
@@ -788,8 +788,8 @@ func gobRegister() {
 	gob.Register(new(association.Association))
 	gob.Register(new(group.Group))
 	gob.Register(new(container.Container))
-	gob.Register(new(acl.ACL))
-	gob.Register(new(acl.ACLitem))
+	gob.Register(new(aclhelper.ACL))
+	gob.Register(new(aclhelper.ACLItem))
 	var jn json.Number
 	gob.Register(jn)
 }
