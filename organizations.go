@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/client"
@@ -58,12 +57,8 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, err := acl.Get(org, "containers", "$$root$$")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
+
+	if f, ferr := org.PermCheck.RootCheckPerm(opUser, "update"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -211,12 +206,7 @@ func orgMainHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, err := acl.Get(org, "containers", "$$root$$")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+	if f, ferr := org.PermCheck.RootCheckPerm(opUser, "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -228,7 +218,7 @@ func orgMainHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET", "DELETE":
 		orgResponse = org.ToJSON()
 		if r.Method == "DELETE" {
-			if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
+			if f, ferr := org.PermCheck.RootCheckPerm(opUser, "delete"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
 			} else if !f {
@@ -242,7 +232,7 @@ func orgMainHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	case "PUT":
-		if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
+		if f, ferr := org.PermCheck.RootCheckPerm(opUser, "update"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
@@ -306,12 +296,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
-	containerACL, err := acl.Get(orgDef, "containers", "$$root$$")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+	if f, ferr := orgDef.PermCheck.RootCheckPerm(opUser, "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -327,7 +312,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			orgResponse[o] = util.CustomURL(itemURL)
 		}
 	case "POST":
-		if f, ferr := containerACL.CheckPerm("create", opUser); ferr != nil {
+		if f, ferr := orgDef.PermCheck.RootCheckPerm(opUser, "create"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {

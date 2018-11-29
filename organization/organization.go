@@ -134,6 +134,10 @@ func (o *Organization) Delete() util.Gerror {
 	if err != nil {
 		return util.CastErr(err)
 	}
+	_, aerr := o.PermCheck.DeleteItemACL(o)
+	if aerr != nil {
+		return util.CastErr(aerr)
+	}
 	return nil
 }
 
