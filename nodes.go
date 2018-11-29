@@ -21,7 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/loginfo"
@@ -73,17 +72,11 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, err := acl.GetItemACL(org, chefNode)
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-
 	/* So, what are we doing? Depends on the HTTP method, of course */
 	switch r.Method {
 	case http.MethodGet, http.MethodDelete:
 		if r.Method == "DELETE" {
-			delchk, ferr := containerACL.CheckPerm("delete", opUser)
+			delchk, ferr := org.PermCheck.CheckItemPerm(chefNode, opUser, "delete")
 			if ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
@@ -93,7 +86,7 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		} else {
-			if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+			if f, ferr := org.PermCheck.CheckItemPerm(chefNode, opUser, "read"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
 			} else if !f {
@@ -113,17 +106,13 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if aerr := containerACL.Delete(); aerr != nil {
-				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
-				return
-			}
 			if lerr := loginfo.LogEvent(org, opUser, chefNode, "delete"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return
 			}
 		}
 	case http.MethodPut:
-		updatechk, ferr := containerACL.CheckPerm("update", opUser)
+		updatechk, ferr := org.PermCheck.CheckItemPerm(chefNode, opUser, "update")
 		if ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
@@ -192,19 +181,13 @@ func nodeListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, err := acl.GetContainerACL(org, "nodes")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-
 	switch r.Method {
 	case "GET":
 		if opUser.IsValidator() {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return
 		}
-		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "nodes", "read"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
@@ -217,7 +200,7 @@ func nodeListHandler(w http.ResponseWriter, r *http.Request) {
 			nodeResponse[k] = util.CustomURL(itemURL)
 		}
 	case "POST":
-		if f, ferr := containerACL.CheckPerm("create", opUser); ferr != nil {
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "nodes", "create"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {

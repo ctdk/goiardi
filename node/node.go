@@ -305,6 +305,10 @@ func (n *Node) Delete() error {
 			n.deleteStatuses()
 		}
 	}
+	_, aerr := n.org.PermCheck.DeleteItemACL(n)
+	if aerr != nil {
+		return aerr
+	}
 	indexer.DeleteItemFromCollection(n.org.Name, "node", n.Name)
 	return nil
 }
