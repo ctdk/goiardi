@@ -288,6 +288,10 @@ func (r *Role) Delete() util.Gerror {
 		ds.Delete(r.org.DataKey("role"), r.Name)
 	}
 	indexer.DeleteItemFromCollection(r.org.Name, "role", r.Name)
+	_, aerr := r.org.PermCheck.DeleteItemACL(r)
+	if aerr != nil {
+		return util.CastErr(aerr)
+	}
 	return nil
 }
 

@@ -21,7 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/loginfo"
@@ -74,12 +73,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, cerr := acl.GetItemACL(org, chefRole)
-	if cerr != nil {
-		jsonErrorReport(w, r, cerr.Error(), cerr.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+	if f, ferr := org.PermCheck.CheckItemPerm(chefRole, opUser, "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -91,7 +85,7 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 		/* Normal /roles/NAME case */
 		switch r.Method {
 		case http.MethodGet, http.MethodDelete:
-			delchk, ferr := containerACL.CheckPerm("delete", opUser)
+			delchk, ferr := org.PermCheck.CheckItemPerm(chefRole, opUser, "delete")
 			if ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
@@ -111,18 +105,13 @@ func roleHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				err = containerACL.Delete()
-				if err != nil {
-					jsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
 				if lerr := loginfo.LogEvent(org, opUser, chefRole, "delete"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
 			}
 		case http.MethodPut:
-			if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
+			if f, ferr := org.PermCheck.CheckItemPerm(chefRole, opUser, "update"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
 			} else if !f {
@@ -238,12 +227,7 @@ func roleListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, cerr := acl.GetContainerACL(org, "roles")
-	if cerr != nil {
-		jsonErrorReport(w, r, cerr.Error(), cerr.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+	if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "roles", "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -262,7 +246,7 @@ func roleListHandler(w http.ResponseWriter, r *http.Request) {
 			roleResponse[k] = util.CustomURL(itemURL)
 		}
 	case "POST":
-		if f, ferr := containerACL.CheckPerm("create", opUser); ferr != nil {
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "roles", "create"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
