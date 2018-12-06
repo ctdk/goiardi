@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/reqctx"
@@ -40,12 +39,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, err := acl.GetContainerACL(org, "nodes")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
+	if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "nodes", "update"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {

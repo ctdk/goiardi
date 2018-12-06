@@ -20,7 +20,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/databag"
@@ -224,12 +223,7 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, conerr := acl.Get(org, "containers", "$$root$$")
-	if conerr != nil {
-		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
+	if f, ferr := org.PermCheck.RootCheckPerm(opUser, "update"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {

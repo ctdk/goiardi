@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/reqctx"
@@ -48,14 +47,8 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	containerACL, conerr := acl.Get(org, "containers", "shoveys")
-	if conerr != nil {
-		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-		jsonErrorReport(w, r, "you cannot perform this action", http.StatusForbidden)
-		return
-	}
 	if r.Method != "PUT" {
-		if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "shoveys", "read"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
@@ -184,7 +177,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			shoveyResponse["id"] = s.RunID
 			shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/shovey/jobs/%s", s.RunID))
 		case http.MethodPut:
-			if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
+			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "shoveys", "update"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
 			} else if !f {
@@ -341,7 +334,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			shoveyResponse["output"] = combinedOutput
 		case http.MethodPut:
-			if f, ferr := containerACL.CheckPerm("update", opUser); ferr != nil {
+			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "shoveys", "update"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
 			} else if !f {
