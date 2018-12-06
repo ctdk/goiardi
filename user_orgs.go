@@ -22,7 +22,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/group"
@@ -51,12 +50,7 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, err := acl.Get(org, "containers", "$$root$$")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+	if f, ferr := org.PermCheck.RootCheckPerm(opUser, "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -104,12 +98,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 
 	var response map[string]interface{}
 
-	containerACL, err := acl.Get(org, "containers", "$$root$$")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("read", opUser); ferr != nil {
+	if f, ferr := org.PermCheck.RootCheckPerm(opUser, "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -124,7 +113,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		if f, ferr := containerACL.CheckPerm("delete", opUser); ferr != nil {
+		if f, ferr := org.PermCheck.RootCheckPerm(opUser, "delete"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f && !opUser.IsSelf(chefUser) {
@@ -144,7 +133,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			go group.ClearActor(org, chefUser)
-			go acl.ResetACLs(org)
+			go org.PermCheck.RemoveUser(chefUser)
 		} else {
 			key := util.JoinStr(userName, "-", org.Name)
 			assocReq, _ := association.GetReq(key)
@@ -315,12 +304,7 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Have to check here if the user who issued the invitation is still an
 	// admin for the organization
-	containerACL, err := acl.Get(org, "containers", "$$root$$")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	if f, ferr := containerACL.CheckPerm("update", assoc.Inviter); ferr != nil {
+	if f, ferr := org.PermCheck.RootCheckPerm(assoc.Inviter, "update"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {

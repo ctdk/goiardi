@@ -21,7 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/group"
@@ -111,7 +110,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		go func(orgs []*organization.Organization, chefUser *user.User) {
 			for _, o := range orgs {
 				group.ClearActor(o, chefUser)
-				acl.ResetACLs(o)
+				o.PermCheck.RemoveUser(chefUser)
 			}
 		}(orgs, chefUser)
 
@@ -139,7 +138,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
-			orgAdmin, oerr := acl.IsOrgAdminForUser(chefUser, opUser)
+			orgAdmin, oerr := isOrgAdminForUser(chefUser, opUser)
 			if oerr != nil {
 				jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 				return
@@ -209,6 +208,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		jsonUser := chefUser.ToJSON()
 		delete(jsonUser, "public_key")
 		if userName != jsonName {
+			oldACLName := chefUser.ACLName()
 			err := chefUser.Rename(jsonName)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
@@ -226,7 +226,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			go func(orgs []*organization.Organization, chefUser *user.User) {
 				for _, o := range orgs {
-					acl.RenameUser(o, chefUser, userName)
+					o.PermCheck.RenameMember(o, chefUser, oldACLName)
 				}
 			}(orgs, chefUser)
 			w.WriteHeader(http.StatusCreated)
@@ -512,7 +512,7 @@ func userListOrgHandler(w http.ResponseWriter, r *http.Request) {
 	chefUser, err := user.Get(userName)
 
 	if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
-		ook, err := acl.IsOrgAdminForUser(chefUser, opUser)
+		ook, err := isOrgAdminForUser(chefUser, opUser)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
@@ -544,4 +544,24 @@ func userListOrgHandler(w http.ResponseWriter, r *http.Request) {
 	if err := enc.Encode(&response); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func isOrgAdminForUsers(chkUser *user.User, opUser actor.Actor) (bool, util.Gerror) {
+	// Another operation that may well be significantly easier when it's
+	// DB-ified.
+	orgs, err := association.OrgAssociations(chkUser)
+	if err != nil {
+		return false, err
+	}
+	for _, org := range orgs {
+		admin, err := group.Get(org, "admins")
+		// unlikely
+		if err != nil {
+			return false, err
+		}
+		if admin.SeekActor(opUser) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
