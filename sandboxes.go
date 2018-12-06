@@ -20,7 +20,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/sandbox"
@@ -46,19 +45,13 @@ func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containerACL, conerr := acl.Get(org, "containers", "sandboxes")
-	if conerr != nil {
-		jsonErrorReport(w, r, conerr.Error(), conerr.Status())
-		return
-	}
-
 	switch r.Method {
 	case http.MethodPost:
 		if pathArrayLen != 1 {
 			jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 			return
 		}
-		if f, err := containerACL.CheckPerm("create", opUser); err != nil {
+		if f, err := org.PermCheck.CheckContainerPerm(opUser, "sandboxes", "create"); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		} else if !f {
@@ -106,7 +99,7 @@ func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "Bad request.", http.StatusMethodNotAllowed)
 			return
 		}
-		if f, err := containerACL.CheckPerm("update", opUser); err != nil {
+		if f, err := org.PermCheck.CheckContainerPerm(opUser, "sandboxes", "update"); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		} else if !f {
