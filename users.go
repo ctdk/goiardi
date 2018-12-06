@@ -226,7 +226,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			go func(orgs []*organization.Organization, chefUser *user.User) {
 				for _, o := range orgs {
-					o.PermCheck.RenameMember(o, chefUser, oldACLName)
+					o.PermCheck.RenameMember(chefUser, oldACLName)
 				}
 			}(orgs, chefUser)
 			w.WriteHeader(http.StatusCreated)
@@ -546,7 +546,7 @@ func userListOrgHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func isOrgAdminForUsers(chkUser *user.User, opUser actor.Actor) (bool, util.Gerror) {
+func isOrgAdminForUser(chkUser *user.User, opUser actor.Actor) (bool, util.Gerror) {
 	// Another operation that may well be significantly easier when it's
 	// DB-ified.
 	orgs, err := association.OrgAssociations(chkUser)

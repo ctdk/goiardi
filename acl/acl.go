@@ -349,6 +349,12 @@ func (c *Checker) RemoveMembers(gRole aclhelper.Role, removing []aclhelper.Membe
 	return nil
 }
 
+func (c *Checker) RemoveUser(u aclhelper.Member) error {
+	c.e.DeleteRolesForUser(u.ACLName())
+	logger.Debugf("deleted all ACL perms for %s", u.ACLName())
+	return nil
+}
+
 func (c *Checker) RemoveItemACL(item aclhelper.Item) util.Gerror {
 	return nil
 }
@@ -416,6 +422,34 @@ func (c *Checker) RenameItemACL(item aclhelper.Item, oldName string) error {
 	}
 	// Wait until all new policies have been added before deleting the old
 	// ones.
+	for _, p := range oldPolicies {
+		if _, err := c.e.RemovePolicySafe(p...); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Checker) RenameMember(member aclhelper.Member, oldName string) error {
+	oldPol := c.e.GetPermissionsForUser(oldName)
+	if oldPol == nil || len(oldPol) == 0 {
+		return nil
+	}
+	oldPolicies := make([][]interface{}, len(oldPol))
+	for i, p := range oldPol {
+		np := make([]interface{}, len(p))
+		for z, v := range p {
+			np[z] = v
+		}
+		oldPolicies[i] = np
+	}
+
+	for _, p := range oldPolicies {
+		newPolicy := make([]interface{}, len(p))
+		copy(newPolicy, p)
+		newPolicy[condGroupPos] = member.ACLName()
+		c.e.AddPolicy(newPolicy...)
+	}
 	for _, p := range oldPolicies {
 		if _, err := c.e.RemovePolicySafe(p...); err != nil {
 			return err

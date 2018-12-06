@@ -88,6 +88,14 @@ func (f *fakeChecker) CreatorOnly(i aclhelper.Item, aclhelper.Actor) util.Gerror
 	return nil
 } 
 
+func (f *fakeChecker) RemoveUser(m aclhelper.Member) error {
+	return nil
+}
+
+func (f *fakeChecker) RenameMember(m aclhelper.Member, o string) error {
+	return nil
+}
+
 // More group tests will be coming, as
 
 func TestGroupCreation(t *testing.T) {

@@ -118,6 +118,8 @@ type PermChecker interface {
 	RenameItemACL(Item, string) error
 	EditFromJSON(Item, string, interface{}) util.Gerror
 	CreatorOnly(Item, Actor) util.Gerror
+	RemoveUser(Member) error
+	RenameMember(Member, string) error
 }
 
 // This might be better moved back to the acl module, and made available as
