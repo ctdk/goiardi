@@ -25,7 +25,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/group"
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -38,7 +38,7 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -84,7 +84,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 	userName := vars["name"]
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -286,7 +286,7 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, util.JoinStr("Association request ", id, " is invalid. Must be ", userName, "-orgname."), http.StatusBadRequest)
 		return
 	}
-	org, err := organization.Get(o[1])
+	org, err := orgloader.Get(o[1])
 	if err != nil {
 		jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
 		return

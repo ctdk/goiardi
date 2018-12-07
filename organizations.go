@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -45,7 +46,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 	var orgResponse interface{}
 
 	op := pathArray[2]
-	org, err := organization.Get(orgName)
+	org, err := orgloader.Get(orgName)
 	if err != nil {
 		log.Printf("Huh? err is %v", err)
 		jsonErrorReport(w, r, err.Error(), err.Status())
@@ -194,7 +195,7 @@ func orgMainHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 	orgName := vars["org"]
-	org, err := organization.Get(orgName)
+	org, err := orgloader.Get(orgName)
 	var orgResponse map[string]interface{}
 
 	if err != nil {
@@ -291,7 +292,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// try the default org for this
-	orgDef, err := organization.Get("default")
+	orgDef, err := orgloader.Get("default")
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
@@ -334,7 +335,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "field full name missing or invalid", http.StatusBadRequest)
 			return
 		}
-		org, err := organization.New(orgName, orgFullName)
+		org, err := orgloader.New(orgName, orgFullName)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return

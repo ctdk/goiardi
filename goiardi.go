@@ -475,7 +475,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var org *organization.Organization
 	if pathArray[0] == "organizations" && len(pathArray) > 1 && !(princre.MatchString(r.URL.Path) && (r.Method == http.MethodGet || r.Method == http.MethodHead)) {
 		var err util.Gerror
-		org, err = organization.Get(pathArray[1])
+		org, err = orgloader.Get(pathArray[1])
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
@@ -622,7 +622,7 @@ func createDefaultActors() {
 			}
 		}
 	}
-	cworg, _ := organization.Get("default")
+	cworg, _ := orgloader.Get("default")
 	if cworg == nil {
 		if org, oerr := orgloader.New("default", "default org"); oerr != nil {
 			logger.Criticalf(oerr.Error())
@@ -913,7 +913,7 @@ func runEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 					logger.Errorf(err.Error())
 					continue
 				}
-				org, err := organization.Get(jsonPayload["organization"])
+				org, err := orgloader.Get(jsonPayload["organization"])
 				if err != nil {
 					logger.Errorf(err.Error())
 					continue
