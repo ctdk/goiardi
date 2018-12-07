@@ -56,6 +56,7 @@ import (
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/role"
@@ -623,7 +624,7 @@ func createDefaultActors() {
 	}
 	cworg, _ := organization.Get("default")
 	if cworg == nil {
-		if org, oerr := organization.New("default", "default org"); oerr != nil {
+		if org, oerr := orgloader.New("default", "default org"); oerr != nil {
 			logger.Criticalf(oerr.Error())
 			os.Exit(1)
 		} else {
