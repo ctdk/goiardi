@@ -21,6 +21,7 @@ import (
 	"github.com/casbin/casbin"
 	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/fakeacl"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
@@ -33,70 +34,6 @@ func init() {
 	indexer.Initialize(config.Config)
 }
 
-// fake ACL checker for testing
-type fakeChecker struct {
-}
-
-func (f *fakeChecker) CheckItemPerm(i aclhelper.Item, a aclhelper.Actor, s string) (bool, util.Gerror) {
-	return true, nil
-}
-
-func (f *fakeChecker) AddMembers(m aclhelper.Role, mm []aclhelper.Member) error {
-	return nil
-}
-
-func (f *fakeChecker) RemoveMembers(m aclhelper.Role, mm []aclhelper.Member) error {
-	return nil
-}
-
-func (f *fakeChecker) AddACLRole(m aclhelper.Role) error {
-	return nil
-}
-
-func (f *fakeChecker) RemoveACLRole(m aclhelper.Role) error {
-	return nil
-}
-
-func (f *fakeChecker) Enforcer() *casbin.SyncedEnforcer {
-	return nil
-}
-
-func (f *fakeChecker) RootCheckPerm(a aclhelper.Actor, s string) (bool, util.Gerror) {
-	return true, nil
-}
-
-func (f *fakeChecker) EditItemPerm(i aclhelper.Item, m aclhelper.Member, perms []string, action string) util.Gerror {
-	return nil
-}
-
-func (f *fakeChecker) GetItemACL(i aclhelper.Item) (*aclhelper.ACL, error) {
-	return nil, nil
-}
-
-func (f *fakeChecker) EditFromJSON(i aclhelper.Item, perm string, data interface{}) util.Gerror {
-	return nil
-}
-
-func (f *fakeChecker) DeleteItemACL(i aclhelper.Item) (bool, error) {
-	return false, nil
-}
-
-func (f *fakeChecker) RenameItemACL(i aclhelper.Item) error {
-	return nil
-}
-
-func (f *fakeChecker) CreatorOnly(i aclhelper.Item, a aclhelper.Actor) util.Gerror {
-	return nil
-}
-
-func (f *fakeChecker) RemoveUser(m aclhelper.Member) error {
-	return nil
-}
-
-func (f *fakeChecker) RenameMember(m aclhelper.Member, o string) error {
-	return nil
-}
-
 // More group tests will be coming, as
 
 func TestGroupCreation(t *testing.T) {
@@ -104,7 +41,7 @@ func TestGroupCreation(t *testing.T) {
 	gob.Register(new(Group))
 	gob.Register(new(user.User))
 	org, _ := orgloader.New("florp", "mlorph normph")
-	org.PermCheck = &fakeChecker{}
+	fakeacl.LoadFakeACL(org)
 
 	g, err := New(org, "us0rs")
 	if err != nil {
@@ -131,7 +68,7 @@ func TestGroupCreation(t *testing.T) {
 
 func TestDefaultGroups(t *testing.T) {
 	org, _ := orgloader.New("florp2", "mlorph normph")
-	org.PermCheck = &fakeChecker{}
+	fakeacl.LoadFakeACL(org)
 	org.Save()
 	u, _ := user.New("pivotal")
 	u.Save()
@@ -174,7 +111,8 @@ func TestDefaultGroups(t *testing.T) {
 func TestAddDelActors(t *testing.T) {
 	gob.Register(new(user.User))
 	org, _ := orgloader.New("florp3", "mlorph normph")
-	org.PermCheck = &fakeChecker{}
+	fakeacl.LoadFakeACL(org)
+
 	org.Save()
 	MakeDefaultGroups(org)
 	g, _ := Get(org, "users")
@@ -197,7 +135,8 @@ func TestAddDelActors(t *testing.T) {
 
 func TestAddDelGroups(t *testing.T) {
 	org, _ := orgloader.New("florp4", "mlorph normph")
-	org.PermCheck = &fakeChecker{}
+	fakeacl.LoadFakeACL(org)
+
 	org.Save()
 	MakeDefaultGroups(org)
 	g, _ := Get(org, "admins")
@@ -220,7 +159,8 @@ func TestAddDelGroups(t *testing.T) {
 
 func TestSeekActor(t *testing.T) {
 	org, _ := orgloader.New("florp5", "mlorph normph")
-	org.PermCheck = &fakeChecker{}
+	fakeacl.LoadFakeACL(org)
+
 	org.Save()
 	MakeDefaultGroups(org)
 	g, _ := Get(org, "admins")
