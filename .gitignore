@@ -6,3 +6,5 @@ docs/_build
 *.deb
 goiardi-*
 packaging/**/share/goiardi/*
+*/default-policy.csv
+*/boo-policy.csv
