@@ -30,6 +30,7 @@ import (
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 
@@ -52,7 +53,7 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 	var org *organization.Organization
 	if pathArray[0] == "organizations" && len(pathArray) > 1 {
 		var err util.Gerror
-		org, err = organization.Get(pathArray[1])
+		org, err = orgloader.Get(pathArray[1])
 		if err != nil {
 			return err
 		}

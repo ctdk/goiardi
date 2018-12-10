@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/loginfo"
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -36,7 +36,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	cookbookResponse := make(map[string]interface{})
 
 	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := orgloader.Get(vars["org"])
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return

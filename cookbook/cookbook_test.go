@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"os"
 	"testing"
 )
@@ -42,7 +43,7 @@ func init() {
 
 func TestLatestConstrained(t *testing.T) {
 	gob.Register(new(organization.Organization))
-	org, _ := organization.New("default", "boo")
+	org, _ := orgloader.New("default", "boo")
 	org.Save()
 	indexer.Initialize(config.Config)
 	cbname := "minimal"

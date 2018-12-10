@@ -47,3 +47,17 @@ func New(name, fullName string) (*organization.Organization, util.Gerror) {
 	}
 	return org, nil
 }
+
+func AllOrganizations() ([]*organization.Organization, error) {
+	orgs, err := organization.AllOrganizations()
+	if err != nil {
+		return nil, err
+	}
+	for _, o := range orgs {
+		aerr := acl.LoadACL(o)
+		if aerr != nil {
+			return nil, aerr
+		}
+	}
+	return orgs, nil
+}

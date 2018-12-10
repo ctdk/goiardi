@@ -34,6 +34,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
 )
@@ -313,7 +314,11 @@ func Purge(olderThan time.Duration) (int, error) {
 		return purgeSQL(t)
 	}
 
-	orgs := organization.AllOrganizations()
+	orgs, err := orgloader.AllOrganizations()
+	if err != nil {
+		return 0, err
+	}
+
 	var ret int
 	for _, org := range orgs {
 		sandboxes := AllSandboxes(org)

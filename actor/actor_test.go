@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"testing"
 )
@@ -35,7 +36,7 @@ func init() {
 
 func TestActorClient(t *testing.T) {
 	gob.Register(new(organization.Organization))
-	org, _ = organization.New("default", "boo")
+	org, _ = orgloader.New("default", "boo")
 	org.Save()
 
 	config.Config.UseAuth = true

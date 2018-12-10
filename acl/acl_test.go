@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
@@ -69,7 +70,7 @@ func buildOrg() (*organization.Organization, *user.User) {
 	adminUser, _ := user.New(fmt.Sprintf("admin%d", orgCount))
 	adminUser.Admin = true
 	adminUser.Save()
-	org, _ := organization.New(fmt.Sprintf("org%d", orgCount), fmt.Sprintf("test org %d", orgCount))
+	org, _ := orgloader.New(fmt.Sprintf("org%d", orgCount), fmt.Sprintf("test org %d", orgCount))
 	orgCount++
 	LoadACL(org)
 	ar, _ := association.SetReq(adminUser, org, pivotal)
@@ -92,7 +93,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestInitACL(t *testing.T) {
-	org, _ := organization.New("florp", "mlorph normph")
+	org, _ := orgloader.New("florp", "mlorph normph")
 	LoadACL(org)
 	group.MakeDefaultGroups(org)
 

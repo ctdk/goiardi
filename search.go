@@ -26,7 +26,7 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/search"
@@ -62,7 +62,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	pathArrayLen := len(pathArray)
 
 	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := orgloader.Get(vars["org"])
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -213,7 +213,7 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	reindexResponse := make(map[string]interface{})
 	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := orgloader.Get(vars["org"])
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -274,7 +274,7 @@ func reindexAll() {
 	// just be added naturally
 	logger.Infof("Clearing index for reindexing now")
 	indexer.ClearIndex()
-	orgs := organization.AllOrganizations()
+	orgs, _ := orgloader.AllOrganizations()
 	for _, org := range orgs {
 		logger.Debugf("Starting to reindex org %s", org.Name)
 		indexer.CreateOrgDex(org.Name)

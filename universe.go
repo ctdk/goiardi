@@ -19,18 +19,18 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/cookbook"
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/gorilla/mux"
 	"net/http"
 )
 
-// TODO: Handle organization universes
+// TODO: Handle orgloader universes
 
 func universeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := orgloader.Get(vars["org"])
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return

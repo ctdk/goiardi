@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"testing"
 	"time"
 )
@@ -35,7 +36,7 @@ func init() {
 
 func TestActionAtADistance(t *testing.T) {
 	gob.Register(new(organization.Organization))
-	org, _ = organization.New("default", "boo")
+	org, _ = orgloader.New("default", "boo")
 	org.Save()
 	indexer.Initialize(config.Config)
 
@@ -126,7 +127,7 @@ func TestNodeStatusDelete(t *testing.T) {
 	if del != expected {
 		t.Errorf("Expected %d deleted statuses, but got %d", expected, del)
 	}
-	orgs := organization.AllOrganizations()
+	orgs := orgloader.AllOrganizations()
 	var an int
 	for _, urg := range orgs {
 		nses := AllNodeStatuses(urg)

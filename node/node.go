@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 )
@@ -409,7 +410,7 @@ func Count() int64 {
 		c, _ := countSQL()
 		return c
 	}
-	orgs := organization.AllOrganizations()
+	orgs, _ := orgloader.AllOrganizations()
 	i := 0
 	for _, org := range orgs {
 		nl := GetList(org)

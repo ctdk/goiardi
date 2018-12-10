@@ -29,6 +29,7 @@ import (
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
@@ -62,7 +63,11 @@ const ExportMinorVersion = 0
 
 func exportAll(fileName string) error {
 	exportedData := &ExportData{MajorVersion: ExportMajorVersion, MinorVersion: ExportMinorVersion, CreatedTime: time.Now()}
-	orgs := organization.AllOrganizations()
+	orgs, oerr := orgloader.AllOrganizations()
+	if oerr != nil {
+		return oerr
+	}
+
 	AllData := make(map[string]interface{})
 	AllData["org_objects"] = make(map[string]map[string][]interface{})
 	for _, org := range orgs {

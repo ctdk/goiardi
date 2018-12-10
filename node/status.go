@@ -22,6 +22,7 @@ package node
 import (
 	"fmt"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"os"
 	"sort"
 	"time"
@@ -161,8 +162,14 @@ func UnseenNodes() ([]*Node, error) {
 	if config.UsingDB() {
 		return unseenNodesSQL()
 	}
+
 	var downNodes []*Node
-	orgs := organization.AllOrganizations()
+
+	orgs, err := orgloader.AllOrganizations()
+	if err != nil {
+		return nil, err
+	}
+
 	for _, org := range orgs {
 		nodes := AllNodes(org)
 		t := time.Now().Add(-10 * time.Minute)
@@ -225,7 +232,11 @@ func DeleteNodeStatusesByAge(dur time.Duration) (int, error) {
 		return false
 	}
 
-	orgs := organization.AllOrganizations()
+	orgs, err := orgloader.AllOrganizations()
+	if err != nil {
+		return 0, err
+	}
+
 	for _, org := range orgs {
 		nodes := AllNodes(org)
 		if len(nodes) == 0 {

@@ -821,7 +821,7 @@ func setLogEventPurgeTicker() {
 		ticker := time.NewTicker(time.Second * time.Duration(60))
 		go func() {
 			for _ = range ticker.C {
-				orgs := organization.AllOrganizations()
+				orgs, _ := orgloader.AllOrganizations()
 				var purged int64
 				for _, org := range orgs {
 					les, _ := loginfo.GetLogInfos(org, nil, 0, 1)

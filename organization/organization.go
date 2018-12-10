@@ -170,7 +170,7 @@ func GetList() []string {
 	return orgList
 }
 
-func AllOrganizations() []*Organization {
+func AllOrganizations() ([]*Organization, error) {
 	if config.UsingDB() {
 
 	}
@@ -182,7 +182,7 @@ func AllOrganizations() []*Organization {
 			orgs = append(orgs, org)
 		}
 	}
-	return orgs
+	return orgs, nil
 }
 
 func (o *Organization) export() *privOrganization {

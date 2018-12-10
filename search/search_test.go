@@ -29,6 +29,7 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/role"
 )
 
@@ -64,7 +65,7 @@ func init() {
 	indexer.Initialize(config.Config)
 	gob.Register(new(organization.Organization))
 	var err error
-	org, err = organization.New("default", "defaultyboo")
+	org, err = orgloader.New("default", "defaultyboo")
 	if err != nil {
 		panic(err)
 	}
@@ -268,7 +269,7 @@ func TestSearchDbagAll(t *testing.T) {
 
 func TestSecondOrg(t *testing.T) {
 	sorgName := "boo"
-	sorg, err := organization.New(sorgName, "booboo")
+	sorg, err := orgloader.New(sorgName, "booboo")
 	if err != nil {
 		t.Errorf(err.Error())
 	}

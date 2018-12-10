@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/filestore"
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -33,7 +33,7 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 	/* We *don't* always set the the content-type to application/json here,
 	 * for obvious reasons. Still do for the PUT/POST though. */
 	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := orgloader.Get(vars["org"])
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return

@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -33,7 +33,7 @@ import (
 func UniverseHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := orgloader.Get(vars["org"])
 	if orgerr != nil {
 		util.JSONErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return

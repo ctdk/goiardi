@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/loginfo"
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -35,7 +35,7 @@ import (
 func eventListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := orgloader.Get(vars["org"])
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -182,7 +182,7 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 func eventHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := orgloader.Get(vars["org"])
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return

@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"testing"
 )
@@ -48,7 +49,7 @@ func TestAssociationReqCreation(t *testing.T) {
 	up.SetPasswd(pass)
 	up.Save()
 	pivotal = up
-	o, _ := organization.New("org", "org-porg")
+	o, _ := orgloader.New("org", "org-porg")
 	o.Save()
 	assoc, err := SetReq(u, o, pivotal)
 	if err != nil {
@@ -68,7 +69,7 @@ func TestAssociationReqDeletion(t *testing.T) {
 	pass := "123456"
 	u.SetPasswd(pass)
 	u.Save()
-	o, _ := organization.New("org2", "org-porg")
+	o, _ := orgloader.New("org2", "org-porg")
 	o.Save()
 	assoc, err := SetReq(u, o, pivotal)
 	if err != nil {
@@ -88,7 +89,7 @@ func TestAcceptance(t *testing.T) {
 	u.SetPasswd(pass)
 	u.Save()
 
-	o, _ := organization.New("org100", "org-porg")
+	o, _ := orgloader.New("org100", "org-porg")
 	o.Save()
 	err := group.MakeDefaultGroups(o)
 	if err != nil {
@@ -120,7 +121,7 @@ func TestAcceptRemoveReq(t *testing.T) {
 	pass := "123456"
 	u.SetPasswd(pass)
 	u.Save()
-	o, _ := organization.New("org103", "org-porg")
+	o, _ := orgloader.New("org103", "org-porg")
 	o.Save()
 	err := group.MakeDefaultGroups(o)
 	if err != nil {
@@ -148,7 +149,7 @@ func TestOrgReqListing(t *testing.T) {
 	u.Save()
 	for n := 0; n < 5; n++ {
 		name := fmt.Sprintf("orglist%d", n)
-		o, e := organization.New(name, fmt.Sprintf("%s org thing", name))
+		o, e := orgloader.New(name, fmt.Sprintf("%s org thing", name))
 		if e != nil {
 			t.Errorf(e.Error())
 		}
@@ -168,7 +169,7 @@ func TestOrgReqListing(t *testing.T) {
 }
 
 func TestUserReqListing(t *testing.T) {
-	o, _ := organization.New("userlist", "user list org")
+	o, _ := orgloader.New("userlist", "user list org")
 	o.Save()
 	pass := "123456"
 	for n := 0; n < 5; n++ {
@@ -191,7 +192,7 @@ func TestUserReqListing(t *testing.T) {
 }
 
 func TestUserAssocListing(t *testing.T) {
-	o, _ := organization.New("userlistz", "user list org")
+	o, _ := orgloader.New("userlistz", "user list org")
 	o.Save()
 	group.MakeDefaultGroups(o)
 	pass := "123456"
@@ -225,7 +226,7 @@ func TestOrgAssocListing(t *testing.T) {
 	u.Save()
 	for n := 0; n < 5; n++ {
 		name := fmt.Sprintf("orglistA%d", n)
-		o, e := organization.New(name, fmt.Sprintf("%s org thing", name))
+		o, e := orgloader.New(name, fmt.Sprintf("%s org thing", name))
 		if e != nil {
 			t.Errorf(e.Error())
 		}
@@ -281,7 +282,7 @@ func TestDelOneUserOrgAssociation(t *testing.T) {
 	pass := "123456"
 	u.SetPasswd(pass)
 	u.Save()
-	o, _ := organization.New("userlistz1", "user list org")
+	o, _ := orgloader.New("userlistz1", "user list org")
 	o.Save()
 	group.MakeDefaultGroups(o)
 	r, err := SetReq(u, o, pivotal)

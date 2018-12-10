@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"testing"
 )
 
@@ -34,7 +35,7 @@ var org *organization.Organization
 
 func TestShoveyCreation(t *testing.T) {
 	gob.Register(new(organization.Organization))
-	org, _ = organization.New("default", "boo")
+	org, _ = orgloader.New("default", "boo")
 	org.Save()
 	indexer.Initialize(config.Config)
 	nn := new(node.Node)

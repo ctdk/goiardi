@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
@@ -343,7 +344,7 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 	var org *organization.Organization
 	if orgName, ok := vars["org"]; ok {
 		var orgerr util.Gerror
-		org, orgerr = organization.Get(orgName)
+		org, orgerr = orgloader.Get(orgName)
 		if orgerr != nil {
 			jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 			return

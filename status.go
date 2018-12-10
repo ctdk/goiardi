@@ -19,7 +19,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/node"
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -29,7 +29,7 @@ import (
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := orgloader.Get(vars["org"])
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return

@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"testing"
@@ -102,7 +103,7 @@ func TestGroupCreation(t *testing.T) {
 	gob.Register(new(organization.Organization))
 	gob.Register(new(Group))
 	gob.Register(new(user.User))
-	org, _ := organization.New("florp", "mlorph normph")
+	org, _ := orgloader.New("florp", "mlorph normph")
 	org.PermCheck = &fakeChecker{}
 
 	g, err := New(org, "us0rs")
@@ -129,7 +130,7 @@ func TestGroupCreation(t *testing.T) {
 }
 
 func TestDefaultGroups(t *testing.T) {
-	org, _ := organization.New("florp2", "mlorph normph")
+	org, _ := orgloader.New("florp2", "mlorph normph")
 	org.PermCheck = &fakeChecker{}
 	org.Save()
 	u, _ := user.New("pivotal")
@@ -172,7 +173,7 @@ func TestDefaultGroups(t *testing.T) {
 
 func TestAddDelActors(t *testing.T) {
 	gob.Register(new(user.User))
-	org, _ := organization.New("florp3", "mlorph normph")
+	org, _ := orgloader.New("florp3", "mlorph normph")
 	org.PermCheck = &fakeChecker{}
 	org.Save()
 	MakeDefaultGroups(org)
@@ -195,7 +196,7 @@ func TestAddDelActors(t *testing.T) {
 }
 
 func TestAddDelGroups(t *testing.T) {
-	org, _ := organization.New("florp4", "mlorph normph")
+	org, _ := orgloader.New("florp4", "mlorph normph")
 	org.PermCheck = &fakeChecker{}
 	org.Save()
 	MakeDefaultGroups(org)
@@ -218,7 +219,7 @@ func TestAddDelGroups(t *testing.T) {
 }
 
 func TestSeekActor(t *testing.T) {
-	org, _ := organization.New("florp5", "mlorph normph")
+	org, _ := orgloader.New("florp5", "mlorph normph")
 	org.PermCheck = &fakeChecker{}
 	org.Save()
 	MakeDefaultGroups(org)

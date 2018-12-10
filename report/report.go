@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/util"
 	"github.com/pborman/uuid"
 	"github.com/raintank/met"
@@ -191,7 +192,11 @@ func DeleteByAge(dur time.Duration) (int, error) {
 		return deleteByAgeSQL(dur)
 	}
 	// hoo-boy.
-	orgs := organization.AllOrganizations()
+	orgs, err := orgloader.AllOrganizations()
+	if err != nil {
+		return 0, err
+	}
+
 	var ret int
 	for _, org := range orgs {
 		reports := AllReports(org)

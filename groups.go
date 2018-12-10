@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/group"
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
 	"log"
@@ -32,7 +32,7 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
@@ -129,7 +129,7 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	orgName := vars["org"]
-	org, orgerr := organization.Get(orgName)
+	org, orgerr := orgloader.Get(orgName)
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return

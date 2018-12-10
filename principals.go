@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
@@ -33,7 +33,7 @@ func principalHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := orgloader.Get(vars["org"])
 	errMap := make(map[string]interface{})
 
 	if orgerr != nil {

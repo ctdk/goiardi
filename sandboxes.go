@@ -20,7 +20,7 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/util"
@@ -34,7 +34,7 @@ func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 	pathArrayLen := len(pathArray)
 	sboxResponse := make(map[string]interface{})
 	vars := mux.Vars(r)
-	org, orgerr := organization.Get(vars["org"])
+	org, orgerr := orgloader.Get(vars["org"])
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return

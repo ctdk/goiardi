@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"testing"
 	"time"
 )
@@ -40,7 +41,7 @@ func TestLogEvent(t *testing.T) {
 	gob.Register(make(map[int]interface{}))
 	gob.Register(new(LogInfo))
 	gob.Register(new(client.Client))
-	org, _ = organization.New("default", "boo")
+	org, _ = orgloader.New("default", "boo")
 	org.Save()
 	config.Config.LogEvents = true
 	doer, _ := client.New(org, "doer")

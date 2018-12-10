@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/pborman/uuid"
 	"testing"
 	"time"
@@ -36,7 +37,7 @@ func init() {
 
 func TestReportCreation(t *testing.T) {
 	gob.Register(new(organization.Organization))
-	org, _ = organization.New("default", "boo")
+	org, _ = orgloader.New("default", "boo")
 	org.Save()
 	uuid := "12b8be8d-a2ef-4fc6-88b3-4c18103b88df"
 	invalidUUID := "12b8be8d-a2ef-4fc6-88b3-4c18103b88zz"

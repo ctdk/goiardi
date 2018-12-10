@@ -35,6 +35,7 @@ import (
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/sandbox"
@@ -59,7 +60,7 @@ func importAll(fileName string) error {
 	// TODO: version 2.0
 	var orgs []*organization.Organization
 	if exportedData.MajorVersion == 1 {
-		org, err := organization.Get("default")
+		org, err := orgloader.Get("default")
 		if err != nil {
 			return err
 		}
