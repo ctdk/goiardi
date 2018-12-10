@@ -353,7 +353,7 @@ func (c *Client) Rename(newName string) util.Gerror {
 	if aerr := c.org.PermCheck.RenameItemACL(c, oldName); aerr != nil {
 		return util.CastErr(aerr)
 	}
-	
+
 	return nil
 }
 

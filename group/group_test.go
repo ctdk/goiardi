@@ -85,9 +85,9 @@ func (f *fakeChecker) RenameItemACL(i aclhelper.Item) error {
 	return nil
 }
 
-func (f *fakeChecker) CreatorOnly(i aclhelper.Item, aclhelper.Actor) util.Gerror {
+func (f *fakeChecker) CreatorOnly(i aclhelper.Item, a aclhelper.Actor) util.Gerror {
 	return nil
-} 
+}
 
 func (f *fakeChecker) RemoveUser(m aclhelper.Member) error {
 	return nil

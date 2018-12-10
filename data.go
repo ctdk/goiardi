@@ -243,7 +243,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		
+
 		if f, ferr := org.PermCheck.CheckItemPerm(chefDbag, opUser, permstr); ferr != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return

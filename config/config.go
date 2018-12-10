@@ -245,7 +245,7 @@ const MinAPIVersion = "0"
 const MaxAPIVersion = "1"
 
 // All supported API versions
-var SupportedAPIVersions = []string{"0","1"}
+var SupportedAPIVersions = []string{"0", "1"}
 
 // The default time difference allowed between the server's clock and the time
 // in the X-OPS-TIMESTAMP header.

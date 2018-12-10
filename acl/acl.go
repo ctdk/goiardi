@@ -237,7 +237,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 						if !util.StringPresentInSlice(strings.TrimPrefix(subj, "role##"), newGroups) {
 							pi := make([]interface{}, len(p))
 							for i, v := range p {
-							pi[i] = v
+								pi[i] = v
 							}
 							c.e.RemovePolicy(pi...)
 						}
@@ -393,7 +393,7 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 
 func (c *Checker) getItemPolicies(itemName string, itemKind string, itemType string) [][]interface{} {
 	filteredItem := c.e.GetFilteredPolicy(condNamePos, itemName)
-	if (filteredItem == nil || len(filteredItem) == 0) {
+	if filteredItem == nil || len(filteredItem) == 0 {
 		return nil
 	}
 	policies := make([][]interface{}, 0)
@@ -403,7 +403,7 @@ func (c *Checker) getItemPolicies(itemName string, itemKind string, itemType str
 			for i, v := range p {
 				pface[i] = v
 			}
-		policies = append(policies, pface)
+			policies = append(policies, pface)
 		}
 	}
 	return policies
