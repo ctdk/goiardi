@@ -19,6 +19,8 @@ package sandbox
 import (
 	"crypto/md5"
 	"encoding/gob"
+	"github.com/ctdk/goiardi/fakeacl"
+	"github.com/ctdk/goiardi/organization"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -74,21 +76,25 @@ func randomHashes(num int) map[string]interface{} {
 func TestSandboxPurgeWith3(t *testing.T) {
 	ss := new(Sandbox)
 	gob.Register(ss)
+	gob.Register(new(organization.Organization))
+	org, _ = organization.New("sboxpurge", "sboxpurge")
+	fakeacl.LoadFakeACL(org)
+	org.Save()
 
 	tm := time.Now()
 	cs1 := randomHashes(numChecksums)
 	cs2 := randomHashes(numChecksums)
 	cs3 := randomHashes(numChecksums)
 
-	sb1, err := New(cs1)
+	sb1, err := New(org, cs1)
 	if err != nil {
 		t.Error(err)
 	}
-	sb2, err := New(cs2)
+	sb2, err := New(org, cs2)
 	if err != nil {
 		t.Error(err)
 	}
-	sb3, err := New(cs3)
+	sb3, err := New(org, cs3)
 	if err != nil {
 		t.Error(err)
 	}

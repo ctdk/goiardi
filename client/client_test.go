@@ -22,9 +22,9 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/fakeacl"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
-	"github.com/ctdk/goiardi/orgloader"
 	"testing"
 )
 
@@ -36,7 +36,8 @@ func init() {
 
 func TestGobEncodeDecode(t *testing.T) {
 	gob.Register(new(organization.Organization))
-	org, _ = orgloader.New("default", "boo")
+	org, _ = organization.New("default", "boo")
+	fakeacl.LoadFakeACL(org)
 	org.Save()
 	indexer.Initialize(config.Config)
 	c, _ := New(org, "foo")

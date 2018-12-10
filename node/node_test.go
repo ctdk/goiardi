@@ -127,7 +127,7 @@ func TestNodeStatusDelete(t *testing.T) {
 	if del != expected {
 		t.Errorf("Expected %d deleted statuses, but got %d", expected, del)
 	}
-	orgs := orgloader.AllOrganizations()
+	orgs, _ := orgloader.AllOrganizations()
 	var an int
 	for _, urg := range orgs {
 		nses := AllNodeStatuses(urg)
