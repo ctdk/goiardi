@@ -21,9 +21,12 @@ package fakeacl
 import (
 	"github.com/casbin/casbin"
 	"github.com/ctdk/goiardi/aclhelper"
-	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 )
+
+type PermTaker interface {
+	SetPermCheck(aclhelper.PermChecker)
+}
 
 // fake ACL checker for testing
 type FakeChecker struct {
@@ -93,7 +96,7 @@ func (f *FakeChecker) RenameMember(m aclhelper.Member, o string) error {
 	return nil
 }
 
-func LoadFakeACL(o *organization.Organization) {
+func LoadFakeACL(o PermTaker) {
 	f := new(FakeChecker)
-	o.PermCheck = f
+	o.SetPermCheck(f)
 }

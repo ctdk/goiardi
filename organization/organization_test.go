@@ -19,6 +19,7 @@ package organization
 import (
 	"encoding/gob"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/fakeacl"
 	"github.com/ctdk/goiardi/indexer"
 	"testing"
 )
@@ -56,6 +57,7 @@ func TestOrgDeletion(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
+	fakeacl.LoadFakeACL(o)
 	o.Delete()
 	o2, _ := Get("hlumph")
 	if o2 != nil {
@@ -70,6 +72,7 @@ func TestOrgGet(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
+	fakeacl.LoadFakeACL(o)
 	err = o.Save()
 	o2, err := Get(name)
 	if err != nil {

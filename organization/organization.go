@@ -235,3 +235,7 @@ func (o *Organization) ContainerKind() string {
 func (o *Organization) ContainerType() string {
 	return "$$root$$"
 }
+
+func (o *Organization) SetPermCheck(p aclhelper.PermChecker) {
+	o.PermCheck = p
+}
