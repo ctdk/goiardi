@@ -395,6 +395,7 @@ func GetAssoc(user *user.User, org *organization.Organization) (*Association, ut
 		}
 		if a != nil {
 			assoc = a.(*Association)
+			assoc.Org = org
 		}
 	}
 	return assoc, nil

@@ -19,7 +19,9 @@ package sandbox
 import (
 	"crypto/md5"
 	"encoding/gob"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/fakeacl"
+	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
 	"fmt"
 	"math/rand"
@@ -43,6 +45,10 @@ const (
 	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
 	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 )
+
+func init() {
+	indexer.Initialize(config.Config)
+}
 
 func randStringBytesMaskImprSrc(n int) string {
 	b := make([]byte, n)
@@ -77,7 +83,7 @@ func TestSandboxPurgeWith3(t *testing.T) {
 	ss := new(Sandbox)
 	gob.Register(ss)
 	gob.Register(new(organization.Organization))
-	org, _ = organization.New("sboxpurge", "sboxpurge")
+	org, _ := organization.New("sboxpurge", "sboxpurge")
 	fakeacl.LoadFakeACL(org)
 	org.Save()
 
@@ -114,7 +120,7 @@ func TestSandboxPurgeWith3(t *testing.T) {
 		t.Errorf("One sandbox should have been deleted, but %d were purged.", d)
 	}
 
-	all := AllSandboxes()
+	all := AllSandboxes(org)
 	if len(all) != 2 {
 		t.Errorf("After purging there should have been 2 sandboxes, but there are %d.", len(all))
 	}
@@ -123,12 +129,16 @@ func TestSandboxPurgeWith3(t *testing.T) {
 }
 
 func TestSandboxPurgeWith30(t *testing.T) {
+	org, _ := organization.New("sboxpurge30", "sboxpurge30")
+	fakeacl.LoadFakeACL(org)
+	org.Save()
+
 	tm := time.Now()
 
 	slen := 30
 	for si := 0; si < slen; si++ {
 		h := randomHashes(numChecksums)
-		sb, _ := New(h)
+		sb, _ := New(org, h)
 		if (si % 5) == 0 {
 			sb.CreationTime = tm.Add(-7 * 24 * time.Hour)
 		}
@@ -140,7 +150,7 @@ func TestSandboxPurgeWith30(t *testing.T) {
 	if d != 6 {
 		t.Errorf("should have purged 6 sandboxes, actually purged %d", d)
 	}
-	all := AllSandboxes()
+	all := AllSandboxes(org)
 	if len(all) != 24 {
 		t.Errorf("After purging there should have been 24 sandboxes, but there were %d instead", len(all))
 	}

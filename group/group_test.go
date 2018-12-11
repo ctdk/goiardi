@@ -18,15 +18,11 @@ package group
 
 import (
 	"encoding/gob"
-	"github.com/casbin/casbin"
-	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/fakeacl"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
-	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
-	"github.com/ctdk/goiardi/util"
 	"testing"
 )
 
@@ -40,8 +36,9 @@ func TestGroupCreation(t *testing.T) {
 	gob.Register(new(organization.Organization))
 	gob.Register(new(Group))
 	gob.Register(new(user.User))
-	org, _ := orgloader.New("florp", "mlorph normph")
+	org, _ := organization.New("florp", "mlorph normph")
 	fakeacl.LoadFakeACL(org)
+	org.Save()
 
 	g, err := New(org, "us0rs")
 	if err != nil {
@@ -67,9 +64,10 @@ func TestGroupCreation(t *testing.T) {
 }
 
 func TestDefaultGroups(t *testing.T) {
-	org, _ := orgloader.New("florp2", "mlorph normph")
+	org, _ := organization.New("florp2", "mlorph normph")
 	fakeacl.LoadFakeACL(org)
 	org.Save()
+
 	u, _ := user.New("pivotal")
 	u.Save()
 	err := MakeDefaultGroups(org)
@@ -110,7 +108,7 @@ func TestDefaultGroups(t *testing.T) {
 
 func TestAddDelActors(t *testing.T) {
 	gob.Register(new(user.User))
-	org, _ := orgloader.New("florp3", "mlorph normph")
+	org, _ := organization.New("florp3", "mlorph normph")
 	fakeacl.LoadFakeACL(org)
 
 	org.Save()
@@ -134,7 +132,7 @@ func TestAddDelActors(t *testing.T) {
 }
 
 func TestAddDelGroups(t *testing.T) {
-	org, _ := orgloader.New("florp4", "mlorph normph")
+	org, _ := organization.New("florp4", "mlorph normph")
 	fakeacl.LoadFakeACL(org)
 
 	org.Save()
@@ -158,7 +156,7 @@ func TestAddDelGroups(t *testing.T) {
 }
 
 func TestSeekActor(t *testing.T) {
-	org, _ := orgloader.New("florp5", "mlorph normph")
+	org, _ := organization.New("florp5", "mlorph normph")
 	fakeacl.LoadFakeACL(org)
 
 	org.Save()
