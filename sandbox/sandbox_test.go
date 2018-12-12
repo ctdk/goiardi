@@ -129,11 +129,12 @@ func TestSandboxPurgeWith3(t *testing.T) {
 }
 
 func TestSandboxPurgeWith30(t *testing.T) {
+	tm := time.Now()
+	
 	org, _ := organization.New("sboxpurge30", "sboxpurge30")
 	fakeacl.LoadFakeACL(org)
 	org.Save()
 
-	tm := time.Now()
 
 	slen := 30
 	for si := 0; si < slen; si++ {

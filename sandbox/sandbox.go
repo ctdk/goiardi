@@ -342,7 +342,7 @@ func Purge(olderThan time.Duration) (int, error) {
 		ret += j
 		ds := datastore.New()
 		for _, s := range sandboxes[:j] {
-			ds.Delete("sandbox", s.ID)
+			ds.Delete(org.DataKey("sandbox"), s.ID)
 		}
 	}
 	return ret, nil
