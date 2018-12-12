@@ -77,7 +77,7 @@ func LoadACL(org *organization.Organization) error {
 	if err != nil {
 		return err
 	}
-	e := casbin.NewSyncedEnforcer(m, pa, true)
+	e := casbin.NewSyncedEnforcer(m, pa, config.Config.PolicyLogging)
 	c := &Checker{org: org, e: e}
 	org.PermCheck = c
 
