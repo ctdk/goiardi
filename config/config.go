@@ -915,6 +915,9 @@ func ParseConfigOptions() error {
 	if opts.PolicyRoot != "" {
 		Config.PolicyRoot = opts.PolicyRoot
 	}
+	if opts.PolicyLogging {
+		Config.PolicyLogging = opts.PolicyLogging
+	}
 
 	return nil
 }
