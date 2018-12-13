@@ -24,13 +24,14 @@ import (
 	"github.com/casbin/casbin/persist/file-adapter"
 	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/container"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -167,12 +168,40 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 		return false, err
 	}
 
-	_, err := association.TestAssociation(doer, c.org)
+	err := testAssociation(doer, c.org)
 	if err != nil {
 		return false, err
 	}
 
 	return false, nil
+}
+
+// I won't pretend that I love this, but all we need to do here is test whether
+// an association exists at all, not actually do anything with it. By not
+// including the assocation library in this one, it will vastly simplify
+// processing association requests, so that's something.
+func testAssociation(doer aclhelper.Actor, org *organization.Organization) util.Gerror {
+	if doer.IsUser() {
+		// This will be much easier with a DB. Alas.
+		if config.UsingDB() {
+
+		} else {
+			ds := datastore.New()
+			key := util.JoinStr(doer.GetName(), "-", org.Name)
+			if _, found := ds.Get("association", key); !found {
+				err := util.Errorf("'%s' not associated with organization '%s'", doer.GetName(), org.Name)
+				err.SetStatus(http.StatusForbidden)
+				return err
+			}
+		}
+	} else {
+		if doer.OrgName() != org.Name {
+			err := util.Errorf("client %s is not associated with org %s", doer.GetName(), org.Name)
+			err.SetStatus(http.StatusForbidden)
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, perms []string, action string) util.Gerror {

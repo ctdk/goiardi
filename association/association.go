@@ -18,6 +18,7 @@ package association
 
 import (
 	"fmt"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
@@ -85,6 +86,8 @@ func GetReq(key string) (*AssociationReq, util.Gerror) {
 		}
 		if a != nil {
 			assoc = a.(*AssociationReq)
+			// blargh.
+			acl.LoadACL(assoc.Org)
 		}
 	}
 	return assoc, nil
@@ -154,6 +157,7 @@ func OrgAssocReqs(user *user.User) ([]*organization.Organization, util.Gerror) {
 	orgs := make([]*organization.Organization, len(o))
 	for i, v := range o {
 		orgs[i] = v.(*organization.Organization)
+		acl.LoadACL(orgs[i])
 	}
 	return orgs, nil
 }
@@ -167,6 +171,7 @@ func OrgAssociations(user *user.User) ([]*organization.Organization, util.Gerror
 	orgs := make([]*organization.Organization, len(o))
 	for i, v := range o {
 		orgs[i] = v.(*organization.Organization)
+		acl.LoadACL(orgs[i])
 	}
 	return orgs, nil
 }
@@ -362,22 +367,6 @@ func SetAssoc(user *user.User, org *organization.Organization) (*Association, ut
 	ds.SetAssociation(org.Name, "users", user.Name, user)
 	ds.SetAssociation(user.Name, "organizations", org.Name, org)
 	return assoc, nil
-}
-
-func TestAssociation(doer actor.Actor, org *organization.Organization) (bool, util.Gerror) {
-	if doer.IsUser() {
-		_, err := GetAssoc(doer.(*user.User), org)
-		if err != nil {
-			return false, err
-		}
-	} else {
-		if doer.OrgName() != org.Name {
-			err := util.Errorf("client %s is not associated with org %s", doer.GetName(), org.Name)
-			err.SetStatus(http.StatusForbidden)
-			return false, err
-		}
-	}
-	return true, nil
 }
 
 func GetAssoc(user *user.User, org *organization.Organization) (*Association, util.Gerror) {
