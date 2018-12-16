@@ -93,7 +93,7 @@ func initializeACL(org *organization.Organization, m model.Model) (*casbin.Synce
 	if err != nil {
 		return nil, err
 	}
-	e := casbin.NewSyncedEnforcer(m, adp, true)
+	e := casbin.NewSyncedEnforcer(m, adp, config.Config.PolicyLogging)
 
 	return e, nil
 }
