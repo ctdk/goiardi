@@ -32,6 +32,7 @@ import (
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
+	"log"
 	"net/http"
 )
 
@@ -583,8 +584,10 @@ func aclPermCheck(r *http.Request, org *organization.Organization, item aclhelpe
 	}
 
 	if ok, err := org.PermCheck.CheckItemPerm(item, opUser, "grant"); err != nil {
+		log.Printf("aclPermCheck: err was '%s'", err.Error())
 		return err
 	} else if !ok {
+		log.Printf("aclPermCheck: no perm, yo")
 		derr := util.Errorf("You do not have permission to do that")
 		derr.SetStatus(http.StatusForbidden)
 		return derr

@@ -79,6 +79,7 @@ func LoadACL(org *organization.Organization) error {
 		return err
 	}
 	e := casbin.NewSyncedEnforcer(m, pa, config.Config.PolicyLogging)
+	e.EnableAutoSave(true)
 	c := &Checker{org: org, e: e}
 	org.PermCheck = c
 
@@ -153,9 +154,11 @@ func initializePolicy(org *organization.Organization, policyRoot string) error {
 func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm string) (bool, util.Gerror) {
 	specific := buildEnforcingSlice(item, doer, perm)
 	var chkSucceeded bool
+	logger.Debugf("enforcing slice: %+v", specific)
 
 	// try the specific check first, then the general
 	if chkSucceeded = c.e.Enforce(specific...); !chkSucceeded {
+		logger.Debugf("trying the general: %+v", specific.general())
 		chkSucceeded = c.e.Enforce(specific.general()...)
 	}
 	if chkSucceeded {
