@@ -134,6 +134,7 @@ func policyExists(org *organization.Organization, policyRoot string) bool {
 }
 
 func initializePolicy(org *organization.Organization, policyRoot string) error {
+	logger.Debugf("initializing policy!")
 	if policyExists(org, policyRoot) {
 		perr := fmt.Errorf("ACL policy for organization %s already exists, cannot initialize!", org.Name)
 		return perr
@@ -393,7 +394,8 @@ func (c *Checker) AddMembers(gRole aclhelper.Role, adding []aclhelper.Member) er
 	}
 	logger.Debugf("added %d members to %s ACL role", len(adding), gRole.GetName())
 
-	return nil
+	//return nil
+	return c.e.SavePolicy()
 }
 
 func (c *Checker) RemoveMembers(gRole aclhelper.Role, removing []aclhelper.Member) error {
