@@ -35,6 +35,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 )
 
 type enforceCondition []interface{}
@@ -42,6 +43,9 @@ type enforceCondition []interface{}
 type Checker struct {
 	org *organization.Organization
 	e   *casbin.SyncedEnforcer
+	// gah, take a mutex to keep these perms from overwriting each other
+	m sync.RWMutex 
+	inTransaction bool
 }
 
 // group, subkind, kind, name, perm, effect
@@ -80,7 +84,7 @@ func LoadACL(org *organization.Organization) error {
 	}
 	e := casbin.NewSyncedEnforcer(m, pa, config.Config.PolicyLogging)
 	e.EnableAutoSave(true)
-	c := &Checker{org: org, e: e}
+	c := &Checker{org: org, e: e, inTransaction: false}
 	org.PermCheck = c
 
 	return nil
@@ -153,6 +157,9 @@ func initializePolicy(org *organization.Organization, policyRoot string) error {
 }
 
 func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm string) (bool, util.Gerror) {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
 	// grrr. Try reloading the policy every frickin' time we do anything.
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return false, util.CastErr(polErr)
@@ -214,6 +221,8 @@ func testAssociation(doer aclhelper.Actor, org *organization.Organization) util.
 }
 
 func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, perms []string, action string) util.Gerror {
+	c.m.Lock()
+	defer c.m.Unlock()
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
@@ -253,6 +262,8 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 		if _, ok := data[perm]; !ok {
 			return util.Errorf("acl %s missing from JSON", perm)
 		}
+		c.m.Lock()
+		defer c.m.Unlock()
 		switch aclEdit := data[perm].(type) {
 		case map[string]interface{}:
 			// ----------
@@ -360,8 +371,6 @@ func (e enforceCondition) general() enforceCondition {
 }
 
 func (c *Checker) isPermValid(item aclhelper.Item, perm string) bool {
-	c.e.LoadPolicy() // come back later maybe for err handling
-
 	// pare down the list to check a little
 	fPass := c.e.GetFilteredPolicy(condSubkindPos, item.ContainerType())
 	validPerms := make(map[string]bool)
@@ -379,6 +388,11 @@ func (c *Checker) AddACLRole(gRole aclhelper.Role) error {
 	// If there's any members in the role, add them. Otherwise, there's
 	// not anything to do.
 	logger.Debugf("Running AddACLRole, calling AddMembers on all members in group %s", gRole.GetName())
+	c.m.Lock()
+	defer c.m.Unlock()
+	c.inTransaction = true
+	defer c.inTransaction = false
+
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
@@ -386,6 +400,11 @@ func (c *Checker) AddACLRole(gRole aclhelper.Role) error {
 }
 
 func (c *Checker) RemoveACLRole(gRole aclhelper.Role) error {
+	c.m.Lock()
+	defer c.m.Unlock()
+	c.inTransaction = true
+	defer c.inTransaction = false
+
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
@@ -394,6 +413,11 @@ func (c *Checker) RemoveACLRole(gRole aclhelper.Role) error {
 }
 
 func (c *Checker) AddMembers(gRole aclhelper.Role, adding []aclhelper.Member) error {
+	if !c.inTransaction {
+		c.m.Lock()
+		defer c.m.Unlock()
+	}
+
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
@@ -406,6 +430,11 @@ func (c *Checker) AddMembers(gRole aclhelper.Role, adding []aclhelper.Member) er
 }
 
 func (c *Checker) RemoveMembers(gRole aclhelper.Role, removing []aclhelper.Member) error {
+	if !c.inTransaction {
+		c.m.Lock()
+		defer c.m.Unlock()
+	}
+
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
@@ -418,6 +447,9 @@ func (c *Checker) RemoveMembers(gRole aclhelper.Role, removing []aclhelper.Membe
 }
 
 func (c *Checker) RemoveUser(u aclhelper.Member) error {
+	c.m.Lock()
+	defer c.m.Unlock()
+
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
@@ -435,6 +467,9 @@ func (c *Checker) Enforcer() *casbin.SyncedEnforcer {
 }
 
 func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return nil, util.CastErr(polErr)
 	}
@@ -485,6 +520,9 @@ func (c *Checker) GetItemPolicies(itemName string, itemKind string, itemType str
 }
 
 func (c *Checker) RenameItemACL(item aclhelper.Item, oldName string) error {
+	c.m.Lock()
+	defer c.m.Unlock()
+
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
@@ -509,6 +547,9 @@ func (c *Checker) RenameItemACL(item aclhelper.Item, oldName string) error {
 }
 
 func (c *Checker) RenameMember(member aclhelper.Member, oldName string) error {
+	c.m.Lock()
+	defer c.m.Unlock()
+
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
@@ -540,6 +581,9 @@ func (c *Checker) RenameMember(member aclhelper.Member, oldName string) error {
 }
 
 func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
+	c.m.Lock()
+	defer c.m.Unlock()
+
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return false, util.CastErr(polErr)
 	}
