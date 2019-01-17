@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package acl
+package acltesting
 
 import (
 	"encoding/gob"
 	"fmt"
+	"github.com/ctdk/goiardi/acl"
 	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/client"
@@ -33,6 +34,16 @@ import (
 	"os"
 	"strings"
 	"testing"
+)
+
+// group, subkind, kind, name, perm, effect
+const (
+	condGroupPos = iota
+	condSubkindPos
+	condKindPos
+	condNamePos
+	condPermPos
+	condEffectPos
 )
 
 var pivotal *user.User
@@ -72,7 +83,7 @@ func buildOrg() (*organization.Organization, *user.User) {
 	adminUser.Save()
 	org, _ := organization.New(fmt.Sprintf("org%d", orgCount), fmt.Sprintf("test org %d", orgCount))
 	orgCount++
-	LoadACL(org)
+	acl.LoadACL(org)
 	ar, _ := association.SetReq(adminUser, org, pivotal)
 	ar.Accept()
 	group.MakeDefaultGroups(org)
@@ -94,7 +105,7 @@ func TestMain(m *testing.M) {
 
 func TestInitACL(t *testing.T) {
 	org, _ := organization.New("florp", "mlorph normph")
-	LoadACL(org)
+	acl.LoadACL(org)
 	group.MakeDefaultGroups(org)
 
 	/*
@@ -367,10 +378,10 @@ func TestRootACL(t *testing.T) {
 	for _, p := range aclhelper.DefaultACLs {
 		s, err := org.PermCheck.RootCheckPerm(adminUser, p)
 		if !s {
-			t.Errorf("Root perm check %s failed for admin user", s)
+			t.Errorf("Root perm check %s failed for admin user", p)
 		}
 		if err != nil {
-			t.Errorf("Root perm check on %s for admin user had an error: %s", s, err.Error())
+			t.Errorf("Root perm check on %s for admin user had an error: %s", p, err.Error())
 		}
 	}
 
@@ -378,15 +389,15 @@ func TestRootACL(t *testing.T) {
 		s, err := org.PermCheck.RootCheckPerm(u1, p)
 		if p != "read" {
 			if s {
-				t.Errorf("Root perm check %s unexpectedly passed for normal user", s)
+				t.Errorf("Root perm check %s unexpectedly passed for normal user", p)
 			}
 		} else {
 			if !s {
-				t.Errorf("Root perm check %s unexpectedly failed for normal user", s)
+				t.Errorf("Root perm check %s unexpectedly failed for normal user", p)
 			}
 		}
 		if err != nil {
-			t.Errorf("Root perm check on %s for normal user had an error: %s", s, err.Error())
+			t.Errorf("Root perm check on %s for normal user had an error: %s", p, err.Error())
 		}
 	}
 }
@@ -493,8 +504,8 @@ func TestItemDelete(t *testing.T) {
 	cKind := c.ContainerKind()
 	cType := c.ContainerType()
 
-	pc := org.PermCheck.(*Checker)
-	cpol := pc.getItemPolicies(cName, cKind, cType)
+	pc := org.PermCheck.(*acl.Checker)
+	cpol := pc.GetItemPolicies(cName, cKind, cType)
 	if cpol == nil || len(cpol) == 0 {
 		t.Errorf("policies for client %s should not have been empty", cName)
 	} else {
@@ -506,14 +517,14 @@ func TestItemDelete(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("policies for client %s should have included 'grant' permission, but didn't.")
+			t.Errorf("policies for client %s should have included 'grant' permission, but didn't.", cName)
 		}
 	}
 
 	if err := c.Delete(); err != nil {
 		t.Errorf("error deleting client during renaming test with ACLs: %s", err.Error())
 	}
-	delcpol := pc.getItemPolicies(cName, cKind, cType)
+	delcpol := pc.GetItemPolicies(cName, cKind, cType)
 	if delcpol != nil && len(delcpol) != 0 {
 		t.Errorf("Deleted client should not have had any policies in the ACL, but it had %d!", len(delcpol))
 	}
@@ -529,8 +540,8 @@ func TestItemRename(t *testing.T) {
 	us, _ := group.Get(org, "users")
 	org.PermCheck.EditItemPerm(c, us, []string{"grant"}, "add")
 
-	pc := org.PermCheck.(*Checker)
-	cpol := pc.getItemPolicies(c.Name, c.ContainerKind(), c.ContainerType())
+	pc := org.PermCheck.(*acl.Checker)
+	cpol := pc.GetItemPolicies(c.Name, c.ContainerKind(), c.ContainerType())
 	if cpol == nil || len(cpol) == 0 {
 		t.Errorf("policies for client %s should not have been empty", c.Name)
 	}
@@ -538,11 +549,11 @@ func TestItemRename(t *testing.T) {
 	c.Rename(newName)
 	c.Save()
 
-	npol := pc.getItemPolicies(newName, c.ContainerKind(), c.ContainerType())
+	npol := pc.GetItemPolicies(newName, c.ContainerKind(), c.ContainerType())
 	if npol == nil || len(npol) == 0 {
 		t.Errorf("policies for renamed client %s (was %s) should not have been empty", c.Name, oldName)
 	}
-	opol := pc.getItemPolicies(oldName, c.ContainerKind(), c.ContainerType())
+	opol := pc.GetItemPolicies(oldName, c.ContainerKind(), c.ContainerType())
 	if opol != nil && len(opol) != 0 {
 		t.Errorf("old policies for client %s (was %s) should have been empty, but had %d elements", c.Name, oldName, len(opol))
 	}

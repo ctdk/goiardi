@@ -239,6 +239,11 @@ func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, per
 		pcondition := buildEnforcingSlice(item, member, p)
 		policyFunc(pcondition...)
 	}
+
+	if err := c.e.SavePolicy(); err != nil {
+		return util.CastErr(err)
+	}
+
 	return nil
 }
 
@@ -322,6 +327,9 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 	default:
 		return util.Errorf("invalid acl data")
 	}
+	if err := c.e.SavePolicy(); err != nil {
+		return util.CastErr(err)
+	}
 	return nil
 }
 
@@ -382,7 +390,7 @@ func (c *Checker) RemoveACLRole(gRole aclhelper.Role) error {
 		return util.CastErr(polErr)
 	}
 	c.e.DeleteRole(gRole.ACLName())
-	return nil
+	return c.e.SavePolicy()
 }
 
 func (c *Checker) AddMembers(gRole aclhelper.Role, adding []aclhelper.Member) error {
@@ -394,7 +402,6 @@ func (c *Checker) AddMembers(gRole aclhelper.Role, adding []aclhelper.Member) er
 	}
 	logger.Debugf("added %d members to %s ACL role", len(adding), gRole.GetName())
 
-	//return nil
 	return c.e.SavePolicy()
 }
 
@@ -407,7 +414,7 @@ func (c *Checker) RemoveMembers(gRole aclhelper.Role, removing []aclhelper.Membe
 	}
 	logger.Debugf("deleted %d members from %s ACL role", len(removing), gRole.GetName())
 
-	return nil
+	return c.e.SavePolicy()
 }
 
 func (c *Checker) RemoveUser(u aclhelper.Member) error {
@@ -416,7 +423,7 @@ func (c *Checker) RemoveUser(u aclhelper.Member) error {
 	}
 	c.e.DeleteRolesForUser(u.ACLName())
 	logger.Debugf("deleted all ACL perms for %s", u.ACLName())
-	return nil
+	return c.e.SavePolicy()
 }
 
 func (c *Checker) RemoveItemACL(item aclhelper.Item) util.Gerror {
@@ -458,7 +465,7 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 	return genPerms, nil
 }
 
-func (c *Checker) getItemPolicies(itemName string, itemKind string, itemType string) [][]interface{} {
+func (c *Checker) GetItemPolicies(itemName string, itemKind string, itemType string) [][]interface{} {
 	c.e.LoadPolicy() // maybe handle errs later
 	filteredItem := c.e.GetFilteredPolicy(condNamePos, itemName)
 	if filteredItem == nil || len(filteredItem) == 0 {
@@ -481,7 +488,7 @@ func (c *Checker) RenameItemACL(item aclhelper.Item, oldName string) error {
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
-	oldPolicies := c.getItemPolicies(oldName, item.ContainerKind(), item.ContainerType())
+	oldPolicies := c.GetItemPolicies(oldName, item.ContainerKind(), item.ContainerType())
 	if oldPolicies == nil || len(oldPolicies) == 0 {
 		return nil
 	}
@@ -498,7 +505,7 @@ func (c *Checker) RenameItemACL(item aclhelper.Item, oldName string) error {
 			return err
 		}
 	}
-	return nil
+	return c.e.SavePolicy()
 }
 
 func (c *Checker) RenameMember(member aclhelper.Member, oldName string) error {
@@ -529,14 +536,14 @@ func (c *Checker) RenameMember(member aclhelper.Member, oldName string) error {
 			return err
 		}
 	}
-	return nil
+	return c.e.SavePolicy()
 }
 
 func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return false, util.CastErr(polErr)
 	}
-	policies := c.getItemPolicies(item.GetName(), item.ContainerKind(), item.ContainerType())
+	policies := c.GetItemPolicies(item.GetName(), item.ContainerKind(), item.ContainerType())
 
 	var rmok bool
 	var err error
@@ -545,6 +552,10 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 		if rmok, err = c.e.RemovePolicySafe(p...); err != nil {
 			return false, err
 		}
+	}
+	
+	if err := c.e.SavePolicy(); err != nil {
+		return false, err
 	}
 	return rmok, nil
 }
