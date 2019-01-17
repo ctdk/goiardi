@@ -82,6 +82,10 @@ func TestDefaultGroups(t *testing.T) {
 	if g == nil {
 		t.Errorf("failed to get created default group users")
 	}
+	if f, _ := g.checkForActor(DefaultUser); !f {
+		t.Errorf("failed to find pivotal user in %s", g.Name)
+	}
+
 	g, err = Get(org, "admins")
 	if err != nil {
 		t.Errorf(err.Error())
@@ -89,6 +93,10 @@ func TestDefaultGroups(t *testing.T) {
 	if g == nil {
 		t.Errorf("failed to get created default group admins")
 	}
+	if f, _ := g.checkForActor(DefaultUser); !f {
+		t.Errorf("failed to find pivotal user in %s", g.Name)
+	}
+
 	g, err = Get(org, "billing-admins")
 	if err != nil {
 		t.Errorf(err.Error())
