@@ -222,9 +222,11 @@ func checkAuthHeaders(publicKey string, r *http.Request, headToCheck, signedHead
 	if string(decHead) != headToCheck {
 		gerr := util.Errorf("failed to verify authorization")
 		gerr.SetStatus(http.StatusUnauthorized)
+		log.Println("Authentication failed apparently")
 		return gerr
 	}
 
+	log.Println("Authentication supposedly succeeded")
 	return nil
 }
 
