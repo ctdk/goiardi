@@ -391,7 +391,9 @@ func (c *Checker) AddACLRole(gRole aclhelper.Role) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.inTransaction = true
-	defer c.inTransaction = false
+	defer func() {
+		c.inTransaction = false
+	}()
 
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
@@ -403,7 +405,9 @@ func (c *Checker) RemoveACLRole(gRole aclhelper.Role) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.inTransaction = true
-	defer c.inTransaction = false
+	defer func() {
+		c.inTransaction = false
+	}()
 
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)

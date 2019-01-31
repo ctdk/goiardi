@@ -38,6 +38,7 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"path"
 	"regexp"
@@ -214,6 +215,10 @@ func checkAuthHeaders(publicKey string, r *http.Request, headToCheck, signedHead
 		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
 	}
+
+	// debuggery
+	log.Printf("decHead: ~~~\n%s\n~~~", decHead)
+	log.Printf("headToCheck: ~~~\n%s~~~", headToCheck)
 	if string(decHead) != headToCheck {
 		gerr := util.Errorf("failed to verify authorization")
 		gerr.SetStatus(http.StatusUnauthorized)
