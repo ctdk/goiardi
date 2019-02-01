@@ -334,6 +334,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func userListHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	userResponse := make(map[string]interface{})
 	opUser, oerr := actor.GetReqUser(nil, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
