@@ -487,6 +487,10 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 		return nil, err
 	}
 
+	// COME ON!
+	logger.Debugf("FILTERED ITEM %s:\n####\n%s\n%%%%", item.GetName(), filteredItem)
+	logger.Debugf("FILTERED TYPE: %s\n####\n%s\n%%%%", item.ContainerType(), filteredType)
+
 	itemCompare := func(i aclhelper.Item, pol []string) bool {
 		return pol[condKindPos] == i.ContainerKind() && pol[condSubkindPos] == i.ContainerType()
 	}
@@ -501,6 +505,15 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 	for k, v := range itemPerms.Perms {
 		genPerms.Perms[k] = v
 	}
+	for _, v := range genPerms.Perms {
+		if !util.StringPresentInSlice(DefaultUser, v.Actors) {
+			v.Actors = append(v.Actors, DefaultUser)
+		}
+	}
+	for k, v := range genPerms.Perms {
+		logger.Debugf("GetItemACL %s Actors: %v", k, v.Actors)
+	}
+
 	return genPerms, nil
 }
 
