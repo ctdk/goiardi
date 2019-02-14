@@ -19,7 +19,6 @@ package util
 import (
 	"fmt"
 	"github.com/ctdk/goiardi/gerror"
-	"golang.org/x/exp/utf8string"
 	"regexp"
 	"strings"
 )
@@ -92,9 +91,10 @@ func TrimStringMax(s string, strLength int) string {
 	if strLength <= 0 {
 		return s
 	}
-	r := utf8string.NewString(s)
-	if r.RuneCount() > strLength {
-		return r.Slice(0, strLength)
+
+	r := []rune(s)
+	if len(r) > strLength {
+		return string(r[0:strLength])
 	}
 	return s
 }
