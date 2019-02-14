@@ -1,3 +1,15 @@
+0.11.9
+------
+* Follow chef RFC041. Newer chef-clients and knifes (knives?) were breaking
+  goiardi wasn't following this RFC by reporting the supported api versions.
+  (Thanks julian7 for the PR and bringing it to my attention.)
+* Remove dependency on golang.org/x/exp/utf8string - it's failing some tests on
+  the Debian build servers, and goiardi's liable to get kicked out of testing
+  shortly if it isn't addressed. Since goiardi wasn't actually using utf8string
+  for anything real complicated, it was easy enough to tear that out and whip
+  up a replacement with built-in functions. (Thanks jordi for bringing this
+  situation to my attention as well.)
+
 0.11.8
 ------
 * Made some small tweaks and updates to the depsolver to make that a little
