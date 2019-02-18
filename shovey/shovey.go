@@ -134,7 +134,7 @@ func (e *qerror) SetStatus(s string) {
 	e.status = s
 }
 
-// Returns the Qerror's HTTP status code.
+// Status returns the Qerror's HTTP status code.
 func (e *qerror) Status() string {
 	return e.status
 }
