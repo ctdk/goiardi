@@ -512,6 +512,7 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 	}
 	for k, v := range genPerms.Perms {
 		logger.Debugf("GetItemACL %s Actors: %v", k, v.Actors)
+		logger.Debugf("GetItemACL %s Groups: %v", k, v.Groups)
 	}
 
 	return genPerms, nil

@@ -515,6 +515,7 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 	}
 
 	response := a.ToJSON()
+	log.Printf("baseACLHandler json response: %+v", response)
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&response); err != nil {
