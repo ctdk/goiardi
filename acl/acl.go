@@ -65,7 +65,16 @@ const (
 	removePerm    = "remove"
 )
 
+// Bleh. Do what we must, I guess.
+// Eventually this will likely need to have separate coordinating chans per
+// organization, but not today.
+var ACLCoordinator chan struct{}
+
 var DefaultUser = "pivotal" // should this be configurable?
+
+func init() {
+	ACLCoordinator = make(chan struct{}, 1)
+}
 
 func LoadACL(org *organization.Organization) error {
 	m := casbin.NewModel(modelDefinition)
@@ -156,7 +165,22 @@ func initializePolicy(org *organization.Organization, policyRoot string) error {
 	return nil
 }
 
+func (c *Checker) waitForChanLock() {
+	// later, someday, this may need to be org-specific, but not to-day
+	// Block until the chan is free so we can hopefully work without getting
+	// stepped on.
+	ACLCoordinator <- struct{}{}
+	return
+}
+
+func (c *Checker) releaseChanLock() {
+	_ = <- ACLCoordinator
+	return
+}
+
 func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm string) (bool, util.Gerror) {
+	c.waitForChanLock()
+	defer c.releaseChanLock()
 	c.m.RLock()
 	defer c.m.RUnlock()
 
@@ -221,6 +245,8 @@ func testAssociation(doer aclhelper.Actor, org *organization.Organization) util.
 }
 
 func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, perms []string, action string) util.Gerror {
+	c.waitForChanLock()
+	defer c.releaseChanLock()
 	c.m.Lock()
 	defer c.m.Unlock()
 	if polErr := c.e.LoadPolicy(); polErr != nil {
@@ -257,6 +283,8 @@ func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, per
 }
 
 func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{}) util.Gerror {
+	c.waitForChanLock()
+	defer c.releaseChanLock()
 	switch data := data.(type) {
 	case map[string]interface{}:
 		if _, ok := data[perm]; !ok {
@@ -385,6 +413,8 @@ func (c *Checker) isPermValid(item aclhelper.Item, perm string) bool {
 // TODO: Determine what's actually needed with these...? There might not be much
 // for this.
 func (c *Checker) AddACLRole(gRole aclhelper.Role) error {
+	c.waitForChanLock()
+	defer c.releaseChanLock()
 	// If there's any members in the role, add them. Otherwise, there's
 	// not anything to do.
 	logger.Debugf("Running AddACLRole, calling AddMembers on all members in group %s", gRole.GetName())
@@ -402,6 +432,8 @@ func (c *Checker) AddACLRole(gRole aclhelper.Role) error {
 }
 
 func (c *Checker) RemoveACLRole(gRole aclhelper.Role) error {
+	c.waitForChanLock()
+	defer c.releaseChanLock()
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.inTransaction = true
@@ -471,6 +503,8 @@ func (c *Checker) Enforcer() *casbin.SyncedEnforcer {
 }
 
 func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
+	c.waitForChanLock()
+	defer c.releaseChanLock()
 	c.m.RLock()
 	defer c.m.RUnlock()
 
@@ -538,6 +572,8 @@ func (c *Checker) GetItemPolicies(itemName string, itemKind string, itemType str
 }
 
 func (c *Checker) RenameItemACL(item aclhelper.Item, oldName string) error {
+	c.waitForChanLock()
+	defer c.releaseChanLock()
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -565,6 +601,8 @@ func (c *Checker) RenameItemACL(item aclhelper.Item, oldName string) error {
 }
 
 func (c *Checker) RenameMember(member aclhelper.Member, oldName string) error {
+	c.waitForChanLock()
+	defer c.releaseChanLock()
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -599,6 +637,8 @@ func (c *Checker) RenameMember(member aclhelper.Member, oldName string) error {
 }
 
 func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
+	c.waitForChanLock()
+	defer c.releaseChanLock()
 	c.m.Lock()
 	defer c.m.Unlock()
 
