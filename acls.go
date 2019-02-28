@@ -79,7 +79,7 @@ func orgACLEditHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 		return
 	} else if !allowed {
-		jsonErrorReport(w, r, "You do not have permission to perform that action.", http.StatusBadRequest)
+		jsonErrorReport(w, r, "You do not have permission to perform that action.", http.StatusForbidden)
 		return
 	}
 
@@ -95,7 +95,7 @@ func orgACLEditHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	a, aclerr := org.PermCheck.GetItemACL(org)
 	if aclerr != nil {
-		jsonErrorReport(w, r, aclerr.Error(), http.StatusBadRequest)
+		jsonErrorReport(w, r, aclerr.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -503,14 +503,20 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 		return
 	}
 
-	rootACL := &aclhelper.RootACL{Name: "$$default$$", Kind: kind, Subkind: subkind}
-	if aerr := aclPermCheck(r, org, rootACL, "grant"); aerr != nil {
-		jsonErrorReport(w, r, aerr.Error(), aerr.Status())
-		return
+	// Check the org's own ACL first. This may be overly restrictive and
+	// ends up never actually granting normal users permissions.
+	if orgACLerr := aclPermCheck(r, org, org, "grant"); orgACLerr != nil {
+		// fall back to the general
+		rootACL := &aclhelper.RootACL{Name: "$$default$$", Kind: kind, Subkind: subkind}
+		if aerr := aclPermCheck(r, org, rootACL, "grant"); aerr != nil {
+			jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+			return
+		}
 	}
+
 	a, aclerr := org.PermCheck.GetItemACL(org)
 	if aclerr != nil {
-		jsonErrorReport(w, r, aclerr.Error(), http.StatusBadRequest)
+		jsonErrorReport(w, r, aclerr.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -530,7 +536,7 @@ func baseItemACLHandler(w http.ResponseWriter, r *http.Request, org *organizatio
 	}
 	aclItem, aerr := org.PermCheck.GetItemACL(item)
 	if aerr != nil {
-		jsonErrorReport(w, r, aerr.Error(), http.StatusBadRequest)
+		jsonErrorReport(w, r, aerr.Error(), http.StatusForbidden)
 		return
 	}
 	a := aclItem.ToJSON()
@@ -558,7 +564,7 @@ func baseACLPermHandler(w http.ResponseWriter, r *http.Request, org *organizatio
 
 	aclItem, aerr := org.PermCheck.GetItemACL(item)
 	if aerr != nil {
-		jsonErrorReport(w, r, aerr.Error(), http.StatusBadRequest)
+		jsonErrorReport(w, r, aerr.Error(), http.StatusForbidden)
 		return
 	}
 	a := aclItem.ToJSON()
