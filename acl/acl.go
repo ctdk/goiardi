@@ -450,6 +450,8 @@ func (c *Checker) RemoveACLRole(gRole aclhelper.Role) error {
 
 func (c *Checker) AddMembers(gRole aclhelper.Role, adding []aclhelper.Member) error {
 	if !c.inTransaction {
+		c.waitForChanLock()
+		defer c.releaseChanLock()
 		c.m.Lock()
 		defer c.m.Unlock()
 	}
@@ -467,6 +469,8 @@ func (c *Checker) AddMembers(gRole aclhelper.Role, adding []aclhelper.Member) er
 
 func (c *Checker) RemoveMembers(gRole aclhelper.Role, removing []aclhelper.Member) error {
 	if !c.inTransaction {
+		c.waitForChanLock()
+		defer c.releaseChanLock()
 		c.m.Lock()
 		defer c.m.Unlock()
 	}
