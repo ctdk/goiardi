@@ -303,6 +303,8 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 			}
 
 			filteredItem := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+			logger.Debugf("FILTERED ITEM (in EditFromJSON) %s:\n####\n%s\n%%%%", item.GetName(), filteredItem)
+			// logger.Debugf("FILTERED TYPE: %s\n####\n%s\n%%%%", item.ContainerType(), filteredType)
 			newActRaw, ok := aclEdit["actors"].([]interface{})
 			if !ok {
 				return util.Errorf("invalid type for actor in acl")
@@ -321,7 +323,8 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 			}
 
 			for _, p := range filteredItem {
-				if p[condKindPos] == item.ContainerKind() && p[condSubkindPos] == item.ContainerType() {
+				logger.Debugf("checking p: %s", p)
+				if p[condKindPos] == item.ContainerKind() && p[condSubkindPos] == item.ContainerType() && p[condPermPos] == perm {
 					subj := p[condGroupPos]
 					if strings.HasPrefix(subj, "role##") {
 						if !util.StringPresentInSlice(strings.TrimPrefix(subj, "role##"), newGroups) {
