@@ -347,9 +347,12 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 			}
 
 			// may need later to permit allow/deny effect editing
+			// Bizarrely both of thse are supposed to return 400
+			// if the actor or group is not present
 			for _, act := range newActors {
 				a, err := actor.GetActor(c.org, act)
 				if err != nil {
+					err.SetStatus(http.StatusBadRequest)
 					return err
 				}
 				p := buildEnforcingSlice(item, a, perm)
@@ -358,6 +361,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 			for _, gr := range newGroups {
 				g, err := group.Get(c.org, gr)
 				if err != nil {
+					err.SetStatus(http.StatusBadRequest)
 					return err
 				}
 				p := buildEnforcingSlice(item, g, perm)
