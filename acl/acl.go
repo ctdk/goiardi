@@ -545,6 +545,10 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 
 	itemPerms := assembleACL(item, filteredItem, itemCompare)
 	genPerms := assembleACL(item, filteredType, genCompare)
+	// wtf is in here
+	for k, v := range genPerms.Perms {
+		logger.Debugf("arrgh: %s :: %+v", k, v)
+	}
 
 	// Override general permissions with the specifics
 	for k, v := range itemPerms.Perms {
