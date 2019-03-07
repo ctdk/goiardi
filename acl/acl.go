@@ -552,11 +552,31 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 
 	// Override general permissions with the specifics
 	for k, v := range itemPerms.Perms {
-		genPerms.Perms[k] = v
+		genPerms.Perms[k].Perm = v.Perm
+		genPerms.Perms[k].Effect = v.Effect
+		if v.Actors != nil {
+			genPerms.Perms[k].Actors = v.Actors
+		}
+		if v.Groups != nil {
+			genPerms.Perms[k].Groups = v.Groups
+		}
 	}
-	for _, v := range genPerms.Perms {
+	for k, v := range genPerms.Perms {
 		if !util.StringPresentInSlice(DefaultUser, v.Actors) {
 			v.Actors = append(v.Actors, DefaultUser)
+		}
+		// Frmph.
+		logger.Debugf("Fnarge: item %s Type: %s perm %s", item.GetName(), item.ContainerType(), k)
+		if item.ContainerType() == "clients" || item.ContainerType() == "users" {
+			// if the thing in question is a user or a client, and
+			// the allowed actors aren't explicitly set, add it
+			// to the actor ACL list if it isn't already there. The
+			// perm definitions would be what *actually* allows
+			// this.
+			// Hopefully this isn't too forgiving.
+			if !util.StringPresentInSlice(item.GetName(), v.Actors){
+				v.Actors = append(v.Actors, item.GetName())
+			}
 		}
 	}
 	for k, v := range genPerms.Perms {
@@ -701,8 +721,10 @@ func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelp
 
 			if _, ok := tmpACL.Perms[perm]; !ok {
 				tmpACL.Perms[perm] = new(aclhelper.ACLItem)
-				tmpACL.Perms[perm].Actors = make([]string, 0)
-				tmpACL.Perms[perm].Groups = make([]string, 0)
+				//tmpACL.Perms[perm].Actors = make([]string, 0)
+				//tmpACL.Perms[perm].Groups = make([]string, 0)
+				tmpACL.Perms[perm].Actors = nil
+				tmpACL.Perms[perm].Groups = nil
 				tmpACL.Perms[perm].Perm = perm
 				tmpACL.Perms[perm].Effect = p[condEffectPos]
 			}
