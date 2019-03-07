@@ -255,6 +255,8 @@ func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, per
 
 	var policyFunc func(p ...interface{}) bool
 
+	logger.Debugf("lol what: %s %s", item.GetName(), action)
+
 	switch action {
 	case addPerm:
 		policyFunc = c.e.AddPolicy
@@ -688,8 +690,9 @@ func (c *Checker) CreatorOnly(item aclhelper.Item, creator aclhelper.Actor) util
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
+	// hmm?
 	for _, p := range aclhelper.DefaultACLs {
-		err := c.EditItemPerm(item, creator, []string{"grant"}, p)
+		err := c.EditItemPerm(item, creator, []string{p}, "add")
 		if err != nil {
 			return err
 		}

@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goiardi/aclhelper"
 	//"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/loginfo"
@@ -113,11 +114,19 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 				return
 			}
+			
 			serr := chefDbag.Save()
 			if serr != nil {
 				jsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)
 				return
 			}
+			// creator perms
+			nerr = org.PermCheck.EditItemPerm(chefDbag, opUser, aclhelper.DefaultACLs[:], "add")
+			if nerr != nil {
+				jsonErrorReport(w, r, nerr.Error(), nerr.Status())
+				return
+			}
+
 			if lerr := loginfo.LogEvent(org, opUser, chefDbag, "create"); lerr != nil {
 				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 				return

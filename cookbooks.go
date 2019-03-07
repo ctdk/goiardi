@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/orgloader"
@@ -305,6 +306,12 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				cb, err = cookbook.New(org, cookbookName)
+				if err != nil {
+					jsonErrorReport(w, r, err.Error(), err.Status())
+					return
+				}
+				// creator perms
+				err = org.PermCheck.EditItemPerm(cb, opUser, aclhelper.DefaultACLs[:], "add")
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
