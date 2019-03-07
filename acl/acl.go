@@ -542,6 +542,13 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 		return pol[condKindPos] == i.ContainerKind() && pol[condSubkindPos] == i.ContainerType()
 	}
 	genCompare := func(i aclhelper.Item, pol []string) bool {
+		// short circuit the check below if we're in the weird case
+		// where we're assembling perms for a new container. How often
+		// does that actually come up, anyway?
+		if i.ContainerKind() == "containers" && i.ContainerType() == "containers" {
+			return false
+		}
+
 		return pol[condKindPos] == i.ContainerKind()
 	}
 
@@ -552,21 +559,30 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 		logger.Debugf("arrgh: %s :: %+v", k, v)
 	}
 
+	// Sigh, a special corner case with custom containers.
+	if item.ContainerKind() == "containers" && item.ContainerType() == "containers" {
+		// just set genPerms to itemPerms in this weird-ish situation
+		genPerms = itemPerms
+	} else { // the normal case
 	// Override general permissions with the specifics
-	for k, v := range itemPerms.Perms {
-		genPerms.Perms[k].Perm = v.Perm
-		genPerms.Perms[k].Effect = v.Effect
-		if v.Actors != nil {
-			genPerms.Perms[k].Actors = v.Actors
-		}
-		if v.Groups != nil {
-			genPerms.Perms[k].Groups = v.Groups
+		for k, v := range itemPerms.Perms {
+			genPerms.Perms[k].Perm = v.Perm
+			genPerms.Perms[k].Effect = v.Effect
+			if v.Actors != nil {
+				genPerms.Perms[k].Actors = v.Actors
+			}
+			if v.Groups != nil {
+				genPerms.Perms[k].Groups = v.Groups
+			}
 		}
 	}
 	for _, v := range genPerms.Perms {
 		if !util.StringPresentInSlice(DefaultUser, v.Actors) {
 			v.Actors = append(v.Actors, DefaultUser)
 		}
+		// also, remove any dupes in Actors or Groups
+		v.Actors = util.RemoveDupStrings(v.Actors)
+		v.Groups = util.RemoveDupStrings(v.Groups)
 	}
 	for k, v := range genPerms.Perms {
 		logger.Debugf("GetItemACL %s Actors: %v", k, v.Actors)
@@ -666,10 +682,14 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 	c.m.Lock()
 	defer c.m.Unlock()
 
+	logger.Debugf("DeleteItemACL #1")
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return false, util.CastErr(polErr)
 	}
+	logger.Debugf("DeleteItemACL #2")
 	policies := c.GetItemPolicies(item.GetName(), item.ContainerKind(), item.ContainerType())
+
+	logger.Debugf("DeleteItemACL #3")
 
 	var rmok bool
 	var err error
@@ -680,9 +700,11 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 		}
 	}
 	
+	logger.Debugf("DeleteItemACL #4")
 	if err := c.e.SavePolicy(); err != nil {
 		return false, err
 	}
+	logger.Debugf("DeleteItemACL #5")
 	return rmok, nil
 }
 

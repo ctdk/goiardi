@@ -18,12 +18,13 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/aclhelper"
+	//"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/container"
 	//"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
+	"github.com/tideland/golib/logger"
 	"net/http"
 )
 
@@ -78,6 +79,7 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
+		logger.Debugf("still alive in container delete?")
 	default:
 		w.Header().Set("Allow", "GET, DELETE")
 		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
@@ -165,11 +167,11 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 		// before we do the check below the creator actually *needs*
 		// these perms, because brand new containers don't have anything
 		// to fall back on
-		aerr := org.PermCheck.EditItemPerm(cont, opUser, aclhelper.DefaultACLs[:], "add")
+		/* aerr := org.PermCheck.EditItemPerm(cont, opUser, aclhelper.DefaultACLs[:], "add")
 		if aerr != nil {
 			jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 			return
-		}
+		} */
 
 		// newly created containers are only accessible by the creator
 		gerr := org.PermCheck.CreatorOnly(cont, opUser)

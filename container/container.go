@@ -80,6 +80,7 @@ func Get(org *organization.Organization, name string) (*Container, util.Gerror) 
 		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
+	container.Org = org
 	return container, nil
 }
 
