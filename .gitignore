@@ -9,3 +9,4 @@ packaging/**/share/goiardi/*
 */default-policy.csv
 */boo-policy.csv
 sandbox/sbox*.csv
+/*.csv
