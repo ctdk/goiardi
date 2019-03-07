@@ -396,6 +396,12 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
+		// also the client itself.
+		err = org.PermCheck.EditItemPerm(chefClient, chefClient, aclhelper.DefaultACLs[:], "add")
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
 	}
 	if lerr := loginfo.LogEvent(org, opUser, chefClient, "create"); lerr != nil {
 		jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)

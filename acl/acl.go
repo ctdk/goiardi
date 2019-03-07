@@ -561,22 +561,9 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 			genPerms.Perms[k].Groups = v.Groups
 		}
 	}
-	for k, v := range genPerms.Perms {
+	for _, v := range genPerms.Perms {
 		if !util.StringPresentInSlice(DefaultUser, v.Actors) {
 			v.Actors = append(v.Actors, DefaultUser)
-		}
-		// Frmph.
-		logger.Debugf("Fnarge: item %s Type: %s perm %s", item.GetName(), item.ContainerType(), k)
-		if item.ContainerType() == "clients" || item.ContainerType() == "users" {
-			// if the thing in question is a user or a client, and
-			// the allowed actors aren't explicitly set, add it
-			// to the actor ACL list if it isn't already there. The
-			// perm definitions would be what *actually* allows
-			// this.
-			// Hopefully this isn't too forgiving.
-			if !util.StringPresentInSlice(item.GetName(), v.Actors){
-				v.Actors = append(v.Actors, item.GetName())
-			}
 		}
 	}
 	for k, v := range genPerms.Perms {
