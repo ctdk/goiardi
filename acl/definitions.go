@@ -44,7 +44,6 @@ m = r.sub == "pivotal" && p.eft != "deny" || g(r.sub, p.sub) && r.kind == p.kind
 
 const defaultPolicySkel = `p, role##admins, containers, containers, $$default$$, create, allow
 p, role##admins, containers, containers, $$default$$, read, allow
-p, role##users, containers, containers, $$default$$, read, allow
 p, role##admins, containers, containers, $$default$$, update, allow
 p, role##admins, containers, containers, $$default$$, delete, allow
 p, role##admins, containers, containers, $$default$$, grant, allow

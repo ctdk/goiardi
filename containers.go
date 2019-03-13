@@ -110,7 +110,9 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "containers", "read"); ferr != nil {
+	// if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "containers", "read"); ferr != nil {
+	// Check the *root* perm here. Hrm.
+	if f, ferr := org.PermCheck.RootCheckPerm(opUser, "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
