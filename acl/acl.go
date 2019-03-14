@@ -178,6 +178,20 @@ func (c *Checker) releaseChanLock() {
 	return
 }
 
+func (c *Checker) testForAnyPol(item aclhelper.Item, perm string) bool {
+	fi := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+
+	if fi != nil && len(fi) != 0 {
+		for _, p := range fi {
+			if item.ContainerKind() == p[condKindPos] && item.ContainerType() == p[condSubkindPos] && p[condPermPos] == perm {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm string) (bool, util.Gerror) {
 	c.waitForChanLock()
 	defer c.releaseChanLock()
@@ -195,8 +209,12 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 
 	// try the specific check first, then the general
 	if chkSucceeded = c.e.Enforce(specific...); !chkSucceeded {
-		logger.Debugf("trying the general: %+v", specific.general())
-		chkSucceeded = c.e.Enforce(specific.general()...)
+		if !c.testForAnyPol(item, perm) {
+			logger.Debugf("trying the general: %+v", specific.general())
+			chkSucceeded = c.e.Enforce(specific.general()...)
+		} else {
+			logger.Debugf("Not testing the general here - item-specific %s perms have been set for %s %s", perm, item.ContainerType(), item.GetName())
+		}
 	}
 	if chkSucceeded {
 		return true, nil
