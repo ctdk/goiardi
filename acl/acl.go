@@ -178,12 +178,19 @@ func (c *Checker) releaseChanLock() {
 	return
 }
 
-func (c *Checker) testForAnyPol(item aclhelper.Item, perm string) bool {
-	fi := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm string) bool {
+	// fi := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+	// Try getting this *user's* filtered policies, and make the test below
+	// more specific.
+	fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
 
 	if fi != nil && len(fi) != 0 {
 		for _, p := range fi {
-			if item.ContainerKind() == p[condKindPos] && item.ContainerType() == p[condSubkindPos] && p[condPermPos] == perm {
+			logger.Debugf("testForAnyPol p for entity (%s) (%s): %v", doer.ACLName(), p[condGroupPos], p)
+			logger.Debugf("what in God's name is getting missed here?\nitem.ContainerKind(): %s\tp[condKindPos]: %s\nitem.ContainerType(): %s\tp[condSubkindPos]: %s\nitem.GetName(): %s\tp[condNamePos]: %s\nperm: %s\tp[condPermPos]: %s", item.ContainerKind(), p[condKindPos], item.ContainerType(), p[condSubkindPos], item.GetName(), p[condNamePos], perm, p[condPermPos])
+			// DON'T include perm!
+			if item.ContainerKind() == p[condKindPos] && item.ContainerType() == p[condSubkindPos] && item.GetName() == p[condNamePos] {
+				logger.Debugf("testForAnyPol returned true")
 				return true
 			}
 		}
@@ -209,7 +216,7 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 
 	// try the specific check first, then the general
 	if chkSucceeded = c.e.Enforce(specific...); !chkSucceeded {
-		if !c.testForAnyPol(item, perm) {
+		if !c.testForAnyPol(item, doer, perm) {
 			logger.Debugf("trying the general: %+v", specific.general())
 			chkSucceeded = c.e.Enforce(specific.general()...)
 		} else {
