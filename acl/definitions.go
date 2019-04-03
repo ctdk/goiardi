@@ -49,7 +49,10 @@ p, role##admins, containers, containers, $$default$$, delete, allow
 p, role##admins, containers, containers, $$default$$, grant, allow
 p, role##users, containers, containers, clients, delete, allow
 p, role##users, containers, containers, nodes, create, allow
+p, role##users, containers, containers, nodes, read, allow
 p, role##users, containers, containers, environments, create, allow
+p, role##users, containers, containers, environments, read, allow
+p, role##clients, containers, containers, environments, read, allow
 
 p, role##admins, $$root$$, containers, $$default$$, create, allow
 p, role##admins, $$root$$, containers, $$default$$, read, allow
