@@ -425,8 +425,14 @@ func buildEnforcingSlice(item aclhelper.Item, member aclhelper.Member, perm stri
 
 func (e enforceCondition) general() enforceCondition {
 	g := make([]interface{}, len(e))
+	// Trying something here: if the Type and Kind are both "container",
+	// then Type (subkind) should be switched to the GetName() value,
+	// because containers are kind of weird.
 	for i, v := range e {
 		g[i] = v
+	}
+	if g[condSubkindPos] == "containers" && g[condKindPos] == "containers" {
+		g[condSubkindPos] = g[condNamePos]
 	}
 	g[condNamePos] = "$$default$$"
 	return enforceCondition(g)
