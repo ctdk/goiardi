@@ -66,6 +66,7 @@ p, role##admins, groups, containers, $$default$$, read, allow
 p, role##admins, groups, containers, $$default$$, update, allow
 p, role##admins, groups, containers, $$default$$, delete, allow
 p, role##admins, groups, containers, $$default$$, grant, allow
+p, role##users, groups, containers, $$default$$, read, allow
 p, role##users, groups, containers, clients, read, deny
 
 p, role##admins, cookbooks, containers, $$default$$, create, allow
