@@ -15,6 +15,12 @@
 			"revisionTime": "2016-08-22T16:14:30Z"
 		},
 		{
+			"checksumSHA1": "oyXJxS8qqy5TCkqvndCD1c7Lkg4=",
+			"path": "github.com/Knetic/govaluate",
+			"revision": "9aa49832a739dcd78a5542ff189fb82c3e423116",
+			"revisionTime": "2017-10-22T00:36:10Z"
+		},
+		{
 			"checksumSHA1": "d6798KSc0jDg2MHNxKdgyNfMK7A=",
 			"origin": "github.com/hashicorp/serf/vendor/github.com/armon/go-metrics",
 			"path": "github.com/armon/go-metrics",
@@ -172,6 +178,60 @@
 			"revisionTime": "2016-09-01T22:26:51Z"
 		},
 		{
+			"checksumSHA1": "TUyKDts5JD8SYvL+4v5nCX2k5rk=",
+			"path": "github.com/casbin/casbin",
+			"revision": "9b70943b813c2bec8a02170ada40556886aaa1b3",
+			"revisionTime": "2018-06-25T12:40:07Z"
+		},
+		{
+			"checksumSHA1": "5fGXPNeMVkXJgc37L203gtrf62g=",
+			"path": "github.com/casbin/casbin/config",
+			"revision": "9b70943b813c2bec8a02170ada40556886aaa1b3",
+			"revisionTime": "2018-06-25T12:40:07Z"
+		},
+		{
+			"checksumSHA1": "Lplb5OORSoHiAhyRlaX7feoCRqI=",
+			"path": "github.com/casbin/casbin/effect",
+			"revision": "9b70943b813c2bec8a02170ada40556886aaa1b3",
+			"revisionTime": "2018-06-25T12:40:07Z"
+		},
+		{
+			"checksumSHA1": "0oE+g9jmB/yMtj/TIP+feL9p+j4=",
+			"path": "github.com/casbin/casbin/model",
+			"revision": "9b70943b813c2bec8a02170ada40556886aaa1b3",
+			"revisionTime": "2018-06-25T12:40:07Z"
+		},
+		{
+			"checksumSHA1": "Vh0QOexgwx/ecGQUB6TzHEaaZDM=",
+			"path": "github.com/casbin/casbin/persist",
+			"revision": "9b70943b813c2bec8a02170ada40556886aaa1b3",
+			"revisionTime": "2018-06-25T12:40:07Z"
+		},
+		{
+			"checksumSHA1": "aLtUb035hzaQYgYXJjJce5o8ePE=",
+			"path": "github.com/casbin/casbin/persist/file-adapter",
+			"revision": "9b70943b813c2bec8a02170ada40556886aaa1b3",
+			"revisionTime": "2018-06-25T12:40:07Z"
+		},
+		{
+			"checksumSHA1": "ZruzUDr8GdmwPfkP9s9UNdr4Jrw=",
+			"path": "github.com/casbin/casbin/rbac",
+			"revision": "9b70943b813c2bec8a02170ada40556886aaa1b3",
+			"revisionTime": "2018-06-25T12:40:07Z"
+		},
+		{
+			"checksumSHA1": "guI06T3ROagfnanfgCnQpVb2Low=",
+			"path": "github.com/casbin/casbin/rbac/default-role-manager",
+			"revision": "9b70943b813c2bec8a02170ada40556886aaa1b3",
+			"revisionTime": "2018-06-25T12:40:07Z"
+		},
+		{
+			"checksumSHA1": "0Hgsf19bwWkLbGPhlnrc7UhTmUQ=",
+			"path": "github.com/casbin/casbin/util",
+			"revision": "9b70943b813c2bec8a02170ada40556886aaa1b3",
+			"revisionTime": "2018-06-25T12:40:07Z"
+		},
+		{
 			"checksumSHA1": "7bY3gkd6HGe4Bgb379UOq78eFnk=",
 			"path": "github.com/ctdk/chefcrypto",
 			"revision": "4a758d21ce96945b7e7d0a184d7ea13c524c0362",
@@ -210,7 +270,6 @@
 		},
 		{
 			"checksumSHA1": "urMd7A9QPAJYY0GZJL9qBhlUmD8=",
-			"origin": "github.com/ctdk/goiardi/vendor/github.com/gorilla/mux",
 			"path": "github.com/gorilla/mux",
 			"revision": "757bef944d0f21880861c2dd9c871ca543023cba",
 			"revisionTime": "2016-09-20T23:08:13Z",
@@ -414,6 +473,12 @@
 			"path": "github.com/philhofer/fwd",
 			"revision": "98c11a7a6ec829d672b03833c3d69a7fae1ca972",
 			"revisionTime": "2016-01-29T03:59:39Z"
+		},
+		{
+			"checksumSHA1": "ljd3FhYRJ91cLZz3wsH9BQQ2JbA=",
+			"path": "github.com/pkg/errors",
+			"revision": "816c9085562cd7ee03e7f8188a1cfd942858cded",
+			"revisionTime": "2018-03-11T21:45:15Z"
 		},
 		{
 			"checksumSHA1": "D+eX5lLgOgij1Hs7NO10OLdUVZo=",
