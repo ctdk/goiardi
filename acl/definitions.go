@@ -53,6 +53,7 @@ p, role##users, containers, containers, nodes, read, allow
 p, role##users, containers, containers, environments, create, allow
 p, role##users, containers, containers, environments, read, allow
 p, role##clients, containers, containers, environments, read, allow
+p, role##users, containers, containers, groups, read, allow
 
 p, role##admins, $$root$$, containers, $$default$$, create, allow
 p, role##admins, $$root$$, containers, $$default$$, read, allow
