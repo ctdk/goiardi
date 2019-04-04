@@ -182,7 +182,18 @@ func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm
 	// fi := c.e.GetFilteredPolicy(condNamePos, item.GetName())
 	// Try getting this *user's* filtered policies, and make the test below
 	// more specific.
-	fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
+	//
+	// Sigh. We're looking at some special case code for groups. If we're
+	// checking a group's perms, any existing perms on that group mean we
+	// should not fall back to the general. Define 'fi', then load it with
+	// either the user-oriented filtered policy, or the one filtered on
+	// item name.
+	var fi [][]string
+	if item.ContainerKind() == "containers" {
+		fi = c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
+	} else {
+		fi = c.e.GetFilteredPolicy(condNamePos, item.GetName())
+	}
 
 	if fi != nil && len(fi) != 0 {
 		for _, p := range fi {
@@ -558,6 +569,9 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 	// Hrmph, it'd be nice if this was a little easier. At least here we
 	// can get it by name and do the kind/subkind checks afterwards.
 	filteredItem := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+
+	// Buh. The filtered type is different if it's a group we're dealing
+	// with.
 	filteredType := c.e.GetFilteredPolicy(condSubkindPos, item.ContainerType())
 
 	if (filteredItem == nil || len(filteredItem) == 0) && (filteredType == nil || len(filteredType) == 0) {

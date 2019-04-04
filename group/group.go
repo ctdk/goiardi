@@ -415,11 +415,13 @@ func (g *Group) OrgName() string {
 }
 
 func (g *Group) ContainerType() string {
-	return g.URLType()
+	//return g.URLType()
+	// hmm.
+	return "$$default$$"
 }
 
 func (g *Group) ContainerKind() string {
-	return "containers"
+	return "groups"
 }
 
 func (g *Group) IsACLRole() bool {
