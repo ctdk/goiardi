@@ -572,7 +572,13 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 
 	// Buh. The filtered type is different if it's a group we're dealing
 	// with.
-	filteredType := c.e.GetFilteredPolicy(condSubkindPos, item.ContainerType())
+	var filteredType [][]string
+
+	if item.ContainerKind() == "groups" {
+		filteredType = c.e.GetFilteredPolicy(condNamePos, "$$default$$")
+	} else {
+		filteredType = c.e.GetFilteredPolicy(condSubkindPos, item.ContainerType())
+	}
 
 	if (filteredItem == nil || len(filteredItem) == 0) && (filteredType == nil || len(filteredType) == 0) {
 		err := fmt.Errorf("item '%s' (and overall type '%s') not found in ACL", item.GetName(), item.ContainerType())
@@ -594,6 +600,7 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 			return false
 		}
 
+		// weird as it seems, this may be OK.
 		return pol[condKindPos] == i.ContainerKind()
 	}
 
