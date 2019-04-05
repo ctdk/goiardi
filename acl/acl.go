@@ -188,12 +188,12 @@ func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm
 	// should not fall back to the general. Define 'fi', then load it with
 	// either the user-oriented filtered policy, or the one filtered on
 	// item name.
-	var fi [][]string
-	if item.ContainerKind() == "containers" {
-		fi = c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
-	} else {
-		fi = c.e.GetFilteredPolicy(condNamePos, item.GetName())
-	}
+	//var fi [][]string
+	//if item.ContainerKind() == "containers" {
+		fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
+	//} else {
+	//	fi = c.e.GetFilteredPolicy(condNamePos, item.GetName())
+	//}
 
 	if fi != nil && len(fi) != 0 {
 		for _, p := range fi {
