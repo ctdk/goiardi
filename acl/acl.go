@@ -796,12 +796,26 @@ func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelp
 				gname := strings.TrimPrefix(subj, "role##")
 				tmpACL.Perms[perm].Groups = append(tmpACL.Perms[perm].Groups, gname)
 			} else {
+				//if !isValidator(item) {
+				// Hmm. Again.
+				logger.Debugf("assembling acl: are we a validator? %v", isValidator(item))
 				tmpACL.Perms[perm].Actors = append(tmpACL.Perms[perm].Actors, subj)
+				//}
 			}
 		}
 	}
 
 	return tmpACL
+}
+
+func isValidator(item aclhelper.Item) bool {
+	if cl, ok := item.(aclhelper.Actor); ok {
+		if cl.IsClient() {
+			return cl.IsValidator()
+		}
+	}
+
+	return false
 }
 
 func checkValidPerm(perm string) bool {
