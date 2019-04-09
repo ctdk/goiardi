@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/orgloader"
@@ -199,7 +198,7 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// creator perms
-		err = org.PermCheck.EditItemPerm(g, opUser, aclhelper.DefaultACLs[:], "add")
+		err = org.PermCheck.CreatorOnly(g, opUser)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return

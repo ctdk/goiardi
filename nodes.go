@@ -21,7 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/loginfo"
@@ -236,7 +235,7 @@ func nodeListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// creator perms
-		naclErr := org.PermCheck.EditItemPerm(chefNode, opUser, aclhelper.DefaultACLs[:], "add")
+		naclErr := org.PermCheck.CreatorOnly(chefNode, opUser)
 		if naclErr != nil {
 			jsonErrorReport(w, r, naclErr.Error(), naclErr.Status())
 			return

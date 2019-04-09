@@ -21,7 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/environment"
@@ -141,7 +140,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// creator perms
-			if err := org.PermCheck.EditItemPerm(chefEnv, opUser, aclhelper.DefaultACLs[:], "add"); err != nil {
+			if err := org.PermCheck.CreatorOnly(chefEnv, opUser); err != nil {
 				jsonErrorReport(w, r, err.Error(), err.Status())
 				return
 			}

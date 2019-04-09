@@ -21,7 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/loginfo"
@@ -282,7 +281,7 @@ func roleListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// creator perms
-		err = org.PermCheck.EditItemPerm(chefRole, opUser, aclhelper.DefaultACLs[:], "add")
+		err = org.PermCheck.CreatorOnly(chefRole, opUser)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return

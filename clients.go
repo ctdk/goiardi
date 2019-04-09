@@ -391,16 +391,16 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !opUser.IsValidator() {
-		err = org.PermCheck.EditItemPerm(chefClient, opUser, aclhelper.DefaultACLs[:], "add")
-		if err != nil {
+		if err = org.PermCheck.CreatorOnly(chefClient, opUser); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		// also the client itself.
-		err = org.PermCheck.EditItemPerm(chefClient, chefClient, aclhelper.DefaultACLs[:], "add")
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
+		// also the client itself, but only if it's not a validator.
+		if !chefClient.IsValidator() {
+			if err = org.PermCheck.EditItemPerm(chefClient, chefClient, aclhelper.DefaultACLs[:], "add"); err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
 		}
 	}
 	if lerr := loginfo.LogEvent(org, opUser, chefClient, "create"); lerr != nil {

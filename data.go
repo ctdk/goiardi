@@ -21,8 +21,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/aclhelper"
-	//"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/orgloader"
@@ -121,7 +119,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			// creator perms
-			nerr = org.PermCheck.EditItemPerm(chefDbag, opUser, aclhelper.DefaultACLs[:], "add")
+			nerr = org.PermCheck.CreatorOnly(chefDbag, opUser)
 			if nerr != nil {
 				jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 				return
