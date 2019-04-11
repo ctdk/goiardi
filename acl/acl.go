@@ -60,6 +60,7 @@ const (
 
 const (
 	enforceEffect = "allow"
+	denyEffect    = "deny"
 	policyFileFmt = "%s-policy.csv"
 	addPerm       = "add"
 	removePerm    = "remove"
@@ -204,7 +205,20 @@ func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm
 				logger.Debugf("testForAnyPol returned true")
 				return true
 			}
+			// second thing to check: if there's a "denyall##groups"
+			// for this perm, return true
+			if item.ContainerKind() == p[condKindPos] && item.ContainerType() == p[condSubkindPos] && p[condNamePos] == "denyall##groups" && perm == p[condPermPos] {
+				return true
+			}
 		}
+	}
+	// Also check for a relevant denyall##groups. (sigh)
+	if item.ContainerKind() == "groups" {
+		logger.Debugf("testing 'denyall##groups' against %s", item.GetName())
+		denyallp := buildDenySlice(item, perm)
+		dnyChk := c.e.Enforce(denyallp)
+		logger.Debugf("denyall##groups check returned %v", dnyChk)
+		return dnyChk
 	}
 
 	return false
@@ -364,7 +378,11 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 				logger.Debugf("checking p: %s", p)
 				if p[condKindPos] == item.ContainerKind() && p[condSubkindPos] == item.ContainerType() && p[condPermPos] == perm {
 					subj := p[condGroupPos]
-					if strings.HasPrefix(subj, "role##") {
+					// skip any "denyall##groups" here, and
+					// remove it further down if necessary
+					if strings.HasPrefix(subj, "denyall##") {
+						continue
+					} else if strings.HasPrefix(subj, "role##") {
 						if !util.StringPresentInSlice(strings.TrimPrefix(subj, "role##"), newGroups) {
 							pi := make([]interface{}, len(p))
 							for i, v := range p {
@@ -387,6 +405,9 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 			// may need later to permit allow/deny effect editing
 			// Bizarrely both of thse are supposed to return 400
 			// if the actor or group is not present
+			// If, by chance, there are no groups provided for this
+			// perm, add a special subject to the ACL:
+			// "denyall##groups". Ugh.
 			for _, act := range newActors {
 				a, err := actor.GetActor(c.org, act)
 				if err != nil {
@@ -396,14 +417,32 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 				p := buildEnforcingSlice(item, a, perm)
 				c.e.AddPolicy(p...)
 			}
-			for _, gr := range newGroups {
-				g, err := group.Get(c.org, gr)
-				if err != nil {
-					err.SetStatus(http.StatusBadRequest)
-					return err
+			
+			// Here comes the science^W special case code! Alas,
+			// using buildEnforcingSlice doesn't really work here,
+			// so build it by hand.
+			denyallp := buildDenySlice(item, perm)
+
+			if len(newGroups) > 0 {
+				for _, gr := range newGroups {
+					g, err := group.Get(c.org, gr)
+					if err != nil {
+						err.SetStatus(http.StatusBadRequest)
+						return err
+					}
+					p := buildEnforcingSlice(item, g, perm)
+					c.e.AddPolicy(p...)
 				}
-				p := buildEnforcingSlice(item, g, perm)
-				c.e.AddPolicy(p...)
+				// remove "denyall##groups" if it's present and
+				// this is a group. (It *appears* that this is
+				// only proper for groups, but I could be
+				// reading the tests wrong.)
+				if item.ContainerKind() == "groups" {
+					c.e.RemovePolicy(denyallp...)
+				}
+			} else if item.ContainerKind() == "groups" {
+				// No groups, so we add the denyall
+				c.e.AddPolicy(denyallp...)
 			}
 		default:
 			return util.Errorf("invalid acl %s data", perm)
@@ -432,6 +471,11 @@ func (c *Checker) CheckContainerPerm(doer aclhelper.Actor, containerName string,
 func buildEnforcingSlice(item aclhelper.Item, member aclhelper.Member, perm string) enforceCondition {
 	cond := []interface{}{member.ACLName(), item.ContainerType(), item.ContainerKind(), item.GetName(), perm, enforceEffect}
 	return enforceCondition(cond)
+}
+
+func buildDenySlice(item aclhelper.Item, perm string) enforceCondition {
+	denyCond := []interface{}{"denyall##groups", item.ContainerType(), item.ContainerKind(), item.GetName(), perm, denyEffect}
+	return enforceCondition(denyCond)
 }
 
 func (e enforceCondition) general() enforceCondition {
@@ -782,6 +826,17 @@ func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelp
 		if comparer(item, p) {
 			perm := p[condPermPos]
 			subj := p[condGroupPos]
+			eft := p[condEffectPos]
+
+			// skip over the perm item if its effect is "deny".
+			// I'm not ruling out somewhere down the line breaking
+			// strict Chef Server compat with ACLs, though, and
+			// making it fit better with how casbin does it. We'll
+			// see, though. Regardless, do this for now to avoid
+			// unexpected items poping up in the acl JSON.
+			if eft == denyEffect {
+				continue
+			}
 
 			if _, ok := tmpACL.Perms[perm]; !ok {
 				tmpACL.Perms[perm] = new(aclhelper.ACLItem)
