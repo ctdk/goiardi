@@ -205,20 +205,15 @@ func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm
 				logger.Debugf("testForAnyPol returned true")
 				return true
 			}
-			// second thing to check: if there's a "denyall##groups"
-			// for this perm, return true
-			if item.ContainerKind() == p[condKindPos] && item.ContainerType() == p[condSubkindPos] && p[condNamePos] == "denyall##groups" && perm == p[condPermPos] {
-				return true
-			}
 		}
 	}
 	// Also check for a relevant denyall##groups. (sigh)
 	if item.ContainerKind() == "groups" {
 		logger.Debugf("testing 'denyall##groups' against %s", item.GetName())
 		denyallp := buildDenySlice(item, perm)
-		dnyChk := c.e.Enforce(denyallp)
-		logger.Debugf("denyall##groups check returned %v", dnyChk)
-		return dnyChk
+		dnyChk := c.e.Enforce(denyallp...)
+		logger.Debugf("denyall##groups check (p: (%v)) returned %v", denyallp, dnyChk)
+		return !dnyChk // d'oh, need to invert this
 	}
 
 	return false
@@ -441,6 +436,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 					c.e.RemovePolicy(denyallp...)
 				}
 			} else if item.ContainerKind() == "groups" {
+				logger.Debugf("adding denyall (%v) to item %s", denyallp, item.GetName())
 				// No groups, so we add the denyall
 				c.e.AddPolicy(denyallp...)
 			}
