@@ -340,7 +340,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		validator, pem, err := makeValidator(org)
+		validator, pem, err := makeValidator(org, opUser)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
@@ -386,7 +386,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func makeValidator(org *organization.Organization) (*client.Client, string, util.Gerror) {
+func makeValidator(org *organization.Organization, opUser actor.Actor) (*client.Client, string, util.Gerror) {
 	valname := util.JoinStr(org.Name, "-validator")
 	val, err := client.New(org, valname)
 	if err != nil {
@@ -401,5 +401,14 @@ func makeValidator(org *organization.Organization) (*client.Client, string, util
 	if perr != nil {
 		return nil, "", util.CastErr(perr)
 	}
+
+	// Unusually, set creator perms for this particular validator to
+	// "pivotal". It's special because it's not created the usual way, but
+	// as part of creating an organization. If we don't do this it'll go
+	// and return the wrong actors in the ACL. (Arrrrgh.)
+	if aerr := org.PermCheck.CreatorOnly(val, opUser); aerr != nil {
+		return nil, "", aerr
+	}
+
 	return val, pem, nil
 }

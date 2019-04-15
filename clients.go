@@ -20,7 +20,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/group"
@@ -28,6 +27,7 @@ import (
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
+	"github.com/tideland/golib/logger"
 	"net/http"
 )
 
@@ -395,12 +395,13 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-		// also the client itself, but only if it's not a validator.
-		if !chefClient.IsValidator() {
-			if err = org.PermCheck.EditItemPerm(chefClient, chefClient, aclhelper.DefaultACLs[:], "add"); err != nil {
-				jsonErrorReport(w, r, err.Error(), err.Status())
-				return
-			}
+	}
+	// also the client itself, but only if it's not a validator.
+	if !chefClient.IsValidator() {
+		logger.Debugf("not a validator, supposed to be adding creator perms")
+		if err = org.PermCheck.CreatorOnly(chefClient, chefClient); err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
 		}
 	}
 	if lerr := loginfo.LogEvent(org, opUser, chefClient, "create"); lerr != nil {
