@@ -53,6 +53,7 @@ p, role##users, containers, containers, environments, create, allow
 p, role##users, containers, containers, environments, read, allow
 p, role##clients, containers, containers, environments, read, allow
 p, role##users, containers, containers, groups, read, allow
+
 p, role##users, containers, containers, clients, delete, allow
 p, role##admins, containers, containers, clients, create, allow
 p, role##admins, containers, containers, clients, read, allow
