@@ -213,7 +213,7 @@ func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm
 		denyallp := buildDenySlice(item, perm)
 		dnyChk := c.e.Enforce(denyallp...)
 		logger.Debugf("denyall##groups check (p: (%v)) returned %v", denyallp, dnyChk)
-		return !dnyChk // d'oh, need to invert this
+		return dnyChk // d'oh, need to invert this
 	}
 
 	return false
@@ -470,7 +470,7 @@ func buildEnforcingSlice(item aclhelper.Item, member aclhelper.Member, perm stri
 }
 
 func buildDenySlice(item aclhelper.Item, perm string) enforceCondition {
-	denyCond := []interface{}{"denyall##groups", item.ContainerType(), item.ContainerKind(), item.GetName(), perm, denyEffect}
+	denyCond := []interface{}{"denyall##groups", item.ContainerType(), item.ContainerKind(), item.GetName(), perm, enforceEffect}
 	return enforceCondition(denyCond)
 }
 
