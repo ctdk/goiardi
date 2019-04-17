@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2018, Jeremy Bingham (<jbingham@gmail.com>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,8 @@ type Checker struct {
 	m sync.RWMutex 
 	inTransaction bool
 }
+
+type defaultItemACL = aclhelper.RootACL
 
 // group, subkind, kind, name, perm, effect
 const (
@@ -180,21 +182,7 @@ func (c *Checker) releaseChanLock() {
 }
 
 func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm string) bool {
-	// fi := c.e.GetFilteredPolicy(condNamePos, item.GetName())
-	// Try getting this *user's* filtered policies, and make the test below
-	// more specific.
-	//
-	// Sigh. We're looking at some special case code for groups. If we're
-	// checking a group's perms, any existing perms on that group mean we
-	// should not fall back to the general. Define 'fi', then load it with
-	// either the user-oriented filtered policy, or the one filtered on
-	// item name.
-	//var fi [][]string
-	//if item.ContainerKind() == "containers" {
-		fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
-	//} else {
-	//	fi = c.e.GetFilteredPolicy(condNamePos, item.GetName())
-	//}
+	fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
 
 	if fi != nil && len(fi) != 0 {
 		for _, p := range fi {
@@ -332,6 +320,7 @@ func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, per
 func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{}) util.Gerror {
 	c.waitForChanLock()
 	defer c.releaseChanLock()
+
 	switch data := data.(type) {
 	case map[string]interface{}:
 		if _, ok := data[perm]; !ok {
@@ -341,104 +330,8 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 		defer c.m.Unlock()
 		switch aclEdit := data[perm].(type) {
 		case map[string]interface{}:
-			// ----------
-			// Implementation note: for each doer already in the
-			// ACL, we'll need to check and see if they're present
-			// in the new list. If not, they'll need to be removed.
-			if polErr := c.e.LoadPolicy(); polErr != nil {
-				return util.CastErr(polErr)
-			}
-
-			filteredItem := c.e.GetFilteredPolicy(condNamePos, item.GetName())
-			logger.Debugf("FILTERED ITEM (in EditFromJSON) %s:\n####\n%s\n%%%%", item.GetName(), filteredItem)
-			// logger.Debugf("FILTERED TYPE: %s\n####\n%s\n%%%%", item.ContainerType(), filteredType)
-			newActRaw, ok := aclEdit["actors"].([]interface{})
-			if !ok {
-				return util.Errorf("invalid type for actor in acl")
-			}
-			newGroupsRaw, ok := aclEdit["groups"].([]interface{})
-			if !ok {
-				return util.Errorf("invalid type for group in acl")
-			}
-			newActors := make([]string, len(newActRaw))
-			newGroups := make([]string, len(newGroupsRaw))
-			for i, v := range newActRaw {
-				newActors[i] = v.(string)
-			}
-			for i, v := range newGroupsRaw {
-				newGroups[i] = v.(string)
-			}
-
-			for _, p := range filteredItem {
-				logger.Debugf("checking p: %s", p)
-				if p[condKindPos] == item.ContainerKind() && p[condSubkindPos] == item.ContainerType() && p[condPermPos] == perm {
-					subj := p[condGroupPos]
-					// skip any "denyall##groups" here, and
-					// remove it further down if necessary
-					if strings.HasPrefix(subj, "denyall##") {
-						continue
-					} else if strings.HasPrefix(subj, "role##") {
-						if !util.StringPresentInSlice(strings.TrimPrefix(subj, "role##"), newGroups) {
-							pi := make([]interface{}, len(p))
-							for i, v := range p {
-								pi[i] = v
-							}
-							c.e.RemovePolicy(pi...)
-						}
-					} else {
-						if !util.StringPresentInSlice(subj, newActors) {
-							pi := make([]interface{}, len(p))
-							for i, v := range p {
-								pi[i] = v
-							}
-							c.e.RemovePolicy(pi...)
-						}
-					}
-				}
-			}
-
-			// may need later to permit allow/deny effect editing
-			// Bizarrely both of thse are supposed to return 400
-			// if the actor or group is not present
-			// If, by chance, there are no groups provided for this
-			// perm, add a special subject to the ACL:
-			// "denyall##groups". Ugh.
-			for _, act := range newActors {
-				a, err := actor.GetActor(c.org, act)
-				if err != nil {
-					err.SetStatus(http.StatusBadRequest)
-					return err
-				}
-				p := buildEnforcingSlice(item, a, perm)
-				c.e.AddPolicy(p...)
-			}
-			
-			// Here comes the science^W special case code! Alas,
-			// using buildEnforcingSlice doesn't really work here,
-			// so build it by hand.
-			denyallp := buildDenySlice(item, perm)
-
-			if len(newGroups) > 0 {
-				for _, gr := range newGroups {
-					g, err := group.Get(c.org, gr)
-					if err != nil {
-						err.SetStatus(http.StatusBadRequest)
-						return err
-					}
-					p := buildEnforcingSlice(item, g, perm)
-					c.e.AddPolicy(p...)
-				}
-				// remove "denyall##groups" if it's present and
-				// this is a group. (It *appears* that this is
-				// only proper for groups, but I could be
-				// reading the tests wrong.)
-				if item.ContainerKind() == "groups" {
-					c.e.RemovePolicy(denyallp...)
-				}
-			} else if item.ContainerKind() == "groups" {
-				logger.Debugf("adding denyall (%v) to item %s", denyallp, item.GetName())
-				// No groups, so we add the denyall
-				c.e.AddPolicy(denyallp...)
+			if err := c.editFromMap(item, perm, aclEdit); err != nil {
+				return err
 			}
 		default:
 			return util.Errorf("invalid acl %s data", perm)
@@ -449,6 +342,129 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 	if err := c.e.SavePolicy(); err != nil {
 		return util.CastErr(err)
 	}
+	return nil
+
+}
+
+func (c *Checker) editFromMap(item aclhelper.Item, perm string, aclEdit map[string]interface{}) util.Gerror {
+	// ----------
+	// Implementation note: for each doer already in the
+	// ACL, we'll need to check and see if they're present
+	// in the new list. If not, they'll need to be removed.
+	if polErr := c.e.LoadPolicy(); polErr != nil {
+		return util.CastErr(polErr)
+	}
+
+	filteredItem := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+	logger.Debugf("FILTERED ITEM (in EditFromJSON) %s:\n####\n%s\n%%%%", item.GetName(), filteredItem)
+	// logger.Debugf("FILTERED TYPE: %s\n####\n%s\n%%%%", item.ContainerType(), filteredType)
+	newActRaw, ok := aclEdit["actors"].([]interface{})
+	if !ok {
+		return util.Errorf("invalid type for actor in acl")
+	}
+	newGroupsRaw, ok := aclEdit["groups"].([]interface{})
+	if !ok {
+		return util.Errorf("invalid type for group in acl")
+	}
+	newActors := make([]string, len(newActRaw))
+	newGroups := make([]string, len(newGroupsRaw))
+	for i, v := range newActRaw {
+		newActors[i] = v.(string)
+	}
+	for i, v := range newGroupsRaw {
+		newGroups[i] = v.(string)
+	}
+
+	for _, p := range filteredItem {
+		logger.Debugf("checking p: %s", p)
+		if p[condKindPos] == item.ContainerKind() && p[condSubkindPos] == item.ContainerType() && p[condPermPos] == perm {
+			subj := p[condGroupPos]
+			// skip any "denyall##groups" here, and
+			// remove it further down if necessary
+			if strings.HasPrefix(subj, "denyall##") {
+				continue
+			} else if strings.HasPrefix(subj, "role##") {
+				if !util.StringPresentInSlice(strings.TrimPrefix(subj, "role##"), newGroups) {
+					pi := make([]interface{}, len(p))
+					for i, v := range p {
+						pi[i] = v
+					}
+					c.e.RemovePolicy(pi...)
+				}
+			} else {
+				if !util.StringPresentInSlice(subj, newActors) {
+					pi := make([]interface{}, len(p))
+					for i, v := range p {
+						pi[i] = v
+					}
+					c.e.RemovePolicy(pi...)
+				}
+			}
+		}
+	}
+
+	// may need later to permit allow/deny effect editing
+	// Bizarrely both of thse are supposed to return 400
+	// if the actor or group is not present
+	// If, by chance, there are no groups provided for this
+	// perm, add a special subject to the ACL:
+	// "denyall##groups". Ugh.
+	for _, act := range newActors {
+		a, err := actor.GetActor(c.org, act)
+		if err != nil {
+			err.SetStatus(http.StatusBadRequest)
+			return err
+		}
+		p := buildEnforcingSlice(item, a, perm)
+		c.e.AddPolicy(p...)
+	}
+	
+	// Here comes the science^W special case code! Alas,
+	// using buildEnforcingSlice doesn't really work here,
+	// so build it by hand.
+	denyallp := buildDenySlice(item, perm)
+
+	if len(newGroups) > 0 {
+		for _, gr := range newGroups {
+			g, err := group.Get(c.org, gr)
+			if err != nil {
+				err.SetStatus(http.StatusBadRequest)
+				return err
+			}
+			p := buildEnforcingSlice(item, g, perm)
+			c.e.AddPolicy(p...)
+		}
+		// remove "denyall##groups" if it's present and
+		// this is a group. (It *appears* that this is
+		// only proper for groups, but I could be
+		// reading the tests wrong.)
+		if item.ContainerKind() == "groups" {
+			c.e.RemovePolicy(denyallp...)
+		}
+	} else if item.ContainerKind() == "groups" {
+		logger.Debugf("adding denyall (%v) to item %s", denyallp, item.GetName())
+		// No groups, so we add the denyall
+		c.e.AddPolicy(denyallp...)
+	}
+
+	// Weeeeird special thing here. If we're editing a
+	// "containers/containers/foo" sort of thing, we need to
+	// also update foo/containers/$$default$$ because
+	// reasons, *unless* we are mucking with the default
+	// container permissions. All of this ACL stuff could
+	// use refactoring I think. There's a lot of workarounds
+	// that could hopefully be consolidated.
+	if item.ContainerKind() == "containers" && item.ContainerType() == "containers" && item.GetName() != "$$default$$" {
+		// editing a container's permissions, better do
+		// the default.
+		logger.Debugf("going to edit the default perms for %+v", item)
+		di := &defaultItemACL{Name: "$$default$$", Kind: item.ContainerKind(), Subkind: item.GetName()}
+		if dierr := c.editFromMap(di, perm, aclEdit); dierr != nil {
+			logger.Debugf("editing the default item perms returned an error: %s", dierr.Error())
+			return dierr
+		}
+	}
+
 	return nil
 }
 
@@ -847,11 +863,7 @@ func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelp
 				gname := strings.TrimPrefix(subj, "role##")
 				tmpACL.Perms[perm].Groups = append(tmpACL.Perms[perm].Groups, gname)
 			} else {
-				//if !isValidator(item) {
-				// Hmm. Again.
-				logger.Debugf("assembling acl: are we a validator? %v", isValidator(item))
 				tmpACL.Perms[perm].Actors = append(tmpACL.Perms[perm].Actors, subj)
-				//}
 			}
 		}
 	}
