@@ -180,21 +180,9 @@ func (c *Checker) releaseChanLock() {
 }
 
 func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm string) bool {
-	// fi := c.e.GetFilteredPolicy(condNamePos, item.GetName())
 	// Try getting this *user's* filtered policies, and make the test below
 	// more specific.
-	//
-	// Sigh. We're looking at some special case code for groups. If we're
-	// checking a group's perms, any existing perms on that group mean we
-	// should not fall back to the general. Define 'fi', then load it with
-	// either the user-oriented filtered policy, or the one filtered on
-	// item name.
-	//var fi [][]string
-	//if item.ContainerKind() == "containers" {
 	fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
-	//} else {
-	//	fi = c.e.GetFilteredPolicy(condNamePos, item.GetName())
-	//}
 
 	if fi != nil && len(fi) != 0 {
 		for _, p := range fi {
@@ -401,7 +389,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 
 			// Here comes the science^W special case code! Alas,
 			// using buildEnforcingSlice doesn't really work here,
-			// so build it by hand.
+			// so build it with a special function. 
 			denyallp := buildDenySlice(item, perm)
 
 			if len(newGroups) > 0 {
@@ -799,7 +787,7 @@ func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelp
 			// strict Chef Server compat with ACLs, though, and
 			// making it fit better with how casbin does it. We'll
 			// see, though. Regardless, do this for now to avoid
-			// unexpected items poping up in the acl JSON.
+			// unexpected items popping up in the acl JSON.
 			if eft == denyEffect {
 				continue
 			}
