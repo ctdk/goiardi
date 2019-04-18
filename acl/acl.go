@@ -198,21 +198,16 @@ func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm
 
 	if fi != nil && len(fi) != 0 {
 		for _, p := range fi {
-			logger.Debugf("testForAnyPol p for entity (%s) (%s): %v", doer.ACLName(), p[condGroupPos], p)
-			logger.Debugf("what in God's name is getting missed here?\nitem.ContainerKind(): %s\tp[condKindPos]: %s\nitem.ContainerType(): %s\tp[condSubkindPos]: %s\nitem.GetName(): %s\tp[condNamePos]: %s\nperm: %s\tp[condPermPos]: %s", item.ContainerKind(), p[condKindPos], item.ContainerType(), p[condSubkindPos], item.GetName(), p[condNamePos], perm, p[condPermPos])
 			// DON'T include perm!
 			if item.ContainerKind() == p[condKindPos] && item.ContainerType() == p[condSubkindPos] && item.GetName() == p[condNamePos] {
-				logger.Debugf("testForAnyPol returned true")
 				return true
 			}
 		}
 	}
 	// Also check for a relevant denyall##groups. (sigh)
 	if item.ContainerKind() == "groups" {
-		logger.Debugf("testing 'denyall##groups' against %s", item.GetName())
 		denyallp := buildDenySlice(item, perm)
 		dnyChk := c.e.Enforce(denyallp...)
-		logger.Debugf("denyall##groups check (p: (%v)) returned %v", denyallp, dnyChk)
 		return dnyChk // d'oh, need to invert this
 	}
 
@@ -232,15 +227,11 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 
 	specific := buildEnforcingSlice(item, doer, perm)
 	var chkSucceeded bool
-	logger.Debugf("enforcing slice: %+v", specific)
 
 	// try the specific check first, then the general
 	if chkSucceeded = c.e.Enforce(specific...); !chkSucceeded {
 		if !c.testForAnyPol(item, doer, perm) {
-			logger.Debugf("trying the general: %+v", specific.general())
 			chkSucceeded = c.e.Enforce(specific.general()...)
-		} else {
-			logger.Debugf("Not testing the general here - item-specific %s perms have been set for %s %s", perm, item.ContainerType(), item.GetName())
 		}
 	}
 	if chkSucceeded {
@@ -300,8 +291,6 @@ func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, per
 
 	var policyFunc func(p ...interface{}) bool
 
-	logger.Debugf("lol what: %s %s", item.GetName(), action)
-
 	switch action {
 	case addPerm:
 		policyFunc = c.e.AddPolicy
@@ -350,8 +339,6 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 			}
 
 			filteredItem := c.e.GetFilteredPolicy(condNamePos, item.GetName())
-			logger.Debugf("FILTERED ITEM (in EditFromJSON) %s:\n####\n%s\n%%%%", item.GetName(), filteredItem)
-			// logger.Debugf("FILTERED TYPE: %s\n####\n%s\n%%%%", item.ContainerType(), filteredType)
 			newActRaw, ok := aclEdit["actors"].([]interface{})
 			if !ok {
 				return util.Errorf("invalid type for actor in acl")
@@ -370,7 +357,6 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 			}
 
 			for _, p := range filteredItem {
-				logger.Debugf("checking p: %s", p)
 				if p[condKindPos] == item.ContainerKind() && p[condSubkindPos] == item.ContainerType() && p[condPermPos] == perm {
 					subj := p[condGroupPos]
 					// skip any "denyall##groups" here, and
@@ -436,7 +422,6 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 					c.e.RemovePolicy(denyallp...)
 				}
 			} else if item.ContainerKind() == "groups" {
-				logger.Debugf("adding denyall (%v) to item %s", denyallp, item.GetName())
 				// No groups, so we add the denyall
 				c.e.AddPolicy(denyallp...)
 			}
@@ -506,9 +491,10 @@ func (c *Checker) isPermValid(item aclhelper.Item, perm string) bool {
 func (c *Checker) AddACLRole(gRole aclhelper.Role) error {
 	c.waitForChanLock()
 	defer c.releaseChanLock()
+
 	// If there's any members in the role, add them. Otherwise, there's
 	// not anything to do.
-	logger.Debugf("Running AddACLRole, calling AddMembers on all members in group %s", gRole.GetName())
+
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.inTransaction = true
@@ -625,10 +611,6 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 		return nil, err
 	}
 
-	// COME ON!
-	logger.Debugf("FILTERED ITEM %s:\n####\n%s\n%%%%", item.GetName(), filteredItem)
-	logger.Debugf("FILTERED TYPE: %s\n####\n%s\n%%%%", item.ContainerType(), filteredType)
-
 	itemCompare := func(i aclhelper.Item, pol []string) bool {
 		return pol[condKindPos] == i.ContainerKind() && pol[condSubkindPos] == i.ContainerType()
 	}
@@ -646,10 +628,6 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 
 	itemPerms := assembleACL(item, filteredItem, itemCompare)
 	genPerms := assembleACL(item, filteredType, genCompare)
-	// wtf is in here
-	for k, v := range genPerms.Perms {
-		logger.Debugf("arrgh: %s :: %+v", k, v)
-	}
 
 	// Sigh, a special corner case with custom containers.
 	if item.ContainerKind() == "containers" && item.ContainerType() == "containers" {
@@ -675,10 +653,6 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 		// also, remove any dupes in Actors or Groups
 		v.Actors = util.RemoveDupStrings(v.Actors)
 		v.Groups = util.RemoveDupStrings(v.Groups)
-	}
-	for k, v := range genPerms.Perms {
-		logger.Debugf("GetItemACL %s Actors: %v", k, v.Actors)
-		logger.Debugf("GetItemACL %s Groups: %v", k, v.Groups)
 	}
 
 	return genPerms, nil
@@ -774,14 +748,11 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 	c.m.Lock()
 	defer c.m.Unlock()
 
-	logger.Debugf("DeleteItemACL #1")
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return false, util.CastErr(polErr)
 	}
-	logger.Debugf("DeleteItemACL #2")
-	policies := c.GetItemPolicies(item.GetName(), item.ContainerKind(), item.ContainerType())
 
-	logger.Debugf("DeleteItemACL #3")
+	policies := c.GetItemPolicies(item.GetName(), item.ContainerKind(), item.ContainerType())
 
 	var rmok bool
 	var err error
@@ -792,11 +763,10 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 		}
 	}
 
-	logger.Debugf("DeleteItemACL #4")
 	if err := c.e.SavePolicy(); err != nil {
 		return false, err
 	}
-	logger.Debugf("DeleteItemACL #5")
+
 	return rmok, nil
 }
 
@@ -847,11 +817,7 @@ func assembleACL(item aclhelper.Item, filtered [][]string, comparer func(aclhelp
 				gname := strings.TrimPrefix(subj, "role##")
 				tmpACL.Perms[perm].Groups = append(tmpACL.Perms[perm].Groups, gname)
 			} else {
-				//if !isValidator(item) {
-				// Hmm. Again.
-				logger.Debugf("assembling acl: are we a validator? %v", isValidator(item))
 				tmpACL.Perms[perm].Actors = append(tmpACL.Perms[perm].Actors, subj)
-				//}
 			}
 		}
 	}
