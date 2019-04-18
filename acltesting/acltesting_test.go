@@ -125,7 +125,7 @@ func TestInitACL(t *testing.T) {
 		{"true", "test1", "groups", "containers", "$$default$$", "create", "allow"},
 		{"true", "pivotal", "groups", "containers", "$$default$$", "create", "allow"},
 		{"true", "test1", "clients", "containers", "$$default$$", "read", "allow"},
-		{"false", "test_user", "groups", "containers", "$$default$$", "read", "allow"},
+		{"true", "test_user", "groups", "containers", "$$default$$", "read", "allow"},
 		{"true", "test_user", "roles", "containers", "$$default$$", "read", "allow"},
 		{"false", "test_user", "roles", "containers", "$$default$$", "nonexistent_perm", "allow"},
 	}
@@ -420,7 +420,7 @@ func TestGetItemAcl(t *testing.T) {
 			if a := m.Perms[p].Actors; a == nil {
 				t.Errorf("Array for actors in ACL perm '%s' was not found.", p)
 			} else {
-				if len(a) != 0 {
+				if len(a) != 1 { // pivotal is always included
 					t.Errorf("Array of actors in ACL perm '%s' should have had no members, but it had %d members.", p, len(a))
 				}
 			}
@@ -537,6 +537,9 @@ func TestItemRename(t *testing.T) {
 	org, _ := buildOrg()
 	c, _ := client.New(org, oldName)
 	c.Save()
+
+	// hm.
+	c, _ = client.Get(org, oldName)
 	us, _ := group.Get(org, "users")
 	org.PermCheck.EditItemPerm(c, us, []string{"grant"}, "add")
 
@@ -559,6 +562,11 @@ func TestItemRename(t *testing.T) {
 	}
 }
 
+/*
+ * Pending
+ *
+
 func TestMultipleOrgs(t *testing.T) {
 
 }
+*/
