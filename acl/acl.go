@@ -454,7 +454,7 @@ func (c *Checker) editFromMap(item aclhelper.Item, perm string, aclEdit map[stri
 	// container permissions. All of this ACL stuff could
 	// use refactoring I think. There's a lot of workarounds
 	// that could hopefully be consolidated.
-	if doEditDefaultItemPerm(item) {
+	if item.ContainerKind() == "containers" && item.ContainerType() == "containers" && item.GetName() != "$$default$$" {
 		// editing a container's permissions, better do
 		// the default.
 		logger.Debugf("going to edit the default perms for %+v", item)
@@ -466,20 +466,6 @@ func (c *Checker) editFromMap(item aclhelper.Item, perm string, aclEdit map[stri
 	}
 
 	return nil
-}
-
-func doEditDefaultItemPerm(item aclhelper.Item) bool {
-	if item.ContainerKind() == "containers" && item.ContainerType() == "containers" {
-		// The values we should do this editing of the default perms are
-		// still pretty weird, honestly. Using a switch statement to 
-		// make keeping track of what we should do easier than an
-		// endless chain of || ... || ... || ... and so on.
-		switch item.GetName() {
-		case "nodes", "environments", "clients":
-			return true
-		}
-	}
-	return false
 }
 
 func (c *Checker) RootCheckPerm(doer aclhelper.Actor, perm string) (bool, util.Gerror) {
