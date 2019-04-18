@@ -112,7 +112,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 				return
 			}
-			
+
 			serr := chefDbag.Save()
 			if serr != nil {
 				jsonErrorReport(w, r, serr.Error(), http.StatusInternalServerError)

@@ -19,11 +19,11 @@ package sandbox
 import (
 	"crypto/md5"
 	"encoding/gob"
+	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/fakeacl"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
-	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -130,11 +130,10 @@ func TestSandboxPurgeWith3(t *testing.T) {
 
 func TestSandboxPurgeWith30(t *testing.T) {
 	tm := time.Now()
-	
+
 	org, _ := organization.New("sboxpurge30", "sboxpurge30")
 	fakeacl.LoadFakeACL(org)
 	org.Save()
-
 
 	slen := 30
 	for si := 0; si < slen; si++ {

@@ -44,7 +44,7 @@ type Checker struct {
 	org *organization.Organization
 	e   *casbin.SyncedEnforcer
 	// gah, take a mutex to keep these perms from overwriting each other
-	m sync.RWMutex 
+	m             sync.RWMutex
 	inTransaction bool
 }
 
@@ -175,7 +175,7 @@ func (c *Checker) waitForChanLock() {
 }
 
 func (c *Checker) releaseChanLock() {
-	_ = <- ACLCoordinator
+	_ = <-ACLCoordinator
 	return
 }
 
@@ -191,7 +191,7 @@ func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm
 	// item name.
 	//var fi [][]string
 	//if item.ContainerKind() == "containers" {
-		fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
+	fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
 	//} else {
 	//	fi = c.e.GetFilteredPolicy(condNamePos, item.GetName())
 	//}
@@ -412,7 +412,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 				p := buildEnforcingSlice(item, a, perm)
 				c.e.AddPolicy(p...)
 			}
-			
+
 			// Here comes the science^W special case code! Alas,
 			// using buildEnforcingSlice doesn't really work here,
 			// so build it by hand.
@@ -656,7 +656,7 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 		// just set genPerms to itemPerms in this weird-ish situation
 		genPerms = itemPerms
 	} else { // the normal case
-	// Override general permissions with the specifics
+		// Override general permissions with the specifics
 		for k, v := range itemPerms.Perms {
 			genPerms.Perms[k].Perm = v.Perm
 			genPerms.Perms[k].Effect = v.Effect
@@ -791,7 +791,7 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 			return false, err
 		}
 	}
-	
+
 	logger.Debugf("DeleteItemACL #4")
 	if err := c.e.SavePolicy(); err != nil {
 		return false, err
