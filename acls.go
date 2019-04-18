@@ -570,6 +570,8 @@ func baseACLPermHandler(w http.ResponseWriter, r *http.Request, org *organizatio
 	a := aclItem.ToJSON()
 	p, ok := a[perm]
 	if !ok {
+		log.Printf("NONEXISTENT PERM, AAAIEEEEE: %s for %s/%s/%s", perm, item.ContainerKind(), item.ContainerType(), item.GetName())
+		log.Printf("The ACL JSON we got:\n~~~~~~\n%+v\n~~~~~~~~~", a)
 		jsonErrorReport(w, r, "perm nonexistent", http.StatusBadRequest)
 		return
 	}
