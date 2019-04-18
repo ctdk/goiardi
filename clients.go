@@ -27,7 +27,6 @@ import (
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
-	"github.com/tideland/golib/logger"
 	"net/http"
 )
 
@@ -398,7 +397,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// also the client itself, but only if it's not a validator.
 	if !chefClient.IsValidator() {
-		logger.Debugf("not a validator, supposed to be adding creator perms")
 		if err = org.PermCheck.CreatorOnly(chefClient, chefClient); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
