@@ -51,6 +51,30 @@ func TestStringTrimmingNoTrim(t *testing.T) {
 	}
 }
 
+func TestStringTrimmingUTF8(t *testing.T) {
+	u := "123456üøöß≈ç"
+	q := "öåπi"
+	l := 8
+	u = TrimStringMax(u, l)
+	if len(u) == l {
+		t.Errorf("post-trim len for u with unicode characters should not be %d", l)
+	}
+	if len([]rune(u)) != l {
+		t.Errorf("trimmed string length in runes should have been %d, but was %d", l, len([]rune(u)))
+	}
+
+	oq := len(q)
+	orq := len([]rune(q))
+	q = TrimStringMax(q, l)
+	if len(q) != oq {
+		t.Errorf("post-trim len for q with unicode characters shorter than the specified length '%d' should have stayed the same, but changed. Expected %d, got %d.", l, oq, len(q))
+	}
+	if len([]rune(q)) != orq {
+		t.Errorf("post-trim rune array len for q with unicode characters shorter than the specified length '%d' should have stayed the same, but changed. Expected %d, got %d.", l, orq, len([]rune(q)))
+	}
+
+}
+
 func TestDupRemoval(t *testing.T) {
 	strs := []string{"This", "", "has", "", "some", "", "some", "dupes"}
 	sort.Strings(strs)

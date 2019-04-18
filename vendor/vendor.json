@@ -535,12 +535,6 @@
 			"revisionTime": "2015-08-05T04:23:39Z"
 		},
 		{
-			"checksumSHA1": "OGkCDmBkdjRTfBB/P3bVOsTRUx0=",
-			"path": "golang.org/x/exp/utf8string",
-			"revision": "397dac334bad1771df6174ef38b97e1ce45ecfa7",
-			"revisionTime": "2017-02-23T23:54:37Z"
-		},
-		{
 			"checksumSHA1": "XNmPFaFgzySgspAuguUZp+UAws0=",
 			"path": "gopkg.in/alexcesaro/statsd.v1",
 			"revision": "c289775e46fd4576434c2ac3f3298ebe1f0a6ab7",

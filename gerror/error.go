@@ -73,7 +73,7 @@ func (e *gerror) SetStatus(s int) {
 	e.status = s
 }
 
-// Returns the Error's HTTP status code.
+// Status returns the Error's HTTP status code.
 func (e *gerror) Status() int {
 	return e.status
 }
