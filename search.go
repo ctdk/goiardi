@@ -307,7 +307,7 @@ func reindexAll() {
 		}
 		defaultEnv, _ := environment.Get(org, "_default")
 		environmentObjs = append(environmentObjs, defaultEnv)
-		logger.Debugf("reindexing environments", org.Name)
+		logger.Debugf("reindexing environments %s", org.Name)
 		indexer.ReIndex(environmentObjs, rCh)
 
 		dbagObjs := make([]indexer.Indexable, 0, 100)
