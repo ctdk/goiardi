@@ -389,7 +389,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 
 			// Here comes the science^W special case code! Alas,
 			// using buildEnforcingSlice doesn't really work here,
-			// so build it with a special function. 
+			// so build it with a special function.
 			denyallp := buildDenySlice(item, perm)
 
 			if len(newGroups) > 0 {
