@@ -10,3 +10,4 @@ packaging/**/share/goiardi/*
 */boo-policy.csv
 sandbox/sbox*.csv
 /*.csv
+association/*.csv
