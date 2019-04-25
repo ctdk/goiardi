@@ -48,6 +48,8 @@ type privOrganization struct {
 	ID       *int
 }
 
+const searchSchemaSkel = "goiardi_search_%d"
+
 func New(name, fullName string) (*Organization, util.Gerror) {
 	var found bool
 	uuID := uuid.NewRandom()
@@ -238,4 +240,18 @@ func (o *Organization) ContainerType() string {
 
 func (o *Organization) SetPermCheck(p aclhelper.PermChecker) {
 	o.PermCheck = p
+}
+
+// SearchSchemaName is a handy little helper method that will return the schema
+// that holds the search tables for this organization.
+//
+// At the moment that's still "goiardi", but the idea is that soon organizations
+// will have their search tables in separate schemas. The reason for this is to
+// hopefully keep them a little more manageable.
+//
+// Also, while it's pretty obvious this is only especially useful when using
+// postgres search.
+func (o *Organization) SearchSchemaName() string {
+	//return fmt.Sprintf(searchSchemaSkel, o.id)
+	return "goiardi"
 }
