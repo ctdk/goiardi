@@ -3,6 +3,7 @@
 * Organizations and RBAC (in progress). This includes stuff like groups, ACLs,
   and whatnot.
 * Refactor of HTTP handling to use gorilla-mux.
+* TODO: Plenty more to add when this is finally ready to release.
 
 0.11.10 (Unreleased at this time)
 -------
