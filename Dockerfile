@@ -1,4 +1,4 @@
-FROM golang:1.9
+FROM golang:1.12
 
 # A Dockerfile that lets you run the local source tree of goiardi easily
 # locally. See https://hub.docker.com/r/ctdk/goiardi/ for official goiardi
