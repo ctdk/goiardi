@@ -388,7 +388,7 @@ func (c *Client) UpdateFromJSON(jsonActor map[string]interface{}) util.Gerror {
 
 	/* Validations. */
 	/* Invalid top level elements */
-	validElements := []string{"name", "json_class", "chef_type", "validator", "org_name", "orgname", "public_key", "private_key", "admin", "certificate", "password", "node_name", "clientname"}
+	validElements := []string{"name", "json_class", "chef_type", "validator", "org_name", "orgname", "public_key", "private_key", "admin", "certificate", "password", "node_name", "clientname", "create_key"}
 ValidElem:
 	for k := range jsonActor {
 		for _, i := range validElements {
