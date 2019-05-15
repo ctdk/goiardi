@@ -1,8 +1,9 @@
-0.11.10 (Unreleased at this time)
+0.11.10
 -------
-* It was brought to my attention by <WHO> that 'create_key' is now a valid JSON
+* It was brought to my attention by @joerg that 'create_key' is now a valid JSON
   hash key for when creating clients with newer chef tools. Added it to the
-  whitelist of valid elements for creating clients.
+  whitelist of valid elements for creating clients. Thanks again for bringing
+  it to my attention.
 
 0.11.9
 ------
