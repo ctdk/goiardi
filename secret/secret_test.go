@@ -126,7 +126,7 @@ func TestMain(m *testing.M) {
 		if err == nil {
 			break
 		} else {
-			log.Printf("try #%d to mount vault secrets failed, will try up to %d times.", si + 1, numTries)
+			log.Printf("try #%d to mount vault secrets failed, will try up to %d times.", si+1, numTries)
 		}
 	}
 
