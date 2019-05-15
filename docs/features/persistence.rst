@@ -60,7 +60,7 @@ Goiardi can also use Postgres as a backend for storing its data, instead of usin
 * Create the user: ``$ createuser goiardi <additional options>``
 * Create the database, if you decided to: ``$ createdb goiardi_db <additional options>``. If you created a user, make it the owner of the goiardi db with ``-O goiardi``.
 
-After you've done that, or decided to use an existing database and user, deploy the sqitch bundle in sql-files/postgres-bundle. If you're using the default Postgres user on the local machine, ``sqitch deploy db:pg:<dbname>`` will be sufficient. Otherwise, the deploy command will be something like ``sqitch deploy db:pg://user:password@localhost/goairdi_db``.
+After you've done that, or decided to use an existing database and user, deploy the sqitch bundle in sql-files/postgres-bundle. If you're using the default Postgres user on the local machine, ``sqitch deploy db:pg:<dbname>`` will be sufficient. Otherwise, the deploy command will be something like ``sqitch deploy db:pg://user:password@localhost/goiardi_db``.
 
 The Postgres sqitch tutorial at https://metacpan.org/pod/sqitchtutorial explains more about how to use sqitch and Postgres.
 
