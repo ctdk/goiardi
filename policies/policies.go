@@ -27,11 +27,29 @@ import (
 )
 
 type Policy struct {
-
+	Name string
+	URI string
+	Revisions []string 		// We may want this to be a new type
 	org *organization.Organization
 }
 
-func New() (*Policy, util.Gerror) {
+func New(name string, uri string, polOrg *organization.Organization) (*Policy, util.Gerror) {
+	p := new(Policy)
+	p.Name = name
+	p.URI = uri
+	p.org = polOrg
 
-	return nil, nil
+	// Don't forget to save!
+	if err := p.Save(); err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func Get(
+
+func (p *Policy) Save() util.Gerror {
+
+	return nil
 }
