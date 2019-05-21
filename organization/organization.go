@@ -255,3 +255,7 @@ func (o *Organization) SearchSchemaName() string {
 	//return fmt.Sprintf(searchSchemaSkel, o.id)
 	return "goiardi"
 }
+
+func (o *Organization) GetId() int {
+	return o.id
+}

@@ -55,6 +55,7 @@ type User struct {
 	pubKey      string
 	passwd      string
 	salt        []byte
+	id          int
 	AuthzID     string `json:"authz_id"`
 }
 
@@ -773,4 +774,8 @@ func (u *User) IsACLRole() bool {
 
 func (u *User) ACLName() string {
 	return u.GetName()
+}
+
+func (u *User) GetId() int {
+	return u.id
 }

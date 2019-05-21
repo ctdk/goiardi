@@ -36,7 +36,7 @@ func checkForUserSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
 
 func (u *User) fillUserFromSQL(row datastore.ResRow) error {
 	var email sql.NullString
-	err := row.Scan(&u.Username, &u.Name, &u.Admin, &u.pubKey, &email, &u.passwd, &u.salt)
+	err := row.Scan(&u.id, &u.Username, &u.Name, &u.Admin, &u.pubKey, &email, &u.passwd, &u.salt)
 	if err != nil {
 		return err
 	}
@@ -52,9 +52,9 @@ func getUserSQL(name string) (*User, error) {
 	user := new(User)
 	var sqlStatement string
 	if config.Config.UseMySQL {
-		sqlStatement = "select name, displayname, admin, public_key, email, passwd, salt FROM users WHERE name = ?"
+		sqlStatement = "select id, name, displayname, admin, public_key, email, passwd, salt FROM users WHERE name = ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "select name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users WHERE name = $1"
+		sqlStatement = "select id, name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users WHERE name = $1"
 	}
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
