@@ -82,7 +82,7 @@ func (a *AssociationReq) savePostgreSQL() error {
 	if err != nil {
 		return err
 	}
-	// SELECT goiardi.merge_association_requests(a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), a.Inviter.URLType(), a.Status)
+	_, err = tx.Exec("SELECT goiardi.merge_association_requests($1, $2, $3, $4, $5)", a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), a.Inviter.URLType(), a.Status)
 
 	if err != nil {
 		tx.Rollback()
