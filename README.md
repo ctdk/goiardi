@@ -60,7 +60,7 @@ Jeremy Bingham (<jeremy@goiardi.gl>)
 COPYRIGHT
 ---------
 
-Copyright 2013-2017, Jeremy Bingham
+Copyright (c) 2013-2019, Jeremy Bingham
 
 The `depgraph` and `digraph` packages are vendored from terraform and are
 copyrighted by Hashicorp.
@@ -82,7 +82,7 @@ License. See the LICENSE file for details.
 The goiardi documentation in the `docs` directory is licensed under a Creative
 Commons Attribution 4.0 International (CC-BY 4.0) License.
 
-Chef is copyright (c) 2008-2016 Chef Software (formerly Opscode, Inc.) and its
+Chef is copyright (c) 2008-2019 Chef Software (formerly Opscode, Inc.) and its
 various contributors.
 
 The `depgraph` and `digraph` packages are vendored from Hashicorp's terraform
@@ -92,7 +92,7 @@ included in those directories and applies only to those files.
 A small part of `go-chef/chef` is included under the `authentication` directory
 to remove a circular dependency with tests between goiardi and go-chef, only
 enough to make a minimal client sufficient to test authenticating headers. It is
-copyright 2013-2014, Jesse Nelson under the terms of the Apache 2.0 license.
+copyright 2013-2019, Jesse Nelson under the terms of the Apache 2.0 license.
 
 Thanks go out to the fine folks of Chef Software and the Chef community for all 
 their hard work.
