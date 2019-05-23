@@ -58,6 +58,7 @@ type Client struct {
 	Certificate string `json:"certificate"`
 	org         *organization.Organization
 	AuthzID     string `json:"authz_id"`
+	id int
 }
 
 // for gob encoding. Needed the json tags for flattening, but that's handled
@@ -731,4 +732,8 @@ func (c *Client) IsACLRole() bool {
 
 func (c *Client) ACLName() string {
 	return c.GetName()
+}
+
+func (c *Client) GetId() int {
+	return c.id
 }

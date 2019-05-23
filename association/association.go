@@ -27,6 +27,7 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"time"
 )
 
 type Association struct {
@@ -38,6 +39,7 @@ type AssociationReq struct {
 	User    *user.User
 	Org     *organization.Organization
 	Inviter actor.Actor
+	Status  string
 }
 
 func (a *AssociationReq) Key() string {
@@ -52,7 +54,8 @@ func SetReq(user *user.User, org *organization.Organization, inviter actor.Actor
 	if config.UsingDB() {
 
 	}
-	assoc := &AssociationReq{user, org, inviter}
+	// may come back and fill in the created/updated at fields
+	assoc := &AssociationReq{user, org, inviter, "pending"}
 	ds := datastore.New()
 	_, found := ds.Get("associationreq", assoc.Key())
 	if found {

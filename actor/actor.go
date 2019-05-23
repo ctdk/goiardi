@@ -45,6 +45,7 @@ type Actor interface {
 	ACLName() string
 	Authz() string
 	IsACLRole() bool
+	GetId() int
 }
 
 // GetReqUser gets the actor making the request. If use-auth is not on, always

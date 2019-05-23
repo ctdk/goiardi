@@ -18,21 +18,76 @@ package association
 
 import (
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/orgloader"
+	"github.com/ctdk/goiardi/user"
 	"github.com/lib/pq"
 )
 
 func (a *Association) fillAssociationFromPostgreSQL(row datastore.ResRow) error {
+	var userName, orgName string
+	
+	err := row.Scan(&userName, &orgName)
+	if err != nil {
+		return err
+	}
 
-}
+	// fill in the user and org now
+	u, err := user.Get(userName)
+	if err != nil {
+		return err
+	}
+	a.User = u
 
-func (a *Association) savePostgreSQL() error {
+	o, err := orgloader.Get(orgName)
+	if err != nil {
+		return err
+	}
+	a.Org = o
 
+	return nil
 }
 
 func (a *AssociationReq) fillAssociationReqFromPostgreSQL(row datastore.ResRow) error {
+	var userName, orgName, inviterName string
+	
+	err := row.Scan(&userName, &orgName, &inviterName, &a.Status)
+	if err != nil {
+		return err
+	}
 
+	// fill in the users and org now
+	u, err := user.Get(userName)
+	if err != nil {
+		return err
+	}
+	a.User = u
+
+	o, err := orgloader.Get(orgName)
+	if err != nil {
+		return err
+	}
+	a.Org = o
+
+	i, err := actor.GetActor(inviterName)
+	if err != nil {
+		return err
+	}
+	a.Inviter = i
+
+	return nil
 }
 
 func (a *AssociationReq) savePostgreSQL() error {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	// SELECT goiardi.merge_association_requests(a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), a.Inviter.URLType(), a.Status)
 
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+	return nil
 }
