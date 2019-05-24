@@ -20,15 +20,16 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/util"
 	"github.com/lib/pq"
 )
 
-func (a *Association) fillAssociationFromPostgreSQL(row datastore.ResRow) error {
+func (a *Association) fillAssociationFromPostgreSQL(row datastore.ResRow) util.Gerror {
 	var userName, orgName string
 	
 	err := row.Scan(&userName, &orgName)
 	if err != nil {
-		return err
+		return util.CastErr(err)
 	}
 
 	// fill in the user and org now
@@ -47,12 +48,12 @@ func (a *Association) fillAssociationFromPostgreSQL(row datastore.ResRow) error 
 	return nil
 }
 
-func (a *AssociationReq) fillAssociationReqFromPostgreSQL(row datastore.ResRow) error {
+func (a *AssociationReq) fillAssociationReqFromPostgreSQL(row datastore.ResRow) util.Gerror {
 	var userName, orgName, inviterName string
 	
 	err := row.Scan(&userName, &orgName, &inviterName, &a.Status)
 	if err != nil {
-		return err
+		return util.CastErr(err)
 	}
 
 	// fill in the users and org now
@@ -77,40 +78,40 @@ func (a *AssociationReq) fillAssociationReqFromPostgreSQL(row datastore.ResRow) 
 	return nil
 }
 
-func (a *AssociationReq) savePostgreSQL() error {
+func (a *AssociationReq) savePostgreSQL() util.Gerror {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		return err
+		return util.CastErr(err)
 	}
 	_, err = tx.Exec("SELECT goiardi.merge_association_requests($1, $2, $3, $4, $5)", a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), a.Inviter.URLType(), a.Status)
 
 	if err != nil {
 		tx.Rollback()
-		return err
+		return util.CastErr(err)
 	}
 	tx.Commit()
 	return nil
 }
 
-func (a *AssociationReq) acceptPostgresSQL() error {
+func (a *AssociationReq) acceptPostgresSQL() util.Gerror {
 	a.Status = 'accepted'
 
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		return err
+		return util.CastErr(err)
 	}
 	_, err = tx.Exec("SELECT goiardi.merge_association_requests($1, $2, $3, $4, $5)", a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), a.Inviter.URLType(), a.Status)
 
 	if err != nil {
 		tx.Rollback()
-		return err
+		return util.CastErr(err)
 	}
 
 	_, err = tx.Exec("INSERT INTO goiardi.associations(user_id, organization_id, association_request_id, created_at, updated_at) VALUES($1, $2, $3, NOW(), NOW())", a.User.GetId(), a.Org.GetId(), a.id)
 
 	if err != nil {
 		tx.Rollback()
-		return err
+		return util.CastErr(err)
 	}
 
 	tx.Commit()
