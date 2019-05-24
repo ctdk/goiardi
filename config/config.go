@@ -111,6 +111,7 @@ type Conf struct {
 	PurgeSandboxesAfter  string   `toml:"purge-sandboxes-after"`
 	PolicyRoot           string   `toml:"policy-root"`
 	PolicyLogging        bool     `toml:"policy-logging"`
+	Language             string   `toml:"language"` // not implemented yet
 	PurgeNodeStatusDur   time.Duration
 	PurgeReportsDur      time.Duration
 	PurgeSandboxesDur    time.Duration
