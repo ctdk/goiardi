@@ -91,3 +91,28 @@ func (a *AssociationReq) savePostgreSQL() error {
 	tx.Commit()
 	return nil
 }
+
+func (a *AssociationReq) acceptPostgresSQL() error {
+	a.Status = 'accepted'
+
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("SELECT goiardi.merge_association_requests($1, $2, $3, $4, $5)", a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), a.Inviter.URLType(), a.Status)
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("INSERT INTO goiardi.associations(user_id, organization_id, association_request_id, created_at, updated_at) VALUES($1, $2, $3, NOW(), NOW())", a.User.GetId(), a.Org.GetId(), a.id)
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	tx.Commit()
+	return nil
+}

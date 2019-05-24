@@ -24,10 +24,11 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/util"
 	"log"
 )
 
-func checkForAssociationSQL(dbhandle datastore.Dbhandle, user *user.User, org *organization.Organization) (bool, error) {
+func checkForAssociationSQL(dbhandle datastore.Dbhandle, user *user.User, org *organization.Organization) (bool, util.Gerror) {
 	var z int
 	var sqlStmt string
 	if config.Config.UseMySQL {
@@ -39,7 +40,7 @@ func checkForAssociationSQL(dbhandle datastore.Dbhandle, user *user.User, org *o
 
 	stmt, err := dbhandle.Prepare(sqlStmt)
 	if err != nil {
-		return false, err
+		return false, util.CastErr(err)
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(user.GetId(), org.GetId()).Scan(&z)
@@ -47,7 +48,7 @@ func checkForAssociationSQL(dbhandle datastore.Dbhandle, user *user.User, org *o
 		if err == sql.ErrNoRows {
 			return false, nil
 		}
-		return false, err
+		return false, util.CastErr(err)
 	}
 	if z > 0 {
 		return true, nil
@@ -55,7 +56,7 @@ func checkForAssociationSQL(dbhandle datastore.Dbhandle, user *user.User, org *o
 	return false, nil
 }
 
-func checkForAssociationReqSQL(dbhandle datastore.Dbhandle, user *user.User, org *organization.Organization, inviter actor.Actor) (bool, error) {
+func checkForAssociationReqSQL(dbhandle datastore.Dbhandle, user *user.User, org *organization.Organization, inviter actor.Actor) (bool, util.Gerror) {
 	var z int
 	var sqlStmt string
 	if config.Config.UseMySQL {
@@ -67,7 +68,7 @@ func checkForAssociationReqSQL(dbhandle datastore.Dbhandle, user *user.User, org
 
 	stmt, err := dbhandle.Prepare(sqlStmt)
 	if err != nil {
-		return false, err
+		return false, util.CastErr(err)
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(user.GetId(), org.GetId(), inviter.GetId(), inviter.URLType()).Scan(&z)
@@ -75,7 +76,7 @@ func checkForAssociationReqSQL(dbhandle datastore.Dbhandle, user *user.User, org
 		if err == sql.ErrNoRows {
 			return false, nil
 		}
-		return false, err
+		return false, util.CastErr(err)
 	}
 	if z > 0 {
 		return true, nil
@@ -83,12 +84,12 @@ func checkForAssociationReqSQL(dbhandle datastore.Dbhandle, user *user.User, org
 	return false, nil
 }
 
-func (a *Association) fillAssociationFromSQL(row datastore.ResRow) error {
+func (a *Association) fillAssociationFromSQL(row datastore.ResRow) util.Gerror {
 	// add mysql later if we do that
 	return a.fillAssociationFromPostgreSQL(row)
 }
 
-func getAssociationSQL(user *user.User, org *organization.Organization) (*Association, error) {
+func getAssociationSQL(user *user.User, org *organization.Organization) (*Association, util.Gerror) {
 	a := new(Association)
 
 	var sqlStmt string
@@ -100,24 +101,24 @@ func getAssociationSQL(user *user.User, org *organization.Organization) (*Associ
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
-		return nil, err
+		return nil, util.CastErr(err)
 	}
 	defer stmt.Close()
 
 	row := stmt.QueryRow(user.GetId(), org.GetId())
 	if err = a.fillAssociationFromSQL(row); err != nil {
-		return nil, err
+		return nil, util.CastErr(err)
 	}
 
 	return a, nil
 }
 
-func (a *AssociationReq) fillAssociationReqFromSQL(row datastore.ResRow) error {
+func (a *AssociationReq) fillAssociationReqFromSQL(row datastore.ResRow) util.Gerror {
 	// add mysql later if we do that
 	return a.fillAssociationReqFromPostgreSQL(row)
 }
 
-func getAssociationReqSQL(user *user.User, org *organization.Organization, inviter actor.Actor, status string) (*AssociationReq, error) {
+func getAssociationReqSQL(user *user.User, org *organization.Organization, inviter actor.Actor, status string) (*AssociationReq, util.Gerror) {
 	a := new(AssociationReq)
 	
 	var sqlStmt string
@@ -129,62 +130,79 @@ func getAssociationReqSQL(user *user.User, org *organization.Organization, invit
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
-		return nil, err
+		return nil, util.CastErr(err)
 	}
 	defer stmt.Close()
 
 	row := stmt.QueryRow(user.GetId(), org.GetId(), inviter.GetName(), inviter.URLType(), status)
 	if err = a.fillAssociationReqFromSQL(row); err != nil {
-		return nil, err
+		return nil, util.CastErr(err)
 	}
 
 	return a, nil
 }
 
 // may be extraneous
-func (a *Association) saveSQL() error {
+func (a *Association) saveSQL() util.Gerror {
 
 }
 
-func (a *Association) deleteSQL() error {
+func (a *Association) deleteSQL() util.Gerror {
 	
 }
 
-func userAssociationsSQL(org *organization.Organization) ([]*user.User, error) {
+func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Gerror) {
 
 }
 
-func orgAssociationsSQL(user *user.User) ([]*organization.Organization, error) {
+func orgAssociationsSQL(user *user.User) ([]*organization.Organization, util.Gerror) {
 
 }
 
-func deleteAllOrgAssociationsSQL(org *organization.Organization) error {
+func deleteAllOrgAssociationsSQL(org *organization.Organization) util.Gerror {
 
 }
 
-func deleteAllUserAssociationsSQL(user *user.User) error {
+func deleteAllUserAssociationsSQL(user *user.User) util.Gerror {
 
 }
 
-func (a *AssociationReq) acceptSQL() error {
-
+func (a *AssociationReq) acceptSQL() util.Gerror {
+	if config.Config.UseMySQL {
+		return nil
+	} else {
+		return a.acceptPostgresSQL()
+	}
 }
 
-func (a *AssociationReq) rejectSQL() error {
+func (a *AssociationReq) rejectSQL() util.Gerror {
 	a.Status = 'rejected'
 	return a.savePostgreSQL()
 }
 
-func (a *AssociationReq) deleteSQL() error {
+func (a *AssociationReq) deleteSQL() util.Gerror {
 	var sqlStmt string
 	if config.Config.UseMySQL {
 
 	} else {
-		sqlStmt = "DELETE FROM goiardi.association_requests WHERE user_id = $1 AND organization_id = $2 AND inviter_id = $3 AND inviter_id = $4"
+		sqlStmt = "DELETE FROM goiardi.association_requests WHERE user_id = $1 AND organization_id = $2 AND inviter_id = $3 AND inviter_type = $4"
 	}
+
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return util.CastErr(err)
+	}
+	_, err = tx.Exec(sqlStmt, a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), a.Inviter.URLType(), a.Status)
+
+	if err != nil {
+		tx.Rollback()
+		return util.CastErr(err)
+	}
+	tx.Commit()
+	return nil
 }
 
-func orgsAssociationReqCountSQL(user *user.User) (int, error) {
+func orgsAssociationReqCountSQL(user *user.User) (int, util.Gerror) {
 	var c int
 	var sqlStmt string
 	// deal with mysql if/when later
@@ -196,7 +214,7 @@ func orgsAssociationReqCountSQL(user *user.User) (int, error) {
 
 	stmt, err := dbhandle.Prepare(sqlStmt)
 	if err != nil {
-		return false, err
+		return false, util.CastErr(err)
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(user.GetId()).Scan(&c)
@@ -204,12 +222,12 @@ func orgsAssociationReqCountSQL(user *user.User) (int, error) {
 		if err == sql.ErrNoRows {
 			return 0, nil
 		}
-		return 0, err
+		return 0, util.CastErr(err)
 	}
 	return c, nil
 }
 
-func userAssociationReqCountSQL(org *organization.Organization) (int, error) {
+func userAssociationReqCountSQL(org *organization.Organization) (int, util.Gerror) {
 	var c int
 	var sqlStmt string
 	// deal with mysql if/when later
@@ -221,7 +239,7 @@ func userAssociationReqCountSQL(org *organization.Organization) (int, error) {
 
 	stmt, err := dbhandle.Prepare(sqlStmt)
 	if err != nil {
-		return false, err
+		return false, util.CastErr(err)
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(org.GetId()).Scan(&c)
@@ -229,28 +247,28 @@ func userAssociationReqCountSQL(org *organization.Organization) (int, error) {
 		if err == sql.ErrNoRows {
 			return 0, nil
 		}
-		return 0, err
+		return 0, util.CastErr(err)
 	}
 	return c, nil
 }
 
-func getOrgAssociationReqsSQL(user *user.User) ([]*AssociationReq, error) {
+func getOrgAssociationReqsSQL(user *user.User) ([]*AssociationReq, util.Gerror) {
 
 }
 
-func getUserAssociationReqsSQL(org *organization.Organization) ([]*AssociationReq, error) {
+func getUserAssociationReqsSQL(org *organization.Organization) ([]*AssociationReq, util.Gerror) {
 
 }
 
-func deleteUserAssociationReqsSQL(user *user.User) error {
+func deleteUserAssociationReqsSQL(user *user.User) util.Gerror {
 
 }
 
-func deleteOrgAssociationReqsSQL(org *organization.Organization) error {
+func deleteOrgAssociationReqsSQL(org *organization.Organization) util.Gerror {
 
 }
 
-func (a *AssociationReq) saveSQL() error {
+func (a *AssociationReq) saveSQL() util.Gerror {
 	if config.Config.UseMySQL {
 		return fmt.Errorf("MySQL's not implemented for this yet")
 	} else if config.Config.UsePostgreSQL {

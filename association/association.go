@@ -33,6 +33,7 @@ import (
 type Association struct {
 	User *user.User
 	Org  *organization.Organization
+	id int
 }
 
 type AssociationReq struct {
