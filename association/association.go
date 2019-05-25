@@ -27,13 +27,11 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
-	"time"
 )
 
 type Association struct {
 	User *user.User
 	Org  *organization.Organization
-	id int
 }
 
 type AssociationReq struct {
@@ -41,6 +39,7 @@ type AssociationReq struct {
 	Org     *organization.Organization
 	Inviter actor.Actor
 	Status  string
+	id int
 }
 
 func (a *AssociationReq) Key() string {
@@ -52,11 +51,31 @@ func (a *Association) Key() string {
 }
 
 func SetReq(user *user.User, org *organization.Organization, inviter actor.Actor) (*AssociationReq, util.Gerror) {
-	if config.UsingDB() {
+	assoc := &AssociationReq{user, org, inviter, "pending", 0}
 
+	if config.UsingDB() {
+		f, ferr := checkForAssociationSQL(datastore.Dbh, user, org)
+		if ferr != nil {
+			return nil, ferr
+		} else if f {
+			ferr = util.Errorf("The association already exists.")
+			ferr.SetStatus(http.StatusConflict)
+			return nil, ferr
+		}
+		f, ferr = checkForAssociationReqSQL(datastore.Dbh, user, org, inviter)
+		if ferr != nil {
+			return nil, ferr
+		} else if f {
+			ferr = util.Errorf("The invite already exists.")
+			ferr.SetStatus(http.StatusConflict)
+			return nil, ferr
+		}
+		if ferr = assoc.saveSQL(); ferr != nil {
+			return nil, ferr
+		}
+		return assoc, nil
 	}
-	// may come back and fill in the created/updated at fields
-	assoc := &AssociationReq{user, org, inviter, "pending"}
+
 	ds := datastore.New()
 	_, found := ds.Get("associationreq", assoc.Key())
 	if found {

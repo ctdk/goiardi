@@ -36,21 +36,21 @@ func checkForOrgSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
 }
 
 func (o *Organization) fillOrgFromSQL(row datastore.ResRow) error {
-
+	return nil
 }
 
 func getOrgSQL(name string) (*Organization, error) {
-
+	return nil, nil
 }
 
 func (o *Organization) deleteSQL() error {
-
+	return nil
 }
 
 func getListSQL() []string {
-
+	return nil
 }
 
 func allOrgsSQL() []*Organization {
-
+	return nil
 }

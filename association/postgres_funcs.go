@@ -17,11 +17,12 @@
 package association
 
 import (
+	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	"github.com/lib/pq"
+	// "github.com/lib/pq"
 )
 
 func (a *Association) fillAssociationFromPostgreSQL(row datastore.ResRow) util.Gerror {
@@ -35,13 +36,13 @@ func (a *Association) fillAssociationFromPostgreSQL(row datastore.ResRow) util.G
 	// fill in the user and org now
 	u, err := user.Get(userName)
 	if err != nil {
-		return err
+		return util.CastErr(err)
 	}
 	a.User = u
 
 	o, err := orgloader.Get(orgName)
 	if err != nil {
-		return err
+		return util.CastErr(err)
 	}
 	a.Org = o
 
@@ -59,19 +60,19 @@ func (a *AssociationReq) fillAssociationReqFromPostgreSQL(row datastore.ResRow) 
 	// fill in the users and org now
 	u, err := user.Get(userName)
 	if err != nil {
-		return err
+		return util.CastErr(err)
 	}
 	a.User = u
 
 	o, err := orgloader.Get(orgName)
 	if err != nil {
-		return err
+		return util.CastErr(err)
 	}
 	a.Org = o
 
-	i, err := actor.GetActor(inviterName)
+	i, err := actor.GetActor(o, inviterName)
 	if err != nil {
-		return err
+		return util.CastErr(err)
 	}
 	a.Inviter = i
 
@@ -83,7 +84,8 @@ func (a *AssociationReq) savePostgreSQL() util.Gerror {
 	if err != nil {
 		return util.CastErr(err)
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_association_requests($1, $2, $3, $4, $5)", a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), a.Inviter.URLType(), a.Status)
+
+	_, err = tx.Exec("SELECT goiardi.merge_association_requests($1, $2, $3, $4, $5)", a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), inviterType(a.Inviter), a.Status)
 
 	if err != nil {
 		tx.Rollback()
@@ -94,13 +96,13 @@ func (a *AssociationReq) savePostgreSQL() util.Gerror {
 }
 
 func (a *AssociationReq) acceptPostgresSQL() util.Gerror {
-	a.Status = 'accepted'
+	a.Status = "accepted"
 
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return util.CastErr(err)
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_association_requests($1, $2, $3, $4, $5)", a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), a.Inviter.URLType(), a.Status)
+	_, err = tx.Exec("SELECT goiardi.merge_association_requests($1, $2, $3, $4, $5)", a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), inviterType(a.Inviter), a.Status)
 
 	if err != nil {
 		tx.Rollback()

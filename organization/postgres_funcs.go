@@ -26,13 +26,13 @@ import (
  */
 
 func (o *Organization) savePostgreSQL() util.Gerror {
-
+	return nil
 }
 
 func (o *Organization) renamePostgreSQL(newName string) util.Gerror {
-
+	return nil
 }
 
 func (o *Organization) createSearchSchema() error {
-
+	return nil
 }

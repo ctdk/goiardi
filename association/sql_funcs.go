@@ -25,7 +25,7 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	"log"
+	//"log"
 )
 
 func checkForAssociationSQL(dbhandle datastore.Dbhandle, user *user.User, org *organization.Organization) (bool, util.Gerror) {
@@ -63,7 +63,7 @@ func checkForAssociationReqSQL(dbhandle datastore.Dbhandle, user *user.User, org
 		// come back if we decide to actually keep mysql still - it's
 		// iffy
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT count(*) AS c FROM goiardi.association_requests WHERE user_id = $1 AND organization_id = $2 AND inviter_id = $3 AND inviter_type = $4"
+		sqlStmt = "SELECT count(*) AS c FROM goiardi.association_requests WHERE user_id = $1 AND organization_id = $2 AND inviter_id = $3 AND inviter_type = $4 AND status = 'pending'"
 	}
 
 	stmt, err := dbhandle.Prepare(sqlStmt)
@@ -71,7 +71,7 @@ func checkForAssociationReqSQL(dbhandle datastore.Dbhandle, user *user.User, org
 		return false, util.CastErr(err)
 	}
 	defer stmt.Close()
-	err = stmt.QueryRow(user.GetId(), org.GetId(), inviter.GetId(), inviter.URLType()).Scan(&z)
+	err = stmt.QueryRow(user.GetId(), org.GetId(), inviter.GetId(), inviterType(inviter)).Scan(&z)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
@@ -125,7 +125,7 @@ func getAssociationReqSQL(user *user.User, org *organization.Organization, invit
 	if config.Config.UseMySQL {
 		// mebbe?
 	} else if config.Config.UsePostgreSQL {
-		sqlStmt = fmt.Sprintf("SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE u.id = $1 AND org.id = $2 AND inviter_name = $3 AND assoc.inviter_type = $4 AND assoc.status = $5", inviter.URLType())
+		sqlStmt = fmt.Sprintf("SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE u.id = $1 AND org.id = $2 AND inviter_name = $3 AND assoc.inviter_type = $4 AND assoc.status = $5", inviterType(inviter))
 	}
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
@@ -134,7 +134,7 @@ func getAssociationReqSQL(user *user.User, org *organization.Organization, invit
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(user.GetId(), org.GetId(), inviter.GetName(), inviter.URLType(), status)
+	row := stmt.QueryRow(user.GetId(), org.GetId(), inviter.GetName(), inviterType(inviter), status)
 	if err = a.fillAssociationReqFromSQL(row); err != nil {
 		return nil, util.CastErr(err)
 	}
@@ -144,39 +144,38 @@ func getAssociationReqSQL(user *user.User, org *organization.Organization, invit
 
 // may be extraneous
 func (a *Association) saveSQL() util.Gerror {
-
+	return nil
 }
 
 func (a *Association) deleteSQL() util.Gerror {
-	
+	return nil
 }
 
 func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Gerror) {
-
+	return nil, nil
 }
 
 func orgAssociationsSQL(user *user.User) ([]*organization.Organization, util.Gerror) {
-
+	return nil, nil
 }
 
 func deleteAllOrgAssociationsSQL(org *organization.Organization) util.Gerror {
-
+	return nil
 }
 
 func deleteAllUserAssociationsSQL(user *user.User) util.Gerror {
-
+	return nil
 }
 
 func (a *AssociationReq) acceptSQL() util.Gerror {
 	if config.Config.UseMySQL {
 		return nil
-	} else {
-		return a.acceptPostgresSQL()
 	}
+	return a.acceptPostgresSQL()
 }
 
 func (a *AssociationReq) rejectSQL() util.Gerror {
-	a.Status = 'rejected'
+	a.Status = "rejected"
 	return a.savePostgreSQL()
 }
 
@@ -192,7 +191,7 @@ func (a *AssociationReq) deleteSQL() util.Gerror {
 	if err != nil {
 		return util.CastErr(err)
 	}
-	_, err = tx.Exec(sqlStmt, a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), a.Inviter.URLType(), a.Status)
+	_, err = tx.Exec(sqlStmt, a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), inviterType(a.Inviter), a.Status)
 
 	if err != nil {
 		tx.Rollback()
@@ -212,9 +211,9 @@ func orgsAssociationReqCountSQL(user *user.User) (int, util.Gerror) {
 		sqlStmt = "SELECT COUNT(*) c FROM goiardi.association_requests WHERE user_id = $1"
 	}
 
-	stmt, err := dbhandle.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
-		return false, util.CastErr(err)
+		return 0, util.CastErr(err)
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(user.GetId()).Scan(&c)
@@ -237,9 +236,9 @@ func userAssociationReqCountSQL(org *organization.Organization) (int, util.Gerro
 		sqlStmt = "SELECT COUNT(*) c FROM goiardi.association_requests WHERE organization_id = $1"
 	}
 
-	stmt, err := dbhandle.Prepare(sqlStmt)
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
-		return false, util.CastErr(err)
+		return 0, util.CastErr(err)
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(org.GetId()).Scan(&c)
@@ -253,25 +252,34 @@ func userAssociationReqCountSQL(org *organization.Organization) (int, util.Gerro
 }
 
 func getOrgAssociationReqsSQL(user *user.User) ([]*AssociationReq, util.Gerror) {
-
+	return nil, nil
 }
 
 func getUserAssociationReqsSQL(org *organization.Organization) ([]*AssociationReq, util.Gerror) {
-
+	return nil, nil
 }
 
 func deleteUserAssociationReqsSQL(user *user.User) util.Gerror {
-
+	return nil
 }
 
 func deleteOrgAssociationReqsSQL(org *organization.Organization) util.Gerror {
-
+	return nil
 }
 
 func (a *AssociationReq) saveSQL() util.Gerror {
 	if config.Config.UseMySQL {
-		return fmt.Errorf("MySQL's not implemented for this yet")
-	} else if config.Config.UsePostgreSQL {
-		return a.savePostgreSQL()
+		return util.Errorf("MySQL's not implemented for this yet")
 	}
+	return a.savePostgreSQL()
+}
+
+func inviterType(inviter actor.Actor) string {
+	var iT string
+	if inviter.IsUser() {
+		iT = "users"
+	} else {
+		iT = "clients"
+	}
+	return iT
 }
