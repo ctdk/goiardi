@@ -142,17 +142,77 @@ func getAssociationReqSQL(user *user.User, org *organization.Organization, invit
 	return a, nil
 }
 
-// may be extraneous
-func (a *Association) saveSQL() util.Gerror {
-	return nil
-}
+// At this time there doesn't seem to be a need for a saveSQL function for
+// associations - aside from creating it in the first place and possibly
+// deleting them, there's not much to edit.
 
 func (a *Association) deleteSQL() util.Gerror {
+	var sqlStmt string
+	if config.Config.UseMySQL {
+
+	} else {
+		sqlStmt = "DELETE FROM goiardi.associations WHERE user_id = $1 AND organization_id = $2"
+	}
+
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return util.CastErr(err)
+	}
+	_, err = tx.Exec(sqlStmt, a.User.GetId(), a.Org.GetId())
+
+	if err != nil {
+		tx.Rollback()
+		return util.CastErr(err)
+	}
+	tx.Commit()
+
 	return nil
 }
 
 func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Gerror) {
-	return nil, nil
+
+	var sqlStmt string
+	if config.Config.UseMySQL {
+
+	} else {
+		sqlStmt = "SELECT user_id FROM goiardi.associations WHERE a.organization_id = $1"
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, util.CastErr(err)
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(org.GetId())
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ua := make([]*user.User, 0) // eh?
+			return ua, nil
+		}
+		return nil, util.CastErr(err)
+	}
+	userIds := make([]int, 0)
+	for rows.Next() {
+		var i int
+		ierr := rows.Scan(&i)
+		if ierr != nil {
+			return nil, util.CastErr(ierr)
+		}
+		userIds = append(userIds, i)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	userAssoc, err := user.UsersByIdSQL(userIds)
+
+	if err != nil {
+		return nil, util.CastErr(err)
+	}
+
+	return userAssoc, nil
 }
 
 func orgAssociationsSQL(user *user.User) ([]*organization.Organization, util.Gerror) {
@@ -160,10 +220,48 @@ func orgAssociationsSQL(user *user.User) ([]*organization.Organization, util.Ger
 }
 
 func deleteAllOrgAssociationsSQL(org *organization.Organization) util.Gerror {
+	var sqlStmt string
+	if config.Config.UseMySQL {
+
+	} else {
+		sqlStmt = "DELETE FROM goiardi.associations WHERE organization_id = $1"
+	}
+
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return util.CastErr(err)
+	}
+	_, err = tx.Exec(sqlStmt, org.GetId())
+
+	if err != nil {
+		tx.Rollback()
+		return util.CastErr(err)
+	}
+	tx.Commit()
+
 	return nil
 }
 
 func deleteAllUserAssociationsSQL(user *user.User) util.Gerror {
+	var sqlStmt string
+	if config.Config.UseMySQL {
+
+	} else {
+		sqlStmt = "DELETE FROM goiardi.associations WHERE user_id = $1"
+	}
+
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return util.CastErr(err)
+	}
+	_, err = tx.Exec(sqlStmt, user.GetId())
+
+	if err != nil {
+		tx.Rollback()
+		return util.CastErr(err)
+	}
+	tx.Commit()
+
 	return nil
 }
 

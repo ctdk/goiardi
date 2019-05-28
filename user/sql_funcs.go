@@ -18,9 +18,11 @@ package user
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"log"
+	"strings"
 )
 
 func checkForUserSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -173,4 +175,50 @@ func allUsersSQL() []*User {
 		log.Fatal(err)
 	}
 	return users
+}
+
+func UsersByIdSQL(ids []int) ([]*User, error) {
+	var users []*User
+	var sqlStatement string
+
+	bind := make([]string. len(ids))
+
+	if config.Config.UseMySQL {
+		for i := range ids {
+			bind[i] = "?"
+		}
+
+		sqlStatement = fmt.Sprintf("SELECT name, displayname, admin, public_key, email, passwd, salt, id FROM users WHERE id IN (%s)", strings.Join(bind, ", "))
+	} else if config.Config.UsePostgreSQL {
+		for i := range ids {
+			bind[i] = fmt.Sprintf("$%d", i + 1)
+		}
+		sqlStatement = fmt.Sprintf("SELECT name, displayname, admin, public_key, email, passwd, salt, id FROM goiardi.users WHERE id IN (%s)", strings.Join(bind, ", "))
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query(ids...)
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return users, nil
+		}
+		return nil qerr
+	}
+	for rows.Next() {
+		us := new(User)
+		err = us.fillUserFromSQL(rows)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, us)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return users, nil
 }
