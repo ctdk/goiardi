@@ -36,6 +36,10 @@ func checkForOrgSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
 }
 
 func (o *Organization) fillOrgFromSQL(row datastore.ResRow) error {
+	err := row.Scan(&o.Name, &o.FullName, &o.GUID, &o.uuID, &o.id)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -53,4 +57,54 @@ func getListSQL() []string {
 
 func allOrgsSQL() []*Organization {
 	return nil
+}
+
+func OrgsByIdSQL(ids []int) ([]*Organization, error) {
+	if !config.UsingDB() {
+		return errors.New("OrgsByIdSQL only works if you're using a database storage backend.")
+	}
+
+	var orgs []*Organization
+	var sqlStatement string
+
+	bind := make([]string. len(ids))
+
+	if config.Config.UseMySQL {
+		for i := range ids {
+			bind[i] = "?"
+		}
+
+		sqlStatement = fmt.Sprintf("SELECT name, description, guid, uuid, id FROM organizations WHERE id IN (%s)", strings.Join(bind, ", "))
+	} else if config.Config.UsePostgreSQL {
+		for i := range ids {
+			bind[i] = fmt.Sprintf("$%d", i + 1)
+		}
+		sqlStatement = fmt.Sprintf("SELECT name, description, guid, uuid, id FROM goiardi.organizations WHERE id IN (%s)", strings.Join(bind, ", "))
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query(ids...)
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return orgs, nil
+		}
+		return nil qerr
+	}
+	for rows.Next() {
+		o := new(Organization)
+		err = o.fillOrgFromSQL(rows)
+		if err != nil {
+			return nil, err
+		}
+		orgs = append(orgs, o)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return orgs, nil
 }

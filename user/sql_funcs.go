@@ -18,6 +18,7 @@ package user
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
@@ -178,6 +179,10 @@ func allUsersSQL() []*User {
 }
 
 func UsersByIdSQL(ids []int) ([]*User, error) {
+	if !config.UsingDB() {
+		return errors.New("UsersByIdSQL only works if you're using a database storage backend.")
+	}
+
 	var users []*User
 	var sqlStatement string
 

@@ -23,6 +23,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	//"log"
@@ -170,7 +171,6 @@ func (a *Association) deleteSQL() util.Gerror {
 }
 
 func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Gerror) {
-
 	var sqlStmt string
 	if config.Config.UseMySQL {
 
@@ -216,7 +216,48 @@ func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Ger
 }
 
 func orgAssociationsSQL(user *user.User) ([]*organization.Organization, util.Gerror) {
-	return nil, nil
+	var sqlStmt string
+	if config.Config.UseMySQL {
+
+	} else {
+		sqlStmt = "SELECT organization_id FROM goiardi.associations WHERE a.user_id = $1"
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, util.CastErr(err)
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(user.GetId())
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ua := make([]*user.User, 0) // eh?
+			return ua, nil
+		}
+		return nil, util.CastErr(err)
+	}
+	orgIds := make([]int, 0)
+	for rows.Next() {
+		var i int
+		ierr := rows.Scan(&i)
+		if ierr != nil {
+			return nil, util.CastErr(ierr)
+		}
+		userIds = append(orgIds, i)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	orgAssoc, err := orgloader.OrgsByIdSQL(orgIds)
+
+	if err != nil {
+		return nil, util.CastErr(err)
+	}
+
+	return orgAssoc, nil
 }
 
 func deleteAllOrgAssociationsSQL(org *organization.Organization) util.Gerror {

@@ -61,3 +61,17 @@ func AllOrganizations() ([]*organization.Organization, error) {
 	}
 	return orgs, nil
 }
+
+func OrgsByIdSQL(ids []int) ([]&organization.Organization, error) {
+	orgs, err := organization.OrgsByIdSQL(ids)
+	if err != nil {
+		return nil, err
+	}
+	for _, o := range orgs {
+		aerr := acl.LoadACL(o)
+		if aerr != nil {
+			return nil, aerr
+		}
+	}
+	return orgs, nil
+}
