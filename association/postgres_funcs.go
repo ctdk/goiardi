@@ -22,7 +22,6 @@ import (
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	// "github.com/lib/pq"
 )
 
 func (a *Association) fillAssociationFromPostgreSQL(row datastore.ResRow) util.Gerror {
