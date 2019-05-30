@@ -20,8 +20,11 @@ package organization
 
 import (
 	"database/sql"
-	// "github.com/ctdk/goiardi/config"
+	"errors"
+	"fmt"
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"strings"
 )
 
 func checkForOrgSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -61,23 +64,28 @@ func allOrgsSQL() []*Organization {
 
 func OrgsByIdSQL(ids []int) ([]*Organization, error) {
 	if !config.UsingDB() {
-		return errors.New("OrgsByIdSQL only works if you're using a database storage backend.")
+		return nil, errors.New("OrgsByIdSQL only works if you're using a database storage backend.")
 	}
 
 	var orgs []*Organization
 	var sqlStatement string
 
-	bind := make([]string. len(ids))
+	bind := make([]string, len(ids))
+
+	// hmrmph, can't pass in []int as []interface{}, of course.
+	intfIds := make([]interface{}, len(ids))
 
 	if config.Config.UseMySQL {
-		for i := range ids {
+		for i, d := range ids {
 			bind[i] = "?"
+			intfIds[i] = d
 		}
 
 		sqlStatement = fmt.Sprintf("SELECT name, description, guid, uuid, id FROM organizations WHERE id IN (%s)", strings.Join(bind, ", "))
 	} else if config.Config.UsePostgreSQL {
-		for i := range ids {
+		for i, d := range ids {
 			bind[i] = fmt.Sprintf("$%d", i + 1)
+			intfIds[i] = d
 		}
 		sqlStatement = fmt.Sprintf("SELECT name, description, guid, uuid, id FROM goiardi.organizations WHERE id IN (%s)", strings.Join(bind, ", "))
 	}
@@ -87,12 +95,13 @@ func OrgsByIdSQL(ids []int) ([]*Organization, error) {
 		return nil, err
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query(ids...)
+
+	rows, qerr := stmt.Query(intfIds...)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return orgs, nil
 		}
-		return nil qerr
+		return nil, qerr
 	}
 	for rows.Next() {
 		o := new(Organization)

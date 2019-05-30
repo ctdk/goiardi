@@ -180,23 +180,26 @@ func allUsersSQL() []*User {
 
 func UsersByIdSQL(ids []int) ([]*User, error) {
 	if !config.UsingDB() {
-		return errors.New("UsersByIdSQL only works if you're using a database storage backend.")
+		return nil, errors.New("UsersByIdSQL only works if you're using a database storage backend.")
 	}
 
 	var users []*User
 	var sqlStatement string
 
-	bind := make([]string. len(ids))
+	bind := make([]string, len(ids))
+	intfIds := make([]interface{}, len(ids))
 
 	if config.Config.UseMySQL {
-		for i := range ids {
+		for i, d := range ids {
 			bind[i] = "?"
+			intfIds[i] = d
 		}
 
 		sqlStatement = fmt.Sprintf("SELECT name, displayname, admin, public_key, email, passwd, salt, id FROM users WHERE id IN (%s)", strings.Join(bind, ", "))
 	} else if config.Config.UsePostgreSQL {
-		for i := range ids {
+		for i, d := range ids {
 			bind[i] = fmt.Sprintf("$%d", i + 1)
+			intfIds[i] = d
 		}
 		sqlStatement = fmt.Sprintf("SELECT name, displayname, admin, public_key, email, passwd, salt, id FROM goiardi.users WHERE id IN (%s)", strings.Join(bind, ", "))
 	}
@@ -206,12 +209,12 @@ func UsersByIdSQL(ids []int) ([]*User, error) {
 		return nil, err
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query(ids...)
+	rows, qerr := stmt.Query(intfIds...)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return users, nil
 		}
-		return nil qerr
+		return nil, qerr
 	}
 	for rows.Next() {
 		us := new(User)

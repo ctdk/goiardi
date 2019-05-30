@@ -203,7 +203,7 @@ func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Ger
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, util.CastErr(err)
 	}
 
 	userAssoc, err := user.UsersByIdSQL(userIds)
@@ -215,7 +215,7 @@ func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Ger
 	return userAssoc, nil
 }
 
-func orgAssociationsSQL(user *user.User) ([]*organization.Organization, util.Gerror) {
+func orgAssociationsSQL(u *user.User) ([]*organization.Organization, util.Gerror) {
 	var sqlStmt string
 	if config.Config.UseMySQL {
 
@@ -229,11 +229,11 @@ func orgAssociationsSQL(user *user.User) ([]*organization.Organization, util.Ger
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(user.GetId())
+	rows, err := stmt.Query(u.GetId())
 	if err != nil {
 		if err == sql.ErrNoRows {
-			ua := make([]*user.User, 0) // eh?
-			return ua, nil
+			oa := make([]*organization.Organization, 0) // eh?
+			return oa, nil
 		}
 		return nil, util.CastErr(err)
 	}
@@ -244,11 +244,11 @@ func orgAssociationsSQL(user *user.User) ([]*organization.Organization, util.Ger
 		if ierr != nil {
 			return nil, util.CastErr(ierr)
 		}
-		userIds = append(orgIds, i)
+		orgIds = append(orgIds, i)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, util.CastErr(err)
 	}
 
 	orgAssoc, err := orgloader.OrgsByIdSQL(orgIds)
@@ -283,7 +283,7 @@ func deleteAllOrgAssociationsSQL(org *organization.Organization) util.Gerror {
 	return nil
 }
 
-func deleteAllUserAssociationsSQL(user *user.User) util.Gerror {
+func deleteAllUserAssociationsSQL(u *user.User) util.Gerror {
 	var sqlStmt string
 	if config.Config.UseMySQL {
 
@@ -295,7 +295,7 @@ func deleteAllUserAssociationsSQL(user *user.User) util.Gerror {
 	if err != nil {
 		return util.CastErr(err)
 	}
-	_, err = tx.Exec(sqlStmt, user.GetId())
+	_, err = tx.Exec(sqlStmt, u.GetId())
 
 	if err != nil {
 		tx.Rollback()
@@ -391,18 +391,122 @@ func userAssociationReqCountSQL(org *organization.Organization) (int, util.Gerro
 }
 
 func getOrgAssociationReqsSQL(user *user.User) ([]*AssociationReq, util.Gerror) {
-	return nil, nil
+	var sqlStmt string
+	if config.Config.UseMySQL {
+
+	} else {
+		sqlStmt = "SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE user_id = $1"
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, util.CastErr(err)
+	}
+	defer stmt.Close()
+
+	oar := make([]*AssociationReq, 0)
+	
+	rows, err := stmt.Query(user.GetId())
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return oar, nil
+		}
+		return nil, util.CastErr(err)
+	}
+	for rows.Next() {
+		ar := new(AssociationReq)
+		if err = ar.fillAssociationReqFromSQL(rows); err != nil {
+			return nil, util.CastErr(err)
+		}
+		oar = append(oar, ar)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, util.CastErr(err)
+	}
+
+	return oar, nil
 }
 
 func getUserAssociationReqsSQL(org *organization.Organization) ([]*AssociationReq, util.Gerror) {
-	return nil, nil
+	var sqlStmt string
+	if config.Config.UseMySQL {
+
+	} else {
+		sqlStmt = "SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE organization_id = $1"
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, util.CastErr(err)
+	}
+	defer stmt.Close()
+
+	uar := make([]*AssociationReq, 0)
+	
+	rows, err := stmt.Query(org.GetId())
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return uar, nil
+		}
+		return nil, util.CastErr(err)
+	}
+	for rows.Next() {
+		ar := new(AssociationReq)
+		if err = ar.fillAssociationReqFromSQL(rows); err != nil {
+			return nil, util.CastErr(err)
+		}
+		uar = append(uar, ar)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, util.CastErr(err)
+	}
+
+	return uar, nil
 }
 
 func deleteUserAssociationReqsSQL(user *user.User) util.Gerror {
+	var sqlStmt string
+	if config.Config.UseMySQL {
+
+	} else {
+		sqlStmt = "DELETE FROM goiardi.association_requests WHERE user_id = $1"
+	}
+
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return util.CastErr(err)
+	}
+	_, err = tx.Exec(sqlStmt, user.GetId())
+
+	if err != nil {
+		tx.Rollback()
+		return util.CastErr(err)
+	}
+	tx.Commit()
 	return nil
 }
 
 func deleteOrgAssociationReqsSQL(org *organization.Organization) util.Gerror {
+	var sqlStmt string
+	if config.Config.UseMySQL {
+
+	} else {
+		sqlStmt = "DELETE FROM goiardi.association_requests WHERE organization_id = $1"
+	}
+
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return util.CastErr(err)
+	}
+	_, err = tx.Exec(sqlStmt, org.GetId())
+
+	if err != nil {
+		tx.Rollback()
+		return util.CastErr(err)
+	}
+	tx.Commit()
 	return nil
 }
 
