@@ -116,7 +116,7 @@ func Get(orgName string) (*Organization, util.Gerror) {
 
 func (o *Organization) Save() util.Gerror {
 	if config.UsingDB() {
-
+		return o.saveSQL()
 	}
 	ds := datastore.New()
 	ds.Set("organization", o.Name, o)
@@ -128,7 +128,7 @@ func (o *Organization) Delete() util.Gerror {
 		return util.Errorf("Cannot delete 'default' organization")
 	}
 	if config.UsingDB() {
-
+		return util.CastErr(o.deleteSQL())
 	}
 	ds := datastore.New()
 	ds.Delete("organization", o.Name)
@@ -155,16 +155,10 @@ func (o *Organization) DataKey(typeKey string) string {
 	return util.JoinStr(typeKey, "-", o.Name)
 }
 
-/* Hmm. Orgs themselves don't have much that needs updating, but it'll get more
- * interesting when RBAC comes along.
- *
- * TODO: Come back soon and investigate.
- */
-
 func GetList() []string {
 	var orgList []string
 	if config.UsingDB() {
-
+		return getListSQL()
 	} else {
 		ds := datastore.New()
 		orgList = ds.GetList("organization")
@@ -174,7 +168,7 @@ func GetList() []string {
 
 func AllOrganizations() ([]*Organization, error) {
 	if config.UsingDB() {
-
+		return allOrgsSQL()
 	}
 	orgList := GetList()
 	orgs := make([]*Organization, 0, len(orgList))
@@ -244,16 +238,8 @@ func (o *Organization) SetPermCheck(p aclhelper.PermChecker) {
 
 // SearchSchemaName is a handy little helper method that will return the schema
 // that holds the search tables for this organization.
-//
-// At the moment that's still "goiardi", but the idea is that soon organizations
-// will have their search tables in separate schemas. The reason for this is to
-// hopefully keep them a little more manageable.
-//
-// Also, while it's pretty obvious this is only especially useful when using
-// postgres search.
 func (o *Organization) SearchSchemaName() string {
-	//return fmt.Sprintf(searchSchemaSkel, o.id)
-	return "goiardi"
+	return fmt.Sprintf(searchSchemaSkel, o.id)
 }
 
 func (o *Organization) GetId() int {

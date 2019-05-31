@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/util"
 	"strings"
 )
 
@@ -46,20 +47,128 @@ func (o *Organization) fillOrgFromSQL(row datastore.ResRow) error {
 	return nil
 }
 
+func (o *Organization) saveSQL() util.Gerror {
+	// pass-through to the postgres one; may add mysql later, but who knows
+	return o.savePostgreSQL()
+}
+
 func getOrgSQL(name string) (*Organization, error) {
-	return nil, nil
+	var sqlStatement string
+	org := new(Organization)
+
+	if config.Config.UseMySQL {
+		sqlStatement = "SELECT name, description, guid, uuid, id FROM organizations WHERE name = ?"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "SELECT name, description, guid, uuid, id FROM goiardi.organizations WHERE name = $1"
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	row := stmt.QueryRow(name);
+	if err = org.fillOrgFromSQL(row); err != nil {
+		return nil, err
+	}
+	return org, nil
 }
 
 func (o *Organization) deleteSQL() error {
+	var sqlStmt string
+	if config.Config.UseMySQL {
+
+	} else {
+		sqlStmt = "DELETE FROM goiardi.associations WHERE id = $1"
+	}
+
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return util.CastErr(err)
+	}
+	_, err = tx.Exec(sqlStmt, o.id)
+
+	if err != nil {
+		tx.Rollback()
+		return util.CastErr(err)
+	}
+	tx.Commit()
+
 	return nil
 }
 
 func getListSQL() []string {
-	return nil
+	var sqlStatement string
+	orgList := make([]string, 0)
+
+	if config.Config.UseMySQL {
+		sqlStatement = "SELECT name FROM organizations"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "SELECT name FROM goiardi.organizations"
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil
+	}
+	defer stmt.Close()
+
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		return nil
+	}
+	for rows.Next() {
+		var s string
+		err = rows.Scan(&s)
+		if err != nil {
+			return nil
+		}
+		orgList = append(orgList, s)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil
+	}
+	return orgList
 }
 
-func allOrgsSQL() []*Organization {
-	return nil
+func allOrgsSQL() ([]*Organization, error) {
+	var sqlStatement string
+	orgs := make([]*Organization, 0)
+
+	if config.Config.UseMySQL {
+		sqlStatement = "SELECT name, description, guid, uuid, id FROM organizations"
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = "SELECT name, description, guid, uuid, id FROM goiardi.organizations"
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, qerr := stmt.Query()
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return orgs, nil
+		}
+		return nil, qerr
+	}
+	for rows.Next() {
+		o := new(Organization)
+		err = o.fillOrgFromSQL(rows)
+		if err != nil {
+			return nil, err
+		}
+		orgs = append(orgs, o)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return orgs, nil
 }
 
 func OrgsByIdSQL(ids []int) ([]*Organization, error) {

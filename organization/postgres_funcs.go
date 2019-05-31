@@ -17,8 +17,11 @@
 package organization
 
 import (
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 )
+
+const baseSearchScheme = "goiardi_search_base"
 
 /*
  * Postgres specific functions for organizations. It's still up in the air if
@@ -26,13 +29,51 @@ import (
  */
 
 func (o *Organization) savePostgreSQL() util.Gerror {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return util.CastErr(err)
+	}
+
+	_, err = tx.Exec("SELECT goiardi.merge_orgs($1, $2, $3, $4)", o.Name, o.FullName, o.GUID, o.uuID)
+
+	if err != nil {
+		tx.Rollback()
+		return util.CastErr(err)
+	}
+	tx.Commit()
 	return nil
 }
 
 func (o *Organization) renamePostgreSQL(newName string) util.Gerror {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return util.CastErr(err)
+	}
+
+	_, err = tx.Exec("UPDATE goiardi.organizations SET name = $1 WHERE id = $2", newName, o.id)
+
+	// do we need to set o.Name here, or is that taken care of further up?
+
+	if err != nil {
+		tx.Rollback()
+		return util.CastErr(err)
+	}
+	tx.Commit()
 	return nil
 }
 
-func (o *Organization) createSearchSchema() error {
+func (o *Organization) createSearchSchema() util.Gerror {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return util.CastErr(err)
+	}
+
+	_, err = tx.Exec("SELECT goiardi.clone_schema($1, $2)", baseSearchScheme, o.SearchSchemaName)
+
+	if err != nil {
+		tx.Rollback()
+		return util.CastErr(err)
+	}
+	tx.Commit()
 	return nil
 }
