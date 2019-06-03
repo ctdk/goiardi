@@ -75,3 +75,25 @@ func OrgsByIdSQL(ids []int) ([]*organization.Organization, error) {
 	}
 	return orgs, nil
 }
+
+func OrgByIdSQL(id int) (*organization.Organization, error) {
+	orgs, err := organization.OrgsByIdSQL([]int{ids})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(orgs) == 0 {
+		return nil, util.Errorf("No organization with id %d was found", id)
+	} else if len(orgs) > 1 {
+		return nil, util.Errorf("Somehow, and this shouldn't possibly be able to happen, multiple organizations with id %d were found", id)
+	}
+
+	o := orgs[0]
+
+	aerr := acl.LoadACL(o)
+	if aerr != nil {
+		return nil, aerr
+	}
+
+	return o, nil
+}
