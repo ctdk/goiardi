@@ -17,6 +17,7 @@
 package container
 
 import (
+	"database/sql"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
@@ -48,7 +49,13 @@ func New(org *organization.Organization, name string) (*Container, util.Gerror) 
 		return nil, util.Errorf("invalid name '%s' for container", name)
 	}
 	if config.UsingDB() {
-
+		var err error
+		found, err = checkForContainerSQL(datastore.Dbh, org, name)
+		if err != nil {
+			gerr := util.Errorf(err.Error())
+			gerr.SetStatus(http.StatusInternalServerError)
+			return nil, gerr
+		}	
 	} else {
 		ds := datastore.New()
 		_, found = ds.Get(org.DataKey("container"), name)
@@ -66,27 +73,42 @@ func New(org *organization.Organization, name string) (*Container, util.Gerror) 
 }
 
 func Get(org *organization.Organization, name string) (*Container, util.Gerror) {
-	if config.UsingDB() {
-
-	}
-	ds := datastore.New()
-	c, found := ds.Get(org.DataKey("container"), name)
 	var container *Container
-	if c != nil {
-		container = c.(*Container)
+	var found bool
+
+	if config.UsingDB() {
+		var err error
+		container, err = getContainerSQL(name, org)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				found = false
+			} else {
+				return nil, util.CastErr(err)
+			}
+		}
+	} else {
+		ds := datastore.New()
+		c, found = ds.Get(org.DataKey("container"), name)
+		if c != nil {
+			container = c.(*Container)
+			container.Org = org
+		}
 	}
 	if !found {
 		err := util.Errorf("container '%s' not found in organization %s", name, org.Name)
 		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
-	container.Org = org
+	
 	return container, nil
 }
 
 func (c *Container) Save() util.Gerror {
 	if config.UsingDB() {
-
+		if err := c.saveSQL(); err != nil {
+			return util.CastErr(err)
+		}
+		return nil
 	}
 	ds := datastore.New()
 	ds.Set(c.Org.DataKey("container"), c.Name, c)
@@ -95,8 +117,12 @@ func (c *Container) Save() util.Gerror {
 
 func (c *Container) Delete() util.Gerror {
 	if config.UsingDB() {
-
+		if err := c.deleteSQL(); err != nil {
+			return util.CastErr(err)
+		}
+		return nil
 	}
+
 	ds := datastore.New()
 	ds.Delete(c.Org.DataKey("container"), c.Name)
 	if _, err := c.Org.PermCheck.DeleteItemACL(c); err != nil {
@@ -108,7 +134,7 @@ func (c *Container) Delete() util.Gerror {
 
 func GetList(org *organization.Organization) []string {
 	if config.UsingDB() {
-
+		return getListSQL(org)
 	}
 	ds := datastore.New()
 	conList := ds.GetList(org.DataKey("container"))
