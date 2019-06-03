@@ -29,11 +29,24 @@ import (
 )
 
 func checkForOrgSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
-	_, err := datastore.CheckForOne(datastore.Dbh, "organizations", name)
+	var objID int32
+	var prepStatement string
+	if config.Config.UseMySQL {
+		prepStatement = "SELECT id FROM organizations WHERE name = ?"
+	} else if config.Config.UsePostgreSQL {
+		prepStatement = "SELECT id FROM goiardi.organizations WHERE name = $1"
+	}
+	stmt, err := dbhandle.Prepare(prepStatement)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	err = stmt.QueryRow(name).Scan(&objID)
+
 	if err == nil {
 		return true, nil
-	}
-	if err != sql.ErrNoRows {
+	} else if err != sql.ErrNoRows {
 		return false, err
 	}
 	return false, nil

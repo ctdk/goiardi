@@ -141,14 +141,15 @@ func DecodeBlob(data []byte, obj interface{}) error {
 
 // CheckForOne object of the given type identified by the given name. For this
 // function to work, the underlying table MUST have its primary text identifier
-// be called "name".
-func CheckForOne(dbhandle Dbhandle, kind string, name string) (int32, error) {
+// be called "name" and have an "organization_id" column connecting it to its
+// parent org.
+func CheckForOne(dbhandle Dbhandle, kind string, name string, organization_id int) (int32, error) {
 	var objID int32
 	var prepStatement string
 	if config.Config.UseMySQL {
-		prepStatement = fmt.Sprintf("SELECT id FROM %s WHERE name = ?", kind)
+		prepStatement = fmt.Sprintf("SELECT id FROM %s WHERE name = ? AND organization_id = ?", kind)
 	} else if config.Config.UsePostgreSQL {
-		prepStatement = fmt.Sprintf("SELECT id FROM goiardi.%s WHERE name = $1", kind)
+		prepStatement = fmt.Sprintf("SELECT id FROM goiardi.%s WHERE name = $1 AND organization_id = $2", kind)
 	}
 	stmt, err := dbhandle.Prepare(prepStatement)
 	if err != nil {
@@ -156,6 +157,6 @@ func CheckForOne(dbhandle Dbhandle, kind string, name string) (int32, error) {
 	}
 	defer stmt.Close()
 
-	err = stmt.QueryRow(name).Scan(&objID)
+	err = stmt.QueryRow(name, organization_id).Scan(&objID)
 	return objID, err
 }
