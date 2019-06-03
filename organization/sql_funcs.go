@@ -93,7 +93,7 @@ func (o *Organization) deleteSQL() error {
 	if config.Config.UseMySQL {
 
 	} else {
-		sqlStmt = "DELETE FROM goiardi.associations WHERE id = $1"
+		sqlStmt = "DELETE FROM goiardi.organizations WHERE id = $1"
 	}
 
 	tx, err := datastore.Dbh.Begin()
