@@ -18,6 +18,17 @@ package group
 
 // SQL goodies for groups
 
+import (
+	"database/sql"
+	"github.com/ctdk/goiardi/client"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
+	"github.com/ctdk/goiardi/user"
+	"strings"
+)
+
 // Arrrgh, that's right. I need to look up the selecting an array aggregate with
 // table join and so forth for groups
 
@@ -39,3 +50,61 @@ WHERE groups.id = 1;
 It does, of course, need some cleaning up.
 
 ***************/
+
+func checkForGroupSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
+	_, err := datastore.CheckForOne(dbhandle, "groups", name)
+	if err == nil {
+		return true, nil
+	}
+	if err != sql.ErrNoRows {
+		return false, err
+	}
+	return false, nil
+}
+
+func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
+	var userIds []int
+	var clientIds []int
+	var groupIds []int
+	var orgId int
+	
+	// arrrgh blargh, it looks like we may also need to create a special
+	// type for getting the arrays of ints out of postgres.
+
+	// eeesh, there isn't a whole lot we can fill in directly.
+	err := row.Scan(&g.Name, &orgId, 
+}
+
+func getGroupSQL(name string, org *organization.Organization) (*Group, error) {
+	var sqlStatement string
+	c := new(Container)
+
+	if config.Config.UseMySQL {
+		// MySQL will be rather more intricate than postgres, I'm
+		// afraid. Leaving this here for now.
+		sqlStatement = "SELECT name, organization_id FROM groups WHERE name = ?"
+	} else if config.Config.UsePostgreSQL {
+		// bleh, break this apart into multiple lines so there's some
+		// small hope of reading and understanding it later.
+		sqlStatement = `select name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
+		LEFT JOIN 
+			(SELECT gau.group_id AS ugid, ARRAY_AGG(gau.user_id) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = groups.id 
+		LEFT JOIN 
+			(SELECT gac.group_id AS cgid, ARRAY_AGG(gac.client_id) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = groups.id
+		LEFT JOIN 
+			(SELECT gg.group_id AS ggid, ARRAY_AGG(gg.member_group_id) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = groups.id
+		WHERE organization_id = $1 AND name = $2`
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	row := stmt.QueryRow(org.GetId(), name);
+	if err = c.fillGroupFromSQL(row); err != nil {
+		return nil, err
+	}
+	return c, nil
+}

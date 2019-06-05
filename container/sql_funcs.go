@@ -43,7 +43,7 @@ func checkForContainerSQL(dbhandle datastore.Dbhandle, org *organization.Organiz
 func (c *Container) fillContainerFromSQL(row datastore.ResRow) error {
 	var orgId int
 
-	err := row.Scan(&c.Name, orgId)
+	err := row.Scan(&c.Name, &orgId)
 	if err != nil {
 		return err
 	}
