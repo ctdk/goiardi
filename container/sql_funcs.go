@@ -62,9 +62,9 @@ func getContainerSQL(name string, org *organization.Organization) (*Container, e
 	c := new(Container)
 
 	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name, organization_id FROM containers WHERE name = ?"
+		sqlStatement = "SELECT name, organization_id FROM containers WHERE organization_id = ? AND name = ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name, organization_id FROM goiardi.containers WHERE name = $1"
+		sqlStatement = "SELECT name, organization_id FROM goiardi.containers WHERE organization_id = $1 AND name = $2"
 	}
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
@@ -73,7 +73,7 @@ func getContainerSQL(name string, org *organization.Organization) (*Container, e
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(name);
+	row := stmt.QueryRow(org.GetId(), name);
 	if err = c.fillContainerFromSQL(row); err != nil {
 		return nil, err
 	}
