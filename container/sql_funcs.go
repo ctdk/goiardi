@@ -26,7 +26,6 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
-	"github.com/ctdk/goiardi/util"
 	"strings"
 )
 
@@ -118,13 +117,13 @@ func (c *Container) deleteSQL() error {
 
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		return util.CastErr(err)
+		return err
 	}
 	_, err = tx.Exec(sqlStmt, c.Name, c.Org.GetId())
 
 	if err != nil {
 		tx.Rollback()
-		return util.CastErr(err)
+		return err
 	}
 	tx.Commit()
 
