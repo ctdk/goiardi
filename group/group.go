@@ -522,3 +522,7 @@ func (g *Group) AllMembers() []aclhelper.Member {
 	}
 	return members
 }
+
+func (g *Group) GetId() int64 {
+	return g.id
+}
