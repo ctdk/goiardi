@@ -184,7 +184,7 @@ func allOrgsSQL() ([]*Organization, error) {
 	return orgs, nil
 }
 
-func OrgsByIdSQL(ids []int) ([]*Organization, error) {
+func OrgsByIdSQL(ids []int64) ([]*Organization, error) {
 	if !config.UsingDB() {
 		return nil, errors.New("OrgsByIdSQL only works if you're using a database storage backend.")
 	}

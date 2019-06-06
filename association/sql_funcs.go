@@ -192,7 +192,7 @@ func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Ger
 		}
 		return nil, util.CastErr(err)
 	}
-	userIds := make([]int, 0)
+	userIds := make([]int64, 0)
 	for rows.Next() {
 		var i int
 		ierr := rows.Scan(&i)
@@ -237,7 +237,7 @@ func orgAssociationsSQL(u *user.User) ([]*organization.Organization, util.Gerror
 		}
 		return nil, util.CastErr(err)
 	}
-	orgIds := make([]int, 0)
+	orgIds := make([]int64, 0)
 	for rows.Next() {
 		var i int
 		ierr := rows.Scan(&i)

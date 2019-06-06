@@ -41,6 +41,7 @@ type Group struct {
 	Actors []actor.Actor
 	Groups []*Group
 	m      sync.RWMutex
+	id     int64
 }
 
 func New(org *organization.Organization, name string) (*Group, util.Gerror) {

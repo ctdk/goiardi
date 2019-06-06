@@ -39,7 +39,7 @@ type AssociationReq struct {
 	Org     *organization.Organization
 	Inviter actor.Actor
 	Status  string
-	id int
+	id int64
 }
 
 func (a *AssociationReq) Key() string {

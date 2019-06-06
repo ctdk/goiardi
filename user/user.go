@@ -55,7 +55,7 @@ type User struct {
 	pubKey      string
 	passwd      string
 	salt        []byte
-	id          int
+	id          int64
 	AuthzID     string `json:"authz_id"`
 }
 
@@ -776,6 +776,6 @@ func (u *User) ACLName() string {
 	return u.GetName()
 }
 
-func (u *User) GetId() int {
+func (u *User) GetId() int64 {
 	return u.id
 }

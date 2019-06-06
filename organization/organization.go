@@ -36,7 +36,7 @@ type Organization struct {
 	FullName  string `json:"full_name"`
 	GUID      string `json:"guid"`
 	uuID      uuid.UUID
-	id        int
+	id        int64
 	PermCheck aclhelper.PermChecker `json:"-"`
 }
 
@@ -45,7 +45,7 @@ type privOrganization struct {
 	FullName *string
 	GUID     *string
 	UUID     *uuid.UUID
-	ID       *int
+	ID       *int64
 }
 
 const searchSchemaSkel = "goiardi_search_%d"
@@ -242,6 +242,6 @@ func (o *Organization) SearchSchemaName() string {
 	return fmt.Sprintf(searchSchemaSkel, o.id)
 }
 
-func (o *Organization) GetId() int {
+func (o *Organization) GetId() int64 {
 	return o.id
 }

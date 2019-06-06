@@ -26,7 +26,7 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
-	"strings"
+	"github.com/lib/pq"
 )
 
 // Arrrgh, that's right. I need to look up the selecting an array aggregate with

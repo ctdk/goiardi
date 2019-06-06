@@ -39,7 +39,7 @@ func checkForClientSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
 }
 
 func (c *Client) fillClientFromSQL(row datastore.ResRow) error {
-	err := row.Scan(&c.Name, &c.NodeName, &c.Validator, &c.Admin, &c.Orgname, &c.pubKey, &c.Certificate)
+	err := row.Scan(&c.Name, &c.NodeName, &c.Validator, &c.Admin, &c.Orgname, &c.pubKey, &c.Certificate, &c.id)
 	if err != nil {
 		return err
 	}
@@ -52,9 +52,9 @@ func getClientSQL(name string) (*Client, error) {
 	client := new(Client)
 	var sqlStatement string
 	if config.Config.UseMySQL {
-		sqlStatement = "select c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o on c.organization_id = o.id WHERE c.name = ?"
+		sqlStatement = "select c.name, nodename, validator, admin, o.name, public_key, certificate, id FROM clients c JOIN organizations o on c.organization_id = o.id WHERE c.name = ?"
 	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "select c.name, nodename, validator, admin, o.name, public_key, certificate FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE c.name = $1"
+		sqlStatement = "select c.name, nodename, validator, admin, o.name, public_key, certificate, id FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE c.name = $1"
 	}
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {

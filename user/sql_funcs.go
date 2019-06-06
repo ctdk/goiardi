@@ -178,7 +178,7 @@ func allUsersSQL() []*User {
 	return users
 }
 
-func UsersByIdSQL(ids []int) ([]*User, error) {
+func UsersByIdSQL(ids []int64) ([]*User, error) {
 	if !config.UsingDB() {
 		return nil, errors.New("UsersByIdSQL only works if you're using a database storage backend.")
 	}

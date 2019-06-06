@@ -62,7 +62,7 @@ func AllOrganizations() ([]*organization.Organization, error) {
 	return orgs, nil
 }
 
-func OrgsByIdSQL(ids []int) ([]*organization.Organization, error) {
+func OrgsByIdSQL(ids []int64) ([]*organization.Organization, error) {
 	orgs, err := organization.OrgsByIdSQL(ids)
 	if err != nil {
 		return nil, err
@@ -76,8 +76,8 @@ func OrgsByIdSQL(ids []int) ([]*organization.Organization, error) {
 	return orgs, nil
 }
 
-func OrgByIdSQL(id int) (*organization.Organization, error) {
-	orgs, err := organization.OrgsByIdSQL([]int{ids})
+func OrgByIdSQL(id int64) (*organization.Organization, error) {
+	orgs, err := organization.OrgsByIdSQL([]int64{ids})
 	if err != nil {
 		return nil, err
 	}
