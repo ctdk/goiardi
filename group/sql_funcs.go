@@ -141,6 +141,42 @@ func getGroupSQL(name string, org *organization.Organization) (*Group, error) {
 	return g, nil
 }
 
+func (g *Group) saveSQL() error {
+	// deal with mysql later, if at all. If we don't, of course, the
+	// contents of savePostgreSQL() should move into here.
+	//
+	// Reminder: the SQL save methods will also need to deal with saving
+	// member actors and groups.
+	return g.savePostgreSQL()
+}
+
+// The Add/Del Actor/Group methods don't need SQL methods, so they're left out
+// in here.
+
+func (g *Group) renameSQL() error {
+
+}
+
+func (g *Group) deleteSQL() error {
+
+}
+
+func (g *Group) getListSQL(org *organization.Organization) []string {
+
+}
+
+func (g *Group) AllGroups(org *organization.Organization) []*Group {
+
+}
+
+func (g *Group) allMembersSQL() []aclhelper.Member {
+
+}
+
+func clearActorSQL(org *organization.Organization, act actor.Actor) {
+
+}
+
 func GroupsByIdSQL(ids []int64) ([]*Group, error) {
 	if !config.UsingDB() {
 		return nil, errors.New("GroupsByIdSQL only works if you're using a database storage backend.")

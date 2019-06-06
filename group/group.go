@@ -42,6 +42,7 @@ type Group struct {
 	Groups []*Group
 	m      sync.RWMutex
 	id     int64
+	depChk map[string]bool
 }
 
 func New(org *organization.Organization, name string) (*Group, util.Gerror) {
@@ -141,13 +142,13 @@ func (g *Group) Rename(newName string) util.Gerror {
 }
 
 func (g *Group) save() util.Gerror {
+	if config.UsingDB() {
+
+	}
+
 	// Save the actors and groups in the ACL
 	if err := g.saveUsers(); err != nil {
 		return err
-	}
-
-	if config.UsingDB() {
-
 	}
 
 	ds := datastore.New()

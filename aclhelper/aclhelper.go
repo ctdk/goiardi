@@ -36,6 +36,7 @@ type Member interface {
 	IsACLRole() bool
 	ACLName() string
 	GetName() string
+	GetId() int64
 }
 
 type Role interface {
@@ -101,6 +102,7 @@ type Actor interface {
 	ACLName() string
 	Authz() string
 	IsACLRole() bool
+	GetId() int64
 }
 
 type PermChecker interface {
