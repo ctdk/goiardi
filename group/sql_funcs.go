@@ -21,6 +21,7 @@ package group
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
@@ -78,33 +79,52 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 		return err
 	}
 
-	// TODO: check and make sure there's some way to prevent loops where
-	// groups include each other as members.
-
-	// fill in the actor and group slices with the appropriate objects
-	// Will these need to be sorted? We'll see.
-	// actorez := make([]actor.Actor, 0, len(userIds) + len(clientIds))
-
-	groupez, err := GroupsByIdSQL(groupIds)
-	if err != nil {
-		return err
+	// Perform a quick sanity check because why not
+	if orgId != org.GetId() {
+		return fmt.Errorf("org id %d returned from query somehow did not match the expected id %d for %s", orgId, org.GetId(), org.Name)
 	}
-	g.Groups = groupez
+	/*
+	 * Only fill in the child actors & groups if it's the main group we're
+	 * interested in. Otherwise, skip over this. On the off chance we ever
+	 * need the grandchild groups, we can reload the group in question. If
+	 * the 'getChildren' flag in a group object is false, its members have
+	 * not been loaded yet.
+	 *
+	 * NOTE: this is in lieu of retrieving the whole tree of groups & their
+	 * members, both to avoid needlessly large data structures and the time
+	 * spent processing the queries to get them, but also to avoid getting
+	 * stuck in a loop. Should this not be sufficient, it'll need to be
+	 * dealt with more thoroughly.
+	 */
 
-	userez, err := user.UsersByIdSQL(userIds)
-	if err != nil {
-		return err
+	if g.getChildren {
+		// fill in the actor and group slices with the appropriate
+		// objects. Will these need to be sorted? We'll see.
+
+		groupez, err := GroupsByIdSQL(groupIds)
+		if err != nil {
+			return err
+		}
+		g.Groups = groupez
+
+		userez, err := user.UsersByIdSQL(userIds)
+		if err != nil {
+			return err
+		}
+
+		clientez, err := client.ClientsByIdSQL(clientIds)
+		if err != nil {
+			return nil
+		}
+
+		actorez := make([]actor.Actor, 0, len(userez) + len(clientez))
+		// may need to do the explicit for range loop.
+		actorez = append(actorez, userez...)
+		actorez = append(actorez, clientez...)
+		g.Actors = actorez
 	}
 
-	clientez, err := client.ClientsByIdSQL(clientIds)
-	if err != nil {
-		return nil
-	}
-
-	actorez := make([]actor.Actor, len(userez) + len(clientez))
-	// may need to do the explicit for range loop.
-	actorez = append(actorez, userez...)
-	actorez = append(actorez, clientez...)
+	return nil
 }
 
 func getGroupSQL(name string, org *organization.Organization) (*Group, error) {
@@ -135,6 +155,8 @@ func getGroupSQL(name string, org *organization.Organization) (*Group, error) {
 	defer stmt.Close()
 
 	row := stmt.QueryRow(org.GetId(), name);
+
+	g.getChildren = true
 	if err = g.fillGroupFromSQL(row); err != nil {
 		return nil, err
 	}
@@ -153,8 +175,26 @@ func (g *Group) saveSQL() error {
 // The Add/Del Actor/Group methods don't need SQL methods, so they're left out
 // in here.
 
-func (g *Group) renameSQL() error {
-
+func (g *Group) renameSQL(newName string) error {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		gerr := util.Errorf(err.Error())
+		return gerr
+	}
+	_, err = tx.Exec("SELECT goiardi.rename_group($1, $2)", g.Name, newName)
+	if err != nil {
+		tx.Rollback()
+		gerr := util.Errorf(err.Error())
+		if strings.HasPrefix(err.Error(), strings.Contains(err.Error(), "already exists, cannot rename")) {
+			gerr.SetStatus(http.StatusConflict)
+		} else {
+			gerr.SetStatus(http.StatusInternalServerError)
+		}
+		return gerr
+	}
+	g.Name = newName
+	tx.Commit()
+	return nil
 }
 
 func (g *Group) deleteSQL() error {

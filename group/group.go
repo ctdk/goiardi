@@ -42,7 +42,7 @@ type Group struct {
 	Groups []*Group
 	m      sync.RWMutex
 	id     int64
-	depChk map[string]bool
+	getChildren bool
 }
 
 func New(org *organization.Organization, name string) (*Group, util.Gerror) {
@@ -81,7 +81,11 @@ func Get(org *organization.Organization, name string) (*Group, util.Gerror) {
 		return nil, err
 	}
 	if config.UsingDB() {
-
+		g, err := getGroupSQL(name, org)
+		if err != nil {
+			return nil, err
+		}
+		return g, nil
 	}
 	ds := datastore.New()
 	g, found := ds.Get(org.DataKey("group"), name)
@@ -98,6 +102,20 @@ func Get(org *organization.Organization, name string) (*Group, util.Gerror) {
 	// assign it to the group so we have access to the ACL
 	// stuff
 	return group, nil
+}
+
+// If the member objects of a child group need to be manipulated, listed,
+// folded, or mutilated, reload the group in question. Should work...
+func (g *Group) Reload() util.Gerror {
+	if g.getChildren || !config.UsingDB() {
+		return nil
+	}
+	tg, err := Get(g.org, g.Name)
+	if err != nil {
+		return nil
+	}
+	g = tg
+	return nil
 }
 
 func (g *Group) Save() util.Gerror {
@@ -147,7 +165,7 @@ func (g *Group) save() util.Gerror {
 	}
 
 	// Save the actors and groups in the ACL
-	if err := g.saveUsers(); err != nil {
+	if err := g.saveMembers(); err != nil {
 		return err
 	}
 
@@ -156,7 +174,7 @@ func (g *Group) save() util.Gerror {
 	return nil
 }
 
-func (g *Group) saveUsers() util.Gerror {
+func (g *Group) saveMembers() util.Gerror {
 	toAdd := g.AllMembers()
 
 	if len(toAdd) == 0 {
