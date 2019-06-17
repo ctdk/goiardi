@@ -23,6 +23,24 @@ import (
 // anything specific enough to postgres that weird conditionals inside a common
 // function or method would be unwieldy.
 
-func (g *Group) savePostgreSQL() error {
-
+func (g *Group) savePostgreSQL(user_ids []int64, client_ids []int64, group_ids []int64) error {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		gerr := util.Errorf(err.Error())
+		return gerr
+	}
+	_, err = tx.Exec("SELECT goiardi.merge_groups($1, $2, $3, $4, $5)", g.Name, g.Org.GetId(), user_ids, client_ids, group_ids)
+	if err != nil {
+		tx.Rollback()
+		gerr := util.Errorf(err.Error())
+		if strings.HasPrefix(err.Error(), strings.Contains(err.Error(), "already exists, cannot rename")) {
+			gerr.SetStatus(http.StatusConflict)
+		} else {
+			gerr.SetStatus(http.StatusInternalServerError)
+		}
+		return gerr
+	}
+	g.Name = newName
+	tx.Commit()
+	return nil
 }

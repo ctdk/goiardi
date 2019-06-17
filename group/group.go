@@ -137,7 +137,9 @@ func (g *Group) Rename(newName string) util.Gerror {
 	defer g.m.Unlock()
 	oldName := g.Name
 	if config.UsingDB() {
-
+		if err := g.renameSQL(newName); err != nil {
+			return util.CastErr(err)
+		}
 	} else {
 		ds := datastore.New()
 		if _, found := ds.Get(g.Org.DataKey("group"), newName); found {
@@ -161,7 +163,9 @@ func (g *Group) Rename(newName string) util.Gerror {
 
 func (g *Group) save() util.Gerror {
 	if config.UsingDB() {
-
+		if err := g.saveSQL(); err != nil {
+			return util.CastErr(err)
+		}
 	}
 
 	// Save the actors and groups in the ACL
@@ -385,7 +389,7 @@ func (g *Group) ToJSON() map[string]interface{} {
 
 func GetList(org *organization.Organization) []string {
 	if config.UsingDB() {
-
+		return getListSQL(org)
 	}
 	ds := datastore.New()
 	groupList := ds.GetList(org.DataKey("group"))
@@ -394,7 +398,7 @@ func GetList(org *organization.Organization) []string {
 
 func AllGroups(org *organization.Organization) []*Group {
 	if config.UsingDB() {
-
+		return allGroupsSQL(org)
 	}
 	groupList := GetList(org)
 	groups := make([]*Group, 0, len(groupList))
@@ -410,7 +414,7 @@ func AllGroups(org *organization.Organization) []*Group {
 
 func ClearActor(org *organization.Organization, act actor.Actor) {
 	if config.UsingDB() {
-
+		return clearActorSQL(org, act)
 	}
 	gs := AllGroups(org)
 	for _, g := range gs {

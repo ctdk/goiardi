@@ -169,7 +169,27 @@ func (g *Group) saveSQL() error {
 	//
 	// Reminder: the SQL save methods will also need to deal with saving
 	// member actors and groups.
-	return g.savePostgreSQL()
+
+	// get arrays of ids for saving
+	user_ids := make([]int64, 0)
+	client_ids := make([]int64, 0)
+	group_ids := make([]int64, len(g.Groups))
+
+	// get the groups out of the way
+	for i, mg := range g.Groups {
+		group_ids[i] = mg.GetId()
+	}
+
+	// and actors
+	for _, act := range g.Actors() {
+		if act.IsUser() {
+			user_ids = append(user_ids, act.GetId())
+		} else {
+			client_ids = append(client_ids, act.GetId())
+		}
+	}
+
+	return g.savePostgreSQL(user_ids, client_ids, group_ids)
 }
 
 // The Add/Del Actor/Group methods don't need SQL methods, so they're left out
@@ -198,23 +218,84 @@ func (g *Group) renameSQL(newName string) error {
 }
 
 func (g *Group) deleteSQL() error {
-
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	// this is a bit complicated, so use a function yo
+	sqlStmt := "SELECT goiardi.delete_group($1, $2)"
+	_, err = tx.Exec(sqlStmt, g.Name, g.Org.GetId())
+	if err != nil {
+		terr := tx.Rollback()
+		if terr != nil {
+			err = fmt.Errorf("deleting group %s from organization %s had an error '%s', and then rolling back the transaction gave another error '%s'", g.Name, err.Error(), terr.Error())
+		}
+		return err
+	}
+	tx.Commit()
+	return nil
 }
 
-func (g *Group) getListSQL(org *organization.Organization) []string {
+func getListSQL(org *organization.Organization) ([]string, err) {
+	var groupList []string
 
+	sqlStatement := "SELECT name FROM goiardi.groups WHERE organization_id = $1"
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query(org.GetId())
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return users, nil
+		}
+		return nil, qerr
+	}
+	for rows.Next() {
+		var gName string
+		err := row.Scan(&gName)
+		if err != nil {
+			return nil, err
+		}
+		groupList = append(groupList, gName)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return groupList, nil
 }
 
-func (g *Group) AllGroups(org *organization.Organization) []*Group {
-
-}
-
-func (g *Group) allMembersSQL() []aclhelper.Member {
+func allGroupsSQL(org *organization.Organization) []*Group {
 
 }
 
 func clearActorSQL(org *organization.Organization, act actor.Actor) {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
 
+	var actType string
+	if act.IsUser() {
+		actType = "user"
+	} else {
+		actType = "client"
+	}
+
+	sqlStmt := fmt.Sprintf("DELETE FROM goiardi.group_actor_%ss WHERE organization_id = $1 AND %s_id = $1")
+
+	_, err = tx.Exec(sqlStmt, act.GetName(), g.Org.GetId())
+	if err != nil {
+		terr := tx.Rollback()
+		if terr != nil {
+			err = fmt.Errorf("clearing actor %s from organization %s had an error '%s', and then rolling back the transaction gave another error '%s'", act.GetName(), g.Org.Name, err.Error(), terr.Error())
+		}
+		return err
+	}
+	tx.Commit()
+	return nil
 }
 
 func GroupsByIdSQL(ids []int64) ([]*Group, error) {
@@ -222,7 +303,7 @@ func GroupsByIdSQL(ids []int64) ([]*Group, error) {
 		return nil, errors.New("GroupsByIdSQL only works if you're using a database storage backend.")
 	}
 
-	var groups []*User
+	var groups []*Groups
 	var sqlStatement string
 
 	bind := make([]string, len(ids))
