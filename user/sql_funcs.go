@@ -36,11 +36,11 @@ func checkForUserSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
 	}
 	stmt, err := dbhandle.Prepare(prepStatement)
 	if err != nil {
-		return 0, err
+		return false, err
 	}
 	defer stmt.Close()
 
-	err = stmt.QueryRow(name, organization_id).Scan(&objID)
+	err = stmt.QueryRow(name).Scan(&objID)
 	if err == nil {
 		return true, nil
 	}

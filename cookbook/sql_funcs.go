@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"log"
 	"net/http"
@@ -64,8 +65,8 @@ func (c *Cookbook) numVer() (int, error) {
 	return cbvCount, nil
 }
 
-func checkForCookbookSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
-	_, err := datastore.CheckForOne(dbhandle, "cookbooks", name)
+func checkForCookbookSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
+	_, err := datastore.CheckForOne(dbhandle, "cookbooks", org.GetId(), name)
 	if err == nil {
 		return true, nil
 	}

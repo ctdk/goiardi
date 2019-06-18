@@ -25,7 +25,6 @@ import (
 	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/container"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/organization"
@@ -430,10 +429,22 @@ func (c *Checker) RootCheckPerm(doer aclhelper.Actor, perm string) (bool, util.G
 }
 
 func (c *Checker) CheckContainerPerm(doer aclhelper.Actor, containerName string, perm string) (bool, util.Gerror) {
-	cont, err := container.Get(c.org, containerName)
-	if err != nil {
-		return false, err
+	// make a fake container, grr. Regardless, we need to check if the
+	// container in question actually exists.
+	if config.UsingDB() {
+		if _, err := datastore.CheckForOne(dbhandle datastore.Dbhandle, "containers", c.org.GetId(), containerName); err != nil {
+			// would this need formatting?
+			return util.CastErr(err)
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get(org.DataKey("container"), containerName)
+		if !found {
+			return false, fmt.Errorf("no container %s in organization %s found", containerName, c.org.Name)
+		}
 	}
+
+	cont := &aclhelper.RootACL{Name: containerName, Kind: "containers", Subkind: "containers"}
 	return c.CheckItemPerm(cont, doer, perm)
 }
 

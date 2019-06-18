@@ -21,14 +21,15 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"log"
 	"strings"
 )
 
 // Functions for finding, saving, etc. data bags with an SQL database.
 
-func checkForDataBagSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
-	_, err := datastore.CheckForOne(dbhandle, "data_bags", name)
+func checkForDataBagSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
+	_, err := datastore.CheckForOne(dbhandle, "data_bags", org.GetId(), name)
 	if err == nil {
 		return true, nil
 	}

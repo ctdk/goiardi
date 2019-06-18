@@ -30,7 +30,7 @@ import (
 )
 
 func checkForContainerSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
-	_, err := datastore.CheckForOne(dbhandle, "containers", name)
+	_, err := datastore.CheckForOne(dbhandle, "containers", org.GetId(), name)
 	if err == nil {
 		return true, nil
 	}

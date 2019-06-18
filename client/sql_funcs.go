@@ -21,14 +21,15 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"log"
 	"net/http"
 	"strings"
 )
 
-func checkForClientSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
-	_, err := datastore.CheckForOne(dbhandle, "clients", name)
+func checkForClientSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
+	_, err := datastore.CheckForOne(dbhandle, "clients", org.GetId(), name)
 	if err == nil {
 		return true, nil
 	}

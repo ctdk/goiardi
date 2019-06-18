@@ -22,13 +22,10 @@ package datastore
 import (
 	"bytes"
 	"database/sql"
-	//"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	// just want the side effects
 	_ "github.com/go-sql-driver/mysql"
-	// just want the side effects
 	_ "github.com/lib/pq"
 	"strings"
 )
@@ -143,7 +140,7 @@ func DecodeBlob(data []byte, obj interface{}) error {
 // function to work, the underlying table MUST have its primary text identifier
 // be called "name" and have an "organization_id" column connecting it to its
 // parent org.
-func CheckForOne(dbhandle Dbhandle, kind string, organization_id int, name string) (int32, error) {
+func CheckForOne(dbhandle Dbhandle, kind string, organization_id int64, name string) (int32, error) {
 	var objID int32
 	var prepStatement string
 	if config.Config.UseMySQL {
