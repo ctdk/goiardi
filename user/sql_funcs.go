@@ -27,7 +27,20 @@ import (
 )
 
 func checkForUserSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
-	_, err := datastore.CheckForOne(dbhandle, "users", name)
+	var objID int32
+	var prepStatement string
+	if config.Config.UseMySQL {
+		prepStatement = "SELECT id FROM users WHERE name = ?"
+	} else if config.Config.UsePostgreSQL {
+		prepStatement = "SELECT id FROM goiardi.users WHERE name = $1"
+	}
+	stmt, err := dbhandle.Prepare(prepStatement)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	err = stmt.QueryRow(name, organization_id).Scan(&objID)
 	if err == nil {
 		return true, nil
 	}
