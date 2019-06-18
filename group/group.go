@@ -389,7 +389,8 @@ func (g *Group) ToJSON() map[string]interface{} {
 
 func GetList(org *organization.Organization) []string {
 	if config.UsingDB() {
-		return getListSQL(org)
+		list, _ := getListSQL(org)
+		return list
 	}
 	ds := datastore.New()
 	groupList := ds.GetList(org.DataKey("group"))
@@ -398,7 +399,10 @@ func GetList(org *organization.Organization) []string {
 
 func AllGroups(org *organization.Organization) []*Group {
 	if config.UsingDB() {
-		return allGroupsSQL(org)
+		// TODO: all of these kinds of functions need to do proper
+		// error handling.
+		ag, _ := allGroupsSQL(org)
+		return
 	}
 	groupList := GetList(org)
 	groups := make([]*Group, 0, len(groupList))

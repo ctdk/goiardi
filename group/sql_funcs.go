@@ -130,6 +130,7 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 func getGroupSQL(name string, org *organization.Organization) (*Group, error) {
 	var sqlStatement string
 	g := new(Group)
+	g.Org = org
 
 	if config.Config.UseMySQL {
 		// MySQL will be rather more intricate than postgres, I'm
@@ -222,9 +223,12 @@ func (g *Group) deleteSQL() error {
 	if err != nil {
 		return err
 	}
-	// this is a bit complicated, so use a function yo
-	sqlStmt := "SELECT goiardi.delete_group($1, $2)"
-	_, err = tx.Exec(sqlStmt, g.Name, g.Org.GetId())
+
+	// Live dangerously, use foreign keys w/ ON DELETE CASCADE to clear out
+	// the associations.
+
+	sqlStmt := "DELETE FROM goiardi.groups WHERE id = $1"
+	_, err = tx.Exec(sqlStmt, g.GetId())
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -267,8 +271,53 @@ func getListSQL(org *organization.Organization) ([]string, err) {
 	return groupList, nil
 }
 
-func allGroupsSQL(org *organization.Organization) []*Group {
+func allGroupsSQL(org *organization.Organization) ([]*Group, error) {
+	if !config.UsingDB() {
+		return nil, errors.New("allGroupsSQL only works if you're using a database storage backend.")
+	}
 
+	var groups []*Groups
+	var sqlStatement string
+
+	if config.Config.UseMySQL {
+		return nil, errors.New("Groups are not implemented with the MySQL backend yet, punting for now.")
+	} else if config.Config.UsePostgreSQL {
+		sqlStatement = `select name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
+		LEFT JOIN 
+			(SELECT gau.group_id AS ugid, ARRAY_AGG(gau.user_id) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = groups.id 
+		LEFT JOIN 
+			(SELECT gac.group_id AS cgid, ARRAY_AGG(gac.client_id) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = groups.id
+		LEFT JOIN 
+			(SELECT gg.group_id AS ggid, ARRAY_AGG(gg.member_group_id) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = groups.id
+		WHERE g.organization_id = $1`
+	}
+
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query(org.GetId())
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return users, nil
+		}
+		return nil, qerr
+	}
+	for rows.Next() {
+		g := new(Group)
+		g.Org = org
+		err = g.fillGroupFromSQL(rows)
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, g)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return groups, nil
 }
 
 func clearActorSQL(org *organization.Organization, act actor.Actor) {
