@@ -70,7 +70,7 @@ func New(org *organization.Organization, name string) (*DataBag, util.Gerror) {
 
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForDataBagSQL(datastore.Dbh, name)
+		found, cerr = checkForDataBagSQL(datastore.Dbh, org, name)
 		if cerr != nil {
 			err = util.Errorf(cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
@@ -139,7 +139,7 @@ func DoesExist(org *organization.Organization, dbName string) (bool, util.Gerror
 	var found bool
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForDataBagSQL(datastore.Dbh, dbName)
+		found, cerr = checkForDataBagSQL(datastore.Dbh, org, dbName)
 		if cerr != nil {
 			err := util.Errorf(cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)

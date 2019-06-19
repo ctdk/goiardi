@@ -97,7 +97,7 @@ func New(org *organization.Organization, clientname string) (*Client, util.Gerro
 	var err util.Gerror
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForClientSQL(datastore.Dbh, clientname)
+		found, cerr = checkForClientSQL(datastore.Dbh, org, clientname)
 		if cerr != nil {
 			err = util.Errorf(cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
@@ -170,7 +170,7 @@ func DoesExist(org *organization.Organization, clientname string) (bool, util.Ge
 	var found bool
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForClientSQL(datastore.Dbh, clientname)
+		found, cerr = checkForClientSQL(datastore.Dbh, org, clientname)
 		if cerr != nil {
 			err := util.CastErr(cerr)
 			return false, err

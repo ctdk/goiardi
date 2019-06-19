@@ -18,6 +18,9 @@ package group
 
 import (
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/util"
+	"net/http"
+	"strings"
 )
 
 // anything specific enough to postgres that weird conditionals inside a common
@@ -33,14 +36,9 @@ func (g *Group) savePostgreSQL(user_ids []int64, client_ids []int64, group_ids [
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())
-		if strings.HasPrefix(err.Error(), strings.Contains(err.Error(), "already exists, cannot rename")) {
-			gerr.SetStatus(http.StatusConflict)
-		} else {
-			gerr.SetStatus(http.StatusInternalServerError)
-		}
+		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	g.Name = newName
 	tx.Commit()
 	return nil
 }

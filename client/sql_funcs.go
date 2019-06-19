@@ -39,6 +39,7 @@ func checkForClientSQL(dbhandle datastore.Dbhandle, org *organization.Organizati
 	return false, nil
 }
 
+// TODO: Don't fill the client Orgname like this
 func (c *Client) fillClientFromSQL(row datastore.ResRow) error {
 	err := row.Scan(&c.Name, &c.NodeName, &c.Validator, &c.Admin, &c.Orgname, &c.pubKey, &c.Certificate, &c.id)
 	if err != nil {
@@ -222,4 +223,47 @@ func allClientsSQL() []*Client {
 		log.Fatal(err)
 	}
 	return clients
+}
+
+func ClientsByIdSQL(ids []int64) ([]*Client, error) {
+	if !config.UsingDB() {
+		return nil, errors.New("ClientsByIdSQL only works if you're using a database storage backend.")
+	}
+
+	var clients []*Client
+
+	bind := make([]string, len(ids))
+	intfIds := make([]interface{}, len(ids))
+
+	for i, d := range ids {
+		bind[i] = fmt.Sprintf("$%d", i + 1)
+		intfIds[i] = d
+	}
+	sqlStatement := fmt.Sprintf("select c.name, nodename, validator, admin, o.name, public_key, certificate, id FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE id IN (%s)", strings.Join(bind, ", "))
+
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	rows, qerr := stmt.Query(intfIds...)
+	if qerr != nil {
+		if qerr == sql.ErrNoRows {
+			return clients, nil
+		}
+		return nil, qerr
+	}
+	for rows.Next() {
+		cs := new(Client)
+		err = cs.fillClientFromSQL(rows)
+		if err != nil {
+			return nil, err
+		}
+		clients = append(clients, cs)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return clients, nil
 }

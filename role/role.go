@@ -50,7 +50,7 @@ func New(org *organization.Organization, name string) (*Role, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var err error
-		found, err = checkForRoleSQL(datastore.Dbh, name, org)
+		found, err = checkForRoleSQL(datastore.Dbh, org, name)
 		if err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -224,7 +224,7 @@ func DoesExist(org *organization.Organization, roleName string) (bool, util.Gerr
 	var found bool
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForRoleSQL(datastore.Dbh, roleName)
+		found, cerr = checkForRoleSQL(datastore.Dbh, org, roleName)
 		if cerr != nil {
 			err := util.Errorf(cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)

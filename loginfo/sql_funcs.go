@@ -36,7 +36,7 @@ func (le *LogInfo) writeEventSQL() error {
 		return err
 	}
 	typeTable := fmt.Sprintf("%ss", le.ActorType)
-	actorID, err := datastore.CheckForOne(tx, typeTable, le.Actor.GetName())
+	actorID, err := datastore.CheckForOne(tx, typeTable, le.org.GetId(), le.Actor.GetName())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -68,7 +68,7 @@ func (le *LogInfo) importEventSQL() error {
 		return err
 	}
 
-	actorID, err := datastore.CheckForOne(tx, typeTable, doer["name"].(string))
+	actorID, err := datastore.CheckForOne(tx, typeTable, le.org.GetId(), doer["name"].(string))
 	if err != nil {
 		actorID = -1
 	}

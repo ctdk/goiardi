@@ -83,7 +83,7 @@ func Get(org *organization.Organization, name string) (*Group, util.Gerror) {
 	if config.UsingDB() {
 		g, err := getGroupSQL(name, org)
 		if err != nil {
-			return nil, err
+			return nil, util.CastErr(err)
 		}
 		return g, nil
 	}
@@ -110,7 +110,7 @@ func (g *Group) Reload() util.Gerror {
 	if g.getChildren || !config.UsingDB() {
 		return nil
 	}
-	tg, err := Get(g.org, g.Name)
+	tg, err := Get(g.Org, g.Name)
 	if err != nil {
 		return nil
 	}
@@ -402,7 +402,7 @@ func AllGroups(org *organization.Organization) []*Group {
 		// TODO: all of these kinds of functions need to do proper
 		// error handling.
 		ag, _ := allGroupsSQL(org)
-		return
+		return ag
 	}
 	groupList := GetList(org)
 	groups := make([]*Group, 0, len(groupList))
@@ -418,7 +418,9 @@ func AllGroups(org *organization.Organization) []*Group {
 
 func ClearActor(org *organization.Organization, act actor.Actor) {
 	if config.UsingDB() {
-		return clearActorSQL(org, act)
+		// see previous comment about error handling
+		clearActorSQL(org, act)
+		return
 	}
 	gs := AllGroups(org)
 	for _, g := range gs {

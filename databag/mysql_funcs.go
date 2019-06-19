@@ -42,7 +42,7 @@ func (db *DataBag) newDBItemMySQL(dbiID string, rawDbagItem map[string]interface
 	tx, err := datastore.Dbh.Begin()
 	// make sure this data bag didn't go away while we were doing something
 	// else
-	found, ferr := checkForDataBagSQL(tx, db.Name)
+	found, ferr := checkForDataBagSQL(tx, db.org, db.Name)
 	if ferr != nil {
 		tx.Rollback()
 		return nil, err

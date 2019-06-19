@@ -22,12 +22,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
-	"github.com/lib/pq"
 )
 
 func checkForGroupSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
@@ -57,8 +57,8 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 	}
 
 	// Perform a quick sanity check because why not
-	if orgId != org.GetId() {
-		return fmt.Errorf("org id %d returned from query somehow did not match the expected id %d for %s", orgId, org.GetId(), org.Name)
+	if orgId != g.Org.GetId() {
+		return fmt.Errorf("org id %d returned from query somehow did not match the expected id %d for %s", orgId, g.Org.GetId(), g.Org.Name)
 	}
 	/*
 	 * Only fill in the child actors & groups if it's the main group we're
@@ -217,7 +217,7 @@ func (g *Group) deleteSQL() error {
 	return nil
 }
 
-func getListSQL(org *organization.Organization) ([]string, err) {
+func getListSQL(org *organization.Organization) ([]string, error) {
 	var groupList []string
 
 	sqlStatement := "SELECT name FROM goiardi.groups WHERE organization_id = $1"
@@ -297,7 +297,7 @@ func allGroupsSQL(org *organization.Organization) ([]*Group, error) {
 	return groups, nil
 }
 
-func clearActorSQL(org *organization.Organization, act actor.Actor) {
+func clearActorSQL(org *organization.Organization, act actor.Actor) error {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err

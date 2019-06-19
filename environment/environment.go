@@ -59,7 +59,7 @@ func New(org *organization.Organization, name string) (*ChefEnvironment, util.Ge
 	var found bool
 	if config.UsingDB() {
 		var eerr error
-		found, eerr = checkForEnvironmentSQL(datastore.Dbh, name)
+		found, eerr = checkForEnvironmentSQL(datastore.Dbh, org, name)
 		if eerr != nil {
 			err := util.CastErr(eerr)
 			err.SetStatus(http.StatusInternalServerError)
@@ -254,7 +254,7 @@ func DoesExist(org *organization.Organization, environmentName string) (bool, ut
 	var found bool
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForEnvironmentSQL(datastore.Dbh, environmentName)
+		found, cerr = checkForEnvironmentSQL(datastore.Dbh, org, environmentName)
 		if cerr != nil {
 			err := util.Errorf(cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)

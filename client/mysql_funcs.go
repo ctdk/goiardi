@@ -58,7 +58,7 @@ func (c *Client) renameMySQL(newName string) util.Gerror {
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	found, err := checkForClientSQL(datastore.Dbh, newName)
+	found, err := checkForClientSQL(datastore.Dbh, c.org, newName)
 	if found || err != nil {
 		tx.Rollback()
 		if found && err == nil {

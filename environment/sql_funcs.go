@@ -21,14 +21,15 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"log"
 	"strings"
 )
 
 /* General SQL functions for environments */
 
-func checkForEnvironmentSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
-	_, err := datastore.CheckForOne(dbhandle, "environments", name)
+func checkForEnvironmentSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
+	_, err := datastore.CheckForOne(dbhandle, "environments", org.GetId(), name)
 	if err == nil {
 		return true, nil
 	}

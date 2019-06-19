@@ -136,7 +136,7 @@ func New(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 	}
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForCookbookSQL(datastore.Dbh, name)
+		found, cerr = checkForCookbookSQL(datastore.Dbh, org, name)
 		if cerr != nil {
 			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
@@ -237,7 +237,7 @@ func DoesExist(org *organization.Organization, cookbookName string) (bool, util.
 	var found bool
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForCookbookSQL(datastore.Dbh, cookbookName)
+		found, cerr = checkForCookbookSQL(datastore.Dbh, org, cookbookName)
 		if cerr != nil {
 			err := util.Errorf(cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
