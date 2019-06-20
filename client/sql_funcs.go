@@ -42,7 +42,7 @@ func checkForClientSQL(dbhandle datastore.Dbhandle, org *organization.Organizati
 
 // TODO: Don't fill the client Orgname like this
 func (c *Client) fillClientFromSQL(row datastore.ResRow) error {
-	err := row.Scan(&c.Name, &c.NodeName, &c.Validator, &c.Admin, &c.Orgname, &c.pubKey, &c.Certificate, &c.id)
+	err := row.Scan(&c.Name, &c.NodeName, &c.Validator, &c.Admin, &c.pubKey, &c.Certificate, &c.id)
 	if err != nil {
 		return err
 	}
@@ -51,20 +51,18 @@ func (c *Client) fillClientFromSQL(row datastore.ResRow) error {
 	return nil
 }
 
-func getClientSQL(name string) (*Client, error) {
+func getClientSQL(name string, org *organization.Organization) (*Client, error) {
 	client := new(Client)
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "select c.name, nodename, validator, admin, o.name, public_key, certificate, id FROM clients c JOIN organizations o on c.organization_id = o.id WHERE c.name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "select c.name, nodename, validator, admin, o.name, public_key, certificate, id FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE c.name = $1"
-	}
+	client.org = org
+
+	sqlStatement := "select name, nodename, validator, admin, public_key, certificate, id FROM goiardi.clients WHERE organization_id = $1 AND name = $2"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(name)
+	row := stmt.QueryRow(org.GetId(), name)
 	err = client.fillClientFromSQL(row)
 	if err != nil {
 		return nil, err
@@ -72,20 +70,13 @@ func getClientSQL(name string) (*Client, error) {
 	return client, nil
 }
 
-func getMultiSQL(clientNames []string) ([]*Client, error) {
-	var sqlStmt string
+func getMultiSQL(clientNames []string, org *organization.Organization) ([]*Client, error) {
 	bind := make([]string, len(clientNames))
 
-	if config.Config.UseMySQL {
-		for i := range clientNames {
-			bind[i] = "?"
-		}
-		sqlStmt = fmt.Sprintf("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o on c.organization_id = o.id WHERE c.name in (%s)", strings.Join(bind, ", "))
-	} else if config.Config.UsePostgreSQL {
-		for i := range clientNames {
-			bind[i] = fmt.Sprintf("$%d", i+1)
-		}
-		sqlStmt = fmt.Sprintf("select c.name, nodename, validator, admin, o.name, public_key, certificate FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE c.name in (%s)", strings.Join(bind, ", "))
+	for i := range clientNames {
+		bind[i] = fmt.Sprintf("$%d", i+2)
+	}
+	sqlStmt = fmt.Sprintf("select name, nodename, validator, admin, public_key, certificate FROM goiardi.clients WHERE organization_id = $1 AND name IN (%s)", strings.Join(bind, ", "))
 	}
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -96,7 +87,7 @@ func getMultiSQL(clientNames []string) ([]*Client, error) {
 	for i, v := range clientNames {
 		nameArgs[i] = v
 	}
-	rows, err := stmt.Query(nameArgs...)
+	rows, err := stmt.Query(org.GetId(), nameArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -125,11 +116,9 @@ func (c *Client) deleteSQL() error {
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	if config.Config.UseMySQL {
-		_, err = tx.Exec("DELETE FROM clients WHERE name = ?", c.Name)
-	} else if config.Config.UsePostgreSQL {
-		_, err = tx.Exec("DELETE FROM goiardi.clients WHERE name = $1", c.Name)
-	}
+
+	_, err = tx.Exec("DELETE FROM goiardi.clients WHERE organization_id = $1 AND name = $2", c.org.GetId(), c.Name)
+
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)
@@ -140,27 +129,24 @@ func (c *Client) deleteSQL() error {
 	return nil
 }
 
-func numAdminsSQL() int {
+// This may be hopelessly obsolete with the new RBAC stuff.
+func numAdminsSQL(org *organization.Organization) int {
 	var numAdmins int
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT count(*) FROM clients WHERE admin = 1"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT count(*) FROM goiardi.clients WHERE admin = TRUE"
-	}
+
+	sqlStatement := "SELECT count(*) FROM goiardi.clients WHERE organization_id = $1 AND admin = TRUE"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	err = stmt.QueryRow().Scan(&numAdmins)
+	err = stmt.QueryRow(org.GetId()).Scan(&numAdmins)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return numAdmins
 }
 
-func getListSQL() []string {
+func getListSQL(org *organization.Organization) []string {
 	var clientList []string
 	var sqlStatement string
 	if config.Config.UseMySQL {
@@ -190,7 +176,7 @@ func getListSQL() []string {
 	}
 	return clientList
 }
-func allClientsSQL() []*Client {
+func allClientsSQL(org *organization.Organization) []*Client {
 	var clients []*Client
 	var sqlStatement string
 	if config.Config.UseMySQL {
@@ -226,7 +212,7 @@ func allClientsSQL() []*Client {
 	return clients
 }
 
-func ClientsByIdSQL(ids []int64) ([]*Client, error) {
+func ClientsByIdSQL(ids []int64, org *organization.Organization) ([]*Client, error) {
 	if !config.UsingDB() {
 		return nil, errors.New("ClientsByIdSQL only works if you're using a database storage backend.")
 	}
