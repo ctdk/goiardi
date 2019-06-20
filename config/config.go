@@ -66,6 +66,8 @@ type Conf struct {
 	SSLKey               string       `toml:"ssl-key"`
 	HTTPSUrls            bool         `toml:"https-urls"`
 	DisableWebUI         bool         `toml:"disable-webui"`
+	// UseMySQL and MySQL are only still here to allow gracefully exploding
+	// if that config is still set.
 	UseMySQL             bool         `toml:"use-mysql"`
 	MySQL                MySQLdb      `toml:"mysql"`
 	UsePostgreSQL        bool         `toml:"use-postgresql"`
@@ -139,13 +141,13 @@ var LogLevelNames = map[string]int{"debug": 5, "info": 4, "warning": 3, "error":
 
 // MySQLdb holds MySQL connection options.
 type MySQLdb struct {
-	Username    string            `long:"username" description:"MySQL username" env:"GOIARDI_MYSQL_USERNAME"`
-	Password    string            `long:"password" description:"MySQL password" env:"GOIARDI_MYSQL_PASSWORD"`
-	Protocol    string            `long:"protocol" description:"MySQL protocol (tcp or unix)" env:"GOIARDI_MYSQL_PROTOCOL"`
-	Address     string            `long:"address" description:"MySQL IP address, hostname, or path to a socket" env:"GOIARDI_MYSQL_ADDRESS"`
-	Port        string            `long:"port" description:"MySQL TCP port" env:"GOIARDI_MYSQL_PORT"`
-	Dbname      string            `long:"dbname" description:"MySQL database name" env:"GOIARDI_MYSQL_DBNAME"`
-	ExtraParams map[string]string `toml:"extra_params" long:"extra-params" description:"Extra configuration parameters for MySQL. Specify them like '--mysql-extra-params=foo:bar'. Multiple extra parameters can be specified by supplying the --mysql-extra-params flag multiple times. If using an environment variable, split up multiple parameters with #, like so: GOIARDI_MYSQL_EXTRA_PARAMS='foo:bar#baz:bug'." env:"GOIARDI_MYSQL_EXTRA_PARAMS" env-delim:"#"`
+	Username    string            `long:"username" hidden:"true" env:"GOIARDI_MYSQL_USERNAME"`
+	Password    string            `long:"password" hidden:"true" env:"GOIARDI_MYSQL_PASSWORD"`
+	Protocol    string            `long:"protocol" hidden:"true" env:"GOIARDI_MYSQL_PROTOCOL"`
+	Address     string            `long:"address" hidden:"true" env:"GOIARDI_MYSQL_ADDRESS"`
+	Port        string            `long:"port" hidden:"true" env:"GOIARDI_MYSQL_PORT"`
+	Dbname      string            `long:"dbname" hidden:"true" env:"GOIARDI_MYSQL_DBNAME"`
+	ExtraParams map[string]string `toml:"extra_params" long:"extra-params" hidden:"true" env:"GOIARDI_MYSQL_EXTRA_PARAMS" env-delim:"#"`
 }
 
 // PostgreSQLdb holds Postgres connection options.
@@ -185,8 +187,9 @@ type Options struct {
 	SSLKey               string       `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root." env:"GOIARDI_SSL_KEY"`
 	HTTPSUrls            bool         `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP." env:"GOIARDI_HTTPS_URLS"`
 	DisableWebUI         bool         `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface." env:"GOIARDI_DISABLE_WEBUI"`
-	UseMySQL             bool         `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file." env:"GOIARDI_USE_MYSQL"`
-	MySQL                MySQLdb      `group:"MySQL connection options (requires --use-mysql)" namespace:"mysql"`
+	// only including UseMySQL and MySQL to allow blowing up gracefully.
+	UseMySQL             bool         `long:"use-mysql" hidden:"true" env:"GOIARDI_USE_MYSQL"`
+	MySQL                MySQLdb      `group:"MySQL connection options (requires --use-mysql) (and you shouldn't be able to see this)" namespace:"mysql" hidden:"true"`
 	UsePostgreSQL        bool         `long:"use-postgresql" description:"Use a PostgreSQL database for data storage. Configure database options in the config file." env:"GOIARDI_USE_POSTGRESQL"`
 	PostgreSQL           PostgreSQLdb `group:"PostgreSQL connection options (requires --use-postgresql)" namespace:"postgresql"`
 	LocalFstoreDir       string       `long:"local-filestore-dir" description:"Directory to save uploaded files in. Optional when running in in-memory mode, *mandatory* (unless using S3 uploads) for SQL mode." env:"GOIARDI_LOCAL_FILESTORE_DIR"`
@@ -357,33 +360,6 @@ func ParseConfigOptions() error {
 	// Use MySQL?
 	if opts.UseMySQL {
 		Config.UseMySQL = opts.UseMySQL
-		// fill in Config with any cli mysql flags
-		if opts.MySQL.Username != "" {
-			Config.MySQL.Username = opts.MySQL.Username
-		}
-		if opts.MySQL.Password != "" {
-			Config.MySQL.Password = opts.MySQL.Password
-		}
-		if opts.MySQL.Protocol != "" {
-			Config.MySQL.Protocol = opts.MySQL.Protocol
-		}
-		if opts.MySQL.Address != "" {
-			Config.MySQL.Address = opts.MySQL.Address
-		}
-		if opts.MySQL.Port != "" {
-			Config.MySQL.Port = opts.MySQL.Port
-		}
-		if opts.MySQL.Dbname != "" {
-			Config.MySQL.Dbname = opts.MySQL.Dbname
-		}
-		if opts.MySQL.ExtraParams != nil {
-			if Config.MySQL.ExtraParams == nil {
-				Config.MySQL.ExtraParams = make(map[string]string)
-			}
-			for k, v := range opts.MySQL.ExtraParams {
-				Config.MySQL.ExtraParams[k] = v
-			}
-		}
 	}
 
 	// Use Postgres?
@@ -410,12 +386,6 @@ func ParseConfigOptions() error {
 		}
 	}
 
-	if Config.UseMySQL && Config.UsePostgreSQL {
-		err := fmt.Errorf("The MySQL and Postgres options cannot be used together.")
-		log.Println(err)
-		os.Exit(1)
-	}
-
 	// Use Postgres search?
 	if opts.PgSearch {
 		// make sure postgres is enabled
@@ -427,19 +397,19 @@ func ParseConfigOptions() error {
 		Config.PgSearch = opts.PgSearch
 	}
 
-	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || (Config.UseMySQL || Config.UsePostgreSQL)) && Config.IndexFile != "")) {
+	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || Config.UsePostgreSQL) && Config.IndexFile != "")) {
 		err := fmt.Errorf("-i and -D must either both be specified, or not specified")
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	if (Config.UseMySQL || Config.UsePostgreSQL) && (Config.IndexFile == "" && !Config.PgSearch) {
-		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with a MySQL or PostgreSQL backend (and not using the PostgreSQL search).")
+	if Config.UsePostgreSQL && (Config.IndexFile == "" && !Config.PgSearch) {
+		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with the PostgreSQL backend (and not using the PostgreSQL search).")
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	if Config.IndexFile != "" && (Config.DataStoreFile != "" || (Config.UseMySQL || Config.UsePostgreSQL)) {
+	if Config.IndexFile != "" && (Config.DataStoreFile != "" || Config.UsePostgreSQL) {
 		Config.FreezeData = true
 	}
 
@@ -486,17 +456,15 @@ func ParseConfigOptions() error {
 
 	// This used to cause an error, but now will just cause a warning. Also
 	// moved it down so we can use the configured logger.
-	if Config.DataStoreFile != "" && (Config.UseMySQL || Config.UsePostgreSQL) {
-		logger.Errorf("The MySQL or Postgres and file data store options should not be specified together. Overriding the file data store.")
+	if Config.DataStoreFile != "" && Config.UsePostgreSQL {
+		logger.Errorf("The Postgres and file data store options should not be specified together. Overriding the file data store.")
 	}
 
 	/* Database options */
 
-	// Don't bother setting a default mysql port if mysql isn't used
+	// no moar mysql backend. It's the end of a goiardi era.
 	if Config.UseMySQL {
-		if Config.MySQL.Port == "" {
-			Config.MySQL.Port = "3306"
-		}
+		log.Fatalf("The MySQL database backend is no longer supported.\n\nIf this is an upgraded installation, please use the -x/--export option with the most recent 0.11.x version of goiardi to export your data, set up PostgreSQL and configure goiardi to use that (or configure the in-mem backend if you want that for some reason), and reimport your data with -m/--import. Otherwise, reconfigure your goiardi as appropriate, creating databases as appropriate, and start it again.")
 	}
 
 	// set default Postgres options
@@ -515,7 +483,7 @@ func ParseConfigOptions() error {
 		Config.UseS3Upload = opts.UseS3Upload
 	}
 	if Config.UseS3Upload {
-		if !Config.UseMySQL && !Config.UsePostgreSQL {
+		if !Config.UsePostgreSQL {
 			logger.Fatalf("S3 uploads must be used in SQL mode, not in-memory mode.")
 			os.Exit(1)
 		}
@@ -540,7 +508,7 @@ func ParseConfigOptions() error {
 		}
 	}
 
-	if Config.LocalFstoreDir == "" && ((Config.UseMySQL || Config.UsePostgreSQL) && !Config.UseS3Upload) {
+	if Config.LocalFstoreDir == "" && (Config.UsePostgreSQL && !Config.UseS3Upload) {
 		logger.Fatalf("local-filestore-dir or use-s3-upload must be set and configured when running goiardi in SQL mode")
 		os.Exit(1)
 	}
@@ -952,7 +920,7 @@ func ServerBaseURL() string {
 // UsingDB returns true if we're using any db engine, false if using the
 // in-memory data store.
 func UsingDB() bool {
-	return Config.UseMySQL || Config.UsePostgreSQL
+	return Config.UsePostgreSQL
 }
 
 func UsingExternalSecrets() bool {
