@@ -205,16 +205,11 @@ func GetMulti(org *organization.Organization, clientNames []string) ([]*Client, 
 }
 
 // Save the client. If a user with the same name as the client exists, returns
-// an error. Additionally, if running with MySQL it will return any DB error.
+// an error. Additionally, if running with PostgreSQL it will return any DB
+// error.
 func (c *Client) Save() util.Gerror {
 	if config.UsingDB() {
-		var err error
-		if config.Config.UseMySQL {
-			err = c.saveMySQL()
-		} else if config.Config.UsePostgreSQL {
-			err = c.savePostgreSQL()
-		}
-		if err != nil {
+		if err := c.savePostgreSQL(); err != nil {
 			return util.CastErr(err)
 		}
 	} else {
@@ -320,13 +315,7 @@ func (c *Client) Rename(newName string) util.Gerror {
 	}
 
 	if config.UsingDB() {
-		var err util.Gerror
-		if config.Config.UseMySQL {
-			err = c.renameMySQL(newName)
-		} else if config.Config.UsePostgreSQL {
-			err = c.renamePostgreSQL(newName)
-		}
-		if err != nil {
+		if err := c.renamePostgreSQL(newName); err != nil {
 			return err
 		}
 	} else {
