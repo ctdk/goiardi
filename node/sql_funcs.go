@@ -23,13 +23,14 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"log"
 	"strings"
 	"time"
 )
 
-func checkForNodeSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
-	_, err := datastore.CheckForOne(datastore.Dbh, "nodes", name)
+func checkForNodeSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
+	_, err := datastore.CheckForOne(datastore.Dbh, "nodes", org.GetId(), name)
 	if err == nil {
 		return true, nil
 	}

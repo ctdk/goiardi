@@ -77,7 +77,7 @@ func OrgsByIdSQL(ids []int64) ([]*organization.Organization, error) {
 }
 
 func OrgByIdSQL(id int64) (*organization.Organization, error) {
-	orgs, err := organization.OrgsByIdSQL([]int64{ids})
+	orgs, err := organization.OrgsByIdSQL([]int64{id})
 	if err != nil {
 		return nil, err
 	}

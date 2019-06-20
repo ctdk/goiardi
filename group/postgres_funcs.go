@@ -20,7 +20,6 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
-	"strings"
 )
 
 // anything specific enough to postgres that weird conditionals inside a common

@@ -57,7 +57,7 @@ func New(org *organization.Organization, name string) (*Node, util.Gerror) {
 	if config.UsingDB() {
 		// will need redone if orgs ever get implemented
 		var err error
-		found, err = checkForNodeSQL(datastore.Dbh, name)
+		found, err = checkForNodeSQL(datastore.Dbh, org, name)
 		if err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -144,7 +144,7 @@ func DoesExist(org *organization.Organization, nodeName string) (bool, util.Gerr
 	var found bool
 	if config.UsingDB() {
 		var cerr error
-		found, cerr = checkForNodeSQL(datastore.Dbh, nodeName)
+		found, cerr = checkForNodeSQL(datastore.Dbh, org, nodeName)
 		if cerr != nil {
 			err := util.Errorf(cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)

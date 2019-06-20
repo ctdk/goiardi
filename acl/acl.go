@@ -432,15 +432,15 @@ func (c *Checker) CheckContainerPerm(doer aclhelper.Actor, containerName string,
 	// make a fake container, grr. Regardless, we need to check if the
 	// container in question actually exists.
 	if config.UsingDB() {
-		if _, err := datastore.CheckForOne(dbhandle datastore.Dbhandle, "containers", c.org.GetId(), containerName); err != nil {
+		if _, err := datastore.CheckForOne(datastore.Dbh, "containers", c.org.GetId(), containerName); err != nil {
 			// would this need formatting?
-			return util.CastErr(err)
+			return false, util.CastErr(err)
 		}
 	} else {
 		ds := datastore.New()
-		_, found = ds.Get(org.DataKey("container"), containerName)
+		_, found := ds.Get(c.org.DataKey("container"), containerName)
 		if !found {
-			return false, fmt.Errorf("no container %s in organization %s found", containerName, c.org.Name)
+			return false, util.Errorf("no container %s in organization %s found", containerName, c.org.Name)
 		}
 	}
 

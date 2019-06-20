@@ -88,6 +88,7 @@ func Get(org *organization.Organization, name string) (*Container, util.Gerror) 
 		}
 	} else {
 		ds := datastore.New()
+		var c interface{}
 		c, found = ds.Get(org.DataKey("container"), name)
 		if c != nil {
 			container = c.(*Container)

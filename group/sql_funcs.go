@@ -28,6 +28,9 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/util"
+	"net/http"
+	"strings"
 )
 
 func checkForGroupSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
@@ -94,10 +97,16 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 			return nil
 		}
 
-		actorez := make([]actor.Actor, 0, len(userez) + len(clientez))
-		// may need to do the explicit for range loop.
-		actorez = append(actorez, userez...)
-		actorez = append(actorez, clientez...)
+		actorez := make([]actor.Actor, len(userez) + len(clientez))
+
+		for i, u := range userez {
+			actorez[i] = u
+		}
+		clientOffset := len(userez)
+		for i, c := range clientez {
+			actorez[i+clientOffset] = c
+		}
+
 		g.Actors = actorez
 	}
 
@@ -159,7 +168,7 @@ func (g *Group) saveSQL() error {
 	}
 
 	// and actors
-	for _, act := range g.Actors() {
+	for _, act := range g.Actors {
 		if act.IsUser() {
 			user_ids = append(user_ids, act.GetId())
 		} else {
@@ -183,7 +192,7 @@ func (g *Group) renameSQL(newName string) error {
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())
-		if strings.HasPrefix(err.Error(), strings.Contains(err.Error(), "already exists, cannot rename")) {
+		if strings.Contains(err.Error(), "already exists, cannot rename") {
 			gerr.SetStatus(http.StatusConflict)
 		} else {
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -229,13 +238,13 @@ func getListSQL(org *organization.Organization) ([]string, error) {
 	rows, qerr := stmt.Query(org.GetId())
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
-			return users, nil
+			return groupList, nil
 		}
 		return nil, qerr
 	}
 	for rows.Next() {
 		var gName string
-		err := row.Scan(&gName)
+		err := rows.Scan(&gName)
 		if err != nil {
 			return nil, err
 		}
@@ -253,7 +262,7 @@ func allGroupsSQL(org *organization.Organization) ([]*Group, error) {
 		return nil, errors.New("allGroupsSQL only works if you're using a database storage backend.")
 	}
 
-	var groups []*Groups
+	var groups []*Group
 	var sqlStatement string
 
 	if config.Config.UseMySQL {
@@ -277,7 +286,7 @@ func allGroupsSQL(org *organization.Organization) ([]*Group, error) {
 	rows, qerr := stmt.Query(org.GetId())
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
-			return users, nil
+			return groups, nil
 		}
 		return nil, qerr
 	}
@@ -310,13 +319,13 @@ func clearActorSQL(org *organization.Organization, act actor.Actor) error {
 		actType = "client"
 	}
 
-	sqlStmt := fmt.Sprintf("DELETE FROM goiardi.group_actor_%ss WHERE organization_id = $1 AND %s_id = $1")
+	sqlStmt := fmt.Sprintf("DELETE FROM goiardi.group_actor_%ss WHERE organization_id = $1 AND %s_id = $1", actType)
 
-	_, err = tx.Exec(sqlStmt, act.GetName(), g.Org.GetId())
+	_, err = tx.Exec(sqlStmt, act.GetName(), org.GetId())
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
-			err = fmt.Errorf("clearing actor %s from organization %s had an error '%s', and then rolling back the transaction gave another error '%s'", act.GetName(), g.Org.Name, err.Error(), terr.Error())
+			err = fmt.Errorf("clearing actor %s (%s) from organization %s had an error '%s', and then rolling back the transaction gave another error '%s'", act.GetName(), actType, org.Name, err.Error(), terr.Error())
 		}
 		return err
 	}
@@ -329,7 +338,7 @@ func GroupsByIdSQL(ids []int64) ([]*Group, error) {
 		return nil, errors.New("GroupsByIdSQL only works if you're using a database storage backend.")
 	}
 
-	var groups []*Groups
+	var groups []*Group
 	var sqlStatement string
 
 	bind := make([]string, len(ids))
@@ -360,7 +369,7 @@ func GroupsByIdSQL(ids []int64) ([]*Group, error) {
 	rows, qerr := stmt.Query(intfIds...)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
-			return users, nil
+			return groups, nil
 		}
 		return nil, qerr
 	}

@@ -20,13 +20,10 @@ package container
 
 import (
 	"database/sql"
-	"errors"
-	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
-	"strings"
 )
 
 func checkForContainerSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
@@ -41,14 +38,14 @@ func checkForContainerSQL(dbhandle datastore.Dbhandle, org *organization.Organiz
 }
 
 func (c *Container) fillContainerFromSQL(row datastore.ResRow) error {
-	var orgId int
+	var orgId int64
 
 	err := row.Scan(&c.Name, &orgId)
 	if err != nil {
 		return err
 	}
 
-	org, err := orgloader.OrgById(orgId)
+	org, err := orgloader.OrgByIdSQL(orgId)
 	if err != nil {
 		return err
 	}
