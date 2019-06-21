@@ -172,7 +172,7 @@ func (c *Cookbook) NumVersions() int {
 // AllCookbooks returns all the cookbooks that have been uploaded to this server.
 func AllCookbooks(org *organization.Organization) (cookbooks []*Cookbook) {
 	if config.UsingDB() {
-		cookbooks = allCookbooksSQL()
+		cookbooks = allCookbooksSQL(org)
 		for _, c := range cookbooks {
 			// populate the versions hash
 			c.sortedVersions()
@@ -197,7 +197,7 @@ func Get(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var err error
-		cookbook, err = getCookbookSQL(name)
+		cookbook, err = getCookbookSQL(name, org)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -253,9 +253,7 @@ func DoesExist(org *organization.Organization, cookbookName string) (bool, util.
 // Save a cookbook to the in-memory data store or database.
 func (c *Cookbook) Save() error {
 	var err error
-	if config.Config.UseMySQL {
-		err = c.saveCookbookMySQL()
-	} else if config.Config.UsePostgreSQL {
+	if config.UsingDB() {
 		err = c.saveCookbookPostgreSQL()
 	} else {
 		ds := datastore.New()
@@ -289,7 +287,7 @@ func (c *Cookbook) Delete() error {
 // GetList gets a list of all cookbooks on this server.
 func GetList(org *organization.Organization) []string {
 	if config.UsingDB() {
-		return getCookbookListSQL()
+		return getCookbookListSQL(org)
 	}
 	ds := datastore.New()
 	cbList := ds.GetList(org.DataKey("cookbook"))
@@ -343,11 +341,11 @@ func (c *Cookbook) LatestVersion() *CookbookVersion {
 	return c.latest
 }
 
-// CookbookLister lists all of the cookbooks on the server, along with some
-// information like URL, available versions, etc.
+// CookbookLister lists all of the cookbooks belonging to the given org on the
+// server, along with some information like URL, available versions, etc.
 func CookbookLister(org *organization.Organization, numResults interface{}) map[string]interface{} {
 	if config.UsingDB() {
-		return cookbookListerSQL(numResults)
+		return cookbookListerSQL(numResults, org)
 	}
 	cr := make(map[string]interface{})
 	for _, cb := range AllCookbooks(org) {
@@ -379,7 +377,7 @@ func CookbookLatest(org *organization.Organization) map[string]interface{} {
 // version of each cookbook.
 func CookbookRecipes(org *organization.Organization) ([]string, util.Gerror) {
 	if config.UsingDB() {
-		return cookbookRecipesSQL()
+		return cookbookRecipesSQL(org)
 	}
 	// TODO: getting a number of how many cookbooks are on the server would
 	// be handy and probably make this faster
@@ -705,7 +703,7 @@ func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion {
 // supermarket/berks /universe endpoint.
 func Universe(org *organization.Organization) map[string]map[string]interface{} {
 	if config.UsingDB() {
-		return universeSQL()
+		return universeSQL(org)
 	}
 	universe := make(map[string]map[string]interface{})
 

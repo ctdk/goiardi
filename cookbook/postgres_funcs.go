@@ -30,7 +30,7 @@ func (c *Cookbook) saveCookbookPostgreSQL() error {
 		return err
 	}
 
-	err = tx.QueryRow("SELECT goiardi.merge_cookbooks($1)", c.Name).Scan(&c.id)
+	err = tx.QueryRow("SELECT goiardi.merge_cookbooks($1, $2)", c.Name, c.org.GetId()).Scan(&c.id)
 	if err != nil {
 		tx.Rollback()
 		return err

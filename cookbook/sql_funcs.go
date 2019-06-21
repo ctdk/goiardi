@@ -42,19 +42,16 @@ func (c *Cookbook) numVersionsSQL() *int {
 
 func (c *Cookbook) numVer() (int, error) {
 	var cbvCount int
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT count(*) AS c FROM cookbook_versions cbv WHERE cbv.cookbook_id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT count(*) AS c FROM goiardi.cookbook_versions cbv WHERE cbv.cookbook_id = $1"
-	}
+
+	// better safe than sorry
+	sqlStatement := "SELECT count(*) AS c FROM goiardi.cookbook_versions cbv WHERE c.organization_id = $1 AND cbv.cookbook_id = $2"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 
 	if err != nil {
 		return 0, err
 	}
 	defer stmt.Close()
-	err = stmt.QueryRow(c.id).Scan(&cbvCount)
+	err = stmt.QueryRow(c.org.GetId(), c.id).Scan(&cbvCount)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			cbvCount = 0
@@ -221,40 +218,33 @@ func (cbv *CookbookVersion) updateCookbookVersionSQL() util.Gerror {
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
+
 	/* version already validated */
 	maj, min, patch, _ := extractVerNums(cbv.Version)
-	if config.Config.UseMySQL {
-		return cbv.updateCookbookVersionMySQL(defb, libb, attb, recb, prob, resb, temb, roob, filb, metb, maj, min, patch)
-	} else if config.Config.UsePostgreSQL {
-		return cbv.updateCookbookVersionPostgreSQL(defb, libb, attb, recb, prob, resb, temb, roob, filb, metb, maj, min, patch)
-	}
-	gerr := util.Errorf("Somehow we ended up in an impossible place trying to use an unsupported db engine")
-	gerr.SetStatus(http.StatusInternalServerError)
-	return gerr
+
+	return cbv.updateCookbookVersionPostgreSQL(defb, libb, attb, recb, prob, resb, temb, roob, filb, metb, maj, min, patch)
 }
 
-func allCookbooksSQL() []*Cookbook {
+func allCookbooksSQL(org *organization.Organization) []*Cookbook {
 	var cookbooks []*Cookbook
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT id, name FROM cookbooks"
-	} else {
-		sqlStatement = "SELECT id, name FROM goiardi.cookbooks"
-	}
+	sqlStatement := "SELECT id, name FROM goiardi.cookbooks WHERE organization_id = $1"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query()
+
+	rows, qerr := stmt.Query(org.GetId())
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return cookbooks
 		}
 		log.Fatal(qerr)
 	}
+
 	for rows.Next() {
 		cb := new(Cookbook)
+		cb.org = org
 		err = cb.fillCookbookFromSQL(rows)
 		if err != nil {
 			log.Fatal(err)
@@ -269,21 +259,17 @@ func allCookbooksSQL() []*Cookbook {
 	return cookbooks
 }
 
-func getCookbookSQL(name string) (*Cookbook, error) {
+func getCookbookSQL(name string, org *organization.Organization) (*Cookbook, error) {
 	cookbook := new(Cookbook)
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT id, name FROM cookbooks WHERE name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT id, name FROM goiardi.cookbooks WHERE name = $1"
-	}
+
+	sqlStatement := "SELECT id, name FROM goiardi.cookbooks WHERE organization_id = $1 AND name = $2"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(name)
+	row := stmt.QueryRow(org.GetId(), name)
 	err = cookbook.fillCookbookFromSQL(row)
 	if err != nil {
 		return nil, err
@@ -308,16 +294,8 @@ func (c *Cookbook) deleteCookbookSQL() error {
 	}
 	sort.Strings(fileHashes)
 	fileHashes = removeDupHashes(fileHashes)
-	// NOTE: I had this twice for some reason. See why it's here towards the
-	// beginning and not just the end -- might have been from general hash
-	// deletion with mysql problems earlier.
-	//c.deleteHashes(fileHashes)
 
-	if config.Config.UseMySQL {
-		_, err = tx.Exec("DELETE FROM cookbook_versions WHERE cookbook_id = ?", c.id)
-	} else if config.Config.UsePostgreSQL {
-		_, err = tx.Exec("DELETE FROM goiardi.cookbook_versions WHERE cookbook_id = $1", c.id)
-	}
+	_, err = tx.Exec("DELETE FROM goiardi.cookbook_versions WHERE cookbook_id = $1", c.org.GetId(), c.id)
 
 	if err != nil && err != sql.ErrNoRows {
 		terr := tx.Rollback()
@@ -326,11 +304,8 @@ func (c *Cookbook) deleteCookbookSQL() error {
 		}
 		return err
 	}
-	if config.Config.UseMySQL {
-		_, err = tx.Exec("DELETE FROM cookbooks WHERE id = ?", c.id)
-	} else if config.Config.UsePostgreSQL {
-		_, err = tx.Exec("DELETE FROM goiardi.cookbooks WHERE id = $1", c.id)
-	}
+
+	_, err = tx.Exec("DELETE FROM goiardi.cookbooks WHERE id = $1", c.id)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -344,16 +319,18 @@ func (c *Cookbook) deleteCookbookSQL() error {
 	return nil
 }
 
-func getCookbookListSQL() []string {
+func getCookbookListSQL(org *organization.Organization) []string {
 	var cbList []string
 
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name FROM cookbooks"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name FROM goiardi.cookbooks"
+	// what on earth did I have this using datastore.Dbh.Query before?
+	sqlStatement := "SELECT name FROM goiardi.cookbooks WHERE organization_id = $1"
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		log.Fatal(err)
 	}
-	rows, err := datastore.Dbh.Query(sqlStatement)
+	defer stmt.Close()
+
+	rows, err := stmt.Query(org.GetId())
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
@@ -380,14 +357,9 @@ func getCookbookListSQL() []string {
 func (c *Cookbook) sortedCookbookVersionsSQL() []*CookbookVersion {
 	var sorted []*CookbookVersion
 
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC"
-	} else {
-		sqlStatement = "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC"
-	}
-	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	sqlStatement := "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 ORDER BY major_ver DESC, minor_ver DESC, patch_ver DESC"
 
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -423,12 +395,7 @@ func (c *Cookbook) getCookbookVersionSQL(cbVersion string) (*CookbookVersion, er
 	if cverr != nil {
 		return nil, cverr
 	}
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 AND major_ver = $2 AND minor_ver = $3 AND patch_ver = $4"
-	}
+	sqlStatement := "SELECT cv.id, cookbook_id, definitions, libraries, attributes, recipes, providers, resources, templates, root_files, files, metadata, major_ver, minor_ver, patch_ver, frozen, c.name FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 AND major_ver = $2 AND minor_ver = $3 AND patch_ver = $4"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
@@ -457,17 +424,12 @@ func (c *Cookbook) checkCookbookVersionSQL(cbVersion string) (bool, error) {
 		return false, nil
 	}
 
-	var sqlStatement string
-
 	maj, min, patch, cverr := extractVerNums(cbVersion)
 	if cverr != nil {
 		return false, cverr
 	}
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT COUNT(cv.id) FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = ? AND major_ver = ? AND minor_ver = ? AND patch_ver = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT COUNT(cv.id) FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 AND major_ver = $2 AND minor_ver = $3 AND patch_ver = $4"
-	}
+
+	sqlStatement := "SELECT COUNT(cv.id) FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id WHERE cookbook_id = $1 AND major_ver = $2 AND minor_ver = $3 AND patch_ver = $4"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -495,11 +457,7 @@ func (cbv *CookbookVersion) deleteCookbookVersionSQL() util.Gerror {
 		return gerr
 	}
 
-	if config.Config.UseMySQL {
-		_, err = tx.Exec("DELETE FROM cookbook_versions WHERE id = ?", cbv.id)
-	} else if config.Config.UsePostgreSQL {
-		_, err = tx.Exec("DELETE FROM goiardi.cookbook_versions WHERE id = $1", cbv.id)
-	}
+	_, err = tx.Exec("DELETE FROM goiardi.cookbook_versions WHERE id = $1", cbv.id)
 
 	if err != nil {
 		terr := tx.Rollback()
@@ -514,7 +472,7 @@ func (cbv *CookbookVersion) deleteCookbookVersionSQL() util.Gerror {
 	return nil
 }
 
-func universeSQL() map[string]map[string]interface{} {
+func universeSQL(org *organization.Organization) map[string]map[string]interface{} {
 	universe := make(map[string]map[string]interface{})
 	var (
 		major int64
@@ -523,12 +481,7 @@ func universeSQL() map[string]map[string]interface{} {
 	)
 	var name string
 
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT major_ver, minor_ver, patch_ver, c.name, metadata FROM cookbook_versions cv LEFT JOIN cookbooks c ON cv.cookbook_id = c.id ORDER BY cv.cookbook_id, major_ver DESC, minor_ver DESC, patch_ver DESC"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT major_ver, minor_ver, patch_ver, c.name, metadata->>'dependencies' FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id ORDER BY cv.cookbook_id, major_ver DESC, minor_ver DESC, patch_ver DESC"
-	}
+	sqlStatement := "SELECT major_ver, minor_ver, patch_ver, c.name, metadata->>'dependencies' FROM goiardi.cookbook_versions cv LEFT JOIN goiardi.cookbooks c ON cv.cookbook_id = c.id ORDER BY cv.cookbook_id, major_ver DESC, minor_ver DESC, patch_ver DESC WHERE c.organization_id = $1"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 
 	if err != nil {
@@ -536,7 +489,7 @@ func universeSQL() map[string]map[string]interface{} {
 	}
 	defer stmt.Close()
 
-	rows, qerr := stmt.Query()
+	rows, qerr := stmt.Query(org.GetId())
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return universe
@@ -578,7 +531,7 @@ func universeSQL() map[string]map[string]interface{} {
 	return universe
 }
 
-func cookbookListerSQL(numResults interface{}) map[string]interface{} {
+func cookbookListerSQL(numResults interface{}, org *organization.Organization) map[string]interface{} {
 	var numVersions int
 	allVersions := false
 
@@ -592,12 +545,7 @@ func cookbookListerSQL(numResults interface{}) map[string]interface{} {
 		allVersions = true
 	}
 
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT version, name FROM joined_cookbook_version ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT version, name FROM goiardi.joined_cookbook_version ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc"
-	}
+	sqlStatement := "SELECT version, name FROM goiardi.joined_cookbook_version ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc WHERE organization_id = $1"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 
 	if err != nil {
@@ -605,7 +553,7 @@ func cookbookListerSQL(numResults interface{}) map[string]interface{} {
 	}
 	defer stmt.Close()
 
-	rows, qerr := stmt.Query()
+	rows, qerr := stmt.Query(org.GetId())
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return cl
@@ -646,13 +594,8 @@ func cookbookListerSQL(numResults interface{}) map[string]interface{} {
 	return cl
 }
 
-func cookbookRecipesSQL() ([]string, util.Gerror) {
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT version, name, recipes FROM joined_cookbook_version ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT version, name, recipes FROM goiardi.joined_cookbook_version ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc"
-	}
+func cookbookRecipesSQL(org *organization.Organization) ([]string, util.Gerror) {
+	sqlStatement := "SELECT version, name, recipes FROM goiardi.joined_cookbook_version ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc WHERE organization_id = $1"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 
 	if err != nil {
@@ -662,7 +605,7 @@ func cookbookRecipesSQL() ([]string, util.Gerror) {
 
 	rlist := make([]string, 0)
 
-	rows, qerr := stmt.Query()
+	rows, qerr := stmt.Query(org.GetId())
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return rlist, nil
