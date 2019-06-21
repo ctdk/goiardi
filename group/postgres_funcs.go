@@ -31,7 +31,7 @@ func (g *Group) savePostgreSQL(user_ids []int64, client_ids []int64, group_ids [
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_groups($1, $2, $3, $4, $5)", g.Name, g.Org.GetId(), user_ids, client_ids, group_ids)
+	_, err = tx.Exec("SELECT goiardi.merge_groups($1, $2, $3, $4, $5)", g.Name, g.org.GetId(), user_ids, client_ids, group_ids)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())

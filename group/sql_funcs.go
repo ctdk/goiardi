@@ -60,8 +60,8 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 	}
 
 	// Perform a quick sanity check because why not
-	if orgId != g.Org.GetId() {
-		return fmt.Errorf("org id %d returned from query somehow did not match the expected id %d for %s", orgId, g.Org.GetId(), g.Org.Name)
+	if orgId != g.org.GetId() {
+		return fmt.Errorf("org id %d returned from query somehow did not match the expected id %d for %s", orgId, g.org.GetId(), g.org.Name)
 	}
 	/*
 	 * Only fill in the child actors & groups if it's the main group we're
@@ -92,7 +92,7 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 			return err
 		}
 
-		clientez, err := client.ClientsByIdSQL(clientIds)
+		clientez, err := client.ClientsByIdSQL(clientIds, g.org)
 		if err != nil {
 			return nil
 		}
@@ -116,7 +116,7 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 func getGroupSQL(name string, org *organization.Organization) (*Group, error) {
 	var sqlStatement string
 	g := new(Group)
-	g.Org = org
+	g.org = org
 
 	if config.Config.UseMySQL {
 		// MySQL will be rather more intricate than postgres, I'm
@@ -292,7 +292,7 @@ func allGroupsSQL(org *organization.Organization) ([]*Group, error) {
 	}
 	for rows.Next() {
 		g := new(Group)
-		g.Org = org
+		g.org = org
 		err = g.fillGroupFromSQL(rows)
 		if err != nil {
 			return nil, err

@@ -37,11 +37,11 @@ var DefaultUser = "pivotal" // should be moved out to config, I think. Same with
 
 type Group struct {
 	Name   string
-	Org    *organization.Organization
 	Actors []actor.Actor
 	Groups []*Group
 	m      sync.RWMutex
 	id     int64
+	org    *organization.Organization
 	getChildren bool
 }
 
@@ -70,7 +70,7 @@ func New(org *organization.Organization, name string) (*Group, util.Gerror) {
 	}
 	g := &Group{
 		Name: name,
-		Org:  org,
+		org:  org,
 	}
 	return g, nil
 }
@@ -98,7 +98,7 @@ func Get(org *organization.Organization, name string) (*Group, util.Gerror) {
 		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
-	group.Org = org // we're in the same org as the caller, go ahead and
+	group.org = org // we're in the same org as the caller, go ahead and
 	// assign it to the group so we have access to the ACL
 	// stuff
 	return group, nil
@@ -110,7 +110,7 @@ func (g *Group) Reload() util.Gerror {
 	if g.getChildren || !config.UsingDB() {
 		return nil
 	}
-	tg, err := Get(g.Org, g.Name)
+	tg, err := Get(g.org, g.Name)
 	if err != nil {
 		return nil
 	}
@@ -142,20 +142,20 @@ func (g *Group) Rename(newName string) util.Gerror {
 		}
 	} else {
 		ds := datastore.New()
-		if _, found := ds.Get(g.Org.DataKey("group"), newName); found {
+		if _, found := ds.Get(g.org.DataKey("group"), newName); found {
 			err := util.Errorf("Group %s already exists, cannot rename", newName)
 			err.SetStatus(http.StatusConflict)
 			return err
 		}
-		ds.Delete(g.Org.DataKey("group"), g.Name)
-		g.Org.PermCheck.RemoveACLRole(g)
+		ds.Delete(g.org.DataKey("group"), g.Name)
+		g.org.PermCheck.RemoveACLRole(g)
 		g.Name = newName
 		err := g.save()
 		if err != nil {
 			return err
 		}
 	}
-	if aerr := g.Org.PermCheck.RenameItemACL(g, oldName); aerr != nil {
+	if aerr := g.org.PermCheck.RenameItemACL(g, oldName); aerr != nil {
 		return util.CastErr(aerr)
 	}
 	return nil
@@ -174,7 +174,7 @@ func (g *Group) save() util.Gerror {
 	}
 
 	ds := datastore.New()
-	ds.Set(g.Org.DataKey("group"), g.Name, g)
+	ds.Set(g.org.DataKey("group"), g.Name, g)
 	return nil
 }
 
@@ -185,7 +185,7 @@ func (g *Group) saveMembers() util.Gerror {
 		return nil
 	}
 
-	if err := g.Org.PermCheck.AddMembers(g, toAdd); err != nil {
+	if err := g.org.PermCheck.AddMembers(g, toAdd); err != nil {
 		return util.CastErr(err)
 	}
 	return nil
@@ -194,13 +194,13 @@ func (g *Group) saveMembers() util.Gerror {
 func (g *Group) Delete() util.Gerror {
 	g.m.RLock()
 	defer g.m.RUnlock()
-	g.Org.PermCheck.RemoveACLRole(g)
+	g.org.PermCheck.RemoveACLRole(g)
 	if config.UsingDB() {
 
 	}
 	ds := datastore.New()
-	ds.Delete(g.Org.DataKey("group"), g.Name)
-	ag := AllGroups(g.Org)
+	ds.Delete(g.org.DataKey("group"), g.Name)
+	ag := AllGroups(g.org)
 	for _, cg := range ag {
 		j, _ := cg.checkForGroup(g.Name)
 		if j {
@@ -208,7 +208,7 @@ func (g *Group) Delete() util.Gerror {
 			cg.Save()
 		}
 	}
-	_, aerr := g.Org.PermCheck.DeleteItemACL(g)
+	_, aerr := g.org.PermCheck.DeleteItemACL(g)
 	if aerr != nil {
 		return util.CastErr(aerr)
 	}
@@ -221,7 +221,7 @@ func (g *Group) AddActor(a actor.Actor) util.Gerror {
 		g.m.Lock()
 		defer g.m.Unlock()
 		g.Actors = append(g.Actors, a)
-		if err := g.Org.PermCheck.AddMembers(g, []aclhelper.Member{a}); err != nil {
+		if err := g.org.PermCheck.AddMembers(g, []aclhelper.Member{a}); err != nil {
 			return util.CastErr(err)
 		}
 	}
@@ -234,7 +234,7 @@ func (g *Group) DelActor(a actor.Actor) util.Gerror {
 		defer g.m.Unlock()
 		g.Actors[pos] = nil
 		g.Actors = append(g.Actors[:pos], g.Actors[pos+1:]...)
-		if err := g.Org.PermCheck.RemoveMembers(g, []aclhelper.Member{a}); err != nil {
+		if err := g.org.PermCheck.RemoveMembers(g, []aclhelper.Member{a}); err != nil {
 			return util.CastErr(err)
 		}
 	} else {
@@ -248,7 +248,7 @@ func (g *Group) AddGroup(a *Group) util.Gerror {
 		g.m.Lock()
 		defer g.m.Unlock()
 		g.Groups = append(g.Groups, a)
-		if err := g.Org.PermCheck.AddMembers(g, []aclhelper.Member{a}); err != nil {
+		if err := g.org.PermCheck.AddMembers(g, []aclhelper.Member{a}); err != nil {
 			return util.CastErr(err)
 		}
 	}
@@ -261,7 +261,7 @@ func (g *Group) DelGroup(a *Group) util.Gerror {
 		defer g.m.Unlock()
 		g.Groups[pos] = nil
 		g.Groups = append(g.Groups[:pos], g.Groups[pos+1:]...)
-		g.Org.PermCheck.RemoveMembers(g, []aclhelper.Member{a})
+		g.org.PermCheck.RemoveMembers(g, []aclhelper.Member{a})
 	} else {
 		return util.Errorf("group %s not in group", a.GetName())
 	}
@@ -304,7 +304,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 				if err != nil {
 					return err
 				}
-				c, err := client.Get(g.Org, cnv)
+				c, err := client.Get(g.org, cnv)
 				if err != nil {
 					return err
 				}
@@ -318,7 +318,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 				if err != nil {
 					return err
 				}
-				addGr, err := Get(g.Org, gnv)
+				addGr, err := Get(g.org, gnv)
 				if err != nil {
 					return err
 				}
@@ -341,7 +341,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 				}
 			}
 		}
-		if merr := g.Org.PermCheck.RemoveMembers(g, toRemove); merr != nil {
+		if merr := g.org.PermCheck.RemoveMembers(g, toRemove); merr != nil {
 			return util.CastErr(merr)
 		}
 
@@ -367,7 +367,7 @@ func (g *Group) ToJSON() map[string]interface{} {
 	gJSON := make(map[string]interface{})
 	gJSON["name"] = g.Name
 	gJSON["groupname"] = g.Name
-	gJSON["orgname"] = g.Org.Name
+	gJSON["orgname"] = g.org.Name
 	gJSON["actors"] = make([]string, len(g.Actors))
 	gJSON["users"] = make([]string, 0, len(g.Actors))
 	gJSON["clients"] = make([]string, 0, len(g.Actors))
@@ -441,7 +441,7 @@ func (g *Group) URLType() string {
 }
 
 func (g *Group) OrgName() string {
-	return g.Org.Name
+	return g.org.Name
 }
 
 func (g *Group) ContainerType() string {
