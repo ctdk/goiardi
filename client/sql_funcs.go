@@ -76,7 +76,7 @@ func getMultiSQL(clientNames []string, org *organization.Organization) ([]*Clien
 	for i := range clientNames {
 		bind[i] = fmt.Sprintf("$%d", i+2)
 	}
-	sqlStmt = fmt.Sprintf("select name, nodename, validator, admin, public_key, certificate FROM goiardi.clients WHERE organization_id = $1 AND name IN (%s)", strings.Join(bind, ", "))
+	sqlStmt := fmt.Sprintf("select name, nodename, validator, admin, public_key, certificate FROM goiardi.clients WHERE organization_id = $1 AND name IN (%s)", strings.Join(bind, ", "))
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,14 @@ func getMultiSQL(clientNames []string, org *organization.Organization) ([]*Clien
 	for i, v := range clientNames {
 		nameArgs[i] = v
 	}
-	rows, err := stmt.Query(org.GetId(), nameArgs...)
+	qargs := make([]interface{}, len(nameArgs) + 1)
+	qargs[0] = org.GetId()
+
+	for i, v := range nameArgs {
+		qargs[i+1] = v
+	}
+
+	rows, err := stmt.Query(qargs)
 	if err != nil {
 		return nil, err
 	}

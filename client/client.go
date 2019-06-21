@@ -137,7 +137,7 @@ func Get(org *organization.Organization, clientname string) (*Client, util.Gerro
 	var err error
 
 	if config.UsingDB() {
-		client, err = getClientSQL(clientname)
+		client, err = getClientSQL(clientname, org)
 		if err != nil {
 			var gerr util.Gerror
 			if err != sql.ErrNoRows {
@@ -187,7 +187,7 @@ func GetMulti(org *organization.Organization, clientNames []string) ([]*Client, 
 	var clients []*Client
 	if config.UsingDB() {
 		var err error
-		clients, err = getMultiSQL(clientNames)
+		clients, err = getMultiSQL(clientNames, org)
 		if err != nil && err != sql.ErrNoRows {
 			return nil, util.CastErr(err)
 		}
@@ -277,7 +277,7 @@ func (c *Client) isLastAdmin() bool {
 	if c.Admin {
 		numAdmins := 0
 		if config.UsingDB() {
-			numAdmins = numAdminsSQL()
+			numAdmins = numAdminsSQL(c.org)
 		} else {
 			clist := GetList(c.org)
 			for _, cc := range clist {
@@ -468,7 +468,7 @@ func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
 func GetList(org *organization.Organization) []string {
 	var clientList []string
 	if config.UsingDB() {
-		clientList = getListSQL()
+		clientList = getListSQL(org)
 	} else {
 		ds := datastore.New()
 		clientList = ds.GetList(org.DataKey("client"))
@@ -673,7 +673,7 @@ func (c *Client) GobDecode(b []byte) error {
 func AllClients(org *organization.Organization) []*Client {
 	var clients []*Client
 	if config.UsingDB() {
-		clients = allClientsSQL()
+		clients = allClientsSQL(org)
 	} else {
 		clientList := GetList(org)
 		clients = make([]*Client, 0, len(clientList))
