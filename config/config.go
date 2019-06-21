@@ -357,9 +357,15 @@ func ParseConfigOptions() error {
 		Config.IndexFile = opts.IndexFile
 	}
 
-	// Use MySQL?
+	// Use MySQL? The thing is, we shouldn't.
 	if opts.UseMySQL {
 		Config.UseMySQL = opts.UseMySQL
+	}
+
+	// no moar mysql backend. It's the end of a goiardi era.
+	if Config.UseMySQL {
+		fmt.Fprintln(os.Stderr, "\nThe MySQL database backend is no longer supported.\n\nIf this is an upgraded installation, please use the -x/--export option with the most recent 0.11.x version of goiardi to export your data, set up PostgreSQL and configure goiardi to use that (or configure the in-mem backend if you want that for some reason), and reimport your data with -m/--import. Otherwise, reconfigure your goiardi as appropriate, creating databases as appropriate, and start it again.\n")
+		os.Exit(1)
 	}
 
 	// Use Postgres?
@@ -462,10 +468,7 @@ func ParseConfigOptions() error {
 
 	/* Database options */
 
-	// no moar mysql backend. It's the end of a goiardi era.
-	if Config.UseMySQL {
-		log.Fatalf("The MySQL database backend is no longer supported.\n\nIf this is an upgraded installation, please use the -x/--export option with the most recent 0.11.x version of goiardi to export your data, set up PostgreSQL and configure goiardi to use that (or configure the in-mem backend if you want that for some reason), and reimport your data with -m/--import. Otherwise, reconfigure your goiardi as appropriate, creating databases as appropriate, and start it again.")
-	}
+	
 
 	// set default Postgres options
 	if Config.UsePostgreSQL {
