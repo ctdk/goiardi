@@ -39,23 +39,19 @@ func checkForDataBagSQL(dbhandle datastore.Dbhandle, org *organization.Organizat
 	return false, nil
 }
 
-func getDataBagSQL(name string) (*DataBag, error) {
+func getDataBagSQL(name string, org *organization.Organization) (*DataBag, error) {
 	dataBag := new(DataBag)
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT id, name FROM data_bags WHERE name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT id, name FROM goiardi.data_bags WHERE name = $1"
-	}
+	sqlStatement := "SELECT id, name FROM goiardi.data_bags WHERE organization_id = $1 AND name = $2"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	err = stmt.QueryRow(name).Scan(&dataBag.id, &dataBag.Name)
+	err = stmt.QueryRow(org.GetId(), name).Scan(&dataBag.id, &dataBag.Name)
 	if err != nil {
 		return nil, err
 	}
+	dataBag.org = org
 	return dataBag, nil
 }
 
@@ -77,18 +73,14 @@ func (dbi *DataBagItem) fillDBItemFromSQL(row datastore.ResRow) error {
 
 func (db *DataBag) getDBItemSQL(dbItemName string) (*DataBagItem, error) {
 	dbi := new(DataBagItem)
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM data_bag_items dbi JOIN data_bags db on dbi.data_bag_id = db.id WHERE dbi.orig_name = ? AND dbi.data_bag_id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM goiardi.data_bag_items dbi JOIN goiardi.data_bags db on dbi.data_bag_id = db.id WHERE dbi.orig_name = $1 AND dbi.data_bag_id = $2"
-	}
+	sqlStatement := "SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM goiardi.data_bag_items dbi JOIN goiardi.data_bags db on dbi.data_bag_id = db.id WHERE db.organization_id = $1 AND dbi.orig_name = $2 AND dbi.data_bag_id = $3"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(dbItemName, db.id)
+	row := stmt.QueryRow(db.org.GetId(), dbItemName, db.id)
 	err = dbi.fillDBItemFromSQL(row)
 	if err != nil {
 		return nil, err
@@ -98,12 +90,7 @@ func (db *DataBag) getDBItemSQL(dbItemName string) (*DataBagItem, error) {
 
 func (db *DataBag) checkDBItemSQL(dbItemName string) (bool, error) {
 	var found bool
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT COUNT(dbi.id) FROM data_bag_items dbi JOIN data_bags db ON dbi.data_bag_id = db.id WHERE dbi.orig_name = ? AND dbi.data_bag_id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT COUNT(dbi.id) FROM goiardi.data_bag_items dbi JOIN goiardi.data_bags db on dbi.data_bag_id = db.id WHERE dbi.orig_name = $1 AND dbi.data_bag_id = $2"
-	}
+	sqlStatement := "SELECT COUNT(dbi.id) FROM goiardi.data_bag_items dbi JOIN goiardi.data_bags db on dbi.data_bag_id = db.id WHERE db.organization_id = $1 AND dbi.orig_name = $2 AND dbi.data_bag_id = $3"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return false, err
@@ -111,7 +98,7 @@ func (db *DataBag) checkDBItemSQL(dbItemName string) (bool, error) {
 	defer stmt.Close()
 
 	var c int
-	err = stmt.QueryRow(dbItemName, db.id).Scan(&c)
+	err = stmt.QueryRow(db.org.GetId(), dbItemName, db.id).Scan(&c)
 	if err != nil && err != sql.ErrNoRows {
 		return false, err
 	}
@@ -122,20 +109,15 @@ func (db *DataBag) checkDBItemSQL(dbItemName string) (bool, error) {
 }
 
 func (db *DataBag) getMultiDBItemSQL(dbItemNames []string) ([]*DataBagItem, error) {
-	var sqlStmt string
 	bind := make([]string, len(dbItemNames))
 
-	if config.Config.UseMySQL {
-		for i := range dbItemNames {
-			bind[i] = "?"
-		}
-		sqlStmt = fmt.Sprintf("SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM data_bag_items dbi JOIN data_bags db on dbi.data_bag_id = db.id WHERE dbi.data_bag_id = ? AND dbi.orig_name IN (%s)", strings.Join(bind, ", "))
-	} else if config.Config.UsePostgreSQL {
-		for i := range dbItemNames {
-			bind[i] = fmt.Sprintf("$%d", i+2)
-		}
-		sqlStmt = fmt.Sprintf("SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM goiardi.data_bag_items dbi JOIN goiardi.data_bags db on dbi.data_bag_id = db.id WHERE dbi.data_bag_id = $1 AND dbi.orig_name IN (%s)", strings.Join(bind, ", "))
+	for i := range dbItemNames {
+		bind[i] = fmt.Sprintf("$%d", i+2)
 	}
+	// Try out relying on just dbi.data_bag_id rather than including
+	// db.organization_id
+	sqlStmt := fmt.Sprintf("SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM goiardi.data_bag_items dbi JOIN goiardi.data_bags db on dbi.data_bag_id = db.id WHERE dbi.data_bag_id = $1 AND dbi.orig_name IN (%s)", strings.Join(bind, ", "))
+
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
@@ -177,11 +159,7 @@ func (dbi *DataBagItem) updateDBItemSQL() error {
 	if err != nil {
 		return err
 	}
-	if config.Config.UseMySQL {
-		_, err = tx.Exec("UPDATE data_bag_items SET raw_data = ?, updated_at = NOW() WHERE id = ?", rawb, dbi.id)
-	} else if config.Config.UsePostgreSQL {
-		_, err = tx.Exec("UPDATE goiardi.data_bag_items SET raw_data = $1, updated_at = NOW() WHERE id = $2", rawb, dbi.id)
-	}
+	_, err = tx.Exec("UPDATE goiardi.data_bag_items SET raw_data = $1, updated_at = NOW() WHERE id = $2", rawb, dbi.id)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -198,11 +176,7 @@ func (dbi *DataBagItem) deleteDBItemSQL() error {
 	if err != nil {
 		return err
 	}
-	if config.Config.UseMySQL {
-		_, err = tx.Exec("DELETE FROM data_bag_items WHERE id = ?", dbi.id)
-	} else if config.Config.UsePostgreSQL {
-		_, err = tx.Exec("DELETE FROM goiardi.data_bag_items WHERE id = $1", dbi.id)
-	}
+	_, err = tx.Exec("DELETE FROM goiardi.data_bag_items WHERE id = $1", dbi.id)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -216,12 +190,9 @@ func (dbi *DataBagItem) deleteDBItemSQL() error {
 
 func (db *DataBag) allDBItemsSQL() (map[string]*DataBagItem, error) {
 	dbis := make(map[string]*DataBagItem)
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM data_bag_items dbi JOIN data_bags db on dbi.data_bag_id = db.id WHERE dbi.data_bag_id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM goiardi.data_bag_items dbi JOIN goiardi.data_bags db on dbi.data_bag_id = db.id WHERE dbi.data_bag_id = $1"
-	}
+
+	sqlStatement := "SELECT dbi.id, dbi.data_bag_id, dbi.name, dbi.orig_name, db.name, dbi.raw_data FROM goiardi.data_bag_items dbi JOIN goiardi.data_bags db on dbi.data_bag_id = db.id WHERE dbi.data_bag_id = $1"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
@@ -251,12 +222,7 @@ func (db *DataBag) allDBItemsSQL() (map[string]*DataBagItem, error) {
 }
 
 func (db *DataBag) numDBItemsSQL() int {
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT count(*) FROM data_bag_items WHERE data_bag_id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT count(*) FROM goiardi.data_bag_items WHERE data_bag_id = $1"
-	}
+	sqlStatement := "SELECT count(*) FROM goiardi.data_bag_items WHERE data_bag_id = $1"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
@@ -276,12 +242,7 @@ func (db *DataBag) numDBItemsSQL() int {
 
 func (db *DataBag) listDBItemsSQL() []string {
 	var dbiList []string
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT orig_name FROM data_bag_items WHERE data_bag_id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT orig_name FROM goiardi.data_bag_items WHERE data_bag_id = $1"
-	}
+	sqlStatement := "SELECT orig_name FROM goiardi.data_bag_items WHERE data_bag_id = $1"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
@@ -316,11 +277,9 @@ func (db *DataBag) deleteSQL() error {
 	if err != nil {
 		return err
 	}
-	if config.Config.UseMySQL {
-		_, err = tx.Exec("DELETE FROM data_bag_items WHERE data_bag_id = ?", db.id)
-	} else if config.Config.UsePostgreSQL {
-		_, err = tx.Exec("DELETE FROM goiardi.data_bag_items WHERE data_bag_id = $1", db.id)
-	}
+
+	_, err = tx.Exec("DELETE FROM goiardi.data_bag_items WHERE data_bag_id = $1", db.id)
+
 	if err != nil && err != sql.ErrNoRows {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -328,11 +287,9 @@ func (db *DataBag) deleteSQL() error {
 		}
 		return err
 	}
-	if config.Config.UseMySQL {
-		_, err = tx.Exec("DELETE FROM data_bags WHERE id = ?", db.id)
-	} else if config.Config.UsePostgreSQL {
-		_, err = tx.Exec("DELETE FROM goiardi.data_bags WHERE id = $1", db.id)
-	}
+
+	_, err = tx.Exec("DELETE FROM goiardi.data_bags WHERE id = $1", db.id)
+
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -344,21 +301,17 @@ func (db *DataBag) deleteSQL() error {
 	return nil
 }
 
-func getListSQL() []string {
+func getListSQL(org *organization.Organization) []string {
 	var dbList []string
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name FROM data_bags"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name FROM goiardi.data_bags"
-	}
+
+	sqlStatement := "SELECT name FROM goiardi.data_bags WHERE organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	rows, err := stmt.Query()
+	rows, err := stmt.Query(org.GetId())
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
@@ -381,20 +334,17 @@ func getListSQL() []string {
 
 	return dbList
 }
-func allDataBagsSQL() []*DataBag {
+func allDataBagsSQL(org *organization.Organization) []*DataBag {
 	var dbags []*DataBag
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT id, name FROM data_bags"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT id, name FROM goiardi.data_bags"
-	}
+
+	sqlStatement := "SELECT id, name FROM goiardi.data_bags WHERE organization_id = $1"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	rows, err := stmt.Query()
+	rows, err := stmt.Query(org.GetId())
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)

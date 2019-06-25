@@ -101,7 +101,7 @@ func Get(org *organization.Organization, dbName string) (*DataBag, util.Gerror) 
 	var dataBag *DataBag
 	var err error
 	if config.UsingDB() {
-		dataBag, err = getDataBagSQL(dbName)
+		dataBag, err = getDataBagSQL(dbName, org)
 		if err != nil {
 			var gerr util.Gerror
 			if err == sql.ErrNoRows {
@@ -154,9 +154,7 @@ func DoesExist(org *organization.Organization, dbName string) (bool, util.Gerror
 
 // Save a data bag.
 func (db *DataBag) Save() error {
-	if config.Config.UseMySQL {
-		return db.saveMySQL()
-	} else if config.Config.UsePostgreSQL {
+	if config.UsingDB() {
 		return db.savePostgreSQL()
 	} else {
 		ds := datastore.New()
@@ -193,7 +191,7 @@ func (db *DataBag) Delete() error {
 func GetList(org *organization.Organization) []string {
 	var dbList []string
 	if config.UsingDB() {
-		dbList = getListSQL()
+		dbList = getListSQL(org)
 	} else {
 		ds := datastore.New()
 		dbList = ds.GetList(org.DataKey("data_bag"))
@@ -279,11 +277,8 @@ func (db *DataBag) NewDBItem(rawDbagItem map[string]interface{}) (*DataBagItem, 
 			gerr.SetStatus(http.StatusConflict)
 			return nil, gerr
 		}
-		if config.Config.UseMySQL {
-			dbagItem, err = db.newDBItemMySQL(dbiID, rawDbagItem)
-		} else if config.Config.UsePostgreSQL {
-			dbagItem, err = db.newDBItemPostgreSQL(dbiID, rawDbagItem)
-		}
+		dbagItem, err = db.newDBItemPostgreSQL(dbiID, rawDbagItem)
+
 		if err != nil {
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -524,11 +519,12 @@ func (dbi *DataBagItem) Flatten() map[string]interface{} {
 	return flatten
 }
 
-// AllDataBags returns all data bags on this server, and all their items.
+// AllDataBags returns all data bags in the given organization, and all their
+// items.
 func AllDataBags(org *organization.Organization) []*DataBag {
 	var dataBags []*DataBag
 	if config.UsingDB() {
-		dataBags = allDataBagsSQL()
+		dataBags = allDataBagsSQL(org)
 	} else {
 		dbagList := GetList(org)
 		dataBags = make([]*DataBag, 0, len(dbagList))
