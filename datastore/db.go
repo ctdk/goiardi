@@ -25,16 +25,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	"strings"
 )
 
 // Dbh is the database handle, shared around.
 var Dbh *sql.DB
-
-// Format to use for dates and times for MySQL.
-const MySQLTimeFormat = "2006-01-02 15:04:05"
 
 // Dbhandle is an interface for db handle types that can execute queries.
 type Dbhandle interface {
@@ -51,15 +47,13 @@ type ResRow interface {
 }
 
 // ConnectDB connects to a database with the database name and a map of
-// connection options. Currently supports MySQL and PostgreSQL.
+// connection options. Currently supports PostgreSQL.
 func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	switch strings.ToLower(dbEngine) {
-	case "mysql", "postgres":
+	case "postgres":
 		var connectStr string
 		var cerr error
 		switch strings.ToLower(dbEngine) {
-		case "mysql":
-			connectStr, cerr = formatMysqlConStr(params)
 		case "postgres":
 			// no error needed at this step with
 			// postgres
@@ -142,12 +136,7 @@ func DecodeBlob(data []byte, obj interface{}) error {
 // parent org.
 func CheckForOne(dbhandle Dbhandle, kind string, organization_id int64, name string) (int32, error) {
 	var objID int32
-	var prepStatement string
-	if config.Config.UseMySQL {
-		prepStatement = fmt.Sprintf("SELECT id FROM %s WHERE name = ? AND organization_id = ?", kind)
-	} else if config.Config.UsePostgreSQL {
-		prepStatement = fmt.Sprintf("SELECT id FROM goiardi.%s WHERE name = $1 AND organization_id = $2", kind)
-	}
+	prepStatement := fmt.Sprintf("SELECT id FROM goiardi.%s WHERE name = $1 AND organization_id = $2", kind)
 	stmt, err := dbhandle.Prepare(prepStatement)
 	if err != nil {
 		return 0, err
