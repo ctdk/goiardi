@@ -189,13 +189,7 @@ func DoesExist(org *organization.Organization, userName string) (bool, util.Gerr
 // Save the user's current state.
 func (u *User) Save() util.Gerror {
 	if config.UsingDB() {
-		var err util.Gerror
-		if config.Config.UseMySQL {
-			err = u.saveMySQL()
-		} else {
-			err = u.savePostgreSQL()
-		}
-		if err != nil {
+		if err := u.savePostgreSQL(); err != nil {
 			return err
 		}
 	} else {
@@ -266,14 +260,8 @@ func (u *User) Rename(newName string) util.Gerror {
 		}
 	}
 	if config.UsingDB() {
-		if config.Config.UseMySQL {
-			if err := u.renameMySQL(newName); err != nil {
-				return err
-			}
-		} else if config.Config.UsePostgreSQL {
-			if err := u.renamePostgreSQL(newName); err != nil {
-				return err
-			}
+		if err := u.renamePostgreSQL(newName); err != nil {
+			return err
 		}
 	} else {
 		ds := datastore.New()
