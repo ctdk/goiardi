@@ -153,9 +153,11 @@ func (le *LogInfo) importEventInMem() error {
 func Get(org *organization.Organization, id int) (*LogInfo, error) {
 	var le *LogInfo
 
+	orgId, orgName := getOrgInfo(org)
+
 	if config.UsingDB() {
 		var err error
-		le, err = getLogEventSQL(id)
+		le, err = getLogEventSQL(id, orgId)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = fmt.Errorf("Couldn't find log event with id %d", id)
@@ -164,7 +166,7 @@ func Get(org *organization.Organization, id int) (*LogInfo, error) {
 		}
 	} else {
 		ds := datastore.New()
-		c, err := ds.GetLogInfo(org.Name, id)
+		c, err := ds.GetLogInfo(orgName, id)
 		if err != nil {
 			return nil, err
 		}
@@ -186,8 +188,11 @@ func DoesExist(org *organization.Organization, eventID string) (bool, util.Gerro
 		cerr := util.CastErr(err)
 		return false, cerr
 	}
+
+	orgId, orgName := getOrgInfo(org)
+
 	if config.UsingDB() {
-		found, err := checkLogEventSQL(id)
+		found, err := checkLogEventSQL(id, orgId)
 		if err != nil {
 			cerr := util.CastErr(err)
 			return false, cerr
@@ -196,7 +201,7 @@ func DoesExist(org *organization.Organization, eventID string) (bool, util.Gerro
 	}
 
 	ds := datastore.New()
-	c, err := ds.GetLogInfo(org.Name, id)
+	c, err := ds.GetLogInfo(orgName, id)
 	if err != nil {
 		cerr := util.CastErr(err)
 		return false, cerr
@@ -214,17 +219,18 @@ func (le *LogInfo) Delete() error {
 		return le.deleteSQL()
 	}
 	ds := datastore.New()
-	ds.DeleteLogInfo(le.org.Name, le.ID)
+	ds.DeleteLogInfo(le.OrgName(), le.ID)
 	return nil
 }
 
 // PurgeLogInfos removes all logged events before the given id.
 func PurgeLogInfos(org *organization.Organization, id int) (int64, error) {
+	orgId, orgName := getOrgInfo(org)
 	if config.UsingDB() {
-		return purgeSQL(id)
+		return purgeSQL(id, orgId)
 	}
 	ds := datastore.New()
-	return ds.PurgeLogInfoBefore(org.Name, id)
+	return ds.PurgeLogInfoBefore(orgName, id)
 }
 
 // GetLogInfos gets a slice of the logged events. May be called with an offset
@@ -232,6 +238,7 @@ func PurgeLogInfos(org *organization.Organization, id int) (int64, error) {
 // specified without a limit, but a limit requires an offset (which can be 0).
 // The map of search params may be nil, but something must be present.
 func GetLogInfos(org *organization.Organization, searchParams map[string]string, limits ...int) ([]*LogInfo, error) {
+	orgId, orgName := getOrgInfo(org)
 	// optional params
 	var from, until time.Time
 	if f, ok := searchParams["from"]; ok {
@@ -265,7 +272,7 @@ func GetLogInfos(org *organization.Organization, searchParams map[string]string,
 		}
 	}
 	if config.UsingDB() {
-		return getLogInfoListSQL(searchParams, from, until, limits...)
+		return getLogInfoListSQL(orgId, searchParams, from, until, limits...)
 	}
 	var offset, limit int
 	if len(limits) > 0 {
@@ -278,7 +285,7 @@ func GetLogInfos(org *organization.Organization, searchParams map[string]string,
 	}
 
 	ds := datastore.New()
-	arr := ds.GetLogInfoList(org.Name)
+	arr := ds.GetLogInfoList(orgName)
 	lis := make([]*LogInfo, len(arr))
 	keys := make([]int, 0, len(arr))
 	for k := range arr {
@@ -350,4 +357,26 @@ func (le *LogInfo) OrgName() string {
 		return le.org.Name
 	}
 	return ""
+}
+
+func (le *LogInfo) OrgId() int64 {
+	if le.org != nil {
+		return le.org.GetId()
+	}
+	return 0
+}
+
+// This is a helper function to get an org's id and name if the org passed in
+// is not nil.
+func getOrgInfo(org *organization.Organization) (int64, string) {
+	var orgName string
+	var orgId int64
+
+	if org != nil {
+		if config.UsingDB() {
+			orgId = org.GetId()
+		}
+		orgName = org.Name
+	}
+	return orgId, orgName
 }

@@ -23,8 +23,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"io/ioutil"
 	"regexp"
 	"time"
@@ -36,7 +37,7 @@ func (le *LogInfo) writeEventSQL() error {
 		return err
 	}
 	typeTable := fmt.Sprintf("%ss", le.ActorType)
-	actorID, err := datastore.CheckForOne(tx, typeTable, le.org.GetId(), le.Actor.GetName())
+	actorID, err := datastore.CheckForOne(tx, typeTable, le.OrgId(), le.Actor.GetName())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -68,7 +69,7 @@ func (le *LogInfo) importEventSQL() error {
 		return err
 	}
 
-	actorID, err := datastore.CheckForOne(tx, typeTable, le.org.GetId(), doer["name"].(string))
+	actorID, err := datastore.CheckForOne(tx, typeTable, le.OrgId(), doer["name"].(string))
 	if err != nil {
 		actorID = -1
 	}
@@ -84,54 +85,43 @@ func (le *LogInfo) importEventSQL() error {
 // This has been broken out to a separate function to simplify importing data
 // from json export dumps.
 func (le *LogInfo) actualWriteEventSQL(tx datastore.Dbhandle, actorID int32) error {
-	if config.Config.UseMySQL {
-		return le.actualWriteEventMySQL(tx, actorID)
-	} else if config.Config.UsePostgreSQL {
-		return le.actualWriteEventPostgreSQL(tx, actorID)
-	}
-	// otherwise, somehow
-	err := fmt.Errorf("Tried to write a log event with an unknown database")
-	return err
+	return le.actualWriteEventPostgreSQL(tx, actorID)
 }
 
-func getLogEventSQL(id int) (*LogInfo, error) {
+func getLogEventSQL(id int, orgId int64) (*LogInfo, error) {
 	le := new(LogInfo)
 
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos WHERE id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos WHERE id = $1"
-	}
+	sqlStmt := "SELECT id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos WHERE organization_id = $1 AND id = $2"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(id)
-	if config.Config.UseMySQL {
-		err = le.fillLogEventFromMySQL(row)
-	} else if config.Config.UsePostgreSQL {
-		err = le.fillLogEventFromPostgreSQL(row)
+
+	if orgId != 0 {
+		org, oerr := orgloader.OrgByIdSQL(orgId)
+		if oerr != nil {
+			return nil, oerr
+		}
+		le.org = org
 	}
-	if err != nil {
+
+	row := stmt.QueryRow(orgId, id)
+	if err = le.fillLogEventFromPostgreSQL(row); err != nil {
 		return nil, err
 	}
+
 	// conveniently, le.Actor does not seem to need to be populated after
 	// it's been saved.
 	return le, nil
 }
 
-func checkLogEventSQL(id int) (bool, error) {
+func checkLogEventSQL(id int, orgId int64) (bool, error) {
 	var found bool
-	var sqlStmt string
 
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT COUNT(id) FROM log_infos WHERE id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT id FROM goiardi.log_infos WHERE id = $1"
-	}
+	sqlStmt := "SELECT id FROM goiardi.log_infos WHERE organization_id = $1 AND id = $2"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return false, err
@@ -139,7 +129,7 @@ func checkLogEventSQL(id int) (bool, error) {
 	defer stmt.Close()
 
 	var c int
-	err = stmt.QueryRow(id).Scan(&c)
+	err = stmt.QueryRow(orgId, id).Scan(&c)
 	// should be hard at best to get ErrNoRows in this situation
 	if err != nil && err != sql.ErrNoRows {
 		return false, err
@@ -156,14 +146,9 @@ func (le *LogInfo) deleteSQL() error {
 		return err
 	}
 
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM log_infos WHERE id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.log_infos WHERE id = $1"
-	}
+	sqlStmt := "DELETE FROM goiardi.log_infos WHERE organization_id = $1 AND id = $2"
 
-	_, err = tx.Exec(sqlStmt, le.ID)
+	_, err = tx.Exec(sqlStmt, le.OrgId(), le.ID)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -172,20 +157,15 @@ func (le *LogInfo) deleteSQL() error {
 	return nil
 }
 
-func purgeSQL(id int) (int64, error) {
+func purgeSQL(id int, orgId int64) (int64, error) {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return 0, err
 	}
 
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM log_infos WHERE id <= ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.log_infos WHERE id <= $1"
-	}
+	sqlStmt := "DELETE FROM goiardi.log_infos WHERE organization_id = $1 AND id <= $2"
 
-	res, err := tx.Exec(sqlStmt, id)
+	res, err := tx.Exec(sqlStmt, orgId, id)
 	if err != nil {
 		tx.Rollback()
 		return 0, err
@@ -195,7 +175,7 @@ func purgeSQL(id int) (int64, error) {
 	return rowsAffected, nil
 }
 
-func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, limits ...int) ([]*LogInfo, error) {
+func getLogInfoListSQL(orgId int64, searchParams map[string]string, from, until time.Time, limits ...int) ([]*LogInfo, error) {
 	var offset int
 	var limit int64 = (1 << 63) - 1
 	if len(limits) > 0 {
@@ -208,61 +188,38 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 	}
 	var loggedEvents []*LogInfo
 
-	var sqlStmt string
-	sqlArgs := []interface{}{from, until}
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos li JOIN users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
-		if action, ok := searchParams["action"]; ok {
-			sqlStmt = sqlStmt + " AND action = ?"
-			sqlArgs = append(sqlArgs, action)
-		}
-		if objectType, ok := searchParams["object_type"]; ok {
-			sqlStmt = sqlStmt + " AND object_type = ?"
-			sqlArgs = append(sqlArgs, objectType)
-		}
-		if objectName, ok := searchParams["object_name"]; ok {
-			sqlStmt = sqlStmt + " AND object_name = ?"
-			sqlArgs = append(sqlArgs, objectName)
-		}
-		if doer, ok := searchParams["doer"]; ok {
-			sqlStmt = sqlStmt + " AND u.name = ?"
-			sqlArgs = append(sqlArgs, doer)
-		} else {
-			re := regexp.MustCompile("JOIN users u ON li.actor_id = u.id")
-			sqlStmt = re.ReplaceAllString(sqlStmt, "")
-		}
-		sqlStmt = sqlStmt + " ORDER BY id DESC LIMIT ?, ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos li JOIN goiardi.users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
-		if action, ok := searchParams["action"]; ok {
-			sqlStmt = sqlStmt + " AND action = ?"
-			sqlArgs = append(sqlArgs, action)
-		}
-		if objectType, ok := searchParams["object_type"]; ok {
-			sqlStmt = sqlStmt + " AND object_type = ?"
-			sqlArgs = append(sqlArgs, objectType)
-		}
-		if objectName, ok := searchParams["object_name"]; ok {
-			sqlStmt = sqlStmt + " AND object_name = ?"
-			sqlArgs = append(sqlArgs, objectName)
-		}
-		if doer, ok := searchParams["doer"]; ok {
-			sqlStmt = sqlStmt + " AND u.name = ?"
-			sqlArgs = append(sqlArgs, doer)
-		} else {
-			re := regexp.MustCompile("JOIN goiardi.users u ON li.actor_id = u.id")
-			sqlStmt = re.ReplaceAllString(sqlStmt, "")
-		}
-		sqlStmt = sqlStmt + " ORDER BY id DESC OFFSET ? LIMIT ?"
-		re := regexp.MustCompile("\\?")
-		u := 1
-		rfunc := func([]byte) []byte {
-			r := []byte(fmt.Sprintf("$%d", u))
-			u++
-			return r
-		}
-		sqlStmt = string(re.ReplaceAllFunc([]byte(sqlStmt), rfunc))
+	sqlArgs := []interface{}{orgId, from, until}
+	
+	sqlStmt := "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos li JOIN goiardi.users u ON li.actor_id = u.id WHERE organization_id = ? AND time >= ? AND time <= ?"
+	if action, ok := searchParams["action"]; ok {
+		sqlStmt = sqlStmt + " AND action = ?"
+		sqlArgs = append(sqlArgs, action)
 	}
+	if objectType, ok := searchParams["object_type"]; ok {
+		sqlStmt = sqlStmt + " AND object_type = ?"
+		sqlArgs = append(sqlArgs, objectType)
+	}
+	if objectName, ok := searchParams["object_name"]; ok {
+		sqlStmt = sqlStmt + " AND object_name = ?"
+		sqlArgs = append(sqlArgs, objectName)
+	}
+	if doer, ok := searchParams["doer"]; ok {
+		sqlStmt = sqlStmt + " AND u.name = ?"
+		sqlArgs = append(sqlArgs, doer)
+	} else {
+		re := regexp.MustCompile("JOIN goiardi.users u ON li.actor_id = u.id")
+		sqlStmt = re.ReplaceAllString(sqlStmt, "")
+	}
+	sqlStmt = sqlStmt + " ORDER BY id DESC OFFSET ? LIMIT ?"
+	re := regexp.MustCompile("\\?")
+	u := 1
+	rfunc := func([]byte) []byte {
+		r := []byte(fmt.Sprintf("$%d", u))
+		u++
+		return r
+	}
+	sqlStmt = string(re.ReplaceAllFunc([]byte(sqlStmt), rfunc))
+
 	sqlArgs = append(sqlArgs, offset)
 	sqlArgs = append(sqlArgs, limit)
 
@@ -278,14 +235,20 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 		}
 		return nil, qerr
 	}
+
+	var org *organization.Organization
+	if orgId != 0 {
+		var oerr error
+		org, oerr = orgloader.OrgByIdSQL(orgId)
+		if oerr != nil {
+			return nil, oerr
+		}
+	}
+
 	for rows.Next() {
 		le := new(LogInfo)
-		if config.Config.UseMySQL {
-			err = le.fillLogEventFromMySQL(rows)
-		} else if config.Config.UsePostgreSQL {
-			err = le.fillLogEventFromPostgreSQL(rows)
-		}
-		if err != nil {
+		le.org = org
+		if err = le.fillLogEventFromPostgreSQL(rows); err != nil {
 			return nil, err
 		}
 		loggedEvents = append(loggedEvents, le)

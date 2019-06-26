@@ -33,11 +33,11 @@ func (le *LogInfo) fillLogEventFromPostgreSQL(row datastore.ResRow) error {
 func (le *LogInfo) actualWriteEventPostgreSQL(tx datastore.Dbhandle, actorID int32) error {
 	var err error
 	if le.ID == 0 {
-		sqlStmt := "INSERT INTO goiardi.log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
-		_, err = tx.Exec(sqlStmt, actorID, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+		sqlStmt := "INSERT INTO goiardi.log_infos (actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info, organization_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+		_, err = tx.Exec(sqlStmt, actorID, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo, le.OrgId())
 	} else {
-		sqlStmt := "INSERT INTO goiardi.log_infos (id, actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
-		_, err = tx.Exec(sqlStmt, le.ID, actorID, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo)
+		sqlStmt := "INSERT INTO goiardi.log_infos (id, actor_id, actor_type, actor_info, time, action, object_type, object_name, extended_info) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
+		_, err = tx.Exec(sqlStmt, le.ID, actorID, le.ActorType, le.ActorInfo, le.Time, le.Action, le.ObjectType, le.ObjectName, le.ExtendedInfo, le.OrgId())
 	}
 	return err
 }
