@@ -19,12 +19,13 @@ package node
 import (
 	"database/sql"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/lib/pq"
 	"strings"
 )
 
 func (n *Node) savePostgreSQL(tx datastore.Dbhandle, rlb, aab, nab, dab, oab []byte) error {
-	_, err := tx.Exec("SELECT goiardi.merge_nodes($1, $2, $3, $4, $5, $6, $7)", n.Name, n.ChefEnvironment, rlb, aab, nab, dab, oab)
+	_, err := tx.Exec("SELECT goiardi.merge_nodes($1, $2, $3, $4, $5, $6, $7, $8)", n.Name, n.ChefEnvironment, rlb, aab, nab, dab, oab, n.org.GetId())
 	if err != nil {
 		return err
 	}
@@ -46,7 +47,7 @@ func (ns *NodeStatus) updateNodeStatusPostgreSQL() error {
 		isDown = true
 	}
 	if isDown != ns.Node.isDown {
-		_, err = tx.Exec("UPDATE goiardi.nodes SET is_down = $1, updated_at = NOW() WHERE name = $2", isDown, ns.Node.Name)
+		_, err = tx.Exec("UPDATE goiardi.nodes SET is_down = $1, updated_at = NOW() WHERE organization_id = $2 AND name = $3", isDown, ns.org.GetId(), ns.Node.Name)
 		if err != nil {
 			tx.Rollback()
 			return err
@@ -72,7 +73,7 @@ func (ns *NodeStatus) fillNodeStatusFromPostgreSQL(row datastore.ResRow) error {
 	return nil
 }
 
-func getNodesByStatusPostgreSQL(nodeNames []string, status string) ([]*Node, error) {
+func getNodesByStatusPostgreSQL(org *organization.Organization, nodeNames []string, status string) ([]*Node, error) {
 	var nodes []*Node
 	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.node_latest_statuses n WHERE n.status = $1 AND n.name = ANY($2::text[])"
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
