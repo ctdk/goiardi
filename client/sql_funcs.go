@@ -154,13 +154,8 @@ func numAdminsSQL(org *organization.Organization) int {
 
 func getListSQL(org *organization.Organization) []string {
 	var clientList []string
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name FROM clients"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name FROM goiardi.clients"
-	}
-	rows, err := datastore.Dbh.Query(sqlStatement)
+	sqlStatement := "SELECT name FROM goiardi.clients WHERE organization_id = $1"
+	rows, err := datastore.Dbh.Query(sqlStatement, org.GetId())
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
@@ -185,18 +180,14 @@ func getListSQL(org *organization.Organization) []string {
 func allClientsSQL(org *organization.Organization) []*Client {
 	var clients []*Client
 	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT c.name, nodename, validator, admin, o.name, public_key, certificate FROM clients c JOIN organizations o ON c.organization_id = o.id"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT c.name, nodename, validator, admin, o.name, public_key, certificate FROM goiardi.clients c JOIN goiardi.organizations o ON c.organization_id = o.id"
-	}
+	sqlStatement = "SELECT c.name, nodename, validator, admin, o.name, public_key, certificate FROM goiardi.clients c JOIN goiardi.organizations o ON c.organization_id = o.id WHERE organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query()
+	rows, qerr := stmt.Query(org.GetId())
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return clients
@@ -226,19 +217,24 @@ func ClientsByIdSQL(ids []int64, org *organization.Organization) ([]*Client, err
 	var clients []*Client
 
 	bind := make([]string, len(ids))
-	intfIds := make([]interface{}, len(ids))
+	intfIds := make([]interface{}, len(ids) + 1)
+	intfIds[0] = org.GetId()
 
 	for i, d := range ids {
-		bind[i] = fmt.Sprintf("$%d", i + 1)
-		intfIds[i] = d
+		bind[i] = fmt.Sprintf("$%d", i + 2)
+		intfIds[i+1] = d
 	}
-	sqlStatement := fmt.Sprintf("select c.name, nodename, validator, admin, o.name, public_key, certificate, id FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE id IN (%s)", strings.Join(bind, ", "))
+
+	// Make this a little bit safer and less likely to accidentally be able
+	// to return clients that don't belong to this org.
+	sqlStatement := fmt.Sprintf("select c.name, nodename, validator, admin, o.name, public_key, certificate, id FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE organization_id = $1 AND c.id IN (%s)", strings.Join(bind, ", "))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
+
 	rows, qerr := stmt.Query(intfIds...)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
