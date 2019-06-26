@@ -132,7 +132,7 @@ func Get(org *organization.Organization, sandboxID string) (*Sandbox, error) {
 
 	if config.UsingDB() {
 		var err error
-		sandbox, err = getSQL(sandboxID)
+		sandbox, err = getSQL(org, sandboxID)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -161,11 +161,7 @@ func Get(org *organization.Organization, sandboxID string) (*Sandbox, error) {
 
 // Save the sandbox.
 func (s *Sandbox) Save() error {
-	if config.Config.UseMySQL {
-		if err := s.saveMySQL(); err != nil {
-			return err
-		}
-	} else if config.Config.UsePostgreSQL {
+	if config.UsingDB() {
 		if err := s.savePostgreSQL(); err != nil {
 			return err
 		}
@@ -193,7 +189,7 @@ func (s *Sandbox) Delete() error {
 func GetList(org *organization.Organization) []string {
 	var sandboxList []string
 	if config.UsingDB() {
-		sandboxList = getListSQL()
+		sandboxList = getListSQL(org)
 	} else {
 		ds := datastore.New()
 		sandboxList = ds.GetList(org.DataKey("sandbox"))
@@ -212,7 +208,7 @@ func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 		if config.Config.UseS3Upload {
 			n = util.S3CheckFile(s.org.Name, chk)
 		} else {
-			k, _ := filestore.Get(s.org.Name, chk)
+			k, _ := filestore.Get(s.org, chk)
 			if k != nil {
 				n = true
 			}
@@ -250,7 +246,7 @@ func (s *Sandbox) IsComplete() error {
 				return err
 			}
 		} else {
-			k, _ := filestore.Get(s.org.Name, chk)
+			k, _ := filestore.Get(s.org, chk)
 			if k != nil {
 				uploaded = true
 			}
@@ -290,7 +286,7 @@ func (s *Sandbox) OrgName() string {
 func AllSandboxes(org *organization.Organization) []*Sandbox {
 	var sandboxes []*Sandbox
 	if config.UsingDB() {
-		sandboxes = allSandboxesSQL()
+		sandboxes = allSandboxesSQL(org)
 	} else {
 		sandboxList := GetList(org)
 		sandboxes = make([]*Sandbox, 0, len(sandboxList))

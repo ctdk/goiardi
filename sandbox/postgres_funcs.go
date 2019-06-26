@@ -44,7 +44,7 @@ func (s *Sandbox) savePostgreSQL() error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_sandboxes($1, $2, $3, $4)", s.ID, s.CreationTime, ckb, s.Completed)
+	_, err = tx.Exec("SELECT goiardi.merge_sandboxes($1, $2, $3, $4, $5)", s.ID, s.CreationTime, ckb, s.Completed, s.org.GetId())
 	if err != nil {
 		tx.Rollback()
 		return err

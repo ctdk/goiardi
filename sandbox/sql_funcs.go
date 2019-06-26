@@ -21,35 +21,28 @@ package sandbox
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"log"
 	"time"
 )
 
 func (s *Sandbox) fillSandboxFromSQL(row datastore.ResRow) error {
-	if config.Config.UseMySQL {
-		return s.fillSandboxFromMySQL(row)
-	} else if config.Config.UsePostgreSQL {
-		return s.fillSandboxFromPostgreSQL(row)
-	}
-	return nil
+	return s.fillSandboxFromPostgreSQL(row)
 }
 
-func getSQL(sandboxID string) (*Sandbox, error) {
+func getSQL(org *organization.Organization, sandboxID string) (*Sandbox, error) {
 	sandbox := new(Sandbox)
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT sbox_id, creation_time, checksums, completed FROM sandboxes WHERE sbox_id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT sbox_id, creation_time, checksums, completed FROM goiardi.sandboxes WHERE sbox_id = $1"
-	}
+	sandbox.org = org
+
+	sqlStmt := "SELECT sbox_id, creation_time, checksums, completed FROM goiardi.sandboxes WHERE organization_id = $1 AND sbox_id = $2"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(sandboxID)
+	row := stmt.QueryRow(org.GetId(), sandboxID)
 	err = sandbox.fillSandboxFromSQL(row)
 	if err != nil {
 		return nil, err
@@ -62,13 +55,10 @@ func (s *Sandbox) deleteSQL() error {
 	if err != nil {
 		return err
 	}
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM sandboxes WHERE sbox_id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.sandboxes WHERE sbox_id = $1"
-	}
-	_, err = tx.Exec(sqlStmt, s.ID)
+
+	sqlStmt := "DELETE FROM goiardi.sandboxes WHERE organization_id = $1 AND sbox_id = $2"
+
+	_, err = tx.Exec(sqlStmt, s.org.GetId(), s.ID)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -85,12 +75,9 @@ func purgeSQL(olderThan time.Time) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM sandboxes WHERE creation_time < ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.sandboxes WHERE creation_time < $1"
-	}
+
+	sqlStmt := "DELETE FROM goiardi.sandboxes WHERE creation_time < $1"
+
 	res, err := tx.Exec(sqlStmt, olderThan)
 	if err != nil {
 		terr := tx.Rollback()
@@ -104,15 +91,10 @@ func purgeSQL(olderThan time.Time) (int, error) {
 	return int(rows), nil
 }
 
-func getListSQL() []string {
+func getListSQL(org *organization.Organization) []string {
 	var sandboxList []string
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT sbox_id FROM sandboxes"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT sbox_id FROM goiardi.sandboxes"
-	}
-	rows, err := datastore.Dbh.Query(sqlStmt)
+	sqlStmt := "SELECT sbox_id FROM goiardi.sandboxes WHERE organization_id = $1"
+	rows, err := datastore.Dbh.Query(sqlStmt, org.GetId())
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
@@ -135,20 +117,16 @@ func getListSQL() []string {
 	return sandboxList
 }
 
-func allSandboxesSQL() []*Sandbox {
+func allSandboxesSQL(org *organization.Organization) []*Sandbox {
 	var sandboxes []*Sandbox
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT sbox_id, creation_time, checksums, completed FROM sandboxes"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT sbox_id, creation_time, checksums, completed FROM goiardi.sandboxes"
-	}
+	sqlStmt := "SELECT sbox_id, creation_time, checksums, completed FROM goiardi.sandboxes WHERE organization_id = $1"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query()
+	rows, qerr := stmt.Query(org.GetId())
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return sandboxes
@@ -157,6 +135,7 @@ func allSandboxesSQL() []*Sandbox {
 	}
 	for rows.Next() {
 		sb := new(Sandbox)
+		sb.org = org
 		err = sb.fillSandboxFromSQL(rows)
 		if err != nil {
 			log.Fatal(err)
