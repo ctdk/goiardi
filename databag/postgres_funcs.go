@@ -61,7 +61,7 @@ func (db *DataBag) savePostgreSQL() error {
 		return err
 	}
 
-	err = tx.QueryRow("SELECT goiardi.merge_data_bags($1)", db.Name).Scan(&db.id)
+	err = tx.QueryRow("SELECT goiardi.merge_data_bags($1, $2)", db.org.GetId(), db.Name).Scan(&db.id)
 	if err != nil {
 		tx.Rollback()
 		return err
