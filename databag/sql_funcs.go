@@ -352,6 +352,7 @@ func allDataBagsSQL(org *organization.Organization) []*DataBag {
 	}
 	for rows.Next() {
 		dataBag := new(DataBag)
+		dataBag.org = org
 		err = rows.Scan(&dataBag.id, &dataBag.Name)
 		if err != nil {
 			log.Fatal(err)

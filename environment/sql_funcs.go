@@ -81,20 +81,17 @@ func (e *ChefEnvironment) fillEnvFromSQL(row datastore.ResRow) error {
 	return nil
 }
 
-func getEnvironmentSQL(envName string) (*ChefEnvironment, error) {
+func getEnvironmentSQL(envName string, org *organization.Organization) (*ChefEnvironment, error) {
 	env := new(ChefEnvironment)
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments WHERE name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name, description, default_attr, override_attr, cookbook_vers FROM goiardi.environments WHERE name = $1"
-	}
+	env.org = org
+
+	sqlStatement := "SELECT name, description, default_attr, override_attr, cookbook_vers FROM goiardi.environments WHERE organization_id = $1 AND name = $2"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(envName)
+	row := stmt.QueryRow(org.GetId(), envName)
 	err = env.fillEnvFromSQL(row)
 	if err != nil {
 		return nil, err
@@ -102,27 +99,22 @@ func getEnvironmentSQL(envName string) (*ChefEnvironment, error) {
 	return env, nil
 }
 
-func getMultiSQL(envNames []string) ([]*ChefEnvironment, error) {
-	var sqlStmt string
+func getMultiSQL(envNames []string, org *organization.Organization) ([]*ChefEnvironment, error) {
 	bind := make([]string, len(envNames))
 
-	if config.Config.UseMySQL {
-		for i := range envNames {
-			bind[i] = "?"
-		}
-		sqlStmt = fmt.Sprintf("SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments WHERE name IN (%s)", strings.Join(bind, ", "))
-	} else if config.Config.UsePostgreSQL {
-		for i := range envNames {
-			bind[i] = fmt.Sprintf("$%d", i+1)
-		}
-		sqlStmt = fmt.Sprintf("SELECT name, description, default_attr, override_attr, cookbook_vers FROM goiardi.environments WHERE name IN (%s)", strings.Join(bind, ", "))
+	for i := range envNames {
+		bind[i] = fmt.Sprintf("$%d", i+2)
 	}
+	sqlStmt := fmt.Sprintf("SELECT name, description, default_attr, override_attr, cookbook_vers FROM goiardi.environments WHERE organization_id = $1 AND name IN (%s)", strings.Join(bind, ", "))
+
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	nameArgs := make([]interface{}, len(envNames))
+	nameArgs := make([]interface{}, len(envNames)+1)
+	nameArgs[0] = org.GetId()
+
 	for i, v := range envNames {
 		nameArgs[i] = v
 	}
@@ -133,6 +125,7 @@ func getMultiSQL(envNames []string) ([]*ChefEnvironment, error) {
 	envs := make([]*ChefEnvironment, 0, len(envNames))
 	for rows.Next() {
 		e := new(ChefEnvironment)
+		e.org = org
 		err = e.fillEnvFromSQL(rows)
 		if err != nil {
 			rows.Close()
@@ -149,17 +142,12 @@ func getMultiSQL(envNames []string) ([]*ChefEnvironment, error) {
 }
 
 func (e *ChefEnvironment) deleteEnvironmentSQL() error {
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "DELETE FROM environments WHERE name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "DELETE FROM goiardi.environments WHERE name = $1"
-	}
+	sqlStatement := "DELETE FROM goiardi.environments WHERE organization_id = $1 AND name = $2"
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(sqlStatement, e.Name)
+	_, err = tx.Exec(sqlStatement, e.org.GetId(), e.Name)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -171,15 +159,10 @@ func (e *ChefEnvironment) deleteEnvironmentSQL() error {
 	return nil
 }
 
-func getEnvironmentList() []string {
+func getEnvironmentList(org *organization.Organization) []string {
 	var envList []string
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name FROM environments"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name FROM goiardi.environments"
-	}
-	rows, err := datastore.Dbh.Query(sqlStatement)
+	sqlStatement := "SELECT name FROM goiardi.environments WHERE organization_id = $1"
+	rows, err := datastore.Dbh.Query(sqlStatement, org.GetId())
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
@@ -202,15 +185,10 @@ func getEnvironmentList() []string {
 	return envList
 }
 
-func allEnvironmentsSQL() []*ChefEnvironment {
+func allEnvironmentsSQL(org *organization.Organization) []*ChefEnvironment {
 	var environments []*ChefEnvironment
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name, description, default_attr, override_attr, cookbook_vers FROM environments WHERE name != '_default'"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name, description, default_attr, override_attr, cookbook_vers FROM goiardi.environments WHERE name <> '_default'"
-	}
-	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	sqlStatement := "SELECT name, description, default_attr, override_attr, cookbook_vers FROM goiardi.environments WHERE organization_id = $1 AND name <> '_default'"
+	stmt, err := datastore.Dbh.Prepare(sqlStatement, org.GetId())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -224,6 +202,7 @@ func allEnvironmentsSQL() []*ChefEnvironment {
 	}
 	for rows.Next() {
 		env := new(ChefEnvironment)
+		env.org = org
 		err = env.fillEnvFromSQL(rows)
 		if err != nil {
 			log.Fatal(err)

@@ -100,6 +100,7 @@ func getMultiSQL(clientNames []string, org *organization.Organization) ([]*Clien
 	clients := make([]*Client, 0, len(clientNames))
 	for rows.Next() {
 		c := new(Client)
+		c.org = org
 		err = c.fillClientFromSQL(rows)
 		if err != nil {
 			rows.Close()
@@ -196,6 +197,7 @@ func allClientsSQL(org *organization.Organization) []*Client {
 	}
 	for rows.Next() {
 		cl := new(Client)
+		cl.org = org
 		err = cl.fillClientFromSQL(rows)
 		if err != nil {
 			log.Fatal(err)
@@ -244,6 +246,7 @@ func ClientsByIdSQL(ids []int64, org *organization.Organization) ([]*Client, err
 	}
 	for rows.Next() {
 		cs := new(Client)
+		cs.org = org
 		err = cs.fillClientFromSQL(rows)
 		if err != nil {
 			return nil, err

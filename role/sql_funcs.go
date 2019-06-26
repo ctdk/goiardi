@@ -116,6 +116,7 @@ func getMultiSQL(roleNames []string, org *organization.Organization) ([]*Role, e
 	roles := make([]*Role, 0, len(roleNames))
 	for rows.Next() {
 		r := new(Role)
+		r.org = org
 		err = r.fillRoleFromSQL(rows)
 		if err != nil {
 			rows.Close()
@@ -198,6 +199,7 @@ func allRolesSQL(org *organization.Organization) []*Role {
 	}
 	for rows.Next() {
 		ro := new(Role)
+		ro.org = org
 		err = ro.fillRoleFromSQL(rows)
 		if err != nil {
 			log.Fatal(err)

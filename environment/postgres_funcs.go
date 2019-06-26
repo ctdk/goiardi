@@ -43,7 +43,7 @@ func (e *ChefEnvironment) saveEnvironmentPostgreSQL() util.Gerror {
 		return gerr
 	}
 
-	_, err = tx.Exec("SELECT goiardi.merge_environments($1, $2, $3, $4, $5)", e.Name, e.Description, dab, oab, cvb)
+	_, err = tx.Exec("SELECT goiardi.merge_environments($1, $2, $3, $4, $5)", e.Name, e.Description, e.org.GetId(), dab, oab, cvb)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)

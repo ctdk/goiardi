@@ -27,6 +27,7 @@ import (
 
 func getSQL(chksum string, org FstoreOrg) (*FileStore, error) {
 	filestore := new(FileStore)
+	filestore.org = org
 	sqlStatement := "SELECT checksum FROM goiardi.file_checksums WHERE organization_id = $1 AND checksum = $2"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -108,6 +109,7 @@ func allFilestoresSQL(org FstoreOrg) []*FileStore {
 	}
 	for rows.Next() {
 		fl := new(FileStore)
+		fl.org = org
 		err = rows.Scan(&fl.Chksum)
 		if err != nil {
 			log.Fatal(err)
