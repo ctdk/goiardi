@@ -66,12 +66,7 @@ func (u *User) fillUserFromSQL(row datastore.ResRow) error {
 
 func getUserSQL(name string) (*User, error) {
 	user := new(User)
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "select id, name, displayname, admin, public_key, email, passwd, salt FROM users WHERE name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "select id, name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users WHERE name = $1"
-	}
+	sqlStatement := "select id, name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users WHERE name = $1"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
@@ -90,11 +85,7 @@ func (u *User) deleteSQL() error {
 	if err != nil {
 		return err
 	}
-	if config.Config.UseMySQL {
-		_, err = tx.Exec("DELETE FROM users WHERE name = ?", u.Username)
-	} else if config.Config.UsePostgreSQL {
-		_, err = tx.Exec("DELETE FROM goiardi.users WHERE name = $1", u.Username)
-	}
+	_, err = tx.Exec("DELETE FROM goiardi.users WHERE name = $1", u.Username)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -103,14 +94,12 @@ func (u *User) deleteSQL() error {
 	return nil
 }
 
+// This is probably obsolete now.
 func numAdminsSQL() int {
 	var numAdmins int
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT count(*) FROM users WHERE admin = 1"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT count(*) FROM goiardi.users WHERE admin = TRUE"
-	}
+
+	sqlStatement := "SELECT count(*) FROM goiardi.users WHERE admin = TRUE"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
@@ -125,12 +114,7 @@ func numAdminsSQL() int {
 
 func getListSQL() []string {
 	var userList []string
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name FROM users"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name FROM goiardi.users"
-	}
+	sqlStatement := "SELECT name FROM goiardi.users"
 	rows, err := datastore.Dbh.Query(sqlStatement)
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -157,12 +141,7 @@ func getListSQL() []string {
 
 func allUsersSQL() []*User {
 	var users []*User
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name, displayname, admin, public_key, email, passwd, salt FROM users"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users"
-	}
+	sqlStatement := "SELECT name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -197,25 +176,15 @@ func UsersByIdSQL(ids []int64) ([]*User, error) {
 	}
 
 	var users []*User
-	var sqlStatement string
 
 	bind := make([]string, len(ids))
 	intfIds := make([]interface{}, len(ids))
 
-	if config.Config.UseMySQL {
-		for i, d := range ids {
-			bind[i] = "?"
-			intfIds[i] = d
-		}
-
-		sqlStatement = fmt.Sprintf("SELECT name, displayname, admin, public_key, email, passwd, salt, id FROM users WHERE id IN (%s)", strings.Join(bind, ", "))
-	} else if config.Config.UsePostgreSQL {
-		for i, d := range ids {
-			bind[i] = fmt.Sprintf("$%d", i + 1)
-			intfIds[i] = d
-		}
-		sqlStatement = fmt.Sprintf("SELECT name, displayname, admin, public_key, email, passwd, salt, id FROM goiardi.users WHERE id IN (%s)", strings.Join(bind, ", "))
+	for i, d := range ids {
+		bind[i] = fmt.Sprintf("$%d", i + 1)
+		intfIds[i] = d
 	}
+	sqlStatement := fmt.Sprintf("SELECT name, displayname, admin, public_key, email, passwd, salt, id FROM goiardi.users WHERE id IN (%s)", strings.Join(bind, ", "))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
