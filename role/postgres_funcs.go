@@ -43,7 +43,7 @@ func (r *Role) savePostgreSQL() error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_roles($1, $2, $3, $4, $5, $6)", r.Name, r.Description, rlb, erb, dab, oab)
+	_, err = tx.Exec("SELECT goiardi.merge_roles($1, $2, $3, $4, $5, $6, $7)", r.Name, r.Description, r.org.GetId(), rlb, erb, dab, oab)
 	if err != nil {
 		tx.Rollback()
 		return err

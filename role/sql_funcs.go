@@ -21,7 +21,6 @@ package role
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"log"
@@ -73,20 +72,17 @@ func (r *Role) fillRoleFromSQL(row datastore.ResRow) error {
 	return nil
 }
 
-func getSQL(roleName string) (*Role, error) {
+func getSQL(roleName string, org *organization.Organization) (*Role, error) {
 	role := new(Role)
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM roles WHERE name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM goiardi.roles WHERE name = $1"
-	}
+
+	sqlStmt := "SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM goiardi.roles WHERE organization_id = $1 AND name = $2"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(roleName)
+	row := stmt.QueryRow(org.GetId(), roleName)
 	err = role.fillRoleFromSQL(row)
 	if err != nil {
 		return nil, err
@@ -94,29 +90,23 @@ func getSQL(roleName string) (*Role, error) {
 	return role, nil
 }
 
-func getMultiSQL(roleNames []string) ([]*Role, error) {
-	var sqlStmt string
+func getMultiSQL(roleNames []string, org *organization.Organization) ([]*Role, error) {
 	bind := make([]string, len(roleNames))
 
-	if config.Config.UseMySQL {
 		for i := range roleNames {
-			bind[i] = "?"
+			bind[i] = fmt.Sprintf("$%d", i+2)
 		}
-		sqlStmt = fmt.Sprintf("SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM roles WHERE name IN (%s)", strings.Join(bind, ", "))
-	} else if config.Config.UsePostgreSQL {
-		for i := range roleNames {
-			bind[i] = fmt.Sprintf("$%d", i+1)
-		}
-		sqlStmt = fmt.Sprintf("SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM goiardi.roles WHERE name IN (%s)", strings.Join(bind, ", "))
-	}
+	sqlStmt := fmt.Sprintf("SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM goiardi.roles WHERE organization_id = $1 AND name IN (%s)", strings.Join(bind, ", "))
+
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	nameArgs := make([]interface{}, len(roleNames))
+	nameArgs := make([]interface{}, len(roleNames) + 1)
+	nameArgs[0] = org.GetId()
 	for i, v := range roleNames {
-		nameArgs[i] = v
+		nameArgs[i+1] = v
 	}
 	rows, err := stmt.Query(nameArgs...)
 	if err != nil {
@@ -145,13 +135,10 @@ func (r *Role) deleteSQL() error {
 	if err != nil {
 		return err
 	}
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM roles WHERE name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.roles WHERE name = $1"
-	}
-	_, err = tx.Exec(sqlStmt, r.Name)
+
+	sqlStmt := "DELETE FROM goiardi.roles WHERE organization_id = $1 AND name = $2"
+
+	_, err = tx.Exec(sqlStmt, r.org.GetId(), r.Name)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -163,15 +150,12 @@ func (r *Role) deleteSQL() error {
 	return nil
 }
 
-func getListSQL() []string {
+func getListSQL(org *organization.Organization) []string {
 	var roleList []string
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT name FROM roles"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT name FROM goiardi.roles"
-	}
-	rows, err := datastore.Dbh.Query(sqlStmt)
+
+	sqlStmt := "SELECT name FROM goiardi.roles WHERE organization_id = $1"
+
+	rows, err := datastore.Dbh.Query(sqlStmt, org.GetId())
 	if err != nil {
 		rows.Close()
 		if err != sql.ErrNoRows {
@@ -194,20 +178,17 @@ func getListSQL() []string {
 	return roleList
 }
 
-func allRolesSQL() []*Role {
+func allRolesSQL(org *organization.Organization) []*Role {
 	var roles []*Role
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM roles"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM goiardi.roles"
-	}
+
+	sqlStmt := "SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM goiardi.roles WHERE organization_id = $1"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query()
+	rows, qerr := stmt.Query(org.GetId())
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return roles

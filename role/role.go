@@ -192,7 +192,7 @@ func Get(org *organization.Organization, roleName string) (*Role, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var err error
-		role, err = getSQL(roleName)
+		role, err = getSQL(roleName, org)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -242,7 +242,7 @@ func GetMulti(org *organization.Organization, roleNames []string) ([]*Role, util
 	var roles []*Role
 	if config.UsingDB() {
 		var err error
-		roles, err = getMultiSQL(roleNames)
+		roles, err = getMultiSQL(roleNames, org)
 		if err != nil && err != sql.ErrNoRows {
 			return nil, util.CastErr(err)
 		}
@@ -261,11 +261,7 @@ func GetMulti(org *organization.Organization, roleNames []string) ([]*Role, util
 
 // Save the role.
 func (r *Role) Save() util.Gerror {
-	if config.Config.UseMySQL {
-		if err := r.saveMySQL(); err != nil {
-			return util.CastErr(err)
-		}
-	} else if config.Config.UsePostgreSQL {
+	if config.UsingDB() {
 		if err := r.savePostgreSQL(); err != nil {
 			return util.CastErr(err)
 		}
@@ -299,7 +295,7 @@ func (r *Role) Delete() util.Gerror {
 func GetList(org *organization.Organization) []string {
 	var roleList []string
 	if config.UsingDB() {
-		roleList = getListSQL()
+		roleList = getListSQL(org)
 	} else {
 		ds := datastore.New()
 		roleList = ds.GetList(org.DataKey("role"))
@@ -349,7 +345,7 @@ func (r *Role) Flatten() map[string]interface{} {
 func AllRoles(org *organization.Organization) []*Role {
 	var roles []*Role
 	if config.UsingDB() {
-		roles = allRolesSQL()
+		roles = allRolesSQL(org)
 	} else {
 		roleList := GetList(org)
 		roles = make([]*Role, 0, len(roleList))
