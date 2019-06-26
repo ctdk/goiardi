@@ -261,6 +261,7 @@ func allCookbooksSQL(org *organization.Organization) []*Cookbook {
 
 func getCookbookSQL(name string, org *organization.Organization) (*Cookbook, error) {
 	cookbook := new(Cookbook)
+	cookbook.org = org
 
 	sqlStatement := "SELECT id, name FROM goiardi.cookbooks WHERE organization_id = $1 AND name = $2"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)

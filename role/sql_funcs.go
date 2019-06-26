@@ -74,6 +74,7 @@ func (r *Role) fillRoleFromSQL(row datastore.ResRow) error {
 
 func getSQL(roleName string, org *organization.Organization) (*Role, error) {
 	role := new(Role)
+	role.org = org
 
 	sqlStmt := "SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM goiardi.roles WHERE organization_id = $1 AND name = $2"
 
