@@ -19,7 +19,6 @@ package environment
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"log"
