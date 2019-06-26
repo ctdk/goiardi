@@ -139,7 +139,7 @@ func ValidateAttributes(key string, attrs interface{}) (map[string]interface{}, 
 	}
 }
 
-func ValidateCookbookDivision(orgName string, dname string, div interface{}) ([]map[string]interface{}, Gerror) {
+func ValidateCookbookDivision(org filestore.FstoreOrg, dname string, div interface{}) ([]map[string]interface{}, Gerror) {
 	switch div := div.(type) {
 	case []interface{}:
 		d := make([]map[string]interface{}, 0, len(div))
@@ -165,12 +165,12 @@ func ValidateCookbookDivision(orgName string, dname string, div interface{}) ([]
 							uploaded = false
 							logger.Errorf(ferr.Error())
 						} else if uploaded {
-							itemURL, _ = S3GetURL(orgName, chksum)
+							itemURL, _ = S3GetURL(org.GetName(), chksum)
 						}
 					} else {
-						if _, ferr = filestore.Get(orgName, chksum); ferr == nil {
+						if _, ferr = filestore.Get(org, chksum); ferr == nil {
 							uploaded = true
-							itemURL = CustomURL(fmt.Sprintf("/organizations/%s/file_store/%s", orgName, chksum))
+							itemURL = CustomURL(fmt.Sprintf("/organizations/%s/file_store/%s", org.GetName(), chksum))
 						}
 					}
 					var merr Gerror

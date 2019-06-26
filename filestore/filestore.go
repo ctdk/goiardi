@@ -41,6 +41,15 @@ import (
 	"github.com/tideland/golib/logger"
 )
 
+// An interface to wrap around organizations. Somehow, somewhere, there's an
+// import loop if you try and include github.com/ctdk/goiardi/organization in
+// this module. This'll make the best of it.
+
+type FstoreOrg interface {
+	GetName() string
+	GetId() int64
+}
+
 /* Local filestorage struct. Add fields as needed. */
 
 // FileStore is an individual file in the filestore. Note that there is no
@@ -49,7 +58,7 @@ import (
 type FileStore struct {
 	Chksum  string
 	Data    *[]byte
-	orgName string
+	org FstoreOrg
 }
 
 /* New, for this, includes giving it the file data */
@@ -57,8 +66,8 @@ type FileStore struct {
 // New creates a new filestore item with the given checksum, io.ReadCloser
 // holding the file's data, and the length of the file. If the file data's
 // checksum does not match the provided checksum an error will be trhown.
-func New(orgName string, chksum string, data io.ReadCloser, dataLength int64) (*FileStore, error) {
-	f, err := Get(orgName, chksum)
+func New(org FstoreOrg, chksum string, data io.ReadCloser, dataLength int64) (*FileStore, error) {
+	f, err := Get(org, chksum)
 	if err == nil {
 		// if err is nil, wait until checking the uploaded content to
 		// see if it's the same as what we have already
@@ -88,18 +97,18 @@ func New(orgName string, chksum string, data io.ReadCloser, dataLength int64) (*
 	filestore := &FileStore{
 		Chksum:  chksum,
 		Data:    &fileData,
-		orgName: orgName,
+		org: org,
 	}
 	return filestore, nil
 }
 
 // Get the file with this checksum.
-func Get(orgName string, chksum string) (*FileStore, error) {
+func Get(org FstoreOrg, chksum string) (*FileStore, error) {
 	var filestore *FileStore
 	var found bool
 	if config.UsingDB() {
 		var err error
-		filestore, err = getSQL(chksum)
+		filestore, err = getSQL(chksum, org)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -112,10 +121,10 @@ func Get(orgName string, chksum string) (*FileStore, error) {
 	} else {
 		ds := datastore.New()
 		var f interface{}
-		f, found = ds.Get(dataKey(orgName), chksum)
+		f, found = ds.Get(dataKey(org.GetName()), chksum)
 		if f != nil {
 			filestore = f.(*FileStore)
-			filestore.orgName = orgName
+			filestore.org = org
 		}
 	}
 	if !found {
@@ -138,7 +147,7 @@ func Get(orgName string, chksum string) (*FileStore, error) {
 
 func (f *FileStore) loadData() error {
 	/* If this is called, file data is stored on disk */
-	chkPath := path.Join(config.Config.LocalFstoreDir, f.orgName, f.Chksum)
+	chkPath := path.Join(config.Config.LocalFstoreDir, f.org.GetName(), f.Chksum)
 
 	fp, err := os.Open(chkPath)
 	if err != nil {
@@ -163,22 +172,16 @@ func (f *FileStore) loadData() error {
 
 // Save a file store item.
 func (f *FileStore) Save() error {
-	if config.Config.UseMySQL {
-		err := f.saveMySQL()
-		if err != nil {
+	if config.UsingDB() {
+		if err := f.savePostgreSQL(); err != nil {
 			return err
-		}
-	} else if config.Config.UsePostgreSQL {
-		err := f.savePostgreSQL()
-		if err != nil {
-			return nil
 		}
 	} else {
 		ds := datastore.New()
-		ds.Set(dataKey(f.orgName), f.Chksum, f)
+		ds.Set(dataKey(f.org.GetName()), f.Chksum, f)
 	}
 	if config.Config.LocalFstoreDir != "" {
-		fp, err := os.Create(path.Join(config.Config.LocalFstoreDir, f.orgName, f.Chksum))
+		fp, err := os.Create(path.Join(config.Config.LocalFstoreDir, f.org.GetName(), f.Chksum))
 		if err != nil {
 			return err
 		}
@@ -201,11 +204,11 @@ func (f *FileStore) Delete() error {
 		}
 	} else {
 		ds := datastore.New()
-		ds.Delete(dataKey(f.orgName), f.Chksum)
+		ds.Delete(dataKey(f.org.GetName()), f.Chksum)
 	}
 
 	if config.Config.LocalFstoreDir != "" {
-		err := os.Remove(path.Join(config.Config.LocalFstoreDir, f.orgName, f.Chksum))
+		err := os.Remove(path.Join(config.Config.LocalFstoreDir, f.org.GetName(), f.Chksum))
 		if err != nil {
 			return err
 		}
@@ -214,26 +217,24 @@ func (f *FileStore) Delete() error {
 }
 
 // GetList gets a list of files that have been uploaded.
-func GetList(orgName string) []string {
+func GetList(org FstoreOrg) []string {
 	var fileList []string
 	if config.UsingDB() {
-		fileList = getListSQL()
+		fileList = getListSQL(org)
 	} else {
 		ds := datastore.New()
-		fileList = ds.GetList(dataKey(orgName))
+		fileList = ds.GetList(dataKey(org.GetName()))
 	}
 	return fileList
 }
 
 // DeleteHashes deletes all the checksum hashes given from the filestore.
-func DeleteHashes(orgName string, fileHashes []string) {
-	if config.Config.UseMySQL {
-		deleteHashesMySQL(fileHashes)
-	} else if config.Config.UsePostgreSQL {
-		deleteHashesPostgreSQL(fileHashes)
+func DeleteHashes(org FstoreOrg, fileHashes []string) {
+	if config.UsingDB() {
+		deleteHashesPostgreSQL(fileHashes, org)
 	} else {
 		for _, ff := range fileHashes {
-			delFile, err := Get(orgName, ff)
+			delFile, err := Get(org, ff)
 			if err != nil {
 				logger.Debugf("Strange, we got an error trying to get %s to delete it.\n", ff)
 				logger.Debugf(err.Error())
@@ -241,15 +242,18 @@ func DeleteHashes(orgName string, fileHashes []string) {
 				_ = delFile.Delete()
 			}
 			// May be able to remove this. Check that it actually deleted
-			d, _ := Get(orgName, ff)
+			d, _ := Get(org, ff)
 			if d != nil {
 				logger.Debugf("Stranger and stranger, %s is still in the file store.\n", ff)
 			}
 		}
 	}
+
+	// TODO: Is there already something in place for deleting file hashes in
+	// s3? It's really been a while since I've looked at this.
 	if config.Config.LocalFstoreDir != "" {
 		for _, fh := range fileHashes {
-			err := os.Remove(path.Join(config.Config.LocalFstoreDir, orgName, fh))
+			err := os.Remove(path.Join(config.Config.LocalFstoreDir, org.GetName(), fh))
 			if err != nil {
 				logger.Errorf(err.Error())
 			}
@@ -259,20 +263,22 @@ func DeleteHashes(orgName string, fileHashes []string) {
 
 // Explicitly set the org name for the filestore. Only here to support
 // cookbook tests.
-func (f *FileStore) SetOrgName(orgName string) {
-	f.orgName = orgName
-}
+// ---- Presumably this is hopelessly obsolete. Once it's confirmed to be out,
+// ---- gank it.
+//func (f *FileStore) SetOrgName(orgName string) {
+//	f.org.GetName() = orgName
+//}
 
 // AllFilestores returns all file checksums and their contents, for exporting.
-func AllFilestores(orgName string) []*FileStore {
+func AllFilestores(org FstoreOrg) []*FileStore {
 	var filestores []*FileStore
 	if config.UsingDB() {
-		filestores = allFilestoresSQL()
+		filestores = allFilestoresSQL(org)
 	} else {
-		fileList := GetList(orgName)
+		fileList := GetList(org)
 		filestores = make([]*FileStore, 0, len(fileList))
 		for _, f := range fileList {
-			fl, err := Get(orgName, f)
+			fl, err := Get(org, f)
 			if err != nil {
 				logger.Debugf("File checksum %s was in the list of files, but wasn't found when fetched. Continuing.", f)
 				continue

@@ -33,7 +33,7 @@ func (f *FileStore) savePostgreSQL() error {
 		return err
 	}
 
-	_, err = tx.Exec("INSERT INTO goiardi.file_checksums (organization_id, checksum) VALUES (1, $1)", f.Chksum)
+	_, err = tx.Exec("INSERT INTO goiardi.file_checksums (organization_id, checksum) VALUES ($1, $2)", f.org.GetId(), f.Chksum)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -43,7 +43,7 @@ func (f *FileStore) savePostgreSQL() error {
 	return nil
 }
 
-func deleteHashesPostgreSQL(fileHashes []string) {
+func deleteHashesPostgreSQL(fileHashes []string, org FstoreOrg) {
 	if len(fileHashes) == 0 {
 		return // nothing to do
 	}
@@ -51,8 +51,12 @@ func deleteHashesPostgreSQL(fileHashes []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	deleteQuery := "DELETE FROM goiardi.file_checksums WHERE checksum = ANY($1::varchar(32)[])"
-	_, err = tx.Exec(deleteQuery, "{"+strings.Join(fileHashes, ",")+"}")
+	deleteQuery := "DELETE FROM goiardi.file_checksums WHERE organization_id = $1 AND checksum = ANY($1::varchar(32)[])"
+
+	// TODO: these hashes probably should be bound variables ($1, $2, etc.).
+	// The way it is now, though, it'll probably break. I guess it'll be an
+	// opportunity soon enough.
+	_, err = tx.Exec(deleteQuery, org.GetId(), "{"+strings.Join(fileHashes, ",")+"}")
 	if err != nil && err != sql.ErrNoRows {
 		logger.Debugf("Error %s trying to delete hashes", err.Error())
 		tx.Rollback()

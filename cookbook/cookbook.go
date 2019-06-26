@@ -863,7 +863,7 @@ func (c *Cookbook) deleteHashes(fhashes []string) {
 	if config.Config.UseS3Upload {
 		util.S3DeleteHashes(c.org.Name, fhashes)
 	} else {
-		filestore.DeleteHashes(c.org.Name, fhashes)
+		filestore.DeleteHashes(c.org, fhashes)
 	}
 }
 
@@ -972,7 +972,7 @@ ValidElem:
 
 	divs := []string{"definitions", "libraries", "attributes", "recipes", "providers", "resources", "templates", "root_files", "files"}
 	for _, d := range divs {
-		cbvData[d], verr = util.ValidateCookbookDivision(cbv.org.Name, d, cbvData[d])
+		cbvData[d], verr = util.ValidateCookbookDivision(cbv.org, d, cbvData[d])
 		if verr != nil {
 			return verr
 		}

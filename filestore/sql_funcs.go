@@ -21,25 +21,19 @@ package filestore
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"log"
 )
 
-func getSQL(chksum string) (*FileStore, error) {
+func getSQL(chksum string, org FstoreOrg) (*FileStore, error) {
 	filestore := new(FileStore)
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT checksum FROM file_checksums WHERE checksum = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT checksum FROM goiardi.file_checksums WHERE checksum = $1"
-	}
+	sqlStatement := "SELECT checksum FROM goiardi.file_checksums WHERE organization_id = $1 AND checksum = $2"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	err = stmt.QueryRow(chksum).Scan(&filestore.Chksum)
+	err = stmt.QueryRow(org.GetId(), chksum).Scan(&filestore.Chksum)
 	if err != nil {
 		return nil, err
 	}
@@ -51,14 +45,10 @@ func (f *FileStore) deleteSQL() error {
 	if err != nil {
 		return err
 	}
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "DELETE FROM file_checksums WHERE checksum = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "DELETE FROM goiardi.file_checksums WHERE checksum = $1"
-	}
 
-	_, err = tx.Exec(sqlStatement, f.Chksum)
+	sqlStatement := "DELETE FROM goiardi.file_checksums WHERE organization_id = $1 AND checksum = $2"
+
+	_, err = tx.Exec(sqlStatement, f.org.GetId(), f.Chksum)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -70,14 +60,10 @@ func (f *FileStore) deleteSQL() error {
 	return nil
 }
 
-func getListSQL() []string {
+func getListSQL(org FstoreOrg) []string {
 	var fileList []string
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT checksum FROM file_checksums"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT checksum FROM goiardi.file_checksums"
-	}
+
+	sqlStatement := "SELECT checksum FROM goiardi.file_checksums WHERE organization_id = $1"
 
 	stmt, perr := datastore.Dbh.Prepare(sqlStatement)
 	if perr != nil {
@@ -87,7 +73,7 @@ func getListSQL() []string {
 		stmt.Close()
 		return fileList
 	}
-	rows, err := stmt.Query()
+	rows, err := stmt.Query(org.GetId())
 	for rows.Next() {
 		var chksum string
 		err = rows.Scan(&chksum)
@@ -103,21 +89,17 @@ func getListSQL() []string {
 	return fileList
 }
 
-func allFilestoresSQL() []*FileStore {
+func allFilestoresSQL(org FstoreOrg) []*FileStore {
 	var filestores []*FileStore
-	var sqlStatement string
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT checksum FROM file_checksums"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT checksum FROM goiardi.file_checksums"
-	}
+
+	sqlStatement := "SELECT checksum FROM goiardi.file_checksums WHERE organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query()
+	rows, qerr := stmt.Query(org.GetId())
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return filestores
