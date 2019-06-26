@@ -188,12 +188,12 @@ func getEnvironmentList(org *organization.Organization) []string {
 func allEnvironmentsSQL(org *organization.Organization) []*ChefEnvironment {
 	var environments []*ChefEnvironment
 	sqlStatement := "SELECT name, description, default_attr, override_attr, cookbook_vers FROM goiardi.environments WHERE organization_id = $1 AND name <> '_default'"
-	stmt, err := datastore.Dbh.Prepare(sqlStatement, org.GetId())
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query()
+	rows, qerr := stmt.Query(org.GetId())
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return environments

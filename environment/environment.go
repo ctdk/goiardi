@@ -219,7 +219,7 @@ func Get(org *organization.Organization, envName string) (*ChefEnvironment, util
 	var found bool
 	if config.UsingDB() {
 		var err error
-		env, err = getEnvironmentSQL(envName)
+		env, err = getEnvironmentSQL(envName, org)
 		if err != nil {
 			var gerr util.Gerror
 			if err != sql.ErrNoRows {
@@ -272,7 +272,7 @@ func GetMulti(org *organization.Organization, envNames []string) ([]*ChefEnviron
 	var envs []*ChefEnvironment
 	if config.UsingDB() {
 		var err error
-		envs, err = getMultiSQL(envNames)
+		envs, err = getMultiSQL(envNames, org)
 		if err != nil && err != sql.ErrNoRows {
 			return nil, util.CastErr(err)
 		}
@@ -333,12 +333,7 @@ func (e *ChefEnvironment) Save() util.Gerror {
 		err.SetStatus(http.StatusMethodNotAllowed)
 		return err
 	}
-	if config.Config.UseMySQL {
-		err := e.saveEnvironmentMySQL()
-		if err != nil {
-			return err
-		}
-	} else if config.Config.UsePostgreSQL {
+	if config.UsingDB() {
 		err := e.saveEnvironmentPostgreSQL()
 		if err != nil {
 			return err
@@ -378,7 +373,7 @@ func (e *ChefEnvironment) Delete() error {
 func GetList(org *organization.Organization) []string {
 	var envList []string
 	if config.UsingDB() {
-		envList = getEnvironmentList()
+		envList = getEnvironmentList(org)
 	} else {
 		ds := datastore.New()
 		envList = ds.GetList(org.DataKey("env"))
@@ -477,7 +472,7 @@ func (e *ChefEnvironment) Flatten() map[string]interface{} {
 func AllEnvironments(org *organization.Organization) []*ChefEnvironment {
 	var environments []*ChefEnvironment
 	if config.UsingDB() {
-		environments = allEnvironmentsSQL()
+		environments = allEnvironmentsSQL(org)
 	} else {
 		envList := GetList(org)
 		environments = make([]*ChefEnvironment, 0, len(envList))
