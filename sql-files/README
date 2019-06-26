@@ -1,15 +1,16 @@
 Sqitch bundles for deploying SQL databases for goiardi are in here (currently,
-the mysql-bundle and postgres-bundle). See http://sqitch.org/ for more 
-information on sqitch, and goiardi's README for information on how to deploy the
-sqitch bundle.
+the postgres-bundle). See http://sqitch.org/ for more information on sqitch, and
+goiardi's README for information on how to deploy the sqitch bundle.
 
 Additionally, for those folks who don't feel like mucking about with sqitch,
-dumps of the MySQL and Postgres schemas are available. Create the desired 
-database with whatever owner you want, and load the schema with mysql -u <owner>
-[-p] <database> < sql-files/goiardi-schema-mysql.sql (for mysql) or psql 
--U <owner> <database> < sql-files/goiardi-schema-postgres.sql (for postgres).
+dump of the Postgres schema is available. Create the desired database with
+whatever owner you want, and load the schema with psql -U <owner> <database> 
+< sql-files/goiardi-schema-postgres.sql.
 
 NOTE: If this is not a tagged goiardi release, but rather is a development 
-branch, these sqitch bundles and SQL files may not be up to date for this
-branch. If so, see https://github.com/ctdk/goiardi-schema for the sqitch files
+branch, the sqitch bundle and SQL files may not be up to date for this branch.
+If so, see https://github.com/ctdk/goiardi-schema for the sqitch files
 for the development branch.
+
+NOTE #2: Formerly, this directory contained a sqitch bundle and a database dump
+for MySQL in addition to Postgres, but MySQL support was dropped with version 1.0.0.
