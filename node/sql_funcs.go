@@ -21,7 +21,6 @@ package node
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"log"
@@ -84,21 +83,18 @@ func (n *Node) fillNodeFromSQL(row datastore.ResRow) error {
 	return nil
 }
 
-func getSQL(nodeName string) (*Node, error) {
+func getSQL(org *organization.Organization, nodeName string) (*Node, error) {
 	node := new(Node)
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n where n.name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from goiardi.nodes n where n.name = $1"
-	}
+	node.org = org
+
+	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.nodes n WHERE n.organization_id = $1 AND n.name = $2"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(nodeName)
+	row := stmt.QueryRow(org.GetId(), nodeName)
 	err = node.fillNodeFromSQL(row)
 
 	if err != nil {
@@ -107,43 +103,40 @@ func getSQL(nodeName string) (*Node, error) {
 	return node, nil
 }
 
-func getMultiSQL(nodeNames []string) ([]*Node, error) {
-	var sqlStmt string
+func getMultiSQL(org *organization.Organization, nodeNames []string) ([]*Node, error) {
 	bind := make([]string, len(nodeNames))
 
-	if config.Config.UseMySQL {
-		for i := range nodeNames {
-			bind[i] = "?"
-		}
-		sqlStmt = fmt.Sprintf("select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n where n.name in (%s)", strings.Join(bind, ", "))
-	} else if config.Config.UsePostgreSQL {
-		for i := range nodeNames {
-			bind[i] = fmt.Sprintf("$%d", i+1)
-		}
-		sqlStmt = fmt.Sprintf("select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from goiardi.nodes n where n.name in (%s)", strings.Join(bind, ", "))
+	for i := range nodeNames {
+		bind[i] = fmt.Sprintf("$%d", i+2)
 	}
+	sqlStmt := fmt.Sprintf("SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.nodes n WHERE n.organization_id = $1 AND n.name IN (%s)", strings.Join(bind, ", "))
+
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 	nameArgs := make([]interface{}, len(nodeNames))
+	nameArgs[0] = org.GetId()
 	for i, v := range nodeNames {
-		nameArgs[i] = v
+		nameArgs[i+1] = v
 	}
 	rows, err := stmt.Query(nameArgs...)
 	if err != nil {
 		return nil, err
 	}
-	nodes := make([]*Node, 0, len(nodeNames))
+	nodes := make([]*Node, len(nodeNames))
+	x := 0
 	for rows.Next() {
 		n := new(Node)
+		n.org = org
 		err = n.fillNodeFromSQL(rows)
 		if err != nil {
 			rows.Close()
 			return nil, err
 		}
-		nodes = append(nodes, n)
+		nodes[x] = n
+		x++
 	}
 
 	rows.Close()
@@ -180,15 +173,12 @@ func (n *Node) saveSQL() error {
 	if err != nil {
 		return err
 	}
-	if config.Config.UseMySQL {
-		err = n.saveMySQL(tx, rlb, aab, nab, dab, oab)
-	} else if config.Config.UsePostgreSQL {
-		err = n.savePostgreSQL(tx, rlb, aab, nab, dab, oab)
-	}
-	if err != nil {
+
+	if err = n.savePostgreSQL(tx, rlb, aab, nab, dab, oab); err != nil {
 		tx.Rollback()
 		return err
 	}
+
 	tx.Commit()
 	return nil
 }
@@ -198,14 +188,9 @@ func (n *Node) deleteSQL() error {
 	if err != nil {
 		return err
 	}
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM nodes WHERE name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.nodes WHERE name = $1"
-	}
+	sqlStmt := "DELETE FROM goiardi.nodes WHERE organization_id = $1 AND name = $2"
 
-	_, err = tx.Exec(sqlStmt, n.Name)
+	_, err = tx.Exec(sqlStmt, n.org.GetId(), n.Name)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -217,25 +202,20 @@ func (n *Node) deleteSQL() error {
 	return err
 }
 
-func deleteByAgeSQL(dur time.Duration) (int, error) {
+func deleteByAgeSQL(org *organization.Organization, dur time.Duration) (int, error) {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return 0, err
 	}
 	from := time.Now().Add(-dur)
 
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM node_statuses WHERE updated_at >= ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.node_statuses WHERE updated_at >= $1"
-	}
+	sqlStmt := "DELETE FROM goiardi.node_statuses ns JOIN goiardi.nodes ON ns.node_id = n.id WHERE n.organization_id = $1 AND ns.updated_at >= $2"
 
-	res, err := tx.Exec(sqlStmt, from)
+	res, err := tx.Exec(sqlStmt, org.GetId(), from)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
-			err = fmt.Errorf("deleting node statuses for the last %s had an error '%s', and then rolling back the transaction gave another error '%s'", from, err.Error(), terr.Error())
+			err = fmt.Errorf("deleting node statuses in org '%s' for the last %s had an error '%s', and then rolling back the transaction gave another error '%s'", org.Name, from, err.Error(), terr.Error())
 		}
 		return 0, err
 	}
@@ -245,27 +225,17 @@ func deleteByAgeSQL(dur time.Duration) (int, error) {
 }
 
 func (ns *NodeStatus) updateNodeStatusSQL() error {
-	if config.Config.UseMySQL {
-		return ns.updateNodeStatusMySQL()
-	} else if config.Config.UsePostgreSQL {
-		return ns.updateNodeStatusPostgreSQL()
-	}
-	err := fmt.Errorf("reached an impossible db state")
-	return err
+	return ns.updateNodeStatusPostgreSQL()
 }
 
 func (ns *NodeStatus) importNodeStatus() error {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "INSERT INTO node_statuses (node_id, status, updated_at) SELECT id, ?, ? FROM nodes WHERE name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "INSERT INTO goiardi.node_statuses (node_id, status, updated_at) SELECT id, $1, $2 FROM goiardi.nodes WHERE name = $3"
-	}
+	sqlStmt := "INSERT INTO goiardi.node_statuses (node_id, status, updated_at) SELECT id, $1, $2 FROM goiardi.nodes WHERE organization_id = $3 AND name = $4"
+
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(sqlStmt, ns.Status, ns.UpdatedAt, ns.Node.Name)
+	_, err = tx.Exec(sqlStmt, ns.Status, ns.UpdatedAt, ns.Node.org.GetId(), ns.Node.Name)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -274,15 +244,12 @@ func (ns *NodeStatus) importNodeStatus() error {
 	return nil
 }
 
-func getListSQL() []string {
+func getListSQL(org *organization.Organization) []string {
 	var nodeList []string
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT name FROM nodes"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT name FROM goiardi.nodes"
-	}
-	rows, err := datastore.Dbh.Query(sqlStmt)
+
+	sqlStmt := "SELECT name FROM goiardi.nodes WHERE organization_id = $1"
+
+	rows, err := datastore.Dbh.Query(sqlStmt, org.GetId())
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
@@ -305,20 +272,16 @@ func getListSQL() []string {
 	return nodeList
 }
 
-func getNodesInEnvSQL(envName string) ([]*Node, error) {
+func getNodesInEnvSQL(org *organization.Organization, envName string) ([]*Node, error) {
 	var nodes []*Node
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM nodes n WHERE n.chef_environment = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.nodes n WHERE n.chef_environment = $1"
-	}
+	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.nodes n WHERE n.organization_id = $1 AND n.chef_environment = $2"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query(envName)
+	rows, qerr := stmt.Query(org.GetId(), envName)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return nodes, nil
@@ -327,6 +290,7 @@ func getNodesInEnvSQL(envName string) ([]*Node, error) {
 	}
 	for rows.Next() {
 		n := new(Node)
+		n.org = org
 		err = n.fillNodeFromSQL(rows)
 		if err != nil {
 			rows.Close()
@@ -341,21 +305,16 @@ func getNodesInEnvSQL(envName string) ([]*Node, error) {
 	return nodes, nil
 }
 
-func allNodesSQL() []*Node {
+func allNodesSQL(org *organization.Organization) []*Node {
 	var nodes []*Node
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from goiardi.nodes n"
-	}
+	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.nodes n WHERE n.organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query()
+	rows, qerr := stmt.Query(org.GetId())
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return nodes
@@ -364,6 +323,7 @@ func allNodesSQL() []*Node {
 	}
 	for rows.Next() {
 		no := new(Node)
+		no.org = org
 		err = no.fillNodeFromSQL(rows)
 		if err != nil {
 			log.Fatal(err)
@@ -378,25 +338,17 @@ func allNodesSQL() []*Node {
 }
 
 func (n *Node) latestStatusSQL() (*NodeStatus, error) {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT status, ns.updated_at FROM node_statuses ns JOIN nodes n on ns.node_id = n.id WHERE n.name = ? ORDER BY ns.id DESC LIMIT 1"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT status, updated_at FROM goiardi.node_latest_statuses WHERE name = $1"
-	}
+	sqlStmt := "SELECT status, updated_at FROM goiardi.node_latest_statuses WHERE organization_id = $1 AND name = $2"
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
+
 	ns := &NodeStatus{Node: n}
-	row := stmt.QueryRow(n.Name)
-	if config.Config.UseMySQL {
-		err = ns.fillNodeStatusFromMySQL(row)
-	} else if config.Config.UsePostgreSQL {
-		err = ns.fillNodeStatusFromPostgreSQL(row)
-	}
-	if err != nil {
+	row := stmt.QueryRow(n.org.GetId(), n.Name)
+
+	if err = ns.fillNodeStatusFromPostgreSQL(row); err != nil {
 		return nil, err
 	}
 	return ns, nil
@@ -404,18 +356,13 @@ func (n *Node) latestStatusSQL() (*NodeStatus, error) {
 
 func (n *Node) allStatusesSQL() ([]*NodeStatus, error) {
 	var nodeStatuses []*NodeStatus
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT status, ns.updated_at FROM node_statuses ns JOIN nodes n on ns.node_id = n.id WHERE n.name = ? ORDER BY ns.id"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT status, ns.updated_at FROM goiardi.node_statuses ns JOIN goiardi.nodes n ON ns.node_id = n.id WHERE n.name = $1 ORDER BY ns.id"
-	}
+	sqlStmt := "SELECT status, ns.updated_at FROM goiardi.node_statuses ns JOIN goiardi.nodes n ON ns.node_id = n.id WHERE n.organization_id = $1 AND n.name = $2 ORDER BY ns.id"
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	rows, qerr := stmt.Query(n.Name)
+	rows, qerr := stmt.Query(n.org.GetId(), n.Name)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return nodeStatuses, nil
@@ -424,12 +371,7 @@ func (n *Node) allStatusesSQL() ([]*NodeStatus, error) {
 	}
 	for rows.Next() {
 		ns := &NodeStatus{Node: n}
-		if config.Config.UseMySQL {
-			err = ns.fillNodeStatusFromMySQL(rows)
-		} else if config.Config.UsePostgreSQL {
-			err = ns.fillNodeStatusFromPostgreSQL(rows)
-		}
-		if err != nil {
+		if err = ns.fillNodeStatusFromPostgreSQL(rows); err != nil {
 			return nil, err
 		}
 		nodeStatuses = append(nodeStatuses, ns)
@@ -443,12 +385,8 @@ func (n *Node) allStatusesSQL() ([]*NodeStatus, error) {
 
 func unseenNodesSQL() ([]*Node, error) {
 	var nodes []*Node
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from nodes n join node_statuses ns on n.id = ns.node_id where is_down = 0 group by n.id having max(ns.updated_at) < date_sub(now(), interval 10 minute)"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "select n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr from goiardi.node_latest_statuses n where n.is_down = false AND n.updated_at < now() - interval '10 minute'"
-	}
+	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.node_latest_statuses n WHERE AND n.is_down = false AND n.updated_at < NOW() - INTERVAL '10 minute'"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
@@ -476,24 +414,15 @@ func unseenNodesSQL() ([]*Node, error) {
 	return nodes, nil
 }
 
-func getNodesByStatusSQL(nodeNames []string, status string) ([]*Node, error) {
-	if config.Config.UseMySQL {
-		return getNodesByStatusMySQL(nodeNames, status)
-	} else if config.Config.UsePostgreSQL {
-		return getNodesByStatusPostgreSQL(nodeNames, status)
-	}
-	err := fmt.Errorf("impossible db state, man")
-	return nil, err
+func getNodesByStatusSQL(org *organization.Organization, nodeNames []string, status string) ([]*Node, error) {
+	return getNodesByStatusPostgreSQL(org, nodeNames, status)
 }
 
 func countSQL() (int64, error) {
 	var c int64
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT COUNT(*) FROM nodes"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT COUNT(*) FROM goiardi.nodes"
-	}
+
+	sqlStmt := "SELECT COUNT(*) FROM goiardi.nodes"
+
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return 0, err

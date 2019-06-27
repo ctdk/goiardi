@@ -47,7 +47,7 @@ func (ns *NodeStatus) updateNodeStatusPostgreSQL() error {
 		isDown = true
 	}
 	if isDown != ns.Node.isDown {
-		_, err = tx.Exec("UPDATE goiardi.nodes SET is_down = $1, updated_at = NOW() WHERE organization_id = $2 AND name = $3", isDown, ns.org.GetId(), ns.Node.Name)
+		_, err = tx.Exec("UPDATE goiardi.nodes SET is_down = $1, updated_at = NOW() WHERE organization_id = $2 AND name = $3", isDown, ns.Node.org.GetId(), ns.Node.Name)
 		if err != nil {
 			tx.Rollback()
 			return err
@@ -75,14 +75,14 @@ func (ns *NodeStatus) fillNodeStatusFromPostgreSQL(row datastore.ResRow) error {
 
 func getNodesByStatusPostgreSQL(org *organization.Organization, nodeNames []string, status string) ([]*Node, error) {
 	var nodes []*Node
-	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.node_latest_statuses n WHERE n.status = $1 AND n.name = ANY($2::text[])"
+	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.node_latest_statuses n WHERE n.organization_id = $1 AND n.status = $2 AND n.name = ANY($2::text[])"
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 	nodeStr := "{" + strings.Join(nodeNames, ",") + "}"
-	rows, qerr := stmt.Query(status, nodeStr)
+	rows, qerr := stmt.Query(org.GetId(), status, nodeStr)
 	if qerr != nil {
 		if qerr == sql.ErrNoRows {
 			return nodes, nil
@@ -91,6 +91,7 @@ func getNodesByStatusPostgreSQL(org *organization.Organization, nodeNames []stri
 	}
 	for rows.Next() {
 		no := new(Node)
+		no.org = org
 		err = no.fillNodeFromSQL(rows)
 		if err != nil {
 			return nil, err

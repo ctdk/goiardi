@@ -157,6 +157,8 @@ func (ns *NodeStatus) ToJSON() map[string]string {
 	return nsmap
 }
 
+// TODO: Erm, leaving this be for now. I have a feeling this really should be
+// done on a per-org basis, but come back later.
 // UnseenNodes returns all nodes that have not sent status reports for a while.
 func UnseenNodes() ([]*Node, error) {
 	if config.UsingDB() {
@@ -189,7 +191,7 @@ func UnseenNodes() ([]*Node, error) {
 // GetNodesByStatus returns the nodes that currently have the given status.
 func GetNodesByStatus(org *organization.Organization, nodeNames []string, status string) ([]*Node, error) {
 	if config.UsingDB() {
-		return getNodesByStatusSQL(nodeNames, status)
+		return getNodesByStatusSQL(org, nodeNames, status)
 	}
 	var statNodes []*Node
 	nodes := make([]*Node, 0, len(nodeNames))
@@ -215,9 +217,9 @@ func GetNodesByStatus(org *organization.Organization, nodeNames []string, status
 
 // DeleteNodeStatusesByAge deletes node status older than the given duration. It
 // returns the number of statuses deleted, and an error if any.
-func DeleteNodeStatusesByAge(dur time.Duration) (int, error) {
+func DeleteNodeStatusesByAge(org *organization.Organization, dur time.Duration) (int, error) {
 	if config.UsingDB() {
-		return deleteByAgeSQL(dur)
+		return deleteByAgeSQL(org, dur)
 	}
 
 	ds := datastore.New()

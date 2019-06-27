@@ -112,7 +112,7 @@ func Get(org *organization.Organization, nodeName string) (*Node, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var err error
-		node, err = getSQL(nodeName)
+		node, err = getSQL(org, nodeName)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -162,7 +162,7 @@ func GetMulti(org *organization.Organization, nodeNames []string) ([]*Node, util
 	var nodes []*Node
 	if config.UsingDB() {
 		var err error
-		nodes, err = getMultiSQL(nodeNames)
+		nodes, err = getMultiSQL(org, nodeNames)
 		if err != nil && err != sql.ErrNoRows {
 			return nil, util.CastErr(err)
 		}
@@ -318,7 +318,7 @@ func (n *Node) Delete() error {
 func GetList(org *organization.Organization) []string {
 	var nodeList []string
 	if config.UsingDB() {
-		nodeList = getListSQL()
+		nodeList = getListSQL(org)
 	} else {
 		ds := datastore.New()
 		nodeList = ds.GetList(org.DataKey("node"))
@@ -329,7 +329,7 @@ func GetList(org *organization.Organization) []string {
 // GetFromEnv returns all nodes that belong to the given environment.
 func GetFromEnv(org *organization.Organization, envName string) ([]*Node, error) {
 	if config.UsingDB() {
-		return getNodesInEnvSQL(envName)
+		return getNodesInEnvSQL(org, envName)
 	}
 	var envNodes []*Node
 	nodeList := GetList(org)
@@ -389,7 +389,7 @@ func (n *Node) Flatten() map[string]interface{} {
 func AllNodes(org *organization.Organization) []*Node {
 	var nodes []*Node
 	if config.UsingDB() {
-		nodes = allNodesSQL()
+		nodes = allNodesSQL(org)
 	} else {
 		nodeList := GetList(org)
 		nodes = make([]*Node, 0, len(nodeList))
@@ -404,7 +404,7 @@ func AllNodes(org *organization.Organization) []*Node {
 	return nodes
 }
 
-// Count returns a count of all nodes on this server.
+// Count returns a count of all nodes in this organization on this server.
 func Count() int64 {
 	if config.UsingDB() {
 		c, _ := countSQL()
