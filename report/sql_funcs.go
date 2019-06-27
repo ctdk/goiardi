@@ -21,26 +21,21 @@ package report
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"log"
 	"time"
 )
 
-func checkForReportSQL(dbhandle datastore.Dbhandle, runID string) (bool, error) {
+func checkForReportSQL(dbhandle datastore.Dbhandle, org *organization.Organization, runID string) (bool, error) {
 	var f int
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT count(*) AS c FROM reports WHERE run_id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT count(*) AS c FROM goiardi.reports WHERE run_id = $1"
-	}
+	sqlStmt := "SELECT count(*) AS c FROM goiardi.reports WHERE organization_id = $1 AND run_id = $2"
 	stmt, err := dbhandle.Prepare(sqlStmt)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
-	err = stmt.QueryRow(runID).Scan(&f)
+	err = stmt.QueryRow(org.GetId(), runID).Scan(&f)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
@@ -54,30 +49,20 @@ func checkForReportSQL(dbhandle datastore.Dbhandle, runID string) (bool, error) 
 }
 
 func (r *Report) fillReportFromSQL(row datastore.ResRow) error {
-	if config.Config.UseMySQL {
-		return r.fillReportFromMySQL(row)
-	} else if config.Config.UsePostgreSQL {
-		return r.fillReportFromPostgreSQL(row)
-	}
-
-	return nil
+	return r.fillReportFromPostgreSQL(row)
 }
 
-func getReportSQL(runID string) (*Report, error) {
+func getReportSQL(org *organization.Organization, runID string) (*Report, error) {
 	r := new(Report)
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE run_id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE run_id = $1"
-	}
+	r.org = org
+	sqlStmt := "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE organization_id = $1 AND run_id = $2"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(runID)
+	row := stmt.QueryRow(org.GetId(), runID)
 	err = r.fillReportFromSQL(row)
 	if err != nil {
 		return nil, err
@@ -91,14 +76,9 @@ func (r *Report) deleteSQL() error {
 		return err
 	}
 
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM reports WHERE run_id = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.reports WHERE run_id = $1"
-	}
+	sqlStmt := "DELETE FROM goiardi.reports WHERE organization_id = $1 AND run_id = $2"
 
-	_, err = tx.Exec(sqlStmt, r.RunID)
+	_, err = tx.Exec(sqlStmt, r.org.GetId(), r.RunID)
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
@@ -117,12 +97,7 @@ func deleteByAgeSQL(dur time.Duration) (int, error) {
 	}
 	from := time.Now().Add(-dur)
 
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "DELETE FROM reports WHERE end_time >= ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "DELETE FROM goiardi.reports WHERE end_time >= $1"
-	}
+	sqlStmt := "DELETE FROM goiardi.reports WHERE AND end_time >= $1"
 
 	res, err := tx.Exec(sqlStmt, from)
 	if err != nil {
@@ -137,17 +112,12 @@ func deleteByAgeSQL(dur time.Duration) (int, error) {
 	return int(rows), nil
 }
 
-func getListSQL() []string {
+func getListSQL(org *organization.Organization) []string {
 	var reportList []string
 
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT run_id FROM reports"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT run_id FROM goiardi.reports"
-	}
+	sqlStmt := "SELECT run_id FROM goiardi.reports WHERE organization_id = $1"
 
-	rows, err := datastore.Dbh.Query(sqlStmt)
+	rows, err := datastore.Dbh.Query(sqlStmt, org.GetId())
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Fatal(err)
@@ -170,22 +140,14 @@ func getListSQL() []string {
 	return reportList
 }
 
-func getReportListSQL(from, until time.Time, retrows int, status string) ([]*Report, error) {
+func getReportListSQL(org *organization.Organization, from, until time.Time, retrows int, status string) ([]*Report, error) {
 	var reports []*Report
 	var sqlStmt string
 
 	if status == "" {
-		if config.Config.UseMySQL {
-			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE start_time >= ? AND start_time <= ? LIMIT ?"
-		} else if config.Config.UsePostgreSQL {
-			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE start_time >= $1 AND start_time <= $2 LIMIT $3"
-		}
+		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE organization_id = $1 AND start_time >= $2 AND start_time <= $3 LIMIT $4"
 	} else {
-		if config.Config.UseMySQL {
-			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE start_time >= ? AND start_time <= ? AND status = ? LIMIT ?"
-		} else if config.Config.UsePostgreSQL {
-			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE start_time >= $1 AND start_time <= $2 AND status = $3 LIMIT $4"
-		}
+		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE organization_id = $1 AND start_time >= $2 AND start_time <= $3 AND status = $4 LIMIT $5"
 	}
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
@@ -197,9 +159,9 @@ func getReportListSQL(from, until time.Time, retrows int, status string) ([]*Rep
 	var rerr error
 
 	if status == "" {
-		rows, rerr = stmt.Query(from, until, retrows)
+		rows, rerr = stmt.Query(org.GetId(), from, until, retrows)
 	} else {
-		rows, rerr = stmt.Query(from, until, status, retrows)
+		rows, rerr = stmt.Query(org.GetId(), from, until, status, retrows)
 	}
 	if rerr != nil {
 		if rerr == sql.ErrNoRows {
@@ -209,6 +171,7 @@ func getReportListSQL(from, until time.Time, retrows int, status string) ([]*Rep
 	}
 	for rows.Next() {
 		r := new(Report)
+		r.org = org
 		err = r.fillReportFromSQL(rows)
 		if err != nil {
 			rows.Close()
@@ -223,22 +186,14 @@ func getReportListSQL(from, until time.Time, retrows int, status string) ([]*Rep
 	return reports, nil
 }
 
-func getNodeListSQL(nodeName string, from, until time.Time, retrows int, status string) ([]*Report, error) {
+func getNodeListSQL(org *organization.Organization, nodeName string, from, until time.Time, retrows int, status string) ([]*Report, error) {
 	var reports []*Report
 
 	var sqlStmt string
 	if status == "" {
-		if config.Config.UseMySQL {
-			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE node_name = ? AND start_time >= ? AND start_time <= ? LIMIT ?"
-		} else if config.Config.UsePostgreSQL {
-			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE node_name = $1 AND start_time >= $2 AND start_time <= $3 LIMIT $4"
-		}
+		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE organization_id = $1 AND node_name = $2 AND start_time >= $3 AND start_time <= $4 LIMIT $5"
 	} else {
-		if config.Config.UseMySQL {
-			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports WHERE node_name = ? AND start_time >= ? AND start_time <= ? AND status = ? LIMIT ?"
-		} else if config.Config.UsePostgreSQL {
-			sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE node_name = $1 AND start_time >= $2 AND start_time <= $3 AND status = $4 LIMIT $5"
-		}
+		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE organization_id = $1 AND node_name = $2 AND start_time >= $3 AND start_time <= $4 AND status = $5 LIMIT $6"
 	}
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
@@ -250,9 +205,9 @@ func getNodeListSQL(nodeName string, from, until time.Time, retrows int, status 
 	var rows *sql.Rows
 	var rerr error
 	if status == "" {
-		rows, rerr = stmt.Query(nodeName, from, until, retrows)
+		rows, rerr = stmt.Query(org.GetId(), nodeName, from, until, retrows)
 	} else {
-		rows, rerr = stmt.Query(nodeName, from, until, status, retrows)
+		rows, rerr = stmt.Query(org.GetId(), nodeName, from, until, status, retrows)
 	}
 	if rerr != nil {
 		if rerr == sql.ErrNoRows {
@@ -262,6 +217,7 @@ func getNodeListSQL(nodeName string, from, until time.Time, retrows int, status 
 	}
 	for rows.Next() {
 		r := new(Report)
+		r.org = org
 		err = r.fillReportFromSQL(rows)
 		if err != nil {
 			rows.Close()
@@ -276,22 +232,17 @@ func getNodeListSQL(nodeName string, from, until time.Time, retrows int, status 
 	return reports, nil
 }
 
-func getReportsSQL() []*Report {
+func getReportsSQL(org *organization.Organization) []*Report {
 	var reports []*Report
 
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM reports"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports"
-	}
+	sqlStmt := "SELECT run_id, start_time, end_time, total_res_count, status, run_list, resources, data, node_name FROM goiardi.reports WHERE organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	rows, rerr := stmt.Query()
+	rows, rerr := stmt.Query(org.GetId())
 	if rerr != nil {
 		if rerr == sql.ErrNoRows {
 			return reports
@@ -300,6 +251,7 @@ func getReportsSQL() []*Report {
 	}
 	for rows.Next() {
 		r := new(Report)
+		r.org = org
 		err = r.fillReportFromSQL(rows)
 		if err != nil {
 			rows.Close()

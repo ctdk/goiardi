@@ -65,7 +65,7 @@ func (r *Report) savePostgreSQL() error {
 	// leverage more of each database's capabilities. Thus, here we shall
 	// do the very MySQL-specific INSERT ... ON DUPLICATE KEY UPDATE
 	// syntax.
-	_, err = tx.Exec("SELECT goiardi.merge_reports($1, $2, $3, $4, $5, $6, $7, $8, $9)", r.RunID, r.NodeName, r.StartTime, r.EndTime, r.TotalResCount, r.Status, r.RunList, res, dat)
+	_, err = tx.Exec("SELECT goiardi.merge_reports($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)", r.RunID, r.NodeName, r.StartTime, r.EndTime, r.TotalResCount, r.Status, r.RunList, res, dat, r.org.GetId())
 	if err != nil {
 		tx.Rollback()
 		return err

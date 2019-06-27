@@ -93,7 +93,7 @@ func New(org *organization.Organization, runID string, nodeName string) (*Report
 	var found bool
 	if config.UsingDB() {
 		var err error
-		found, err = checkForReportSQL(datastore.Dbh, runID)
+		found, err = checkForReportSQL(datastore.Dbh, org, runID)
 		if err != nil {
 			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -128,7 +128,7 @@ func Get(org *organization.Organization, runID string) (*Report, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var err error
-		report, err = getReportSQL(runID)
+		report, err = getReportSQL(org, runID)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				found = false
@@ -160,9 +160,7 @@ func Get(org *organization.Organization, runID string) (*Report, util.Gerror) {
 // Save a report.
 func (r *Report) Save() error {
 	var err error
-	if config.Config.UseMySQL {
-		err = r.saveMySQL()
-	} else if config.Config.UsePostgreSQL {
+	if config.UsingDB() {
 		err = r.savePostgreSQL()
 	} else {
 		ds := datastore.New()
@@ -189,7 +187,7 @@ func (r *Report) Delete() error {
 // number of reports deleted, and an error if any.
 func DeleteByAge(dur time.Duration) (int, error) {
 	if config.UsingDB() {
-		return deleteByAgeSQL(dur)
+		return deleteByAgeSQL( dur)
 	}
 	// hoo-boy.
 	orgs, err := orgloader.AllOrganizations()
@@ -345,7 +343,7 @@ func (r *Report) UpdateFromJSON(jsonReport map[string]interface{}) util.Gerror {
 func GetList(org *organization.Organization) []string {
 	var reportList []string
 	if config.UsingDB() {
-		reportList = getListSQL()
+		reportList = getListSQL(org)
 	} else {
 		ds := datastore.New()
 		reportList = ds.GetList(org.DataKey("report"))
@@ -357,7 +355,7 @@ func GetList(org *organization.Organization) []string {
 // and with the given status, which may be "" for any status.
 func GetReportList(org *organization.Organization, from, until time.Time, rows int, status string) ([]*Report, error) {
 	if config.UsingDB() {
-		return getReportListSQL(from, until, rows, status)
+		return getReportListSQL(org, from, until, rows, status)
 	}
 	var reports []*Report
 	reportList := GetList(org)
@@ -383,7 +381,7 @@ func (r *Report) checkTimeRange(from, until time.Time) bool {
 // and status given. Status may be "" for all statuses.
 func GetNodeList(org *organization.Organization, nodeName string, from, until time.Time, rows int, status string) ([]*Report, error) {
 	if config.UsingDB() {
-		return getNodeListSQL(nodeName, from, until, rows, status)
+		return getNodeListSQL(org, nodeName, from, until, rows, status)
 	}
 	// Really really not the most efficient way, but deliberately
 	// not doing it in a better manner for now. If reporting
@@ -428,7 +426,7 @@ func (r *Report) GobDecode(b []byte) error {
 // AllReports returns all run reports currently on the server for export.
 func AllReports(org *organization.Organization) []*Report {
 	if config.UsingDB() {
-		return getReportsSQL()
+		return getReportsSQL(org)
 	}
 	//var reports []*Report
 	reportList := GetList(org)
