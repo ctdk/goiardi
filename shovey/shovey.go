@@ -171,7 +171,7 @@ func New(org *organization.Organization, command string, timeout int, quorumStr 
 	// Conflicting uuids are unlikely, but conceivable.
 	if config.UsingDB() {
 		var err error
-		found, err = checkForShoveySQL(runID)
+		found, err = checkForShoveySQL(org, runID)
 		if err != nil {
 			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusInternalServerError)
@@ -278,7 +278,7 @@ func (s *Shovey) GetNodeRuns() ([]*ShoveyRun, util.Gerror) {
 // Get a shovey instance with the given run id.
 func Get(org *organization.Organization, runID string) (*Shovey, util.Gerror) {
 	if config.UsingDB() {
-		return getShoveySQL(runID)
+		return getShoveySQL(org, runID)
 	}
 	var shove *Shovey
 	ds := datastore.New()
@@ -298,7 +298,7 @@ func Get(org *organization.Organization, runID string) (*Shovey, util.Gerror) {
 // DoesExist checks if there is a shovey instance with the given run id.
 func DoesExist(org *organization.Organization, runID string) (bool, util.Gerror) {
 	if config.UsingDB() {
-		found, err := checkForShoveySQL(runID)
+		found, err := checkForShoveySQL(org, runID)
 		if err != nil {
 			serr := util.CastErr(err)
 			return false, serr
@@ -542,6 +542,7 @@ func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
 	toJSON["status"] = s.Status
 	toJSON["created_at"] = s.CreatedAt
 	toJSON["updated_at"] = s.UpdatedAt
+	toJSON["organization_id"] = s.org.GetId()
 	tjnodes := make(map[string][]string)
 
 	// we can totally do this more efficiently in SQL mode. Do so when we're
@@ -561,7 +562,7 @@ func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
 // AllShoveyIDs returns all shovey run ids.
 func AllShoveyIDs(org *organization.Organization) ([]string, util.Gerror) {
 	if config.UsingDB() {
-		return allShoveyIDsSQL()
+		return allShoveyIDsSQL(org)
 	}
 	ds := datastore.New()
 	list := ds.GetList(org.DataKey("shovey"))
@@ -578,7 +579,7 @@ func GetList(org *organization.Organization) []string {
 func AllShoveys(org *organization.Organization) []*Shovey {
 	var shoveys []*Shovey
 	if config.UsingDB() {
-		return allShoveysSQL()
+		return allShoveysSQL(org)
 	}
 	shoveList := GetList(org)
 	for _, s := range shoveList {

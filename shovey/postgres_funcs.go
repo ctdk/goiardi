@@ -81,7 +81,7 @@ func (s *Shovey) savePostgreSQL() util.Gerror {
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_shoveys($1, $2, $3, $4, $5)", s.RunID, s.Command, s.Status, s.Timeout, s.Quorum)
+	_, err = tx.Exec("SELECT goiardi.merge_shoveys($1, $2, $3, $4, $5, $6)", s.RunID, s.Command, s.Status, s.Timeout, s.Quorum, s.org.GetId())
 	if err != nil {
 		gerr := util.CastErr(err)
 		gerr.SetStatus(http.StatusInternalServerError)
