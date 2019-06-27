@@ -77,7 +77,7 @@ func exportAll(fileName string) error {
 		data["cookbook"] = exportTransformSlice(cookbook.AllCookbooks(org))
 		data["databag"] = exportTransformSlice(databag.AllDataBags(org))
 		data["environment"] = exportTransformSlice(environment.AllEnvironments(org))
-		data["filestore"] = exportTransformSlice(filestore.AllFilestores(org.Name))
+		data["filestore"] = exportTransformSlice(filestore.AllFilestores(org))
 		data["loginfo"] = exportTransformSlice(loginfo.AllLogInfos(org))
 		data["node"] = exportTransformSlice(node.AllNodes(org))
 		data["node_status"] = exportTransformSlice(node.AllNodeStatuses(org))

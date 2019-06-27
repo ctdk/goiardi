@@ -1019,11 +1019,17 @@ func startNodeStatusPurge() {
 		// check every 2 hours for statuses to purge
 		ticker := time.NewTicker(2 * time.Hour)
 		for _ = range ticker.C {
-			del, err := node.DeleteNodeStatusesByAge(config.Config.PurgeNodeStatusDur)
-			if err != nil {
-				logger.Errorf("Purging node statuses had an error: %s", err.Error())
-			} else {
-				logger.Debugf("Purged %d node statuses", del)
+			orgs, oerr := orgloader.AllOrganizations()
+			if oerr != nil {
+				logger.Errorf("Getting organizations to purge old node statuses had an error: %s", oerr.Error())
+			}
+			for _, org := range orgs {
+				del, err := node.DeleteNodeStatusesByAge(org, config.Config.PurgeNodeStatusDur)
+				if err != nil {
+					logger.Errorf("Purging node statuses had an error: %s", err.Error())
+				} else {
+					logger.Debugf("Purged %d node statuses", del)
+				}
 			}
 		}
 	}()

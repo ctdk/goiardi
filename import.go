@@ -138,7 +138,7 @@ func importAll(fileName string) error {
 				}
 				fdBuf := bytes.NewBuffer(fileData)
 				fdRc := ioutil.NopCloser(fdBuf)
-				fs, err := filestore.New(org.Name, v.(map[string]interface{})["Chksum"].(string), fdRc, int64(fdBuf.Len()))
+				fs, err := filestore.New(org, v.(map[string]interface{})["Chksum"].(string), fdRc, int64(fdBuf.Len()))
 				if err != nil {
 					return err
 				}

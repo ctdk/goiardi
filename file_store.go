@@ -46,7 +46,7 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet, http.MethodHead:
 		w.Header().Set("Content-Type", "application/x-binary")
-		fileStore, err := filestore.Get(org.Name, chksum)
+		fileStore, err := filestore.Get(org, chksum)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
@@ -61,7 +61,7 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		/* Need to distinguish file already existing and some
 		 * sort of error with uploading the file. */
-		if fileStore, _ := filestore.Get(org.Name, chksum); fileStore != nil {
+		if fileStore, _ := filestore.Get(org, chksum); fileStore != nil {
 			fileErr := fmt.Errorf("File with checksum %s already exists.", chksum)
 			/* Send status OK. It seems chef-pedant at least
 			 * tries to upload files twice for some reason.
@@ -70,7 +70,7 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, config.Config.ObjMaxSize)
-		fileStore, err := filestore.New(org.Name, chksum, r.Body, r.ContentLength)
+		fileStore, err := filestore.New(org, chksum, r.Body, r.ContentLength)
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
