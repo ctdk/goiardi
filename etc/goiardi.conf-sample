@@ -177,25 +177,6 @@ log-events = true
 # stastd-instance = "my_goiardi_server" # should be the hostname. "." will
 #      					# automatically be converted to "_".
 
-# MySQL options. If "use-mysql" is true on the command line or in the
-# configuration file, connect to mysql with the options in [mysql]. All of the
-# MySQL options must be strings.
-use-mysql = false
-
-[mysql]
-	username = "foo" # technically optional, although you probably want it
-	password = "s3kr1t" # optional, if you have no password set for MySQL
-	protocol = "tcp" # optional, but set to "unix" for connecting to MySQL
-			 # through a Unix socket.
-	address = "localhost"
-	port = "3306" # optional, defaults to 3306. Not used with sockets.
-	dbname = "goiardi_test"
-	# See https://github.com/go-sql-driver/mysql#parameters for an
-	# explanation of available parameters
-	#[mysql.extra_params]
-	#	tls = "false"
-	#	foo = "bar"
-
 # Environment variables - if, for some reason, you need to pass environment
 # variables to goiardi but can't easily do so in the usual way, you can do so
 # here.
