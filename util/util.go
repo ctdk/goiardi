@@ -41,6 +41,15 @@ import (
 // isn't a map
 const defaultMapCap = 4
 
+// SearchSchemaSkel is a printf style format string used to generate the
+// expected search schema for a given organization. Moved out of organizations
+// so it can be easily referred to inside the indexer.
+const SearchSchemaSkel = "goiardi_search_org_%s"
+
+// BaseSearchSchema is a constant holding the name of the base search schema in
+// goiardi. This schema is cloned for each organization.
+const BaseSearchSchema = "goiardi_search_base"
+
 // declare some postgres search key regexps once up here, so they aren't
 // reallocated every time the function is called.
 

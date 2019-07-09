@@ -21,11 +21,8 @@ import (
 	"github.com/ctdk/goiardi/util"
 )
 
-const baseSearchScheme = "goiardi_search_base"
-
 /*
- * Postgres specific functions for organizations. It's still up in the air if
- * MySQL will come along for the ride to 1.0.0, but we'll see.
+ * Postgres specific functions for organizations.
  */
 
 func (o *Organization) savePostgreSQL() util.Gerror {
@@ -68,7 +65,7 @@ func (o *Organization) createSearchSchema() util.Gerror {
 		return util.CastErr(err)
 	}
 
-	_, err = tx.Exec("SELECT goiardi.clone_schema($1, $2)", baseSearchScheme, o.SearchSchemaName)
+	_, err = tx.Exec("SELECT goiardi.clone_schema($1, $2)", util.BaseSearchSchema, o.SearchSchemaName)
 
 	if err != nil {
 		tx.Rollback()

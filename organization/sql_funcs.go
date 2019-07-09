@@ -30,12 +30,7 @@ import (
 
 func checkForOrgSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
 	var objID int32
-	var prepStatement string
-	if config.Config.UseMySQL {
-		prepStatement = "SELECT id FROM organizations WHERE name = ?"
-	} else if config.Config.UsePostgreSQL {
-		prepStatement = "SELECT id FROM goiardi.organizations WHERE name = $1"
-	}
+	prepStatement := "SELECT id FROM goiardi.organizations WHERE name = $1"
 	stmt, err := dbhandle.Prepare(prepStatement)
 	if err != nil {
 		return false, err
@@ -53,10 +48,15 @@ func checkForOrgSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
 }
 
 func (o *Organization) fillOrgFromSQL(row datastore.ResRow) error {
-	err := row.Scan(&o.Name, &o.FullName, &o.GUID, &o.uuID, &o.id)
+	var fn sql.NullString
+	err := row.Scan(&o.Name, &fn, &o.GUID, &o.uuID, &o.id)
 	if err != nil {
 		return err
 	}
+	if fn.Valid {
+		o.FullName = fn.String
+	}
+
 	return nil
 }
 
@@ -66,14 +66,9 @@ func (o *Organization) saveSQL() util.Gerror {
 }
 
 func getOrgSQL(name string) (*Organization, error) {
-	var sqlStatement string
 	org := new(Organization)
 
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name, description, guid, uuid, id FROM organizations WHERE name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name, description, guid, uuid, id FROM goiardi.organizations WHERE name = $1"
-	}
+	sqlStatement := "SELECT name, description, guid, uuid, id FROM goiardi.organizations WHERE name = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -89,12 +84,7 @@ func getOrgSQL(name string) (*Organization, error) {
 }
 
 func (o *Organization) deleteSQL() error {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "DELETE FROM goiardi.organizations WHERE id = $1"
-	}
+	sqlStmt := "DELETE FROM goiardi.organizations WHERE id = $1"
 
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
@@ -112,14 +102,9 @@ func (o *Organization) deleteSQL() error {
 }
 
 func getListSQL() []string {
-	var sqlStatement string
 	orgList := make([]string, 0)
 
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name FROM organizations"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name FROM goiardi.organizations"
-	}
+	sqlStatement := "SELECT name FROM goiardi.organizations"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -147,14 +132,9 @@ func getListSQL() []string {
 }
 
 func allOrgsSQL() ([]*Organization, error) {
-	var sqlStatement string
 	orgs := make([]*Organization, 0)
 
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name, description, guid, uuid, id FROM organizations"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name, description, guid, uuid, id FROM goiardi.organizations"
-	}
+	sqlStatement := "SELECT name, description, guid, uuid, id FROM goiardi.organizations"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -190,27 +170,17 @@ func OrgsByIdSQL(ids []int64) ([]*Organization, error) {
 	}
 
 	var orgs []*Organization
-	var sqlStatement string
 
 	bind := make([]string, len(ids))
 
 	// hmrmph, can't pass in []int as []interface{}, of course.
 	intfIds := make([]interface{}, len(ids))
 
-	if config.Config.UseMySQL {
-		for i, d := range ids {
-			bind[i] = "?"
-			intfIds[i] = d
-		}
-
-		sqlStatement = fmt.Sprintf("SELECT name, description, guid, uuid, id FROM organizations WHERE id IN (%s)", strings.Join(bind, ", "))
-	} else if config.Config.UsePostgreSQL {
-		for i, d := range ids {
-			bind[i] = fmt.Sprintf("$%d", i + 1)
-			intfIds[i] = d
-		}
-		sqlStatement = fmt.Sprintf("SELECT name, description, guid, uuid, id FROM goiardi.organizations WHERE id IN (%s)", strings.Join(bind, ", "))
+	for i, d := range ids {
+		bind[i] = fmt.Sprintf("$%d", i + 1)
+		intfIds[i] = d
 	}
+	sqlStatement := fmt.Sprintf("SELECT name, description, guid, uuid, id FROM goiardi.organizations WHERE id IN (%s)", strings.Join(bind, ", "))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {

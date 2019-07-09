@@ -307,14 +307,11 @@ func (i *FileIndex) Endpoints(orgName string) ([]string, error) {
 	return endpoints, nil
 }
 
-func (i *FileIndex) Clear() error {
-	orgNames := i.OrgList()
+func (i *FileIndex) Clear(orgName string) error {
 	i.m.Lock()
-	i.idxmap = i.makeIdxmap()
+	i.idxmap[orgName] = make(map[string]IndexCollection)
 	i.m.Unlock()
-	for _, o := range orgNames {
-		i.makeDefaultCollections(o)
-	}
+	i.makeDefaultCollections(orgName)
 	return nil
 }
 

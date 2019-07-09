@@ -29,15 +29,43 @@ import (
 type PostgresIndex struct {
 }
 
+func searchSchemaName(orgName string) string {
+	return fmt.Sprintf(util.SearchSchemaSkel, orgName)
+}
+
 func (p *PostgresIndex) Initialize() error {
 	// check if the default indexes exist yet, and if not create them
 	var c int
+	var schemaExists bool
+
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
+
+	defaultOrgSchema := searchSchemaName("default")
+
+	// Check if the default org search schema exists.
+	err = tx.QueryRow("SELECT exists(SELECT schema_name FROM information_schema.schemata WHERE schema_name = $1)", defaultOrgSchema).Scan(&schemaExists)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// If it doesn't, it needs to be created. This does duplicate an
+	// internal method inside organizations, but it can't really be avoided
+	// sadly.
+
+	if !schemaExists {
+		_, err = tx.Exec("SELECT goiardi.clone_schema($1, $2)", util.BaseSearchSchema, defaultOrgSchema)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
 	// organization_id will obviously not always be 1
-	err = tx.QueryRow("SELECT count(*) FROM goiardi.search_collections WHERE organization_id = $1 AND name IN ('node', 'client', 'environment', 'role')", 1).Scan(&c)
+	err = tx.QueryRow(fmt.Sprintf("SELECT count(*) FROM %s.search_collections WHERE name IN ('node', 'client', 'environment', 'role')", defaultOrgSchema)).Scan(&c)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -50,7 +78,7 @@ func (p *PostgresIndex) Initialize() error {
 		}
 		// otherwise everything's good.
 	} else {
-		sqlStmt := "INSERT INTO goiardi.search_collections (name, organization_id) VALUES ('client', $1), ('environment', $1), ('node', $1), ('role', $1)"
+		sqlStmt := fmt.Sprintf("INSERT INTO %s.search_collections (name, organization_id) VALUES ('client', $1), ('environment', $1), ('node', $1), ('role', $1)", defaultOrgSchema)
 		_, err = tx.Exec(sqlStmt, 1)
 		if err != nil {
 			tx.Rollback()
@@ -70,7 +98,7 @@ func (p *PostgresIndex) DeleteOrgDex(orgName string) error {
 }
 
 func (p *PostgresIndex) CreateCollection(orgName, col string) error {
-	sqlStmt := "INSERT INTO goiardi.search_collections (name, organization_id) VALUES ($1, $2)"
+	sqlStmt := fmt.Sprintf("INSERT INTO %s.search_collections (name, organization_id) VALUES ($1, $2)", searchSchemaName(orgName))
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
@@ -93,7 +121,7 @@ func (p *PostgresIndex) DeleteCollection(orgName, col string) error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("SELECT goiardi.delete_search_collection($1, $2)", col, 1)
+	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_collection($1, $2)", searchSchemaName(orgName)), col, 1)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -107,7 +135,7 @@ func (p *PostgresIndex) DeleteItem(orgName, idxName string, doc string) error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("SELECT goiardi.delete_search_item($1, $2, $3)", idxName, doc, 1)
+	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_item($1, $2, $3)", searchSchemaName(orgName)), idxName, doc, 1)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -124,18 +152,19 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 	if err != nil {
 		return err
 	}
+	orgSchema := searchSchemaName(obj.OrgName())
 	var scID int32
-	err = tx.QueryRow("SELECT id FROM goiardi.search_collections WHERE organization_id = $1 AND name = $2", 1, collectionName).Scan(&scID)
+	err = tx.QueryRow(fmt.Sprintf("SELECT id FROM goiardi.search_collections WHERE organization_id = $1 AND name = $2", orgSchema), 1, collectionName).Scan(&scID)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
-	_, err = tx.Exec("SELECT goiardi.delete_search_item($1, $2, $3)", collectionName, itemName, 1)
+	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_item($1, $2, $3)", orgSchema), collectionName, itemName, 1)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
-	_, _ = tx.Exec("SET search_path TO goiardi")
+	_, _ = tx.Exec(fmt.Sprintf("SET search_path TO %s", orgSchema))
 	stmt, err := tx.Prepare(pq.CopyIn("search_items", "organization_id", "search_collection_id", "item_name", "value", "path"))
 	if err != nil {
 		tx.Rollback()
@@ -192,7 +221,7 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 }
 
 func (p *PostgresIndex) Endpoints(orgName string) ([]string, error) {
-	sqlStmt := "SELECT ARRAY_AGG(name) FROM goiardi.search_collections WHERE organization_id = $1"
+	sqlStmt := fmt.Sprintf("SELECT ARRAY_AGG(name) FROM %s.search_collections WHERE organization_id = $1", searchSchemaName(orgName))
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
@@ -207,38 +236,37 @@ func (p *PostgresIndex) Endpoints(orgName string) ([]string, error) {
 	return endpoints, nil
 }
 
-func (p *PostgresIndex) Clear() error {
+func (p *PostgresIndex) Clear(orgName string) error {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
-	lockStmt := "LOCK TABLE goiardi.search_collections"
-	_, err = tx.Exec(lockStmt)
-	if err != nil {
+
+	orgSchema := searchSchemaName(orgName)
+
+	// Get the org id. TODO: The search stuff ought to take an interface
+	// wrapper around orgs to make this easier.
+
+	var orgId int64
+	if err = tx.QueryRow("SELECT id FROM goiardi.organizations WHERE name = $1", orgName).Scan(&orgId); err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	lockStmt = "LOCK TABLE goiardi.search_items"
-	_, err = tx.Exec(lockStmt)
-	if err != nil {
-		tx.Rollback()
+	// Ooooh. Now, rather than doing a whole dance with locking tables and
+	// such and such, we can just torpedo the whole schema and rebuild it.
+	if _, err = tx.Exec(fmt.Sprintf("DROP SCHEMA %s CASCADE", orgSchema)); err != nil {
+		tx.Rollback() // this might not actually work
 		return err
 	}
 
-	sqlStmt := "DELETE FROM goiardi.search_items WHERE organization_id = $1"
-	_, err = tx.Exec(sqlStmt, 1)
-	if err != nil {
+	// Rebuild yon schema
+	if _, err = tx.Exec("SELECT goiardi.clone_schema($1, $2)", util.BaseSearchSchema, orgSchema); err != nil {
 		tx.Rollback()
 		return err
 	}
-	sqlStmt = "DELETE FROM goiardi.search_collections WHERE organization_id = $1"
-	_, err = tx.Exec(sqlStmt, 1)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	sqlStmt = "INSERT INTO goiardi.search_collections (name, organization_id) VALUES ('client', $1), ('environment', $1), ('node', $1), ('role', $1)"
+	
+	sqlStmt := fmt.Sprintf("INSERT INTO %s.search_collections (name, organization_id) VALUES ('client', $1), ('environment', $1), ('node', $1), ('role', $1)", orgSchema)
 	_, err = tx.Exec(sqlStmt, 1)
 	if err != nil {
 		tx.Rollback()

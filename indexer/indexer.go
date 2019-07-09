@@ -43,6 +43,11 @@ type Indexable interface {
 	Flatten() map[string]interface{}
 }
 
+type IndexerOrg interface {
+	GetName() string
+	GetId() int64
+}
+
 // Index holds a map of document collections.
 type Index interface {
 	Search(string, string, string, bool) (map[string]Document, error)
@@ -67,7 +72,7 @@ type ObjIndexer interface {
 	SaveItem(Indexable) error
 	Endpoints(string) ([]string, error)
 	OrgList() []string
-	Clear() error
+	Clear(string) error
 }
 
 type Document interface {
@@ -161,8 +166,8 @@ func LoadIndex() error {
 }
 
 // ClearIndex of all collections and documents
-func ClearIndex() {
-	err := objIndex.Clear()
+func ClearIndex(orgName string) {
+	err := objIndex.Clear(orgName)
 	if err != nil {
 		logger.Errorf("Error clearing db for reindexing: %s", err.Error())
 	}

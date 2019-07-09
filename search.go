@@ -248,6 +248,7 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// TODO: This needs to be able to be done per-org.
 func reindexAll() {
 	// Take the mutex before starting to reindex everything. This way at
 	// least reindexing jobs won't pile up on top of each other all trying
@@ -272,10 +273,11 @@ func reindexAll() {
 	// something comes in between the time we fetch the
 	// objects to reindex and when it gets done, they'll
 	// just be added naturally
-	logger.Infof("Clearing index for reindexing now")
-	indexer.ClearIndex()
+	logger.Infof("Beginning org search schema reindexing now")
 	orgs, _ := orgloader.AllOrganizations()
 	for _, org := range orgs {
+		logger.Debugf("Clearing %s search schema and tables", org.Name)
+		indexer.ClearIndex(org.Name)
 		logger.Debugf("Starting to reindex org %s", org.Name)
 		indexer.CreateOrgDex(org.Name)
 		// Send the objects to be reindexed in somewhat more manageable chunks

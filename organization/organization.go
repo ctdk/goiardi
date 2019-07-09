@@ -18,6 +18,7 @@ package organization
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/gob"
 	"fmt"
 	"github.com/ctdk/goiardi/aclhelper"
@@ -26,6 +27,7 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 	"github.com/pborman/uuid"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"os"
 	"path"
@@ -48,13 +50,11 @@ type privOrganization struct {
 	ID       *int64
 }
 
-const searchSchemaSkel = "goiardi_search_%d"
-
 func New(name, fullName string) (*Organization, util.Gerror) {
 	var found bool
 	uuID := uuid.NewRandom()
 	if config.UsingDB() {
-
+		found, _ = checkForOrgSQL(datastore.Dbh, name)
 	} else {
 		ds := datastore.New()
 		_, found = ds.Get("organization", name)
@@ -97,7 +97,15 @@ func Get(orgName string) (*Organization, util.Gerror) {
 	var org *Organization
 	var found bool
 	if config.UsingDB() {
-
+		var err error
+		org, err = getOrgSQL(orgName)
+		if err != nil {
+			logger.Debugf("no org, err was: %+v", err.Error())
+			if err != sql.ErrNoRows {
+				return nil, util.CastErr(err)
+			}
+		}
+		found = true
 	} else {
 		ds := datastore.New()
 		var o interface{}
@@ -239,7 +247,7 @@ func (o *Organization) SetPermCheck(p aclhelper.PermChecker) {
 // SearchSchemaName is a handy little helper method that will return the schema
 // that holds the search tables for this organization.
 func (o *Organization) SearchSchemaName() string {
-	return fmt.Sprintf(searchSchemaSkel, o.id)
+	return fmt.Sprintf(util.SearchSchemaSkel, o.Name)
 }
 
 func (o *Organization) GetId() int64 {
