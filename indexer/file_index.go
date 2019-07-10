@@ -71,7 +71,7 @@ type searchRes struct {
 
 /* Index methods */
 
-func (i *FileIndex) Initialize() error {
+func (i *FileIndex) Initialize(defaultOrg IndexerOrg) error {
 	in := new(FileIndex)
 	ic := new(IdxCollection)
 	id := new(IdxDoc)
@@ -80,7 +80,7 @@ func (i *FileIndex) Initialize() error {
 	gob.Register(id)
 
 	i.idxmap = i.makeIdxmap()
-	i.makeDefaultCollections("default")
+	i.makeDefaultCollections(defaultOrg)
 	return nil
 }
 
@@ -99,34 +99,34 @@ func (i *FileIndex) OrgList() []string {
 	return l
 }
 
-func (i *FileIndex) CreateOrgDex(orgName string) error {
+func (i *FileIndex) CreateOrgDex(org IndexerOrg) error {
 	i.m.Lock()
 	i.updated = true
-	i.checkOrCreateOrgDex(orgName)
+	i.checkOrCreateOrgDex(org.GetName())
 	i.m.Unlock()
-	i.makeDefaultCollections(orgName)
+	i.makeDefaultCollections(org)
 
 	return nil
 }
 
-func (i *FileIndex) DeleteOrgDex(orgName string) error {
+func (i *FileIndex) DeleteOrgDex(org IndexerOrg) error {
 	i.m.Lock()
 	defer i.m.Unlock()
 	i.updated = true
-	if _, ok := i.idxmap[orgName]; !ok {
-		return fmt.Errorf("Organization index %s not found", orgName)
+	if _, ok := i.idxmap[org.GetName()]; !ok {
+		return fmt.Errorf("Organization index %s not found", org.GetName())
 	}
-	delete(i.idxmap, orgName)
+	delete(i.idxmap, org.GetName())
 	return nil
 }
 
-func (i *FileIndex) CreateCollection(orgName string, idxName string) error {
-	i.checkOrCreateOrgDex(orgName)
-	if _, ok := i.idxmap[orgName][idxName]; !ok {
+func (i *FileIndex) CreateCollection(org IndexerOrg, idxName string) error {
+	i.checkOrCreateOrgDex(org.GetName())
+	if _, ok := i.idxmap[org.GetName()][idxName]; !ok {
 		coll := new(IdxCollection)
 		coll.docs = make(map[string]*IdxDoc)
 		casted := IndexCollection(coll)
-		i.idxmap[orgName][idxName] = casted
+		i.idxmap[org.GetName()][idxName] = casted
 	}
 	return nil
 }
@@ -138,14 +138,14 @@ func (i *FileIndex) checkOrCreateOrgDex(orgName string) {
 	}
 }
 
-func (i *FileIndex) CreateNewCollection(orgName string, idxName string) error {
+func (i *FileIndex) CreateNewCollection(org IndexerOrg, idxName string) error {
 	i.m.Lock()
 	defer i.m.Unlock()
 	i.updated = true
-	return i.CreateCollection(orgName, idxName)
+	return i.CreateCollection(org, idxName)
 }
 
-func (i *FileIndex) DeleteCollection(orgName string, idxName string) error {
+func (i *FileIndex) DeleteCollection(org IndexerOrg, idxName string) error {
 	i.m.Lock()
 	defer i.m.Unlock()
 	/* Don't try and delete built-in indexes */
@@ -154,11 +154,11 @@ func (i *FileIndex) DeleteCollection(orgName string, idxName string) error {
 		return err
 	}
 	i.updated = true
-	delete(i.idxmap[orgName], idxName)
+	delete(i.idxmap[org.GetName()], idxName)
 	return nil
 }
 
-func (i *FileIndex) SaveItem(object Indexable) error {
+func (i *FileIndex) SaveItem(org IndexerOrg, object Indexable) error {
 	/* Have to check to see if data bag indexes exist */
 	i.m.Lock()
 	defer i.m.Unlock()
@@ -171,9 +171,10 @@ func (i *FileIndex) SaveItem(object Indexable) error {
 	return nil
 }
 
-func (i *FileIndex) DeleteItem(orgName, idxName string, doc string) error {
+func (i *FileIndex) DeleteItem(org IndexerOrg, idxName string, doc string) error {
 	i.m.Lock()
 	defer i.m.Unlock()
+	orgName := org.GetName()
 	i.updated = true
 	i.checkOrCreateOrgDex(orgName)
 	if _, found := i.idxmap[orgName][idxName]; !found {
@@ -184,7 +185,8 @@ func (i *FileIndex) DeleteItem(orgName, idxName string, doc string) error {
 	return nil
 }
 
-func (i *FileIndex) Search(orgName string, idx string, term string, notop bool) (map[string]Document, error) {
+func (i *FileIndex) Search(org IndexerOrg, idx string, term string, notop bool) (map[string]Document, error) {
+	orgName := org.GetName()
 	i.m.Lock()
 	i.checkOrCreateOrgDex(orgName)
 	i.m.Unlock()
@@ -205,7 +207,8 @@ func (i *FileIndex) Search(orgName string, idx string, term string, notop bool) 
 	return results, err
 }
 
-func (i *FileIndex) SearchText(orgName string, idx string, term string, notop bool) (map[string]Document, error) {
+func (i *FileIndex) SearchText(org IndexerOrg, idx string, term string, notop bool) (map[string]Document, error) {
+	orgName := org.GetName()
 	i.m.Lock()
 	i.checkOrCreateOrgDex(orgName)
 	i.m.Unlock()
@@ -222,7 +225,8 @@ func (i *FileIndex) SearchText(orgName string, idx string, term string, notop bo
 	return results, err
 }
 
-func (i *FileIndex) SearchRange(orgName string, idx string, field string, start string, end string, inclusive bool, negated bool) (map[string]Document, error) {
+func (i *FileIndex) SearchRange(org IndexerOrg, idx string, field string, start string, end string, inclusive bool, negated bool) (map[string]Document, error) {
+	orgName := org.GetName()
 	i.m.Lock()
 	i.checkOrCreateOrgDex(orgName)
 	i.m.Unlock()
@@ -288,7 +292,8 @@ func (i *FileIndex) SearchResultsText(term string, notop bool, docs map[string]D
 }
 
 // Endpoints returns a list of currently indexed endpoints.
-func (i *FileIndex) Endpoints(orgName string) ([]string, error) {
+func (i *FileIndex) Endpoints(org IndexerOrg) ([]string, error) {
+	orgName := org.GetName()
 	i.m.Lock()
 	i.checkOrCreateOrgDex(orgName)
 	i.m.Unlock()
@@ -307,21 +312,22 @@ func (i *FileIndex) Endpoints(orgName string) ([]string, error) {
 	return endpoints, nil
 }
 
-func (i *FileIndex) Clear(orgName string) error {
+func (i *FileIndex) Clear(org IndexerOrg) error {
+	orgName := org.GetName()
 	i.m.Lock()
 	i.idxmap[orgName] = make(map[string]IndexCollection)
 	i.m.Unlock()
-	i.makeDefaultCollections(orgName)
+	i.makeDefaultCollections(org)
 	return nil
 }
 
-func (i *FileIndex) makeDefaultCollections(orgName string) {
+func (i *FileIndex) makeDefaultCollections(org IndexerOrg) {
 	defaults := [...]string{"client", "environment", "node", "role"}
 	i.m.Lock()
 	defer i.m.Unlock()
 	i.updated = true
 	for _, d := range defaults {
-		i.CreateCollection(orgName, d)
+		i.CreateCollection(org, d)
 	}
 }
 

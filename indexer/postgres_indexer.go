@@ -29,11 +29,7 @@ import (
 type PostgresIndex struct {
 }
 
-func searchSchemaName(orgName string) string {
-	return fmt.Sprintf(util.SearchSchemaSkel, orgName)
-}
-
-func (p *PostgresIndex) Initialize() error {
+func (p *PostgresIndex) Initialize(org IndexerOrg) error {
 	// check if the default indexes exist yet, and if not create them
 	var c int
 	var schemaExists bool
@@ -43,7 +39,7 @@ func (p *PostgresIndex) Initialize() error {
 		return err
 	}
 
-	defaultOrgSchema := searchSchemaName("default")
+	defaultOrgSchema := org.SearchSchemaName()
 
 	// Check if the default org search schema exists.
 	err = tx.QueryRow("SELECT exists(SELECT schema_name FROM information_schema.schemata WHERE schema_name = $1)", defaultOrgSchema).Scan(&schemaExists)
@@ -64,7 +60,6 @@ func (p *PostgresIndex) Initialize() error {
 		}
 	}
 
-	// organization_id will obviously not always be 1
 	err = tx.QueryRow(fmt.Sprintf("SELECT count(*) FROM %s.search_collections WHERE name IN ('node', 'client', 'environment', 'role')", defaultOrgSchema)).Scan(&c)
 	if err != nil {
 		tx.Rollback()
@@ -79,7 +74,7 @@ func (p *PostgresIndex) Initialize() error {
 		// otherwise everything's good.
 	} else {
 		sqlStmt := fmt.Sprintf("INSERT INTO %s.search_collections (name, organization_id) VALUES ('client', $1), ('environment', $1), ('node', $1), ('role', $1)", defaultOrgSchema)
-		_, err = tx.Exec(sqlStmt, 1)
+		_, err = tx.Exec(sqlStmt, org.GetId())
 		if err != nil {
 			tx.Rollback()
 			return err
@@ -89,16 +84,16 @@ func (p *PostgresIndex) Initialize() error {
 	return nil
 }
 
-func (p *PostgresIndex) CreateOrgDex(orgName string) error {
+func (p *PostgresIndex) CreateOrgDex(org IndexerOrg) error {
 	return nil
 }
 
-func (p *PostgresIndex) DeleteOrgDex(orgName string) error {
+func (p *PostgresIndex) DeleteOrgDex(org IndexerOrg) error {
 	return nil
 }
 
-func (p *PostgresIndex) CreateCollection(orgName, col string) error {
-	sqlStmt := fmt.Sprintf("INSERT INTO %s.search_collections (name, organization_id) VALUES ($1, $2)", searchSchemaName(orgName))
+func (p *PostgresIndex) CreateCollection(org IndexerOrg, col string) error {
+	sqlStmt := fmt.Sprintf("INSERT INTO %s.search_collections (name, organization_id) VALUES ($1, $2)", org.SearchSchemaName())
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
@@ -112,16 +107,16 @@ func (p *PostgresIndex) CreateCollection(orgName, col string) error {
 	return nil
 }
 
-func (p *PostgresIndex) CreateNewCollection(orgName, col string) error {
-	return p.CreateCollection(orgName, col)
+func (p *PostgresIndex) CreateNewCollection(org IndexerOrg, col string) error {
+	return p.CreateCollection(org, col)
 }
 
-func (p *PostgresIndex) DeleteCollection(orgName, col string) error {
+func (p *PostgresIndex) DeleteCollection(org IndexerOrg, col string) error {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_collection($1, $2)", searchSchemaName(orgName)), col, 1)
+	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_collection($1, $2)", org.SearchSchemaName()), col, 1)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -130,12 +125,12 @@ func (p *PostgresIndex) DeleteCollection(orgName, col string) error {
 	return nil
 }
 
-func (p *PostgresIndex) DeleteItem(orgName, idxName string, doc string) error {
+func (p *PostgresIndex) DeleteItem(org IndexerOrg, idxName string, doc string) error {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_item($1, $2, $3)", searchSchemaName(orgName)), idxName, doc, 1)
+	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_item($1, $2, $3)", org.SearchSchemaName()), idxName, doc, 1)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -220,8 +215,8 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 	return nil
 }
 
-func (p *PostgresIndex) Endpoints(orgName string) ([]string, error) {
-	sqlStmt := fmt.Sprintf("SELECT ARRAY_AGG(name) FROM %s.search_collections WHERE organization_id = $1", searchSchemaName(orgName))
+func (p *PostgresIndex) Endpoints(org IndexerOrg) ([]string, error) {
+	sqlStmt := fmt.Sprintf("SELECT ARRAY_AGG(name) FROM %s.search_collections WHERE organization_id = $1", org.SearchSchemaName())
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
@@ -236,22 +231,13 @@ func (p *PostgresIndex) Endpoints(orgName string) ([]string, error) {
 	return endpoints, nil
 }
 
-func (p *PostgresIndex) Clear(orgName string) error {
+func (p *PostgresIndex) Clear(org IndexerOrg) error {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return err
 	}
 
-	orgSchema := searchSchemaName(orgName)
-
-	// Get the org id. TODO: The search stuff ought to take an interface
-	// wrapper around orgs to make this easier.
-
-	var orgId int64
-	if err = tx.QueryRow("SELECT id FROM goiardi.organizations WHERE name = $1", orgName).Scan(&orgId); err != nil {
-		tx.Rollback()
-		return err
-	}
+	orgSchema := org.SearchSchemaName()
 
 	// Ooooh. Now, rather than doing a whole dance with locking tables and
 	// such and such, we can just torpedo the whole schema and rebuild it.
@@ -267,7 +253,7 @@ func (p *PostgresIndex) Clear(orgName string) error {
 	}
 	
 	sqlStmt := fmt.Sprintf("INSERT INTO %s.search_collections (name, organization_id) VALUES ('client', $1), ('environment', $1), ('node', $1), ('role', $1)", orgSchema)
-	_, err = tx.Exec(sqlStmt, 1)
+	_, err = tx.Exec(sqlStmt, org.GetId())
 	if err != nil {
 		tx.Rollback()
 		return err

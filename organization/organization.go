@@ -247,7 +247,7 @@ func (o *Organization) SetPermCheck(p aclhelper.PermChecker) {
 // SearchSchemaName is a handy little helper method that will return the schema
 // that holds the search tables for this organization.
 func (o *Organization) SearchSchemaName() string {
-	return fmt.Sprintf(util.SearchSchemaSkel, o.Name)
+	return fmt.Sprintf(util.SearchSchemaSkel, o.id)
 }
 
 func (o *Organization) GetId() int64 {

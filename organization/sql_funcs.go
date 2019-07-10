@@ -61,7 +61,6 @@ func (o *Organization) fillOrgFromSQL(row datastore.ResRow) error {
 }
 
 func (o *Organization) saveSQL() util.Gerror {
-	// pass-through to the postgres one; may add mysql later, but who knows
 	return o.savePostgreSQL()
 }
 

@@ -46,6 +46,7 @@ type Indexable interface {
 type IndexerOrg interface {
 	GetName() string
 	GetId() int64
+	SearchSchemaName() string
 }
 
 // Index holds a map of document collections.
@@ -62,17 +63,17 @@ type Index interface {
 }
 
 type ObjIndexer interface {
-	Initialize() error
-	CreateOrgDex(string) error
-	DeleteOrgDex(string) error
-	CreateCollection(string, string) error
-	CreateNewCollection(string, string) error
-	DeleteCollection(string, string) error
-	DeleteItem(string, string, string) error
-	SaveItem(Indexable) error
-	Endpoints(string) ([]string, error)
+	Initialize(IndexerOrg) error
+	CreateOrgDex(IndexerOrg) error
+	DeleteOrgDex(IndexerOrg) error
+	CreateCollection(IndexerOrg, string) error
+	CreateNewCollection(IndexerOrg, string) error
+	DeleteCollection(IndexerOrg, string) error
+	DeleteItem(IndexerOrg, string, string) error
+	SaveItem(IndexerOrg, Indexable) error
+	Endpoints(IndexerOrg) ([]string, error)
 	OrgList() []string
-	Clear(string) error
+	Clear(IndexerOrg) error
 }
 
 type Document interface {
@@ -81,15 +82,15 @@ type Document interface {
 var indexMap Index
 var objIndex ObjIndexer
 
-func Initialize(config *config.Conf) {
+func Initialize(config *config.Conf, defaultOrg IndexerOrg) {
 	if config.PgSearch {
 		objIndex = new(PostgresIndex)
-		objIndex.Initialize()
+		objIndex.Initialize(defaultOrg)
 	} else {
 		fileindex := new(FileIndex)
 		fileindex.file = config.IndexFile
 		im := Index(fileindex)
-		im.Initialize()
+		im.Initialize(defaultOrg)
 		indexMap = im
 		objIndex = im
 	}
@@ -101,46 +102,46 @@ func GetIndex() Index {
 }
 
 // CreateOrgDex makes an organization's index.
-func CreateOrgDex(orgName string) error {
-	return objIndex.CreateOrgDex(orgName)
+func CreateOrgDex(org IndexerOrg) error {
+	return objIndex.CreateOrgDex(org)
 }
 
 // DeleteOrgDex deletes an organization's index.
-func DeleteOrgDex(orgName string) error {
-	return objIndex.CreateOrgDex(orgName)
+func DeleteOrgDex(org IndexerOrg) error {
+	return objIndex.CreateOrgDex(org)
 }
 
 // CreateNewCollection creates an index for data bags when they are created,
 // rather than when the first data bag item is uploaded
-func CreateNewCollection(orgName, idxName string) {
-	objIndex.CreateNewCollection(orgName, idxName)
+func CreateNewCollection(org IndexerOrg, idxName string) {
+	objIndex.CreateNewCollection(org, idxName)
 }
 
 // DeleteCollection deletes a collection from the index. Useful only for data
 // bags.
-func DeleteCollection(orgName string, idxName string) error {
+func DeleteCollection(org IndexerOrg, idxName string) error {
 	/* Don't try and delete built-in indexes */
 	if idxName == "node" || idxName == "client" || idxName == "environment" || idxName == "role" {
 		err := fmt.Errorf("%s is a default search index, cannot be deleted.", idxName)
 		return err
 	}
-	return objIndex.DeleteCollection(orgName, idxName)
+	return objIndex.DeleteCollection(org, idxName)
 }
 
 // DeleteItemFromCollection deletes an item from a collection
-func DeleteItemFromCollection(orgName, idxName string, doc string) error {
-	err := objIndex.DeleteItem(orgName, idxName, doc)
+func DeleteItemFromCollection(org IndexerOrg, idxName string, doc string) error {
+	err := objIndex.DeleteItem(org, idxName, doc)
 	return err
 }
 
 // IndexObj processes and adds an object to the index.
-func IndexObj(object Indexable) {
-	go objIndex.SaveItem(object)
+func IndexObj(org IndexerOrg, object Indexable) {
+	go objIndex.SaveItem(org, object)
 }
 
 // Endpoints returns a list of currently indexed endpoints.
-func Endpoints(orgName string) ([]string, error) {
-	endpoints, err := objIndex.Endpoints(orgName)
+func Endpoints(org IndexerOrg) ([]string, error) {
+	endpoints, err := objIndex.Endpoints(org)
 	return endpoints, err
 }
 
@@ -166,8 +167,8 @@ func LoadIndex() error {
 }
 
 // ClearIndex of all collections and documents
-func ClearIndex(orgName string) {
-	err := objIndex.Clear(orgName)
+func ClearIndex(org IndexerOrg) {
+	err := objIndex.Clear(org)
 	if err != nil {
 		logger.Errorf("Error clearing db for reindexing: %s", err.Error())
 	}

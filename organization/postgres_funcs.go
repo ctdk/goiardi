@@ -31,7 +31,7 @@ func (o *Organization) savePostgreSQL() util.Gerror {
 		return util.CastErr(err)
 	}
 
-	_, err = tx.Exec("SELECT goiardi.merge_orgs($1, $2, $3, $4)", o.Name, o.FullName, o.GUID, o.uuID)
+	err = tx.QueryRow("SELECT goiardi.merge_orgs($1, $2, $3, $4)", o.Name, o.FullName, o.GUID, o.uuID).Scan(&o.id)
 
 	if err != nil {
 		tx.Rollback()
