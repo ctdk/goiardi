@@ -139,7 +139,7 @@ func (p *PostgresIndex) DeleteItem(org IndexerOrg, idxName string, doc string) e
 	return nil
 }
 
-func (p *PostgresIndex) SaveItem(obj Indexable) error {
+func (p *PostgresIndex) SaveItem(org IndexerOrg, obj Indexable) error {
 	flat := obj.Flatten()
 	itemName := obj.DocID()
 	collectionName := obj.Index()
@@ -147,7 +147,7 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 	if err != nil {
 		return err
 	}
-	orgSchema := searchSchemaName(obj.OrgName())
+	orgSchema := org.SearchSchemaName()
 	var scID int32
 	err = tx.QueryRow(fmt.Sprintf("SELECT id FROM %s.search_collections WHERE organization_id = $1 AND name = $2", orgSchema), 1, collectionName).Scan(&scID)
 	if err != nil {

@@ -25,6 +25,7 @@ import (
 	"errors"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"strings"
 )
@@ -158,7 +159,7 @@ type NotQuery struct {
 // be able to implement to search the index.
 type Queryable interface {
 	// Search the index for the given term.
-	SearchIndex(string, string) (map[string]indexer.Document, error)
+	SearchIndex(*organization.Organization, string) (map[string]indexer.Document, error)
 	// Search for the given term from already gathered search results
 	SearchResults(map[string]indexer.Document) (map[string]indexer.Document, error)
 	// Add an operator to this query chain link.
@@ -194,18 +195,18 @@ type groupQueryHolder struct {
 	res map[string]indexer.Document
 }
 
-func (q *BasicQuery) SearchIndex(orgName string, idxName string) (map[string]indexer.Document, error) {
+func (q *BasicQuery) SearchIndex(org *organization.Organization, idxName string) (map[string]indexer.Document, error) {
 	notop := false
 	if q.Prev() != nil && ((q.Prev().Op() == OpUnaryNot) || (q.Prev().Op() == OpUnaryPro)) {
 		notop = true
 	}
 	i := indexer.GetIndex()
 	if q.field == "" {
-		res, err := i.SearchText(orgName, idxName, string(q.term.term), notop)
+		res, err := i.SearchText(org, idxName, string(q.term.term), notop)
 		return res, err
 	}
 	searchTerm := makeSearchTerm(q.field, q.term.term)
-	res, err := i.Search(orgName, idxName, searchTerm, notop)
+	res, err := i.Search(org, idxName, searchTerm, notop)
 
 	return res, err
 }
@@ -408,7 +409,7 @@ func (q *RangeQuery) AddFuzzParam(s string) {
 
 }
 
-func (q *GroupedQuery) SearchIndex(orgName string, idxName string) (map[string]indexer.Document, error) {
+func (q *GroupedQuery) SearchIndex(org *organization.Organization, idxName string) (map[string]indexer.Document, error) {
 	tmpRes := make([]groupQueryHolder, len(q.terms))
 	for i, v := range q.terms {
 		tmpRes[i].op = v.mod
@@ -418,7 +419,7 @@ func (q *GroupedQuery) SearchIndex(orgName string, idxName string) (map[string]i
 		}
 		searchTerm := makeSearchTerm(q.field, v.term)
 		ix := indexer.GetIndex()
-		r, err := ix.Search(orgName, idxName, searchTerm, notop)
+		r, err := ix.Search(org, idxName, searchTerm, notop)
 		if err != nil {
 			return nil, err
 		}
@@ -458,13 +459,13 @@ func mergeResults(tmpRes []groupQueryHolder) (map[string]indexer.Document, error
 	return res, nil
 }
 
-func (q *RangeQuery) SearchIndex(orgName string, idxName string) (map[string]indexer.Document, error) {
+func (q *RangeQuery) SearchIndex(org *organization.Organization, idxName string) (map[string]indexer.Document, error) {
 	i := indexer.GetIndex()
-	res, err := i.SearchRange(orgName, idxName, string(q.field), string(q.start), string(q.end), q.inclusive, q.negated)
+	res, err := i.SearchRange(org, idxName, string(q.field), string(q.start), string(q.end), q.inclusive, q.negated)
 	return res, err
 }
 
-func (q *SubQuery) SearchIndex(orgName string, idxName string) (map[string]indexer.Document, error) {
+func (q *SubQuery) SearchIndex(org *organization.Organization, idxName string) (map[string]indexer.Document, error) {
 	return nil, nil
 }
 
@@ -549,12 +550,12 @@ func (q *SubQuery) AddFuzzParam(s string) {
 
 }
 
-func (q *NotQuery) SearchIndex(orgName string, idxName string) (map[string]indexer.Document, error) {
+func (q *NotQuery) SearchIndex(org *organization.Organization, idxName string) (map[string]indexer.Document, error) {
 	if q.Next() == nil {
 		err := errors.New("No next link present in query chain after unary NOT operator!")
 		return nil, err
 	}
-	return q.Next().SearchIndex(orgName, idxName)
+	return q.Next().SearchIndex(org, idxName)
 }
 
 func (q *NotQuery) SearchResults(results map[string]indexer.Document) (map[string]indexer.Document, error) {

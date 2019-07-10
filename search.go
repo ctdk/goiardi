@@ -286,14 +286,14 @@ func reindexAll() {
 			clientObjs = append(clientObjs, v)
 		}
 		logger.Debugf("reindexing %s clients", org.Name)
-		indexer.ReIndex(clientObjs, rCh)
+		indexer.ReIndex(org, clientObjs, rCh)
 
 		nodeObjs := make([]indexer.Indexable, 0, 100)
 		for _, v := range node.AllNodes(org) {
 			nodeObjs = append(nodeObjs, v)
 		}
 		logger.Debugf("reindexing %s nodes", org.Name)
-		indexer.ReIndex(nodeObjs, rCh)
+		indexer.ReIndex(org, nodeObjs, rCh)
 
 		roleObjs := make([]indexer.Indexable, 0, 100)
 		for _, v := range role.AllRoles(org) {
@@ -301,7 +301,7 @@ func reindexAll() {
 		}
 
 		logger.Debugf("reindexing %s roles", org.Name)
-		indexer.ReIndex(roleObjs, rCh)
+		indexer.ReIndex(org, roleObjs, rCh)
 
 		environmentObjs := make([]indexer.Indexable, 0, 100)
 		for _, v := range environment.AllEnvironments(org) {
@@ -339,7 +339,7 @@ func reindexAll() {
 			dbagObjs = append(dbagObjs, dbis...)
 		}
 		logger.Debugf("Reindexing %s data bags", org.Name)
-		indexer.ReIndex(dbagObjs, rCh)
+		indexer.ReIndex(org, dbagObjs, rCh)
 	}
 	return
 }

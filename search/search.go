@@ -210,7 +210,7 @@ func (sq *SolrQuery) execute() (map[string]indexer.Document, error) {
 			if curOp == OpBinAnd {
 				r, err = s.SearchResults(sq.docs)
 			} else {
-				r, err = s.SearchIndex(sq.org.Name, sq.idxName)
+				r, err = s.SearchIndex(sq.org, sq.idxName)
 			}
 		}
 		if err != nil {

@@ -165,7 +165,7 @@ func (i *FileIndex) SaveItem(org IndexerOrg, object Indexable) error {
 	i.updated = true
 	i.checkOrCreateOrgDex(object.OrgName())
 	if _, found := i.idxmap[object.OrgName()][object.Index()]; !found {
-		i.CreateCollection(object.OrgName(), object.Index())
+		i.CreateCollection(org, object.Index())
 	}
 	i.idxmap[object.OrgName()][object.Index()].addDoc(object)
 	return nil

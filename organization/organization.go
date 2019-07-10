@@ -89,7 +89,7 @@ func New(name, fullName string) (*Organization, util.Gerror) {
 	if err != nil {
 		return nil, err
 	}
-	indexer.CreateOrgDex(o.Name)
+	indexer.CreateOrgDex(o)
 	return o, nil
 }
 
@@ -140,7 +140,7 @@ func (o *Organization) Delete() util.Gerror {
 	}
 	ds := datastore.New()
 	ds.Delete("organization", o.Name)
-	err := indexer.DeleteOrgDex(o.Name)
+	err := indexer.DeleteOrgDex(o)
 	if err != nil {
 		return util.CastErr(err)
 	}

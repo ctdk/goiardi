@@ -51,9 +51,9 @@ type IndexerOrg interface {
 
 // Index holds a map of document collections.
 type Index interface {
-	Search(string, string, string, bool) (map[string]Document, error)
-	SearchText(string, string, string, bool) (map[string]Document, error)
-	SearchRange(string, string, string, string, string, bool, bool) (map[string]Document, error)
+	Search(IndexerOrg, string, string, bool) (map[string]Document, error)
+	SearchText(IndexerOrg, string, string, bool) (map[string]Document, error)
+	SearchRange(IndexerOrg, string, string, string, string, bool, bool) (map[string]Document, error)
 	SearchResults(string, bool, map[string]Document) (map[string]Document, error)
 	SearchResultsRange(string, string, string, bool, bool, map[string]Document) (map[string]Document, error)
 	SearchResultsText(string, bool, map[string]Document) (map[string]Document, error)
@@ -97,7 +97,6 @@ func Initialize(config *config.Conf, defaultOrg IndexerOrg) {
 }
 
 func GetIndex() Index {
-	// right now just return the index map
 	return indexMap
 }
 
@@ -176,7 +175,7 @@ func ClearIndex(org IndexerOrg) {
 }
 
 // ReIndex rebuilds the search index from scratch
-func ReIndex(objects []Indexable, rCh chan struct{}) error {
+func ReIndex(org IndexerOrg, objects []Indexable, rCh chan struct{}) error {
 	go func() {
 		z := 0
 		t := "(none)"
@@ -203,7 +202,7 @@ func ReIndex(objects []Indexable, rCh chan struct{}) error {
 		for i := 0; i < runtime.NumCPU(); i++ {
 			go func() {
 				for obj := range ch {
-					objIndex.SaveItem(obj)
+					objIndex.SaveItem(org, obj)
 					fCh <- struct{}{}
 				}
 				return
