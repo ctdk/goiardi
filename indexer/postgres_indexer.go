@@ -154,7 +154,7 @@ func (p *PostgresIndex) SaveItem(obj Indexable) error {
 	}
 	orgSchema := searchSchemaName(obj.OrgName())
 	var scID int32
-	err = tx.QueryRow(fmt.Sprintf("SELECT id FROM goiardi.search_collections WHERE organization_id = $1 AND name = $2", orgSchema), 1, collectionName).Scan(&scID)
+	err = tx.QueryRow(fmt.Sprintf("SELECT id FROM %s.search_collections WHERE organization_id = $1 AND name = $2", orgSchema), 1, collectionName).Scan(&scID)
 	if err != nil {
 		tx.Rollback()
 		return err
