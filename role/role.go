@@ -269,7 +269,7 @@ func (r *Role) Save() util.Gerror {
 		ds := datastore.New()
 		ds.Set(r.org.DataKey("role"), r.Name, r)
 	}
-	indexer.IndexObj(r)
+	indexer.IndexObj(r.org, r)
 	return nil
 }
 

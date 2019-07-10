@@ -308,7 +308,7 @@ func (db *DataBag) NewDBItem(rawDbagItem map[string]interface{}) (*DataBagItem, 
 		gerr.SetStatus(http.StatusInternalServerError)
 		return nil, gerr
 	}
-	indexer.IndexObj(dbagItem)
+	indexer.IndexObj(db.org, dbagItem)
 	return dbagItem, nil
 }
 
@@ -334,7 +334,7 @@ func (db *DataBag) UpdateDBItem(dbiID string, rawDbagItem map[string]interface{}
 	if err != nil {
 		return nil, err
 	}
-	indexer.IndexObj(dbItem)
+	indexer.IndexObj(db.org, dbItem)
 	return dbItem, nil
 }
 

@@ -219,7 +219,7 @@ func (c *Client) Save() util.Gerror {
 		ds := datastore.New()
 		ds.Set(c.org.DataKey("client"), c.Name, c)
 	}
-	indexer.IndexObj(c)
+	indexer.IndexObj(c.org, c)
 	return nil
 }
 

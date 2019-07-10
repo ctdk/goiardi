@@ -288,7 +288,7 @@ func (n *Node) Save() error {
 		ds.Set(n.org.DataKey("node"), n.Name, n)
 	}
 	/* TODO Later: excellent candidate for a goroutine */
-	indexer.IndexObj(n)
+	indexer.IndexObj(n.org, n)
 	return nil
 }
 

@@ -309,7 +309,7 @@ func MakeDefaultEnvironment(org *organization.Organization) {
 		de = defaultEnvironment(org)
 		ds.Set(org.DataKey("env"), de.Name, de)
 	}
-	indexer.IndexObj(de)
+	indexer.IndexObj(org, de)
 }
 
 func defaultEnvironment(org *organization.Organization) *ChefEnvironment {
@@ -342,7 +342,7 @@ func (e *ChefEnvironment) Save() util.Gerror {
 		ds := datastore.New()
 		ds.Set(e.org.DataKey("env"), e.Name, e)
 	}
-	indexer.IndexObj(e)
+	indexer.IndexObj(e.org, e)
 	return nil
 }
 

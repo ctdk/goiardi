@@ -33,13 +33,33 @@ type testObj struct {
 	OName   string                 `json:"org_name"`
 }
 
+type testOrg struct {
+	name 	string
+	id 	int64
+}
+
+func (o *testOrg) GetName() string {
+	return o.name
+}
+
+func (o *testOrg) GetId() int64 {
+	return o.id
+}
+
+func (o *testOrg) SearchSchemaName() string {
+	return fmt.Sprintf(util.SearchSchemaSkel, o.id)
+}
+
 var conf *config.Conf
+
+var fakeOrg *testOrg
 
 func init() {
 	conf = &config.Conf{}
+	fakeOrg = &testOrg{"default", 1}
 	idxTmpDir = idxTmpGen()
 	conf.IndexFile = fmt.Sprintf("%s/idx.bin", idxTmpDir)
-	Initialize(conf)
+	Initialize(fakeOrg, conf)
 }
 
 func (to *testObj) DocID() string {
