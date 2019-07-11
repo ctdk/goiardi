@@ -19,6 +19,7 @@ package group
 import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
+	"github.com/lib/pq"
 	"net/http"
 )
 
@@ -31,7 +32,7 @@ func (g *Group) savePostgreSQL(user_ids []int64, client_ids []int64, group_ids [
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_groups($1, $2, $3, $4, $5)", g.Name, g.org.GetId(), user_ids, client_ids, group_ids)
+	_, err = tx.Exec("SELECT goiardi.merge_groups($1, $2, $3, $4, $5)", g.Name, g.org.GetId(), pq.Int64Array(user_ids), pq.Int64Array(client_ids), pq.Int64Array(group_ids))
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())
