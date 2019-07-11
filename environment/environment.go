@@ -30,6 +30,7 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"sort"
 )
@@ -309,6 +310,10 @@ func MakeDefaultEnvironment(org *organization.Organization) {
 		de = defaultEnvironment(org)
 		ds.Set(org.DataKey("env"), de.Name, de)
 	}
+	if err := de.save(); err != nil {
+		logger.Errorf(err.Error())
+	}
+
 	indexer.IndexObj(org, de)
 }
 
@@ -333,6 +338,12 @@ func (e *ChefEnvironment) Save() util.Gerror {
 		err.SetStatus(http.StatusMethodNotAllowed)
 		return err
 	}
+	return e.save()
+}
+
+// the base save() method - we need this because you DO need to save the default
+// environment when creating an organization.
+func (e *ChefEnvironment) save() util.Gerror {
 	if config.UsingDB() {
 		err := e.saveEnvironmentPostgreSQL()
 		if err != nil {
@@ -353,6 +364,12 @@ func (e *ChefEnvironment) Delete() error {
 		err := fmt.Errorf("The '_default' environment cannot be modified.")
 		return err
 	}
+	return e.delete()
+}
+
+// the base delete method, since we'll need to be able to delete the default
+// environment when deleting an organization.
+func (e *ChefEnvironment) delete() error {
 	if config.UsingDB() {
 		if err := e.deleteEnvironmentSQL(); err != nil {
 			return nil

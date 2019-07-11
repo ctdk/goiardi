@@ -89,7 +89,11 @@ func New(name, fullName string) (*Organization, util.Gerror) {
 	if err != nil {
 		return nil, err
 	}
-	indexer.CreateOrgDex(o)
+	if ierr := indexer.CreateOrgDex(o); ierr != nil {
+		logger.Debugf(ierr.Error())
+		return nil, util.CastErr(ierr)
+	}
+
 	return o, nil
 }
 

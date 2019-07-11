@@ -85,10 +85,40 @@ func (p *PostgresIndex) Initialize(org IndexerOrg) error {
 }
 
 func (p *PostgresIndex) CreateOrgDex(org IndexerOrg) error {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+	schemaName := org.SearchSchemaName()
+	_, err = tx.Exec("SELECT goiardi.clone_schema($1, $2)", util.BaseSearchSchema, schemaName)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	sqlStmt := fmt.Sprintf("INSERT INTO %s.search_collections (name, organization_id) VALUES ('client', $1), ('environment', $1), ('node', $1), ('role', $1)", schemaName)
+	if _, err = tx.Exec(sqlStmt, org.GetId()); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	tx.Commit()
 	return nil
 }
 
 func (p *PostgresIndex) DeleteOrgDex(org IndexerOrg) error {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(fmt.Sprintf("DROP SCHEMA %s CASCADE", org.SearchSchemaName()))
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	tx.Commit()
 	return nil
 }
 
