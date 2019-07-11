@@ -59,7 +59,7 @@ func init() {
 	fakeOrg = &testOrg{"default", 1}
 	idxTmpDir = idxTmpGen()
 	conf.IndexFile = fmt.Sprintf("%s/idx.bin", idxTmpDir)
-	Initialize(fakeOrg, conf)
+	Initialize(conf, fakeOrg)
 }
 
 func (to *testObj) DocID() string {
@@ -84,7 +84,7 @@ func (to *testObj) OrgName() string {
 
 func TestIndexObj(t *testing.T) {
 	obj := &testObj{Name: "foo", URLType: "bar"}
-	IndexObj(obj)
+	IndexObj(fakeOrg, obj)
 }
 
 var idxTmpDir string
@@ -116,8 +116,8 @@ func TestLoad(t *testing.T) {
 
 func TestSearchObj(t *testing.T) {
 	obj := &testObj{Name: "foo", URLType: "client"}
-	IndexObj(obj)
-	_, err := indexMap.Search("default", "client", "name:foo", false)
+	IndexObj(fakeOrg, obj)
+	_, err := indexMap.Search(fakeOrg, "client", "name:foo", false)
 	if err != nil {
 		t.Errorf("Failed to search index for test: %s", err)
 	}
@@ -125,12 +125,12 @@ func TestSearchObj(t *testing.T) {
 
 func TestSearchObjLoad(t *testing.T) {
 	obj := &testObj{Name: "foo", URLType: "client"}
-	IndexObj(obj)
+	IndexObj(fakeOrg, obj)
 	tmpfile := fmt.Sprintf("%s/idx2.bin", idxTmpDir)
 	indexMap.(*FileIndex).file = tmpfile
 	SaveIndex()
 	LoadIndex()
-	_, err := indexMap.Search("default", "client", "name:foo", false)
+	_, err := indexMap.Search(fakeOrg, "client", "name:foo", false)
 	if err != nil {
 		t.Errorf("Failed to search index for test: %s", err)
 	}
@@ -138,9 +138,10 @@ func TestSearchObjLoad(t *testing.T) {
 
 func TestNewOrg(t *testing.T) {
 	obj := &testObj{Name: "boo", URLType: "client", OName: "bleep"}
-	CreateOrgDex("bleep")
-	IndexObj(obj)
-	_, err := indexMap.Search("bleep", "client", "*:*", false)
+	bleep := &testOrg{"bleep", 2}
+	CreateOrgDex(bleep)
+	IndexObj(bleep, obj)
+	_, err := indexMap.Search(bleep, "client", "*:*", false)
 	if err != nil {
 		t.Errorf("searching a new org index failed: %s", err.Error())
 	}
