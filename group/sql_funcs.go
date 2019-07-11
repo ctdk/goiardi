@@ -29,9 +29,32 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
+	"github.com/lib/pq"
 	"net/http"
 	"strings"
 )
+
+// *sob*
+type nullInt64Array struct {
+  Int64s []int64
+  Valid  bool
+}
+
+func (n *nullInt64Array) Scan(value interface{}) error {
+  if value == nil {
+    n.Int64s, n.Valid = nil, false
+    return nil
+  }
+  n.Valid = true
+  return pq.Array(&n.Int64s).Scan(value)
+}
+
+func (n *nullInt64Array) val() []int64 {
+	if n.Valid {
+		return n.Int64s
+	}
+	return make([]int64, 0)
+}
 
 func checkForGroupSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
 	_, err := datastore.CheckForOne(dbhandle, "groups", org.GetId(), name)
@@ -45,9 +68,9 @@ func checkForGroupSQL(dbhandle datastore.Dbhandle, org *organization.Organizatio
 }
 
 func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
-	var userIds []int64
-	var clientIds []int64
-	var groupIds []int64
+	var userIds nullInt64Array
+	var clientIds nullInt64Array
+	var groupIds nullInt64Array
 	var orgId int64
 	
 	// arrrgh blargh, it looks like we may also need to create a special
@@ -81,20 +104,30 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 		// fill in the actor and group slices with the appropriate
 		// objects. Will these need to be sorted? We'll see.
 
-		groupez, err := GroupsByIdSQL(groupIds)
-		if err != nil {
-			return err
-		}
-		g.Groups = groupez
-
-		userez, err := user.UsersByIdSQL(userIds)
-		if err != nil {
-			return err
+		if len(groupIds.val()) > 0 {
+			groupez, err := GroupsByIdSQL(groupIds.val())
+			if err != nil {
+				return err
+			}
+			g.Groups = groupez
 		}
 
-		clientez, err := client.ClientsByIdSQL(clientIds, g.org)
-		if err != nil {
-			return nil
+		var err error
+		var userez []*user.User
+		var clientez []*client.Client
+
+		if len(userIds.val()) > 0 {
+			userez, err = user.UsersByIdSQL(userIds.val())
+			if err != nil {
+				return err
+			}
+		}
+
+		if len(clientIds.val()) > 0 {
+			clientez, err = client.ClientsByIdSQL(clientIds.val(), g.org)
+			if err != nil {
+				return nil
+			}
 		}
 
 		actorez := make([]actor.Actor, len(userez) + len(clientez))
@@ -127,11 +160,11 @@ func getGroupSQL(name string, org *organization.Organization) (*Group, error) {
 		// small hope of reading and understanding it later.
 		sqlStatement = `select name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
 		LEFT JOIN 
-			(SELECT gau.group_id AS ugid, ARRAY_AGG(gau.user_id) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = g.id 
+			(SELECT gau.group_id AS ugid, COALESCE(ARRAY_AGG(gau.user_id), ARRAY[]::BIGINT[]) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = g.id 
 		LEFT JOIN 
-			(SELECT gac.group_id AS cgid, ARRAY_AGG(gac.client_id) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = g.id
+			(SELECT gac.group_id AS cgid, COALESCE(ARRAY_AGG(gac.client_id), ARRAY[]::BIGINT[]) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = g.id
 		LEFT JOIN 
-			(SELECT gg.group_id AS ggid, ARRAY_AGG(gg.member_group_id) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = g.id
+			(SELECT gg.group_id AS ggid, COALESCE(ARRAY_AGG(gg.member_group_id), ARRAY[]::BIGINT[]) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = g.id
 		WHERE organization_id = $1 AND name = $2`
 	}
 
@@ -158,25 +191,25 @@ func (g *Group) saveSQL() error {
 	// member actors and groups.
 
 	// get arrays of ids for saving
-	user_ids := make([]int64, 0)
-	client_ids := make([]int64, 0)
-	group_ids := make([]int64, len(g.Groups))
+	userIds := make([]int64, 0)
+	clientIds := make([]int64, 0)
+	groupIds := make([]int64, len(g.Groups))
 
 	// get the groups out of the way
 	for i, mg := range g.Groups {
-		group_ids[i] = mg.GetId()
+		groupIds[i] = mg.GetId()
 	}
 
 	// and actors
 	for _, act := range g.Actors {
 		if act.IsUser() {
-			user_ids = append(user_ids, act.GetId())
+			userIds = append(userIds, act.GetId())
 		} else {
-			client_ids = append(client_ids, act.GetId())
+			clientIds = append(clientIds, act.GetId())
 		}
 	}
 
-	return g.savePostgreSQL(user_ids, client_ids, group_ids)
+	return g.savePostgreSQL(userIds, clientIds, groupIds)
 }
 
 // The Add/Del Actor/Group methods don't need SQL methods, so they're left out
@@ -270,11 +303,11 @@ func allGroupsSQL(org *organization.Organization) ([]*Group, error) {
 	} else if config.Config.UsePostgreSQL {
 		sqlStatement = `select name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
 		LEFT JOIN 
-			(SELECT gau.group_id AS ugid, ARRAY_AGG(gau.user_id) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = groups.id 
+			(SELECT gau.group_id AS ugid, COALESCE(ARRAY_AGG(gau.user_id), ARRAY[]::BIGINT[]) AS user_ids AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = groups.id 
 		LEFT JOIN 
-			(SELECT gac.group_id AS cgid, ARRAY_AGG(gac.client_id) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = groups.id
+			(SELECT gac.group_id AS cgid, COALESCE(ARRAY_AGG(gau.client_id), ARRAY[]::BIGINT[]) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = groups.id
 		LEFT JOIN 
-			(SELECT gg.group_id AS ggid, ARRAY_AGG(gg.member_group_id) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = groups.id
+			(SELECT gg.group_id AS ggid, COALESCE(ARRAY_AGG(gau.group_id), ARRAY[]::BIGINT[]) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = groups.id
 		WHERE g.organization_id = $1`
 	}
 
@@ -358,7 +391,7 @@ func GroupsByIdSQL(ids []int64) ([]*Group, error) {
 			(SELECT gac.group_id AS cgid, ARRAY_AGG(gac.client_id) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = groups.id
 		LEFT JOIN 
 			(SELECT gg.group_id AS ggid, ARRAY_AGG(gg.member_group_id) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = groups.id
-		WHERE id in (%s)`, strings.Join(bind, ", "))
+		WHERE id IN (%s)`, strings.Join(bind, ", "))
 	}
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)

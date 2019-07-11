@@ -30,6 +30,7 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
+	"github.com/tideland/golib/logger"
 	"log"
 	"net/http"
 	"regexp"
@@ -353,11 +354,13 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 		environment.MakeDefaultEnvironment(org)
 		gerr := group.MakeDefaultGroups(org)
 		if gerr != nil {
+			logger.Debugf("blowing up here")
 			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
 			return
 		}
 		clientGroup, err := group.Get(org, "clients")
 		if err != nil {
+			logger.Debugf("blowing up here in clients")
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}

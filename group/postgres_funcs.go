@@ -26,13 +26,13 @@ import (
 // anything specific enough to postgres that weird conditionals inside a common
 // function or method would be unwieldy.
 
-func (g *Group) savePostgreSQL(user_ids []int64, client_ids []int64, group_ids []int64) error {
+func (g *Group) savePostgreSQL(userIds []int64, clientIds []int64, groupIds []int64) error {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_groups($1, $2, $3, $4, $5)", g.Name, g.org.GetId(), pq.Int64Array(user_ids), pq.Int64Array(client_ids), pq.Int64Array(group_ids))
+	_, err = tx.Exec("SELECT goiardi.merge_groups($1, $2, $3, $4, $5)", g.Name, g.org.GetId(), pq.Int64Array(userIds), pq.Int64Array(clientIds), pq.Int64Array(groupIds))
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())
