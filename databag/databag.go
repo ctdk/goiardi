@@ -92,7 +92,7 @@ func New(org *organization.Organization, name string) (*DataBag, util.Gerror) {
 		DataBagItems: dbiMap,
 		org:          org,
 	}
-	indexer.CreateNewCollection(org.Name, name)
+	indexer.CreateNewCollection(org, name)
 	return dataBag, nil
 }
 
@@ -178,7 +178,7 @@ func (db *DataBag) Delete() error {
 		}
 		ds.Delete(db.org.DataKey("data_bag"), db.Name)
 	}
-	indexer.DeleteCollection(db.org.Name, db.Name)
+	indexer.DeleteCollection(db.org, db.Name)
 	_, aerr := db.org.PermCheck.DeleteItemACL(db)
 	if aerr != nil {
 		return aerr
@@ -356,7 +356,7 @@ func (db *DataBag) DeleteDBItem(dbItemName string) error {
 	if err != nil {
 		return err
 	}
-	indexer.DeleteItemFromCollection(db.org.Name, db.Name, dbItemName)
+	indexer.DeleteItemFromCollection(db.org, db.Name, dbItemName)
 	return nil
 }
 

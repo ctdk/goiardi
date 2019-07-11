@@ -189,7 +189,7 @@ func (p *PostgresSearch) Search(org *organization.Organization, idx string, q st
 
 func (p *PostgresSearch) GetEndpoints(org *organization.Organization) []string {
 	// TODO: deal with possible errors
-	endpoints, err := indexer.Endpoints(org.Name)
+	endpoints, err := indexer.Endpoints(org)
 	if err != nil {
 		logger.Errorf(err.Error())
 	}

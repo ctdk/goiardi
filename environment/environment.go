@@ -361,7 +361,7 @@ func (e *ChefEnvironment) Delete() error {
 		ds := datastore.New()
 		ds.Delete(e.org.DataKey("env"), e.Name)
 	}
-	indexer.DeleteItemFromCollection(e.org.Name, "environment", e.Name)
+	indexer.DeleteItemFromCollection(e.org, "environment", e.Name)
 	_, aerr := e.org.PermCheck.DeleteItemACL(e)
 	if aerr != nil {
 		return aerr

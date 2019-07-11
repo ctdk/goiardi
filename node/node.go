@@ -310,7 +310,7 @@ func (n *Node) Delete() error {
 	if aerr != nil {
 		return aerr
 	}
-	indexer.DeleteItemFromCollection(n.org.Name, "node", n.Name)
+	indexer.DeleteItemFromCollection(n.org, "node", n.Name)
 	return nil
 }
 

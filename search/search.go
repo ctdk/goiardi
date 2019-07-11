@@ -278,7 +278,7 @@ func (sq *SolrQuery) results() []string {
 // bags.
 func (t *TrieSearch) GetEndpoints(org *organization.Organization) []string {
 	// TODO: deal with possible errors
-	endpoints, _ := indexer.Endpoints(org.Name)
+	endpoints, _ := indexer.Endpoints(org)
 	return endpoints
 }
 

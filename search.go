@@ -277,9 +277,9 @@ func reindexAll() {
 	orgs, _ := orgloader.AllOrganizations()
 	for _, org := range orgs {
 		logger.Debugf("Clearing %s search schema and tables", org.Name)
-		indexer.ClearIndex(org.Name)
+		indexer.ClearIndex(org)
 		logger.Debugf("Starting to reindex org %s", org.Name)
-		indexer.CreateOrgDex(org.Name)
+		indexer.CreateOrgDex(org)
 		// Send the objects to be reindexed in somewhat more manageable chunks
 		clientObjs := make([]indexer.Indexable, 0, 100)
 		for _, v := range client.AllClients(org) {
@@ -310,7 +310,7 @@ func reindexAll() {
 		defaultEnv, _ := environment.Get(org, "_default")
 		environmentObjs = append(environmentObjs, defaultEnv)
 		logger.Debugf("reindexing environments %s", org.Name)
-		indexer.ReIndex(environmentObjs, rCh)
+		indexer.ReIndex(org, environmentObjs, rCh)
 
 		dbagObjs := make([]indexer.Indexable, 0, 100)
 		// data bags have to be done separately
@@ -323,7 +323,7 @@ func reindexAll() {
 			// Don't forget to create the collections, because we
 			// weren't for the postgres search index. (Somehow a
 			// regression snuck in here, but what do you do?
-			indexer.CreateNewCollection(org.Name, dbag.GetName())
+			indexer.CreateNewCollection(org, dbag.GetName())
 			dbis := make([]indexer.Indexable, dbag.NumDBItems())
 			i := 0
 			allDBItems, derr := dbag.AllDBItems()

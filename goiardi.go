@@ -127,7 +127,14 @@ func main() {
 
 	gobRegister()
 	ds := datastore.New()
-	indexer.Initialize(config.Config)
+
+	// bleh, ye olde chicken and egge. The default org's needed before
+	// initializing the index, but the index is needed before the default
+	// clients can be created. So, create the default org (if needed). If
+	// this somehow fails miserably it'll bomb.
+	cworg := createDefaultOrg()
+
+	indexer.Initialize(config.Config, cworg)
 	if config.Config.FreezeData {
 		if config.Config.DataStoreFile != "" {
 			uerr := ds.Load(config.Config.DataStoreFile)
@@ -224,9 +231,8 @@ func main() {
 		startSandboxPurge()
 	}
 
-	/* Create default clients and users. Currently chef-validator,
-	 * chef-webui, and admin. */
-	createDefaultActors()
+	/* Create default clients and users. */
+	createDefaultActors(cworg)
 	handleSignals()
 
 	muxer := mux.NewRouter()
@@ -593,7 +599,7 @@ func cleanPath(p string) string {
 }
 
 // TODO: this has to change for organizations.
-func createDefaultActors() {
+func createDefaultActors(cworg *organization.Organization) {
 	// the admin user is called 'pivotal' now with chef12 for some reason.
 	if uadmin, _ := user.Get("pivotal"); uadmin == nil {
 		if admin, aerr := user.New("pivotal"); aerr != nil {
@@ -622,22 +628,7 @@ func createDefaultActors() {
 			}
 		}
 	}
-	cworg, _ := orgloader.Get("default")
-	if cworg == nil {
-		if org, oerr := orgloader.New("default", "default org"); oerr != nil {
-			logger.Criticalf(oerr.Error())
-			os.Exit(1)
-		} else {
-			err := org.Save()
-			if err != nil {
-				logger.Criticalf(err.Error())
-				os.Exit(1)
-			}
-			cworg = org
-			container.MakeDefaultContainers(cworg)
-			group.MakeDefaultGroups(cworg)
-		}
-	}
+	
 	if cwebui, _ := client.Get(cworg, "default-webui"); cwebui == nil {
 		if webui, nerr := client.New(cworg, "default-webui"); nerr != nil {
 			logger.Criticalf(nerr.Error())
@@ -1124,4 +1115,35 @@ func matchSupportedVersion(ver string) bool {
 		}
 	}
 	return false
+}
+
+func createDefaultOrg() *organization.Organization {
+	cworg, _ := orgloader.Get("default")
+	if cworg == nil {
+		var oerr util.Gerror 
+		if cworg, oerr = orgloader.New("default", "default org"); oerr != nil {
+			logger.Criticalf(oerr.Error())
+			os.Exit(1)
+		} else {
+			err := cworg.Save()
+			if err != nil {
+				logger.Criticalf(err.Error())
+				os.Exit(1)
+			}
+			container.MakeDefaultContainers(cworg)
+			group.MakeDefaultGroups(cworg)
+		}
+	}
+
+	// Just assume (hopefully not wrongly) that if GetList is nil that we
+	// need to create the containers and groups.
+	if cl := container.GetList(cworg); cl == nil {
+		container.MakeDefaultContainers(cworg)
+	}
+
+	if gl := group.GetList(cworg); gl == nil {
+		group.MakeDefaultGroups(cworg)
+	}
+
+	return cworg
 }

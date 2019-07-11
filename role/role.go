@@ -283,7 +283,7 @@ func (r *Role) Delete() util.Gerror {
 		ds := datastore.New()
 		ds.Delete(r.org.DataKey("role"), r.Name)
 	}
-	indexer.DeleteItemFromCollection(r.org.Name, "role", r.Name)
+	indexer.DeleteItemFromCollection(r.org, "role", r.Name)
 	_, aerr := r.org.PermCheck.DeleteItemACL(r)
 	if aerr != nil {
 		return util.CastErr(aerr)

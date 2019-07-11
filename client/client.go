@@ -242,7 +242,7 @@ func (c *Client) Delete() util.Gerror {
 		ds := datastore.New()
 		ds.Delete(c.org.DataKey("client"), c.Name)
 	}
-	indexer.DeleteItemFromCollection(c.org.Name, "client", c.Name)
+	indexer.DeleteItemFromCollection(c.org, "client", c.Name)
 	if config.UsingExternalSecrets() {
 		err := secret.DeletePublicKey(c)
 		if err != nil {
