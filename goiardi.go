@@ -1130,19 +1130,25 @@ func createDefaultOrg() *organization.Organization {
 				logger.Criticalf(err.Error())
 				os.Exit(1)
 			}
-			container.MakeDefaultContainers(cworg)
-			group.MakeDefaultGroups(cworg)
 		}
 	}
 
 	// Just assume (hopefully not wrongly) that if GetList is nil that we
 	// need to create the containers and groups.
-	if cl := container.GetList(cworg); cl == nil {
-		container.MakeDefaultContainers(cworg)
+	if cl := container.GetList(cworg); len(cl) == 0 {
+		logger.Debugf("creating default containers")
+		if cerr := container.MakeDefaultContainers(cworg); cerr != nil {
+			logger.Criticalf(cerr.Error())
+			os.Exit(3)
+		}
 	}
 
-	if gl := group.GetList(cworg); gl == nil {
-		group.MakeDefaultGroups(cworg)
+	if gl := group.GetList(cworg); len(gl) == 0 {
+		logger.Debugf("creating default groups")
+		if gerr := group.MakeDefaultGroups(cworg); gerr != nil {
+			logger.Criticalf(gerr.Error())
+			os.Exit(3)
+		}
 	}
 
 	return cworg
