@@ -364,7 +364,7 @@ func ParseConfigOptions() error {
 
 	// no moar mysql backend. It's the end of a goiardi era.
 	if Config.UseMySQL {
-		fmt.Fprintln(os.Stderr, "\nThe MySQL database backend is no longer supported.\n\nIf this is an upgraded installation, please use the -x/--export option with the most recent 0.11.x version of goiardi to export your data, set up PostgreSQL and configure goiardi to use that (or configure the in-mem backend if you want that for some reason), and reimport your data with -m/--import. Otherwise, reconfigure your goiardi as appropriate, creating databases as appropriate, and start it again.\n")
+		fmt.Fprintf(os.Stderr, "\nThe MySQL database backend is no longer supported.\n\nIf this is an upgraded installation, please use the -x/--export option with the most recent 0.11.x version of goiardi to export your data, set up PostgreSQL and configure goiardi to use that (or configure the in-mem backend if you want that for some reason), and reimport your data with -m/--import. Otherwise, reconfigure your goiardi as appropriate, creating databases as appropriate, and start it again.\n\n")
 		os.Exit(1)
 	}
 
