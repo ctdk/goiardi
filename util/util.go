@@ -32,6 +32,7 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -411,6 +412,7 @@ func JoinStr(str ...string) string {
 // JSONErrorReport spits out the given error and HTTP status code formatted as
 // JSON for the client's benefit before completing the errored out request.
 func JSONErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
+	spewCallers()
 	logger.Infof(errorStr)
 	jsonError := map[string][]string{"error": []string{errorStr}}
 	sendErrorReport(w, jsonError, status)
@@ -418,6 +420,7 @@ func JSONErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, st
 }
 
 func JSONErrorNonArrayReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
+	spewCallers()
 	logger.Infof(errorStr)
 	jsonError := map[string]string{"error": errorStr}
 	sendErrorReport(w, jsonError, status)
@@ -425,6 +428,7 @@ func JSONErrorNonArrayReport(w http.ResponseWriter, r *http.Request, errorStr st
 }
 
 func JSONErrorMapReport(w http.ResponseWriter, r *http.Request, errMap map[string]interface{}, status int) {
+	spewCallers()
 	logger.Infof("%+v", errMap)
 	sendErrorReport(w, errMap, status)
 	return
@@ -479,4 +483,24 @@ func pgKeyReplace(key string, re, bs, ps *regexp.Regexp) string {
 		k = ps.ReplaceAllString(k, ".")
 	}
 	return k
+}
+
+func spewCallers() {
+	return // TODO: make this settable with a flag. Deactivating for now.
+	pc := make([]uintptr, 10)
+	n := runtime.Callers(2, pc)
+	if n == 0 {
+		return
+	}
+	pc = pc[:n]
+	frames := runtime.CallersFrames(pc)
+	logger.Debugf("printing %d frames", n)
+
+	for {
+		frame, more := frames.Next()
+		logger.Debugf("- more:%v | %s", more, frame.Function)
+		if !more {
+			break
+		}
+	}
 }

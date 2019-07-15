@@ -29,7 +29,7 @@ func (c *Client) savePostgreSQL() util.Gerror {
 		gerr := util.CastErr(err)
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_clients($1, $2, $3, $4, $5, $6, $7)", c.Name, c.NodeName, c.Validator, c.Admin, c.pubKey, c.Certificate, c.org.GetId())
+	err = tx.QueryRow("SELECT goiardi.merge_clients($1, $2, $3, $4, $5, $6, $7)", c.Name, c.NodeName, c.Validator, c.Admin, c.pubKey, c.Certificate, c.org.GetId()).Scan(&c.id)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)

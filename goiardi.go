@@ -628,7 +628,15 @@ func createDefaultActors(cworg *organization.Organization) {
 			}
 		}
 	}
-	
+
+	if gl := group.GetList(cworg); len(gl) == 0 {
+		logger.Debugf("creating default groups")
+		if gerr := group.MakeDefaultGroups(cworg); gerr != nil {
+			logger.Criticalf(gerr.Error())
+			os.Exit(3)
+		}
+	}
+
 	if cwebui, _ := client.Get(cworg, "default-webui"); cwebui == nil {
 		if webui, nerr := client.New(cworg, "default-webui"); nerr != nil {
 			logger.Criticalf(nerr.Error())
@@ -1142,14 +1150,6 @@ func createDefaultOrg() *organization.Organization {
 		logger.Debugf("creating default containers")
 		if cerr := container.MakeDefaultContainers(cworg); cerr != nil {
 			logger.Criticalf(cerr.Error())
-			os.Exit(3)
-		}
-	}
-
-	if gl := group.GetList(cworg); len(gl) == 0 {
-		logger.Debugf("creating default groups")
-		if gerr := group.MakeDefaultGroups(cworg); gerr != nil {
-			logger.Criticalf(gerr.Error())
 			os.Exit(3)
 		}
 	}
