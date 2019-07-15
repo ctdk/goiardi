@@ -75,7 +75,7 @@ func getOrgSQL(name string) (*Organization, error) {
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(name);
+	row := stmt.QueryRow(name)
 	if err = org.fillOrgFromSQL(row); err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func OrgsByIdSQL(ids []int64) ([]*Organization, error) {
 	intfIds := make([]interface{}, len(ids))
 
 	for i, d := range ids {
-		bind[i] = fmt.Sprintf("$%d", i + 1)
+		bind[i] = fmt.Sprintf("$%d", i+1)
 		intfIds[i] = d
 	}
 	sqlStatement := fmt.Sprintf("SELECT name, description, guid, uuid, id FROM goiardi.organizations WHERE id IN (%s)", strings.Join(bind, ", "))

@@ -187,7 +187,7 @@ func (r *Report) Delete() error {
 // number of reports deleted, and an error if any.
 func DeleteByAge(dur time.Duration) (int, error) {
 	if config.UsingDB() {
-		return deleteByAgeSQL( dur)
+		return deleteByAgeSQL(dur)
 	}
 	// hoo-boy.
 	orgs, err := orgloader.AllOrganizations()

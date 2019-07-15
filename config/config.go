@@ -43,29 +43,29 @@ import (
 
 // Conf is the master struct for holding configuration options.
 type Conf struct {
-	Ipaddress            string
-	Port                 int
-	Hostname             string
-	ProxyHostname        string `toml:"proxy-hostname"`
-	ProxyPort            int    `toml:"proxy-port"`
-	ConfFile             string `toml:"conf-file"`
-	IndexFile            string `toml:"index-file"`
-	DataStoreFile        string `toml:"data-file"`
-	DebugLevel           int    `toml:"debug-level"`
-	LogLevel             string `toml:"log-level"`
-	FreezeInterval       int    `toml:"freeze-interval"`
-	FreezeData           bool   `toml:"freeze-data"`
-	LogFile              string `toml:"log-file"`
-	SysLog               bool   `toml:"syslog"`
-	UseAuth              bool   `toml:"use-auth"`
-	TimeSlew             string `toml:"time-slew"`
-	TimeSlewDur          time.Duration
-	ConfRoot             string       `toml:"conf-root"`
-	UseSSL               bool         `toml:"use-ssl"`
-	SSLCert              string       `toml:"ssl-cert"`
-	SSLKey               string       `toml:"ssl-key"`
-	HTTPSUrls            bool         `toml:"https-urls"`
-	DisableWebUI         bool         `toml:"disable-webui"`
+	Ipaddress      string
+	Port           int
+	Hostname       string
+	ProxyHostname  string `toml:"proxy-hostname"`
+	ProxyPort      int    `toml:"proxy-port"`
+	ConfFile       string `toml:"conf-file"`
+	IndexFile      string `toml:"index-file"`
+	DataStoreFile  string `toml:"data-file"`
+	DebugLevel     int    `toml:"debug-level"`
+	LogLevel       string `toml:"log-level"`
+	FreezeInterval int    `toml:"freeze-interval"`
+	FreezeData     bool   `toml:"freeze-data"`
+	LogFile        string `toml:"log-file"`
+	SysLog         bool   `toml:"syslog"`
+	UseAuth        bool   `toml:"use-auth"`
+	TimeSlew       string `toml:"time-slew"`
+	TimeSlewDur    time.Duration
+	ConfRoot       string `toml:"conf-root"`
+	UseSSL         bool   `toml:"use-ssl"`
+	SSLCert        string `toml:"ssl-cert"`
+	SSLKey         string `toml:"ssl-key"`
+	HTTPSUrls      bool   `toml:"https-urls"`
+	DisableWebUI   bool   `toml:"disable-webui"`
 	// UseMySQL and MySQL are only still here to allow gracefully exploding
 	// if that config is still set.
 	UseMySQL             bool         `toml:"use-mysql"`
@@ -165,28 +165,28 @@ type PostgreSQLdb struct {
 // Configurations from the command line/env vars are preferred to those set in
 // the config file.
 type Options struct {
-	Version              bool         `short:"v" long:"version" description:"Print version info."`
-	Verbose              []bool       `short:"V" long:"verbose" description:"Show verbose debug information. Repeat for more verbosity."`
-	ConfFile             string       `short:"c" long:"config" description:"Specify a config file to use." env:"GOIARDI_CONFIG"`
-	Ipaddress            string       `short:"I" long:"ipaddress" description:"Listen on a specific IP address." env:"GOIARDI_IPADDRESS"`
-	Hostname             string       `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel." env:"GOIARDI_HOSTNAME"`
-	Port                 int          `short:"P" long:"port" description:"Port to listen on. If port is set to 443, SSL will be activated. (default: 4545)" env:"GOIARDI_PORT"`
-	ProxyHostname        string       `short:"Z" long:"proxy-hostname" description:"Hostname to report to clients if this goiardi server is behind a proxy using a different hostname. See also --proxy-port. Can be used with --proxy-port or alone, or not at all." env:"GOIARDI_PROXY_HOSTNAME"`
-	ProxyPort            int          `short:"W" long:"proxy-port" description:"Port to report to clients if this goiardi server is behind a proxy using a different port than the port goiardi is listening on. Can be used with --proxy-hostname or alone, or not at all." env:"GOIARDI_PROXY_PORT"`
-	IndexFile            string       `short:"i" long:"index-file" description:"File to save search index data to." env:"GOIARDI_INDEX_FILE"`
-	DataStoreFile        string       `short:"D" long:"data-file" description:"File to save data store data to." env:"GOIARDI_DATA_FILE"`
-	FreezeInterval       int          `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk if there have been any changes (requires -i/--index-file and -D/--data-file options to be set). (Default 10 seconds.)" env:"GOIARDI_FREEZE_INTERVAL"`
-	LogFile              string       `short:"L" long:"log-file" description:"Log to file X" env:"GOIARDI_LOG_FILE"`
-	SysLog               bool         `short:"s" long:"syslog" description:"Log to syslog rather than a log file. Incompatible with -L/--log-file." env:"GOIARDI_SYSLOG"`
-	LogLevel             string       `short:"g" long:"log-level" description:"Specify logging verbosity. Performs the same function as -V, but works like the 'log-level' option in the configuration file. Acceptable values are 'debug', 'info', 'warning', 'error', 'critical', and 'fatal'." env:"GOIARDI_LOG_LEVEL"`
-	TimeSlew             string       `long:"time-slew" description:"Time difference allowed between the server's clock and the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m." env:"GOIARDI_TIME_SLEW"`
-	ConfRoot             string       `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set." env:"GOIARDI_CONF_ROOT"`
-	UseAuth              bool         `short:"A" long:"use-auth" description:"Use authentication. Default: false. (NB: At a future time, the default behavior will change to authentication being enabled.)" env:"GOIARDI_USE_AUTH"`
-	UseSSL               bool         `long:"use-ssl" description:"Use SSL for connections. If --port is set to 433, this will automatically be turned on. If it is set to 80, it will automatically be turned off. Default: off. Requires --ssl-cert and --ssl-key." env:"GOIARDI_USE_SSL"`
-	SSLCert              string       `long:"ssl-cert" description:"SSL certificate file. If a relative path, will be set relative to --conf-root." env:"GOIARDI_SSL_CERT"`
-	SSLKey               string       `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root." env:"GOIARDI_SSL_KEY"`
-	HTTPSUrls            bool         `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP." env:"GOIARDI_HTTPS_URLS"`
-	DisableWebUI         bool         `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface." env:"GOIARDI_DISABLE_WEBUI"`
+	Version        bool   `short:"v" long:"version" description:"Print version info."`
+	Verbose        []bool `short:"V" long:"verbose" description:"Show verbose debug information. Repeat for more verbosity."`
+	ConfFile       string `short:"c" long:"config" description:"Specify a config file to use." env:"GOIARDI_CONFIG"`
+	Ipaddress      string `short:"I" long:"ipaddress" description:"Listen on a specific IP address." env:"GOIARDI_IPADDRESS"`
+	Hostname       string `short:"H" long:"hostname" description:"Hostname to use for this server. Defaults to hostname reported by the kernel." env:"GOIARDI_HOSTNAME"`
+	Port           int    `short:"P" long:"port" description:"Port to listen on. If port is set to 443, SSL will be activated. (default: 4545)" env:"GOIARDI_PORT"`
+	ProxyHostname  string `short:"Z" long:"proxy-hostname" description:"Hostname to report to clients if this goiardi server is behind a proxy using a different hostname. See also --proxy-port. Can be used with --proxy-port or alone, or not at all." env:"GOIARDI_PROXY_HOSTNAME"`
+	ProxyPort      int    `short:"W" long:"proxy-port" description:"Port to report to clients if this goiardi server is behind a proxy using a different port than the port goiardi is listening on. Can be used with --proxy-hostname or alone, or not at all." env:"GOIARDI_PROXY_PORT"`
+	IndexFile      string `short:"i" long:"index-file" description:"File to save search index data to." env:"GOIARDI_INDEX_FILE"`
+	DataStoreFile  string `short:"D" long:"data-file" description:"File to save data store data to." env:"GOIARDI_DATA_FILE"`
+	FreezeInterval int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk if there have been any changes (requires -i/--index-file and -D/--data-file options to be set). (Default 10 seconds.)" env:"GOIARDI_FREEZE_INTERVAL"`
+	LogFile        string `short:"L" long:"log-file" description:"Log to file X" env:"GOIARDI_LOG_FILE"`
+	SysLog         bool   `short:"s" long:"syslog" description:"Log to syslog rather than a log file. Incompatible with -L/--log-file." env:"GOIARDI_SYSLOG"`
+	LogLevel       string `short:"g" long:"log-level" description:"Specify logging verbosity. Performs the same function as -V, but works like the 'log-level' option in the configuration file. Acceptable values are 'debug', 'info', 'warning', 'error', 'critical', and 'fatal'." env:"GOIARDI_LOG_LEVEL"`
+	TimeSlew       string `long:"time-slew" description:"Time difference allowed between the server's clock and the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m." env:"GOIARDI_TIME_SLEW"`
+	ConfRoot       string `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set." env:"GOIARDI_CONF_ROOT"`
+	UseAuth        bool   `short:"A" long:"use-auth" description:"Use authentication. Default: false. (NB: At a future time, the default behavior will change to authentication being enabled.)" env:"GOIARDI_USE_AUTH"`
+	UseSSL         bool   `long:"use-ssl" description:"Use SSL for connections. If --port is set to 433, this will automatically be turned on. If it is set to 80, it will automatically be turned off. Default: off. Requires --ssl-cert and --ssl-key." env:"GOIARDI_USE_SSL"`
+	SSLCert        string `long:"ssl-cert" description:"SSL certificate file. If a relative path, will be set relative to --conf-root." env:"GOIARDI_SSL_CERT"`
+	SSLKey         string `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root." env:"GOIARDI_SSL_KEY"`
+	HTTPSUrls      bool   `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP." env:"GOIARDI_HTTPS_URLS"`
+	DisableWebUI   bool   `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface." env:"GOIARDI_DISABLE_WEBUI"`
 	// only including UseMySQL and MySQL to allow blowing up gracefully.
 	UseMySQL             bool         `long:"use-mysql" hidden:"true" env:"GOIARDI_USE_MYSQL"`
 	MySQL                MySQLdb      `group:"MySQL connection options (requires --use-mysql) (and you shouldn't be able to see this)" namespace:"mysql" hidden:"true"`
@@ -467,8 +467,6 @@ func ParseConfigOptions() error {
 	}
 
 	/* Database options */
-
-	
 
 	// set default Postgres options
 	if Config.UsePostgreSQL {

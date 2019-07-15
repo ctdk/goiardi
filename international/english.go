@@ -21,7 +21,7 @@ package international
 
 // plunk in an example.
 
-var Example = &Text{"Example", 
+var Example = &Text{"Example",
 	map[string]string{
 		"english": "'sup, dawg",
 		"russian": "привет, собака",

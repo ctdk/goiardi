@@ -70,7 +70,7 @@ func getContainerSQL(name string, org *organization.Organization) (*Container, e
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(org.GetId(), name);
+	row := stmt.QueryRow(org.GetId(), name)
 	if err = c.fillContainerFromSQL(row); err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func getContainerSQL(name string, org *organization.Organization) (*Container, e
 // container once it's been created, so here we get to just go an insert.
 func (c *Container) saveSQL() error {
 	var sqlStmt string
-	
+
 	// Will we keep MySQL? I'm still uncertain.
 	if config.Config.UseMySQL {
 

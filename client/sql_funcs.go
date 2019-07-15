@@ -86,7 +86,7 @@ func getMultiSQL(clientNames []string, org *organization.Organization) ([]*Clien
 	for i, v := range clientNames {
 		nameArgs[i] = v
 	}
-	qargs := make([]interface{}, len(nameArgs) + 1)
+	qargs := make([]interface{}, len(nameArgs)+1)
 	qargs[0] = org.GetId()
 
 	for i, v := range nameArgs {
@@ -219,11 +219,11 @@ func ClientsByIdSQL(ids []int64, org *organization.Organization) ([]*Client, err
 	var clients []*Client
 
 	bind := make([]string, len(ids))
-	intfIds := make([]interface{}, len(ids) + 1)
+	intfIds := make([]interface{}, len(ids)+1)
 	intfIds[0] = org.GetId()
 
 	for i, d := range ids {
-		bind[i] = fmt.Sprintf("$%d", i + 2)
+		bind[i] = fmt.Sprintf("$%d", i+2)
 		intfIds[i+1] = d
 	}
 

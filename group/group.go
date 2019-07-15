@@ -36,12 +36,12 @@ var DefaultUser = "pivotal" // should be moved out to config, I think. Same with
 // acl
 
 type Group struct {
-	Name   string
-	Actors []actor.Actor
-	Groups []*Group
-	m      sync.RWMutex
-	id     int64
-	org    *organization.Organization
+	Name        string
+	Actors      []actor.Actor
+	Groups      []*Group
+	m           sync.RWMutex
+	id          int64
+	org         *organization.Organization
 	getChildren bool
 }
 

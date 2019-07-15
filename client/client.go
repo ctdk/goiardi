@@ -58,7 +58,7 @@ type Client struct {
 	Certificate string `json:"certificate"`
 	org         *organization.Organization
 	AuthzID     string `json:"authz_id"`
-	id int64
+	id          int64
 }
 
 // for gob encoding. Needed the json tags for flattening, but that's handled

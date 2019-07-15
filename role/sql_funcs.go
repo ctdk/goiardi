@@ -94,9 +94,9 @@ func getSQL(roleName string, org *organization.Organization) (*Role, error) {
 func getMultiSQL(roleNames []string, org *organization.Organization) ([]*Role, error) {
 	bind := make([]string, len(roleNames))
 
-		for i := range roleNames {
-			bind[i] = fmt.Sprintf("$%d", i+2)
-		}
+	for i := range roleNames {
+		bind[i] = fmt.Sprintf("$%d", i+2)
+	}
 	sqlStmt := fmt.Sprintf("SELECT name, description, run_list, env_run_lists, default_attr, override_attr FROM goiardi.roles WHERE organization_id = $1 AND name IN (%s)", strings.Join(bind, ", "))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
@@ -104,7 +104,7 @@ func getMultiSQL(roleNames []string, org *organization.Organization) ([]*Role, e
 		return nil, err
 	}
 	defer stmt.Close()
-	nameArgs := make([]interface{}, len(roleNames) + 1)
+	nameArgs := make([]interface{}, len(roleNames)+1)
 	nameArgs[0] = org.GetId()
 	for i, v := range roleNames {
 		nameArgs[i+1] = v

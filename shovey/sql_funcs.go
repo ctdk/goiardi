@@ -86,7 +86,7 @@ func getShoveySQL(org *organization.Organization, runID string) (*Shovey, util.G
 
 func (s *Shovey) getShoveyRunSQL(nodeName string) (*ShoveyRun, util.Gerror) {
 	sr := new(ShoveyRun)
-	sr.org = s.org 		// may not really be necessary
+	sr.org = s.org // may not really be necessary
 
 	sqlStatement := "SELECT id, shovey_uuid, node_name, status, ack_time, end_time, error, exit_status FROM goiardi.shovey_runs WHERE shovey_uuid = $1 and node_name = $2"
 

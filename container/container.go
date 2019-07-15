@@ -55,7 +55,7 @@ func New(org *organization.Organization, name string) (*Container, util.Gerror) 
 			gerr := util.Errorf(err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
 			return nil, gerr
-		}	
+		}
 	} else {
 		ds := datastore.New()
 		_, found = ds.Get(org.DataKey("container"), name)
@@ -100,7 +100,7 @@ func Get(org *organization.Organization, name string) (*Container, util.Gerror) 
 		err.SetStatus(http.StatusNotFound)
 		return nil, err
 	}
-	
+
 	return container, nil
 }
 

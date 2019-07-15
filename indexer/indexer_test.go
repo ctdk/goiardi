@@ -34,8 +34,8 @@ type testObj struct {
 }
 
 type testOrg struct {
-	name 	string
-	id 	int64
+	name string
+	id   int64
 }
 
 func (o *testOrg) GetName() string {

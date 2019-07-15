@@ -26,7 +26,7 @@ import (
 
 func (a *Association) fillAssociationFromPostgreSQL(row datastore.ResRow) util.Gerror {
 	var userName, orgName string
-	
+
 	err := row.Scan(&userName, &orgName)
 	if err != nil {
 		return util.CastErr(err)
@@ -50,7 +50,7 @@ func (a *Association) fillAssociationFromPostgreSQL(row datastore.ResRow) util.G
 
 func (a *AssociationReq) fillAssociationReqFromPostgreSQL(row datastore.ResRow) util.Gerror {
 	var userName, orgName, inviterName string
-	
+
 	err := row.Scan(&userName, &orgName, &inviterName, &a.Status)
 	if err != nil {
 		return util.CastErr(err)

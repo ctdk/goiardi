@@ -56,9 +56,9 @@ type FstoreOrg interface {
 // actual name for the file used, but it is identified by the file's checksum.
 // The file's data is stored as a pointer to an array of bytes.
 type FileStore struct {
-	Chksum  string
-	Data    *[]byte
-	org FstoreOrg
+	Chksum string
+	Data   *[]byte
+	org    FstoreOrg
 }
 
 /* New, for this, includes giving it the file data */
@@ -95,9 +95,9 @@ func New(org FstoreOrg, chksum string, data io.ReadCloser, dataLength int64) (*F
 		return nil, chkErr
 	}
 	filestore := &FileStore{
-		Chksum:  chksum,
-		Data:    &fileData,
-		org: org,
+		Chksum: chksum,
+		Data:   &fileData,
+		org:    org,
 	}
 	return filestore, nil
 }

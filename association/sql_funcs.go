@@ -121,7 +121,7 @@ func (a *AssociationReq) fillAssociationReqFromSQL(row datastore.ResRow) util.Ge
 
 func getAssociationReqSQL(user *user.User, org *organization.Organization, inviter actor.Actor, status string) (*AssociationReq, util.Gerror) {
 	a := new(AssociationReq)
-	
+
 	var sqlStmt string
 	if config.Config.UseMySQL {
 		// mebbe?
@@ -405,7 +405,7 @@ func getOrgAssociationReqsSQL(user *user.User) ([]*AssociationReq, util.Gerror) 
 	defer stmt.Close()
 
 	oar := make([]*AssociationReq, 0)
-	
+
 	rows, err := stmt.Query(user.GetId())
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -443,7 +443,7 @@ func getUserAssociationReqsSQL(org *organization.Organization) ([]*AssociationRe
 	defer stmt.Close()
 
 	uar := make([]*AssociationReq, 0)
-	
+
 	rows, err := stmt.Query(org.GetId())
 	if err != nil {
 		if err == sql.ErrNoRows {

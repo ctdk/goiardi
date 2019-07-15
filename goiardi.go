@@ -1131,7 +1131,7 @@ func matchSupportedVersion(ver string) bool {
 func createDefaultOrg() *organization.Organization {
 	cworg, _ := orgloader.Get("default")
 	if cworg == nil {
-		var oerr util.Gerror 
+		var oerr util.Gerror
 		if cworg, oerr = orgloader.New("default", "default org"); oerr != nil {
 			logger.Criticalf(oerr.Error())
 			os.Exit(1)

@@ -36,17 +36,17 @@ import (
 
 // *sob*
 type nullInt64Array struct {
-  Int64s []int64
-  Valid  bool
+	Int64s []int64
+	Valid  bool
 }
 
 func (n *nullInt64Array) Scan(value interface{}) error {
-  if value == nil {
-    n.Int64s, n.Valid = nil, false
-    return nil
-  }
-  n.Valid = true
-  return pq.Array(&n.Int64s).Scan(value)
+	if value == nil {
+		n.Int64s, n.Valid = nil, false
+		return nil
+	}
+	n.Valid = true
+	return pq.Array(&n.Int64s).Scan(value)
 }
 
 func (n *nullInt64Array) val() []int64 {
@@ -72,7 +72,7 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 	var clientIds nullInt64Array
 	var groupIds nullInt64Array
 	var orgId int64
-	
+
 	// arrrgh blargh, it looks like we may also need to create a special
 	// type for getting the arrays of ints out of postgres.
 
@@ -130,7 +130,7 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 			}
 		}
 
-		actorez := make([]actor.Actor, len(userez) + len(clientez))
+		actorez := make([]actor.Actor, len(userez)+len(clientez))
 
 		for i, u := range userez {
 			actorez[i] = u
@@ -174,7 +174,7 @@ func getGroupSQL(name string, org *organization.Organization) (*Group, error) {
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(org.GetId(), name);
+	row := stmt.QueryRow(org.GetId(), name)
 
 	g.getChildren = true
 	if err = g.fillGroupFromSQL(row); err != nil {
@@ -381,7 +381,7 @@ func GroupsByIdSQL(ids []int64) ([]*Group, error) {
 		return nil, errors.New("Groups are not implemented with the MySQL backend yet, punting for now.")
 	} else if config.Config.UsePostgreSQL {
 		for i, d := range ids {
-			bind[i] = fmt.Sprintf("$%d", i + 1)
+			bind[i] = fmt.Sprintf("$%d", i+1)
 			intfIds[i] = d
 		}
 		sqlStatement = fmt.Sprintf(`select name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g

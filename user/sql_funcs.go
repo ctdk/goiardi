@@ -181,7 +181,7 @@ func UsersByIdSQL(ids []int64) ([]*User, error) {
 	intfIds := make([]interface{}, len(ids))
 
 	for i, d := range ids {
-		bind[i] = fmt.Sprintf("$%d", i + 1)
+		bind[i] = fmt.Sprintf("$%d", i+1)
 		intfIds[i] = d
 	}
 	sqlStatement := fmt.Sprintf("SELECT name, displayname, admin, public_key, email, passwd, salt, id FROM goiardi.users WHERE id IN (%s)", strings.Join(bind, ", "))

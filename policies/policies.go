@@ -21,16 +21,15 @@
 package policies
 
 import (
-
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 )
 
 type Policy struct {
-	Name string
-	URI string
-	Revisions []string 		// We may want this to be a new type
-	org *organization.Organization
+	Name      string
+	URI       string
+	Revisions []string // We may want this to be a new type
+	org       *organization.Organization
 }
 
 func New(name string, uri string, polOrg *organization.Organization) (*Policy, util.Gerror) {
@@ -47,7 +46,9 @@ func New(name string, uri string, polOrg *organization.Organization) (*Policy, u
 	return p, nil
 }
 
-func Get(
+func Get() error {
+	return nil
+}
 
 func (p *Policy) Save() util.Gerror {
 

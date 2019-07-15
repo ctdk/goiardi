@@ -37,13 +37,13 @@ type PostgresSearch struct {
 }
 
 type PgQuery struct {
-	idx        string
-	queryChain Queryable
-	paths      []string
-	queryStrs  []string
-	arguments  []string
-	fullQuery  string
-	allArgs    []interface{}
+	idx          string
+	queryChain   Queryable
+	paths        []string
+	queryStrs    []string
+	arguments    []string
+	fullQuery    string
+	allArgs      []interface{}
 	searchSchema string
 }
 
@@ -331,7 +331,7 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op, searchSchema
 
 		q = fmt.Sprintf("((f%d.path OPERATOR(%s.~) _ARG_ AND f%d.value %s _ARG_) %s (f%d.path OPERATOR(%s.~) _ARG_))", *tNum, searchSchema, *tNum, cop, clauseJoin, *tNum, searchSchema)
 		if notPath {
-			q = fmt.Sprintf("(" + q + " OR NOT EXISTS (SELECT 1 FROM found_items WHERE i.item_name = found_items.item_name AND found_items.path OPERATOR(%s.~) _ARG_))", searchSchema)
+			q = fmt.Sprintf("("+q+" OR NOT EXISTS (SELECT 1 FROM found_items WHERE i.item_name = found_items.item_name AND found_items.path OPERATOR(%s.~) _ARG_))", searchSchema)
 		}
 		/*******
 		q = fmt.Sprintf("%s((f%d.path OPERATOR(%s.~) _ARG_ AND f%d.value %s _ARG_) %s (f%d.path OPERATOR(%s.~) _ARG_))", opStr, *tNum, searchSchema, *tNum, cop, clauseJoin, *tNum, searchSchema)

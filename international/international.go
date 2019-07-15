@@ -24,13 +24,13 @@ import (
 	"github.com/ctdk/goiardi/config"
 )
 
-const defaultLang = 'english'
+const defaultLang = "english"
 
 // Text is a struct of translations of output strings with a consistent
 // identifier.
 type Text struct {
-	Name string 	// a consistent identifier for the message
-	translations map[string]string 	// map of message translations, keyed by language
+	Name         string            // a consistent identifier for the message
+	translations map[string]string // map of message translations, keyed by language
 }
 
 // GetString, unsurprisingly, gets the translation of a string for a particular

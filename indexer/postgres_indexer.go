@@ -281,7 +281,7 @@ func (p *PostgresIndex) Clear(org IndexerOrg) error {
 		tx.Rollback()
 		return err
 	}
-	
+
 	sqlStmt := fmt.Sprintf("INSERT INTO %s.search_collections (name, organization_id) VALUES ('client', $1), ('environment', $1), ('node', $1), ('role', $1)", orgSchema)
 	_, err = tx.Exec(sqlStmt, org.GetId())
 	if err != nil {

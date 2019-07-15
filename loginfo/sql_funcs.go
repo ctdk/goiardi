@@ -189,7 +189,7 @@ func getLogInfoListSQL(orgId int64, searchParams map[string]string, from, until 
 	var loggedEvents []*LogInfo
 
 	sqlArgs := []interface{}{orgId, from, until}
-	
+
 	sqlStmt := "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM goiardi.log_infos li JOIN goiardi.users u ON li.actor_id = u.id WHERE organization_id = ? AND time >= ? AND time <= ?"
 	if action, ok := searchParams["action"]; ok {
 		sqlStmt = sqlStmt + " AND action = ?"
