@@ -95,11 +95,12 @@ func SetReq(user *user.User, org *organization.Organization, inviter actor.Actor
 	return assoc, nil
 }
 
-func GetReq(key string) (*AssociationReq, util.Gerror) {
+func GetReq(user *user.User, org *organization.Organization) (*AssociationReq, util.Gerror) {
 	var assoc *AssociationReq
 	if config.UsingDB() {
-
+		return getAssociationReqSQL(user, org)
 	} else {
+		key := util.JoinStr(user.Name, "-", org.Name)
 		ds := datastore.New()
 		a, found := ds.Get("associationreq", key)
 		if !found {
@@ -118,7 +119,7 @@ func GetReq(key string) (*AssociationReq, util.Gerror) {
 
 func (a *AssociationReq) Accept() util.Gerror {
 	if config.UsingDB() {
-
+		return a.acceptSQL()
 	}
 	// group stuff happens here, once that all gets figured out
 	// This one I think *does* happen. I think.
@@ -157,12 +158,15 @@ func (a *AssociationReq) Accept() util.Gerror {
 }
 
 func (a *AssociationReq) Reject() util.Gerror {
+	if config.UsingDB() {
+		return a.rejectSQL()
+	}
 	return a.Delete()
 }
 
 func (a *AssociationReq) Delete() util.Gerror {
 	if config.UsingDB() {
-
+		return a.deleteSQL()
 	}
 	ds := datastore.New()
 	ds.Delete("associationreq", a.Key())
@@ -172,9 +176,6 @@ func (a *AssociationReq) Delete() util.Gerror {
 }
 
 func OrgAssocReqs(user *user.User) ([]*organization.Organization, util.Gerror) {
-	if config.UsingDB() {
-
-	}
 	ds := datastore.New()
 	o := ds.GetAssociationReqs(user.Name, "organizations")
 	orgs := make([]*organization.Organization, len(o))
@@ -187,7 +188,7 @@ func OrgAssocReqs(user *user.User) ([]*organization.Organization, util.Gerror) {
 
 func OrgAssociations(user *user.User) ([]*organization.Organization, util.Gerror) {
 	if config.UsingDB() {
-
+		return orgAssociationsSQL(user)
 	}
 	ds := datastore.New()
 	o := ds.GetAssociations(user.Name, "organizations")
@@ -201,7 +202,7 @@ func OrgAssociations(user *user.User) ([]*organization.Organization, util.Gerror
 
 func OrgsAssociationReqCount(user *user.User) (int, util.Gerror) {
 	if config.UsingDB() {
-
+		return orgsAssociationReqCountSQL(user)
 	}
 	orgs, err := OrgAssocReqs(user)
 	if err != nil {
@@ -213,9 +214,9 @@ func OrgsAssociationReqCount(user *user.User) (int, util.Gerror) {
 
 func UsersAssociationReqCount(org *organization.Organization) (int, util.Gerror) {
 	if config.UsingDB() {
-
+		return userAssociationReqCountSQL(org)
 	}
-	users, err := UserAssocReqs(org)
+	users, err := userAssocReqs(org)
 	if err != nil {
 		return 0, err
 	}
@@ -223,10 +224,7 @@ func UsersAssociationReqCount(org *organization.Organization) (int, util.Gerror)
 	return count, nil
 }
 
-func UserAssocReqs(org *organization.Organization) ([]*user.User, util.Gerror) {
-	if config.UsingDB() {
-
-	}
+func userAssocReqs(org *organization.Organization) ([]*user.User, util.Gerror) {
 	ds := datastore.New()
 	u := ds.GetAssociationReqs(org.Name, "users")
 	users := make([]*user.User, len(u))
@@ -238,7 +236,7 @@ func UserAssocReqs(org *organization.Organization) ([]*user.User, util.Gerror) {
 
 func UserAssociations(org *organization.Organization) ([]*user.User, util.Gerror) {
 	if config.UsingDB() {
-
+		return userAssociationsSQL(org)
 	}
 	ds := datastore.New()
 	u := ds.GetAssociations(org.Name, "users")
@@ -252,15 +250,14 @@ func UserAssociations(org *organization.Organization) ([]*user.User, util.Gerror
 func DelAllUserAssocReqs(user *user.User) util.Gerror {
 	// these two will be vastly easier with the db, eh.
 	if config.UsingDB() {
-
+		return deleteUserAssociationReqsSQL(user)
 	}
 	orgs, err := OrgAssocReqs(user)
 	if err != nil {
 		return err
 	}
 	for _, o := range orgs {
-		key := util.JoinStr(user.Name, "-", o.Name)
-		a, err := GetReq(key)
+		a, err := GetReq(user, o)
 		if err != nil {
 			return err
 		}
@@ -274,15 +271,14 @@ func DelAllUserAssocReqs(user *user.User) util.Gerror {
 
 func DelAllOrgAssocReqs(org *organization.Organization) util.Gerror {
 	if config.UsingDB() {
-
+		return deleteOrgAssociationReqsSQL(org)
 	}
-	users, err := UserAssocReqs(org)
+	users, err := userAssocReqs(org)
 	if err != nil {
 		return err
 	}
 	for _, u := range users {
-		key := util.JoinStr(u.Name, "-", org.Name)
-		a, err := GetReq(key)
+		a, err := GetReq(u, org)
 		if err != nil {
 			return err
 		}
@@ -297,7 +293,7 @@ func DelAllOrgAssocReqs(org *organization.Organization) util.Gerror {
 func DelAllUserAssociations(user *user.User) util.Gerror {
 	// these two will be vastly easier with the db, eh.
 	if config.UsingDB() {
-
+		return deleteAllUserAssociationsSQL(user)
 	}
 	orgs, err := OrgAssociations(user)
 	if err != nil {
@@ -318,7 +314,7 @@ func DelAllUserAssociations(user *user.User) util.Gerror {
 
 func DelAllOrgAssociations(org *organization.Organization) util.Gerror {
 	if config.UsingDB() {
-
+		return deleteAllOrgAssociationsSQL(org)
 	}
 	users, err := UserAssociations(org)
 	if err != nil {
@@ -339,7 +335,7 @@ func DelAllOrgAssociations(org *organization.Organization) util.Gerror {
 
 func GetAllOrgsAssociationReqs(user *user.User) ([]*AssociationReq, util.Gerror) {
 	if config.UsingDB() {
-
+		return getOrgAssociationReqsSQL(user)
 	}
 	orgs, err := OrgAssocReqs(user)
 	if err != nil {
@@ -347,8 +343,7 @@ func GetAllOrgsAssociationReqs(user *user.User) ([]*AssociationReq, util.Gerror)
 	}
 	assoc := make([]*AssociationReq, len(orgs))
 	for i, o := range orgs {
-		key := util.JoinStr(user.Name, "-", o.Name)
-		a, err := GetReq(key)
+		a, err := GetReq(user, o)
 		if err != nil {
 			return nil, err
 		}
@@ -359,16 +354,15 @@ func GetAllOrgsAssociationReqs(user *user.User) ([]*AssociationReq, util.Gerror)
 
 func GetAllUsersAssociationReqs(org *organization.Organization) ([]*AssociationReq, util.Gerror) {
 	if config.UsingDB() {
-
+		return getUserAssociationReqsSQL(org)
 	}
-	users, err := UserAssocReqs(org)
+	users, err := userAssocReqs(org)
 	if err != nil {
 		return nil, err
 	}
 	assoc := make([]*AssociationReq, len(users))
 	for i, u := range users {
-		key := util.JoinStr(u.Name, "-", org.Name)
-		a, err := GetReq(key)
+		a, err := GetReq(u, org)
 		if err != nil {
 			return nil, err
 		}
@@ -378,6 +372,10 @@ func GetAllUsersAssociationReqs(org *organization.Organization) ([]*AssociationR
 }
 
 func SetAssoc(user *user.User, org *organization.Organization) (*Association, util.Gerror) {
+	if config.UsingDB() {
+		return nil, util.Errorf("SetAssoc shouldn't be called if using a DB storage backend!")
+	}
+
 	assoc := &Association{user, org}
 	ds := datastore.New()
 	_, found := ds.Get("association", assoc.Key())
@@ -395,7 +393,7 @@ func SetAssoc(user *user.User, org *organization.Organization) (*Association, ut
 func GetAssoc(user *user.User, org *organization.Organization) (*Association, util.Gerror) {
 	var assoc *Association
 	if config.UsingDB() {
-
+		return getAssociationSQL(user, org)
 	} else {
 		ds := datastore.New()
 		key := util.JoinStr(user.Name, "-", org.Name)
@@ -415,7 +413,7 @@ func GetAssoc(user *user.User, org *organization.Organization) (*Association, ut
 
 func (a *Association) Delete() util.Gerror {
 	if config.UsingDB() {
-
+		return a.deleteSQL()
 	}
 	ds := datastore.New()
 	usagName := fmt.Sprintf("%x", []byte(a.User.Name))

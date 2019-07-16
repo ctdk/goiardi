@@ -104,7 +104,13 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			log.Printf("Deleting assoc req %s", id)
 			// Looks like this is supposed to be a delete.
-			ar, err := association.GetReq(id)
+			arUser, err := user.Get(userChk[1])
+			if err != nil {
+				jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
+				return
+			}
+
+			ar, err := association.GetReq(arUser, org)
 			if err != nil {
 				jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
 				return

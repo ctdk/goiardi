@@ -29,6 +29,7 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
+	"github.com/tideland/golib/logger"
 	"net/http"
 	"regexp"
 )
@@ -135,8 +136,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 			go group.ClearActor(org, chefUser)
 			go org.PermCheck.RemoveUser(chefUser)
 		} else {
-			key := util.JoinStr(userName, "-", org.Name)
-			assocReq, _ := association.GetReq(key)
+			assocReq, _ := association.GetReq(chefUser, org)
 			if assocReq != nil {
 				err = assocReq.Delete()
 				if err != nil {
@@ -297,13 +297,15 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 		return
 	}
-	assoc, err := association.GetReq(id)
+	assoc, err := association.GetReq(user, org)
 	if err != nil {
 		jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
 		return
 	}
 	// Have to check here if the user who issued the invitation is still an
 	// admin for the organization
+	logger.Debugf("Do we think assoc is anything? %+v", assoc)
+	logger.Debugf("or org for that matter: %+v", org)
 	if f, ferr := org.PermCheck.RootCheckPerm(assoc.Inviter, "update"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return

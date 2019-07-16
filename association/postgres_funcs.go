@@ -94,7 +94,7 @@ func (a *AssociationReq) savePostgreSQL() util.Gerror {
 	return nil
 }
 
-func (a *AssociationReq) acceptPostgresSQL() util.Gerror {
+func (a *AssociationReq) acceptPostgreSQL() util.Gerror {
 	a.Status = "accepted"
 
 	tx, err := datastore.Dbh.Begin()

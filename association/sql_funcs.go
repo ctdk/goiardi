@@ -20,7 +20,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
@@ -31,13 +31,7 @@ import (
 
 func checkForAssociationSQL(dbhandle datastore.Dbhandle, user *user.User, org *organization.Organization) (bool, util.Gerror) {
 	var z int
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		// come back if we decide to actually keep mysql still - it's
-		// iffy
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT count(*) AS c FROM goiardi.associations WHERE user_id = $1 AND organization_id = $2"
-	}
+	sqlStmt := "SELECT count(*) AS c FROM goiardi.associations WHERE user_id = $1 AND organization_id = $2"
 
 	stmt, err := dbhandle.Prepare(sqlStmt)
 	if err != nil {
@@ -59,13 +53,7 @@ func checkForAssociationSQL(dbhandle datastore.Dbhandle, user *user.User, org *o
 
 func checkForAssociationReqSQL(dbhandle datastore.Dbhandle, user *user.User, org *organization.Organization, inviter actor.Actor) (bool, util.Gerror) {
 	var z int
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		// come back if we decide to actually keep mysql still - it's
-		// iffy
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT count(*) AS c FROM goiardi.association_requests WHERE user_id = $1 AND organization_id = $2 AND inviter_id = $3 AND inviter_type = $4 AND status = 'pending'"
-	}
+	sqlStmt := "SELECT count(*) AS c FROM goiardi.association_requests WHERE user_id = $1 AND organization_id = $2 AND inviter_id = $3 AND inviter_type = $4 AND status = 'pending'"
 
 	stmt, err := dbhandle.Prepare(sqlStmt)
 	if err != nil {
@@ -92,13 +80,7 @@ func (a *Association) fillAssociationFromSQL(row datastore.ResRow) util.Gerror {
 
 func getAssociationSQL(user *user.User, org *organization.Organization) (*Association, util.Gerror) {
 	a := new(Association)
-
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		// mebbe?
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT u.name AS user_name, o.name AS org_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id WHERE u.id = $1 AND o.id = $2"
-	}
+	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id WHERE u.id = $1 AND o.id = $2"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -119,15 +101,55 @@ func (a *AssociationReq) fillAssociationReqFromSQL(row datastore.ResRow) util.Ge
 	return a.fillAssociationReqFromPostgreSQL(row)
 }
 
-func getAssociationReqSQL(user *user.User, org *organization.Organization, inviter actor.Actor, status string) (*AssociationReq, util.Gerror) {
+func getAssociationReqSQL(uReq *user.User, org *organization.Organization) (*AssociationReq, util.Gerror) {
+	sqlStmt := "SELECT inviter_id, inviter_type FROM goiardi.association_requests WHERE user_id = $1 AND organization_id = $2 AND status = 'pending' ORDER BY id DESC LIMIT 1"
+
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return nil, util.CastErr(err)
+	}
+	defer stmt.Close()
+
+	var inviterId int64
+	var inviterType string
+
+	row := stmt.QueryRow(uReq.GetId(), org.GetId())
+	if err = row.Scan(&inviterId, &inviterType); err != nil {
+		return nil, util.CastErr(err)
+	}
+
+	var inviter actor.Actor
+
+	switch inviterType {
+	case "users":
+		u, uerr := user.UsersByIdSQL([]int64{inviterId})
+		if uerr != nil {
+			return nil, util.CastErr(uerr)
+		}
+		if u == nil || len(u) == 0 {
+			return nil, util.Errorf("Inviter user id %d not found", inviterId)
+		}
+		inviter = u[0]
+	case "clients":
+		c, cerr := client.ClientsByIdSQL([]int64{inviterId}, org)
+		if cerr != nil {
+			return nil, util.CastErr(cerr)
+		}
+		if c == nil || len(c) == 0 {
+			return nil, util.Errorf("Inviter client id %d not found", inviterId)
+		}
+		inviter = c[0]
+	default:
+		return nil, util.Errorf("Unknown inviter type '%s'.", inviterType)
+	}
+
+	return getExactAssociationReqSQL(uReq, org, inviter, "pending")
+}
+
+func getExactAssociationReqSQL(user *user.User, org *organization.Organization, inviter actor.Actor, status string) (*AssociationReq, util.Gerror) {
 	a := new(AssociationReq)
 
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		// mebbe?
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = fmt.Sprintf("SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE u.id = $1 AND org.id = $2 AND inviter_name = $3 AND assoc.inviter_type = $4 AND assoc.status = $5", inviterType(inviter))
-	}
+	sqlStmt := fmt.Sprintf("SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE u.id = $1 AND org.id = $2 AND inviter_name = $3 AND assoc.inviter_type = $4 AND assoc.status = $5", inviterType(inviter))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -148,12 +170,7 @@ func getAssociationReqSQL(user *user.User, org *organization.Organization, invit
 // deleting them, there's not much to edit.
 
 func (a *Association) deleteSQL() util.Gerror {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "DELETE FROM goiardi.associations WHERE user_id = $1 AND organization_id = $2"
-	}
+	sqlStmt := "DELETE FROM goiardi.associations WHERE user_id = $1 AND organization_id = $2"
 
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
@@ -171,12 +188,7 @@ func (a *Association) deleteSQL() util.Gerror {
 }
 
 func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Gerror) {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "SELECT user_id FROM goiardi.associations WHERE a.organization_id = $1"
-	}
+	sqlStmt := "SELECT user_id FROM goiardi.associations WHERE a.organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -216,12 +228,7 @@ func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Ger
 }
 
 func orgAssociationsSQL(u *user.User) ([]*organization.Organization, util.Gerror) {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "SELECT organization_id FROM goiardi.associations WHERE a.user_id = $1"
-	}
+	sqlStmt := "SELECT organization_id FROM goiardi.associations WHERE a.user_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -261,12 +268,7 @@ func orgAssociationsSQL(u *user.User) ([]*organization.Organization, util.Gerror
 }
 
 func deleteAllOrgAssociationsSQL(org *organization.Organization) util.Gerror {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "DELETE FROM goiardi.associations WHERE organization_id = $1"
-	}
+	sqlStmt := "DELETE FROM goiardi.associations WHERE organization_id = $1"
 
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
@@ -284,12 +286,7 @@ func deleteAllOrgAssociationsSQL(org *organization.Organization) util.Gerror {
 }
 
 func deleteAllUserAssociationsSQL(u *user.User) util.Gerror {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "DELETE FROM goiardi.associations WHERE user_id = $1"
-	}
+	sqlStmt := "DELETE FROM goiardi.associations WHERE user_id = $1"
 
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
@@ -307,10 +304,7 @@ func deleteAllUserAssociationsSQL(u *user.User) util.Gerror {
 }
 
 func (a *AssociationReq) acceptSQL() util.Gerror {
-	if config.Config.UseMySQL {
-		return nil
-	}
-	return a.acceptPostgresSQL()
+	return a.acceptPostgreSQL()
 }
 
 func (a *AssociationReq) rejectSQL() util.Gerror {
@@ -319,12 +313,7 @@ func (a *AssociationReq) rejectSQL() util.Gerror {
 }
 
 func (a *AssociationReq) deleteSQL() util.Gerror {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "DELETE FROM goiardi.association_requests WHERE user_id = $1 AND organization_id = $2 AND inviter_id = $3 AND inviter_type = $4"
-	}
+	sqlStmt := "DELETE FROM goiardi.association_requests WHERE user_id = $1 AND organization_id = $2 AND inviter_id = $3 AND inviter_type = $4"
 
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
@@ -342,13 +331,7 @@ func (a *AssociationReq) deleteSQL() util.Gerror {
 
 func orgsAssociationReqCountSQL(user *user.User) (int, util.Gerror) {
 	var c int
-	var sqlStmt string
-	// deal with mysql if/when later
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "SELECT COUNT(*) c FROM goiardi.association_requests WHERE user_id = $1"
-	}
+	sqlStmt := "SELECT COUNT(*) c FROM goiardi.association_requests WHERE user_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -367,13 +350,7 @@ func orgsAssociationReqCountSQL(user *user.User) (int, util.Gerror) {
 
 func userAssociationReqCountSQL(org *organization.Organization) (int, util.Gerror) {
 	var c int
-	var sqlStmt string
-	// deal with mysql if/when later
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "SELECT COUNT(*) c FROM goiardi.association_requests WHERE organization_id = $1"
-	}
+	sqlStmt := "SELECT COUNT(*) c FROM goiardi.association_requests WHERE organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -391,12 +368,7 @@ func userAssociationReqCountSQL(org *organization.Organization) (int, util.Gerro
 }
 
 func getOrgAssociationReqsSQL(user *user.User) ([]*AssociationReq, util.Gerror) {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE user_id = $1"
-	}
+	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE user_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -429,12 +401,7 @@ func getOrgAssociationReqsSQL(user *user.User) ([]*AssociationReq, util.Gerror) 
 }
 
 func getUserAssociationReqsSQL(org *organization.Organization) ([]*AssociationReq, util.Gerror) {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE organization_id = $1"
-	}
+	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -467,12 +434,7 @@ func getUserAssociationReqsSQL(org *organization.Organization) ([]*AssociationRe
 }
 
 func deleteUserAssociationReqsSQL(user *user.User) util.Gerror {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "DELETE FROM goiardi.association_requests WHERE user_id = $1"
-	}
+	sqlStmt := "DELETE FROM goiardi.association_requests WHERE user_id = $1"
 
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
@@ -489,12 +451,7 @@ func deleteUserAssociationReqsSQL(user *user.User) util.Gerror {
 }
 
 func deleteOrgAssociationReqsSQL(org *organization.Organization) util.Gerror {
-	var sqlStmt string
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "DELETE FROM goiardi.association_requests WHERE organization_id = $1"
-	}
+	sqlStmt := "DELETE FROM goiardi.association_requests WHERE organization_id = $1"
 
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
@@ -511,9 +468,6 @@ func deleteOrgAssociationReqsSQL(org *organization.Organization) util.Gerror {
 }
 
 func (a *AssociationReq) saveSQL() util.Gerror {
-	if config.Config.UseMySQL {
-		return util.Errorf("MySQL's not implemented for this yet")
-	}
 	return a.savePostgreSQL()
 }
 

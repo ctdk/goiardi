@@ -188,7 +188,7 @@ func TestUserReqListing(t *testing.T) {
 			t.Errorf(err.Error())
 		}
 	}
-	users, err := UserAssocReqs(o)
+	users, err := userAssocReqs(o)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -261,7 +261,7 @@ func TestDelUserAssocReq(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	users, err := UserAssocReqs(o)
+	users, err := userAssocReqs(o)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
