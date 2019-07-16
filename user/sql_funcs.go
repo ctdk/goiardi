@@ -66,7 +66,7 @@ func (u *User) fillUserFromSQL(row datastore.ResRow) error {
 
 func getUserSQL(name string) (*User, error) {
 	user := new(User)
-	sqlStatement := "select id, name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users WHERE name = $1"
+	sqlStatement := "select name, displayname, admin, public_key, email, passwd, salt, id FROM goiardi.users WHERE name = $1"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
