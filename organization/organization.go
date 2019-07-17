@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	_ "github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 	"github.com/pborman/uuid"
@@ -139,6 +140,14 @@ func (o *Organization) Delete() util.Gerror {
 	if o.Name == "default" {
 		return util.Errorf("Cannot delete 'default' organization")
 	}
+
+	// Delete the ACL first, methinks
+	aerr := o.PermCheck.DeletePolicy()
+	if aerr != nil {
+		return util.CastErr(aerr)
+	}
+
+	// Files need to be deleted as well. Hrm.
 	if config.UsingDB() {
 		return util.CastErr(o.deleteSQL())
 	}
@@ -148,10 +157,7 @@ func (o *Organization) Delete() util.Gerror {
 	if err != nil {
 		return util.CastErr(err)
 	}
-	_, aerr := o.PermCheck.DeleteItemACL(o)
-	if aerr != nil {
-		return util.CastErr(aerr)
-	}
+	
 	return nil
 }
 

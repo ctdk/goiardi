@@ -122,6 +122,7 @@ type PermChecker interface {
 	CreatorOnly(Item, Actor) util.Gerror
 	RemoveUser(Member) error
 	RenameMember(Member, string) error
+	DeletePolicy() error
 }
 
 // This might be better moved back to the acl module, and made available as

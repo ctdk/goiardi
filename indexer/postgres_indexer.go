@@ -112,7 +112,7 @@ func (p *PostgresIndex) DeleteOrgDex(org IndexerOrg) error {
 		return err
 	}
 
-	_, err = tx.Exec(fmt.Sprintf("DROP SCHEMA %s CASCADE", org.SearchSchemaName()))
+	_, err = tx.Exec("CALL goiardi.drop_search_schema($1, $2)", org.GetId(), org.SearchSchemaName())
 	if err != nil {
 		tx.Rollback()
 		return err

@@ -60,7 +60,7 @@ const (
 const (
 	enforceEffect = "allow"
 	denyEffect    = "deny"
-	policyFileFmt = "%s-policy.csv"
+	policyFileFmt = "org-%d-policy.csv"
 	addPerm       = "add"
 	removePerm    = "remove"
 )
@@ -115,9 +115,11 @@ func initializeACL(org *organization.Organization, m model.Model) (*casbin.Synce
 // TODO: When 1.0.0-dev starts wiring in the DBs, set up DB adapters for
 // policies. Until that time, set up a file backed one.
 func loadPolicyAdapter(org *organization.Organization) (persist.Adapter, error) {
-	if config.UsingDB() {
-
-	}
+	// Gah, the adapters for storing policies in the db are pretty weird.
+	// Use the file for now.
+	// if config.UsingDB() {
+	//
+	// }
 	return loadPolicyFileAdapter(org, config.Config.PolicyRoot)
 }
 
@@ -133,7 +135,7 @@ func loadPolicyFileAdapter(org *organization.Organization, policyRoot string) (p
 }
 
 func makePolicyPath(org *organization.Organization, policyRoot string) string {
-	fn := fmt.Sprintf(policyFileFmt, org.Name)
+	fn := fmt.Sprintf(policyFileFmt, org.GetId())
 	policyPath := path.Join(policyRoot, fn)
 	return policyPath
 }
@@ -779,6 +781,21 @@ func (c *Checker) CreatorOnly(item aclhelper.Item, creator aclhelper.Actor) util
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (c *Checker) DeletePolicy() error {
+	// Assuming file for now, until storing policies sanely in the db is
+	// sorted out.
+
+	// Disable autosave just in case
+	c.e.EnableAutoSave(false)
+
+	// and zap dat file
+	policyPath := makePolicyPath(c.org, config.Config.PolicyRoot)
+	if err := os.Remove(policyPath); err != nil {
+		return err
 	}
 	return nil
 }

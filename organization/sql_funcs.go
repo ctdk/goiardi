@@ -83,13 +83,13 @@ func getOrgSQL(name string) (*Organization, error) {
 }
 
 func (o *Organization) deleteSQL() error {
-	sqlStmt := "DELETE FROM goiardi.organizations WHERE id = $1"
+	sqlStmt := "CALL goiardi.delete_org($1, $2)"
 
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return util.CastErr(err)
 	}
-	_, err = tx.Exec(sqlStmt, o.id)
+	_, err = tx.Exec(sqlStmt, o.id, o.SearchSchemaName())
 
 	if err != nil {
 		tx.Rollback()
