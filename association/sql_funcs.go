@@ -80,7 +80,7 @@ func (a *Association) fillAssociationFromSQL(row datastore.ResRow) util.Gerror {
 
 func getAssociationSQL(user *user.User, org *organization.Organization) (*Association, util.Gerror) {
 	a := new(Association)
-	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id WHERE u.id = $1 AND o.id = $2"
+	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name FROM goiardi.associations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id WHERE u.id = $1 AND o.id = $2"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -149,7 +149,7 @@ func getAssociationReqSQL(uReq *user.User, org *organization.Organization) (*Ass
 func getExactAssociationReqSQL(user *user.User, org *organization.Organization, inviter actor.Actor, status string) (*AssociationReq, util.Gerror) {
 	a := new(AssociationReq)
 
-	sqlStmt := fmt.Sprintf("SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE u.id = $1 AND org.id = $2 AND inviter_name = $3 AND assoc.inviter_type = $4 AND assoc.status = $5", inviterType(inviter))
+	sqlStmt := fmt.Sprintf("SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name, status FROM goiardi.association_requests assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE u.id = $1 AND o.id = $2 AND i.name = $3 AND assoc.inviter_type = $4 AND assoc.status = $5", inviterType(inviter))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -188,7 +188,7 @@ func (a *Association) deleteSQL() util.Gerror {
 }
 
 func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Gerror) {
-	sqlStmt := "SELECT user_id FROM goiardi.associations WHERE a.organization_id = $1"
+	sqlStmt := "SELECT user_id FROM goiardi.associations WHERE organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -368,7 +368,7 @@ func userAssociationReqCountSQL(org *organization.Organization) (int, util.Gerro
 }
 
 func getOrgAssociationReqsSQL(user *user.User) ([]*AssociationReq, util.Gerror) {
-	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE user_id = $1"
+	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.association_requests assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE user_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -401,7 +401,7 @@ func getOrgAssociationReqsSQL(user *user.User) ([]*AssociationReq, util.Gerror) 
 }
 
 func getUserAssociationReqsSQL(org *organization.Organization) ([]*AssociationReq, util.Gerror) {
-	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.assocations assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE organization_id = $1"
+	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.association_requests assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
