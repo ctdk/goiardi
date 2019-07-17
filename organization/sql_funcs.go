@@ -67,7 +67,7 @@ func (o *Organization) saveSQL() util.Gerror {
 func getOrgSQL(name string) (*Organization, error) {
 	org := new(Organization)
 
-	sqlStatement := "SELECT name, description, guid, uuid, id FROM goiardi.organizations WHERE name = $1"
+	sqlStatement := "SELECT name, description, translate(guid::TEXT, '-', ''), uuid, id FROM goiardi.organizations WHERE name = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -133,7 +133,7 @@ func getListSQL() []string {
 func allOrgsSQL() ([]*Organization, error) {
 	orgs := make([]*Organization, 0)
 
-	sqlStatement := "SELECT name, description, guid, uuid, id FROM goiardi.organizations"
+	sqlStatement := "SELECT name, description, translate(guid::TEXT, '-', ''), uuid, id FROM goiardi.organizations"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -179,7 +179,7 @@ func OrgsByIdSQL(ids []int64) ([]*Organization, error) {
 		bind[i] = fmt.Sprintf("$%d", i+1)
 		intfIds[i] = d
 	}
-	sqlStatement := fmt.Sprintf("SELECT name, description, guid, uuid, id FROM goiardi.organizations WHERE id IN (%s)", strings.Join(bind, ", "))
+	sqlStatement := fmt.Sprintf("SELECT name, description, translate(guid::TEXT, '-', ''), uuid, id FROM goiardi.organizations WHERE id IN (%s)", strings.Join(bind, ", "))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
