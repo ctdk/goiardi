@@ -91,7 +91,7 @@ func (o *Organization) deleteSQL() error {
 	}
 	_, err = tx.Exec(sqlStmt, o.id, o.SearchSchemaName())
 
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		tx.Rollback()
 		return util.CastErr(err)
 	}

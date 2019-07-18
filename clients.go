@@ -70,6 +70,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
+
 		err := chefClient.Delete()
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusForbidden)

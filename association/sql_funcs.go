@@ -228,7 +228,7 @@ func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Ger
 }
 
 func orgAssociationsSQL(u *user.User) ([]*organization.Organization, util.Gerror) {
-	sqlStmt := "SELECT organization_id FROM goiardi.associations WHERE a.user_id = $1"
+	sqlStmt := "SELECT organization_id FROM goiardi.associations WHERE user_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -256,6 +256,10 @@ func orgAssociationsSQL(u *user.User) ([]*organization.Organization, util.Gerror
 	rows.Close()
 	if err = rows.Err(); err != nil {
 		return nil, util.CastErr(err)
+	}
+
+	if len(orgIds) == 0 {
+		return nil, nil
 	}
 
 	orgAssoc, err := orgloader.OrgsByIdSQL(orgIds)

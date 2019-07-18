@@ -105,12 +105,13 @@ func Get(orgName string) (*Organization, util.Gerror) {
 		var err error
 		org, err = getOrgSQL(orgName)
 		if err != nil {
-			logger.Debugf("no org, err was: %+v", err.Error())
 			if err != sql.ErrNoRows {
 				return nil, util.CastErr(err)
 			}
+			found = false
+		} else {
+			found = true
 		}
-		found = true
 	} else {
 		ds := datastore.New()
 		var o interface{}
@@ -149,7 +150,9 @@ func (o *Organization) Delete() util.Gerror {
 
 	// Files need to be deleted as well. Hrm.
 	if config.UsingDB() {
-		return util.CastErr(o.deleteSQL())
+		if err := o.deleteSQL(); err != nil {
+			return util.CastErr(err)
+		}
 	}
 	ds := datastore.New()
 	ds.Delete("organization", o.Name)

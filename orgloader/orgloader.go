@@ -26,9 +26,13 @@ import (
 
 func Get(name string) (*organization.Organization, util.Gerror) {
 	org, err := organization.Get(name)
-	if err != nil {
+
+	// I *think* there's a reason that organization.Get doesn't return an
+	// error if the org isn't present.
+	if err != nil || org == nil {
 		return nil, err
 	}
+
 	aclErr := acl.LoadACL(org)
 	if aclErr != nil {
 		return nil, util.CastErr(aclErr)

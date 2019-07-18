@@ -209,11 +209,22 @@ func orgMainHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
+
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
+
+	// check if the org is nil before trying anything crazy like checking
+	// its perms. *crosses fingers*
+	if org == nil {
+		// fix this message if needed
+		msg := fmt.Sprintf("organization %s not found", orgName)
+		jsonErrorReport(w, r, msg, http.StatusNotFound)
+		return
+	}
+
 	if f, ferr := org.PermCheck.RootCheckPerm(opUser, "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
