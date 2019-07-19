@@ -690,7 +690,9 @@ func createDefaultActors(cworg *organization.Organization) {
 
 	// Don't do this if we're using the db - that'll already be created.
 	if !config.UsingDB() {
-		environment.MakeDefaultEnvironment(cworg)
+		if eerr := environment.MakeDefaultEnvironment(cworg); eerr != nil {
+			logger.Errorf("MakeDefaultEnvironment for default org had an error: %s", eerr.Error())
+		}
 	}
 
 	return

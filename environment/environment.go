@@ -30,7 +30,6 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"sort"
 )
@@ -291,7 +290,7 @@ func GetMulti(org *organization.Organization, envNames []string) ([]*ChefEnviron
 }
 
 // MakeDefaultEnvironment creates the default environment on startup.
-func MakeDefaultEnvironment(org *organization.Organization) {
+func MakeDefaultEnvironment(org *organization.Organization) util.Gerror {
 	var de *ChefEnvironment
 	if config.UsingDB() {
 		// The default environment is pre-created in the db schema when
@@ -299,22 +298,27 @@ func MakeDefaultEnvironment(org *organization.Organization) {
 		// hurt anything though, so just get the usual default env and
 		// index it, not bothering with these other steps that are
 		// easier to do with the in-memory mode.
+
+		// argh, what do we think org is?
 		de = defaultEnvironment(org)
 	} else {
 		ds := datastore.New()
 		// only create the new default environment if we don't already have one
 		// saved
 		if _, found := ds.Get(org.DataKey("env"), "_default"); found {
-			return
+			err := util.Errorf("Somehow could not load organization %s's default environment", org.Name)
+			err.SetStatus(http.StatusNotFound)
+			return err
 		}
 		de = defaultEnvironment(org)
 		ds.Set(org.DataKey("env"), de.Name, de)
 	}
 	if err := de.save(); err != nil {
-		logger.Errorf(err.Error())
+		return err
 	}
 
 	indexer.IndexObj(org, de)
+	return nil
 }
 
 func defaultEnvironment(org *organization.Organization) *ChefEnvironment {

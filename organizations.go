@@ -368,7 +368,11 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, cerr.Error(), cerr.Status())
 			return
 		}
-		environment.MakeDefaultEnvironment(org)
+		if eerr := environment.MakeDefaultEnvironment(org); eerr != nil {
+			jsonErrorReport(w, r, eerr.Error(), eerr.Status())
+			return
+		}
+
 		gerr := group.MakeDefaultGroups(org)
 		if gerr != nil {
 			logger.Debugf("blowing up here")
