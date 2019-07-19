@@ -112,7 +112,7 @@ func (p *PostgresIndex) DeleteOrgDex(org IndexerOrg) error {
 		return err
 	}
 
-	_, err = tx.Exec("CALL goiardi.drop_search_schema($1, $2)", org.GetId(), org.SearchSchemaName())
+	_, err = tx.Exec("CALL goiardi.drop_search_schema($1)", org.SearchSchemaName())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -128,7 +128,7 @@ func (p *PostgresIndex) CreateCollection(org IndexerOrg, col string) error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(sqlStmt, col, 1)
+	_, err = tx.Exec(sqlStmt, col, org.GetId())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -146,7 +146,7 @@ func (p *PostgresIndex) DeleteCollection(org IndexerOrg, col string) error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_collection($1, $2)", org.SearchSchemaName()), col, 1)
+	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_collection($1, $2)", org.SearchSchemaName()), col, org.GetId())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -160,7 +160,7 @@ func (p *PostgresIndex) DeleteItem(org IndexerOrg, idxName string, doc string) e
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_item($1, $2, $3)", org.SearchSchemaName()), idxName, doc, 1)
+	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_item($1, $2, $3)", org.SearchSchemaName()), idxName, doc, org.GetId())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -179,12 +179,12 @@ func (p *PostgresIndex) SaveItem(org IndexerOrg, obj Indexable) error {
 	}
 	orgSchema := org.SearchSchemaName()
 	var scID int32
-	err = tx.QueryRow(fmt.Sprintf("SELECT id FROM %s.search_collections WHERE organization_id = $1 AND name = $2", orgSchema), 1, collectionName).Scan(&scID)
+	err = tx.QueryRow(fmt.Sprintf("SELECT id FROM %s.search_collections WHERE organization_id = $1 AND name = $2", orgSchema), org.GetId(), collectionName).Scan(&scID)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
-	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_item($1, $2, $3)", orgSchema), collectionName, itemName, 1)
+	_, err = tx.Exec(fmt.Sprintf("SELECT %s.delete_search_item($1, $2, $3)", orgSchema), collectionName, itemName, org.GetId())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -206,7 +206,7 @@ func (p *PostgresIndex) SaveItem(org IndexerOrg, obj Indexable) error {
 			v = util.IndexEscapeStr(v)
 			// try it with newlines too
 			v = strings.Replace(v, "\n", "\\n", -1)
-			_, err = stmt.Exec(1, scID, itemName, v, k)
+			_, err = stmt.Exec(org.GetId(), scID, itemName, v, k)
 			if err != nil {
 				tx.Rollback()
 				return err
@@ -221,7 +221,7 @@ func (p *PostgresIndex) SaveItem(org IndexerOrg, obj Indexable) error {
 				w = util.TrimStringMax(w, maxValLen)
 				w = util.IndexEscapeStr(w)
 				w = strings.Replace(w, "\n", "\\n", -1)
-				_, err = stmt.Exec(1, scID, itemName, w, k)
+				_, err = stmt.Exec(org.GetId(), scID, itemName, w, k)
 				if err != nil {
 					tx.Rollback()
 					return err

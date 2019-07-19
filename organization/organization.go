@@ -153,6 +153,7 @@ func (o *Organization) Delete() util.Gerror {
 		if err := o.deleteSQL(); err != nil {
 			return util.CastErr(err)
 		}
+		return nil
 	}
 	ds := datastore.New()
 	ds.Delete("organization", o.Name)
