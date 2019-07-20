@@ -44,7 +44,7 @@ func (c *Cookbook) numVer() (int, error) {
 	var cbvCount int
 
 	// better safe than sorry
-	sqlStatement := "SELECT count(*) AS c FROM goiardi.cookbook_versions cbv WHERE c.organization_id = $1 AND cbv.cookbook_id = $2"
+	sqlStatement := "SELECT count(*) AS c FROM goiardi.cookbook_versions cbv JOIN goiardi.cookbooks c ON cbv.cookbook_id = c.id WHERE c.organization_id = $1 AND cbv.cookbook_id = $2"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 
 	if err != nil {
@@ -296,7 +296,7 @@ func (c *Cookbook) deleteCookbookSQL() error {
 	sort.Strings(fileHashes)
 	fileHashes = removeDupHashes(fileHashes)
 
-	_, err = tx.Exec("DELETE FROM goiardi.cookbook_versions WHERE cookbook_id = $1", c.org.GetId(), c.id)
+	_, err = tx.Exec("DELETE FROM goiardi.cookbook_versions WHERE cookbook_id = $1", c.id)
 
 	if err != nil && err != sql.ErrNoRows {
 		terr := tx.Rollback()
@@ -402,6 +402,7 @@ func (c *Cookbook) getCookbookVersionSQL(cbVersion string) (*CookbookVersion, er
 		return nil, err
 	}
 	defer stmt.Close()
+	cbv.org = c.org
 	row := stmt.QueryRow(c.id, maj, min, patch)
 	err = cbv.fillCookbookVersionFromSQL(row)
 	if err != nil {
@@ -511,7 +512,7 @@ func universeSQL(org *organization.Organization) map[string]map[string]interface
 			log.Fatal(err)
 		}
 		version := fmt.Sprintf("%d.%d.%d", major, minor, patch)
-		customURL := fmt.Sprintf("/cookbook/%s/%s", name, version)
+		customURL := fmt.Sprintf("%s/cookbook/%s/%s", org.OrgURLBase(), name, version)
 		u["location_path"] = util.CustomURL(customURL)
 		u["location_type"] = "chef_server"
 
@@ -546,7 +547,7 @@ func cookbookListerSQL(numResults interface{}, org *organization.Organization) m
 		allVersions = true
 	}
 
-	sqlStatement := "SELECT version, name FROM goiardi.joined_cookbook_version ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc WHERE organization_id = $1"
+	sqlStatement := "SELECT version, name FROM goiardi.joined_cookbook_version WHERE organization_id = $1 ORDER BY name, major_ver desc, minor_ver desc, patch_ver DESC"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 
 	if err != nil {
@@ -576,7 +577,7 @@ func cookbookListerSQL(numResults interface{}, org *organization.Organization) m
 	}
 	for name, versions := range scratch {
 		nr := 0
-		cburl := fmt.Sprintf("/cookbooks/%s", name)
+		cburl := fmt.Sprintf("%s/cookbooks/%s", org.OrgURLBase(), name)
 		cb := make(map[string]interface{})
 		cb["url"] = util.CustomURL(cburl)
 		cb["versions"] = make([]interface{}, 0)
@@ -585,7 +586,7 @@ func cookbookListerSQL(numResults interface{}, org *organization.Organization) m
 				break
 			}
 			cv := make(map[string]string)
-			cv["url"] = util.CustomURL(fmt.Sprintf("/cookbooks/%s/%s", name, ver))
+			cv["url"] = util.CustomURL(fmt.Sprintf("%s/cookbooks/%s/%s", org.OrgURLBase(), name, ver))
 			cv["version"] = ver
 			cb["versions"] = append(cb["versions"].([]interface{}), cv)
 			nr++
@@ -596,7 +597,7 @@ func cookbookListerSQL(numResults interface{}, org *organization.Organization) m
 }
 
 func cookbookRecipesSQL(org *organization.Organization) ([]string, util.Gerror) {
-	sqlStatement := "SELECT version, name, recipes FROM goiardi.joined_cookbook_version ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc WHERE organization_id = $1"
+	sqlStatement := "SELECT version, name, recipes FROM goiardi.joined_cookbook_version WHERE organization_id = $1 ORDER BY name, major_ver desc, minor_ver desc, patch_ver desc"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 
 	if err != nil {

@@ -267,3 +267,9 @@ func (o *Organization) SearchSchemaName() string {
 func (o *Organization) GetId() int64 {
 	return o.id
 }
+
+// OrgURLBase returns the common "/organizations/<foo>" portion of a Chef
+// object's URL.
+func (o *Organization) OrgURLBase() string {
+	return fmt.Sprintf("/organizations/%s", o.Name)
+}
