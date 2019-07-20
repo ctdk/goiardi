@@ -51,7 +51,7 @@ func deleteHashesPostgreSQL(fileHashes []string, org FstoreOrg) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	deleteQuery := "DELETE FROM goiardi.file_checksums WHERE organization_id = $1 AND checksum = ANY($1::varchar(32)[])"
+	deleteQuery := "DELETE FROM goiardi.file_checksums WHERE organization_id = $1 AND checksum = ANY($2::varchar(32)[])"
 
 	// TODO: these hashes probably should be bound variables ($1, $2, etc.).
 	// The way it is now, though, it'll probably break. I guess it'll be an
