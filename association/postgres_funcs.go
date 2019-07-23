@@ -24,24 +24,24 @@ import (
 	"github.com/ctdk/goiardi/util"
 )
 
-func (a *Association) fillAssociationFromPostgreSQL(row datastore.ResRow) util.Gerror {
+func (a *Association) fillAssociationFromPostgreSQL(row datastore.ResRow) error {
 	var userName, orgName string
 
 	err := row.Scan(&userName, &orgName)
 	if err != nil {
-		return util.CastErr(err)
+		return err
 	}
 
 	// fill in the user and org now
 	u, err := user.Get(userName)
 	if err != nil {
-		return util.CastErr(err)
+		return err
 	}
 	a.User = u
 
 	o, err := orgloader.Get(orgName)
 	if err != nil {
-		return util.CastErr(err)
+		return err
 	}
 	a.Org = o
 

@@ -26,7 +26,7 @@ import (
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	//"log"
+	"net/http"
 )
 
 func checkForAssociationSQL(dbhandle datastore.Dbhandle, user *user.User, org *organization.Organization) (bool, util.Gerror) {
@@ -73,7 +73,7 @@ func checkForAssociationReqSQL(dbhandle datastore.Dbhandle, user *user.User, org
 	return false, nil
 }
 
-func (a *Association) fillAssociationFromSQL(row datastore.ResRow) util.Gerror {
+func (a *Association) fillAssociationFromSQL(row datastore.ResRow) error {
 	// add mysql later if we do that
 	return a.fillAssociationFromPostgreSQL(row)
 }
@@ -90,7 +90,12 @@ func getAssociationSQL(user *user.User, org *organization.Organization) (*Associ
 
 	row := stmt.QueryRow(user.GetId(), org.GetId())
 	if err = a.fillAssociationFromSQL(row); err != nil {
-		return nil, util.CastErr(err)
+		if err != sql.ErrNoRows {
+			return nil, util.CastErr(err)
+		}
+		gerr := util.Errorf("'%s' not associated with organization '%s'", user.Name, org.Name)
+		gerr.SetStatus(http.StatusForbidden)
+		return nil, gerr
 	}
 
 	return a, nil
