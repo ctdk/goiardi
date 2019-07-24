@@ -147,26 +147,19 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 }
 
 func getGroupSQL(name string, org *organization.Organization) (*Group, error) {
-	var sqlStatement string
 	g := new(Group)
 	g.org = org
 
-	if config.Config.UseMySQL {
-		// MySQL will be rather more intricate than postgres, I'm
-		// afraid. Leaving this here for now.
-		sqlStatement = "SELECT name, organization_id FROM groups WHERE name = ?"
-	} else if config.Config.UsePostgreSQL {
-		// bleh, break this apart into multiple lines so there's some
-		// small hope of reading and understanding it later.
-		sqlStatement = `select name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
-		LEFT JOIN 
-			(SELECT gau.group_id AS ugid, COALESCE(ARRAY_AGG(gau.user_id), ARRAY[]::BIGINT[]) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = g.id 
-		LEFT JOIN 
-			(SELECT gac.group_id AS cgid, COALESCE(ARRAY_AGG(gac.client_id), ARRAY[]::BIGINT[]) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = g.id
-		LEFT JOIN 
-			(SELECT gg.group_id AS ggid, COALESCE(ARRAY_AGG(gg.member_group_id), ARRAY[]::BIGINT[]) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = g.id
-		WHERE organization_id = $1 AND name = $2`
-	}
+	// bleh, break this apart into multiple lines so there's some
+	// small hope of reading and understanding it later.
+	sqlStatement := `SELECT name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
+	LEFT JOIN 
+		(SELECT gau.group_id AS ugid, COALESCE(ARRAY_AGG(gau.user_id), ARRAY[]::BIGINT[]) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = g.id 
+	LEFT JOIN 
+		(SELECT gac.group_id AS cgid, COALESCE(ARRAY_AGG(gac.client_id), ARRAY[]::BIGINT[]) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = g.id
+	LEFT JOIN 
+		(SELECT gg.group_id AS ggid, COALESCE(ARRAY_AGG(gg.member_group_id), ARRAY[]::BIGINT[]) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = g.id
+	WHERE organization_id = $1 AND name = $2`
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -296,20 +289,15 @@ func allGroupsSQL(org *organization.Organization) ([]*Group, error) {
 	}
 
 	var groups []*Group
-	var sqlStatement string
 
-	if config.Config.UseMySQL {
-		return nil, errors.New("Groups are not implemented with the MySQL backend yet, punting for now.")
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = `select name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
-		LEFT JOIN 
-			(SELECT gau.group_id AS ugid, COALESCE(ARRAY_AGG(gau.user_id), ARRAY[]::BIGINT[]) AS user_ids AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = groups.id 
-		LEFT JOIN 
-			(SELECT gac.group_id AS cgid, COALESCE(ARRAY_AGG(gau.client_id), ARRAY[]::BIGINT[]) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = groups.id
-		LEFT JOIN 
-			(SELECT gg.group_id AS ggid, COALESCE(ARRAY_AGG(gau.group_id), ARRAY[]::BIGINT[]) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = groups.id
-		WHERE g.organization_id = $1`
-	}
+	sqlStatement := `SELECT name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
+	LEFT JOIN 
+		(SELECT gau.group_id AS ugid, COALESCE(ARRAY_AGG(gau.user_id), ARRAY[]::BIGINT[]) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = g.id 
+	LEFT JOIN 
+		(SELECT gac.group_id AS cgid, COALESCE(ARRAY_AGG(gac.client_id), ARRAY[]::BIGINT[]) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = g.id
+	LEFT JOIN 
+		(SELECT gg.group_id AS ggid, COALESCE(ARRAY_AGG(gg.group_id), ARRAY[]::BIGINT[]) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = g.id
+	WHERE g.organization_id = $1`
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -372,27 +360,22 @@ func GroupsByIdSQL(ids []int64) ([]*Group, error) {
 	}
 
 	var groups []*Group
-	var sqlStatement string
 
 	bind := make([]string, len(ids))
 	intfIds := make([]interface{}, len(ids))
 
-	if config.Config.UseMySQL {
-		return nil, errors.New("Groups are not implemented with the MySQL backend yet, punting for now.")
-	} else if config.Config.UsePostgreSQL {
-		for i, d := range ids {
-			bind[i] = fmt.Sprintf("$%d", i+1)
-			intfIds[i] = d
-		}
-		sqlStatement = fmt.Sprintf(`select name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
-		LEFT JOIN 
-			(SELECT gau.group_id AS ugid, ARRAY_AGG(gau.user_id) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = groups.id 
-		LEFT JOIN 
-			(SELECT gac.group_id AS cgid, ARRAY_AGG(gac.client_id) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = groups.id
-		LEFT JOIN 
-			(SELECT gg.group_id AS ggid, ARRAY_AGG(gg.member_group_id) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = groups.id
-		WHERE id IN (%s)`, strings.Join(bind, ", "))
+	for i, d := range ids {
+		bind[i] = fmt.Sprintf("$%d", i+1)
+		intfIds[i] = d
 	}
+	sqlStatement := fmt.Sprintf(`SELECT name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
+	LEFT JOIN 
+		(SELECT gau.group_id AS ugid, ARRAY_AGG(gau.user_id) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = g.id 
+	LEFT JOIN 
+		(SELECT gac.group_id AS cgid, ARRAY_AGG(gac.client_id) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = g.id
+	LEFT JOIN 
+		(SELECT gg.group_id AS ggid, ARRAY_AGG(gg.member_group_id) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = g.id
+	WHERE id IN (%s)`, strings.Join(bind, ", "))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
