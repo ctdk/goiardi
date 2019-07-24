@@ -29,7 +29,6 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"regexp"
 )
@@ -304,8 +303,6 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Have to check here if the user who issued the invitation is still an
 	// admin for the organization
-	logger.Debugf("Do we think assoc is anything? %+v", assoc)
-	logger.Debugf("or org for that matter: %+v", org)
 	if f, ferr := org.PermCheck.RootCheckPerm(assoc.Inviter, "update"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
