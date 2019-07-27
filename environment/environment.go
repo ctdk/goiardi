@@ -306,9 +306,7 @@ func MakeDefaultEnvironment(org *organization.Organization) util.Gerror {
 		// only create the new default environment if we don't already have one
 		// saved
 		if _, found := ds.Get(org.DataKey("env"), "_default"); found {
-			err := util.Errorf("Somehow could not load organization %s's default environment", org.Name)
-			err.SetStatus(http.StatusNotFound)
-			return err
+			return nil
 		}
 		de = defaultEnvironment(org)
 		ds.Set(org.DataKey("env"), de.Name, de)
