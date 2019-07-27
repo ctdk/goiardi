@@ -33,30 +33,13 @@ type testObj struct {
 	OName   string                 `json:"org_name"`
 }
 
-type testOrg struct {
-	name string
-	id   int64
-}
-
-func (o *testOrg) GetName() string {
-	return o.name
-}
-
-func (o *testOrg) GetId() int64 {
-	return o.id
-}
-
-func (o *testOrg) SearchSchemaName() string {
-	return fmt.Sprintf(util.SearchSchemaSkel, o.id)
-}
-
 var conf *config.Conf
 
-var fakeOrg *testOrg
+var fakeOrg *DummyOrg
 
 func init() {
 	conf = &config.Conf{}
-	fakeOrg = &testOrg{"default", 1}
+	fakeOrg = &DummyOrg{"default", 1}
 	idxTmpDir = idxTmpGen()
 	conf.IndexFile = fmt.Sprintf("%s/idx.bin", idxTmpDir)
 	Initialize(conf, fakeOrg)
@@ -138,7 +121,7 @@ func TestSearchObjLoad(t *testing.T) {
 
 func TestNewOrg(t *testing.T) {
 	obj := &testObj{Name: "boo", URLType: "client", OName: "bleep"}
-	bleep := &testOrg{"bleep", 2}
+	bleep := &DummyOrg{"bleep", 2}
 	CreateOrgDex(bleep)
 	IndexObj(bleep, obj)
 	_, err := indexMap.Search(bleep, "client", "*:*", false)

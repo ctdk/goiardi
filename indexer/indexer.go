@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
 )
 
@@ -78,6 +79,29 @@ type ObjIndexer interface {
 
 type Document interface {
 }
+
+// DummyOrg was formerly a mere "testOrg" type that lived in the indexer tests
+// to allow those tests to pass. Now, however, it turns out that it's needed in
+// goiardi.go to get around the chicken and egg problem between in-mem and
+// postgres indexes and orgs. Thus, it lives here as an exported type.
+type DummyOrg struct {
+	name string
+	id   int64
+}
+
+func (o *DummyOrg) GetName() string {
+	return o.name
+}
+
+func (o *DummyOrg) GetId() int64 {
+	return o.id
+}
+
+func (o *DummyOrg) SearchSchemaName() string {
+	return fmt.Sprintf(util.SearchSchemaSkel, o.id)
+}
+
+var DefaultDummyOrg = &DummyOrg{"default", 1} // sigh	
 
 var indexMap Index
 var objIndex ObjIndexer

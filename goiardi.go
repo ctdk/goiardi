@@ -128,13 +128,26 @@ func main() {
 	gobRegister()
 	ds := datastore.New()
 
-	// bleh, ye olde chicken and egge. The default org's needed before
-	// initializing the index, but the index is needed before the default
-	// clients can be created. So, create the default org (if needed). If
-	// this somehow fails miserably it'll bomb.
-	cworg := createDefaultOrg()
+	/* bleh, ye olde chicken and egge. The default org's needed before
+	 * initializing the index, but the index is needed before the default
+	 * clients can be created. So, create the default org (if needed). If
+	 * this somehow fails miserably it'll bomb.
+	 *
+	 * Strangely, it turns out that in postgres mode the default org must
+	 * exist before the index can be initialized. In in-memory mode,
+	 * however, the index must have been created before you can make the
+	 * default organization. (sigh). We need to dance around that.
+	 */
 
-	indexer.Initialize(config.Config, cworg)
+	var cworg *organization.Organization
+	if config.UsingDB() {
+		cworg = createDefaultOrg()
+		indexer.Initialize(config.Config, cworg)
+	} else {
+		indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
+		cworg = createDefaultOrg()
+	}
+
 	if config.Config.FreezeData {
 		if config.Config.DataStoreFile != "" {
 			uerr := ds.Load(config.Config.DataStoreFile)
