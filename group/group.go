@@ -322,6 +322,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 				if err != nil {
 					return err
 				}
+				logger.Debugf("group we got? %v", addGr)
 				newGroups[gnv] = true
 				groups = append(groups, addGr)
 			}

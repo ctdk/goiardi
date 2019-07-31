@@ -77,7 +77,7 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 	// type for getting the arrays of ints out of postgres.
 
 	// eeesh, there isn't a whole lot we can fill in directly.
-	err := row.Scan(&g.Name, &orgId, &userIds, &clientIds, &groupIds)
+	err := row.Scan(&g.Name, &g.id, &orgId, &userIds, &clientIds, &groupIds)
 	if err != nil {
 		return err
 	}
@@ -86,6 +86,7 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 	if orgId != g.org.GetId() {
 		return fmt.Errorf("org id %d returned from query somehow did not match the expected id %d for %s", orgId, g.org.GetId(), g.org.Name)
 	}
+
 	/*
 	 * Only fill in the child actors & groups if it's the main group we're
 	 * interested in. Otherwise, skip over this. On the off chance we ever
@@ -105,7 +106,7 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 		// objects. Will these need to be sorted? We'll see.
 
 		if len(groupIds.val()) > 0 {
-			groupez, err := GroupsByIdSQL(groupIds.val())
+			groupez, err := GroupsByIdSQL(groupIds.val(), g.org)
 			if err != nil {
 				return err
 			}
@@ -152,7 +153,7 @@ func getGroupSQL(name string, org *organization.Organization) (*Group, error) {
 
 	// bleh, break this apart into multiple lines so there's some
 	// small hope of reading and understanding it later.
-	sqlStatement := `SELECT name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
+	sqlStatement := `SELECT name, g.id, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
 	LEFT JOIN 
 		(SELECT gau.group_id AS ugid, COALESCE(ARRAY_AGG(gau.user_id), ARRAY[]::BIGINT[]) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = g.id 
 	LEFT JOIN 
@@ -290,7 +291,7 @@ func allGroupsSQL(org *organization.Organization) ([]*Group, error) {
 
 	var groups []*Group
 
-	sqlStatement := `SELECT name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
+	sqlStatement := `SELECT name, g.id, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
 	LEFT JOIN 
 		(SELECT gau.group_id AS ugid, COALESCE(ARRAY_AGG(gau.user_id), ARRAY[]::BIGINT[]) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = g.id 
 	LEFT JOIN 
@@ -354,7 +355,7 @@ func clearActorSQL(org *organization.Organization, act actor.Actor) error {
 	return nil
 }
 
-func GroupsByIdSQL(ids []int64) ([]*Group, error) {
+func GroupsByIdSQL(ids []int64, org *organization.Organization) ([]*Group, error) {
 	if !config.UsingDB() {
 		return nil, errors.New("GroupsByIdSQL only works if you're using a database storage backend.")
 	}
@@ -362,20 +363,21 @@ func GroupsByIdSQL(ids []int64) ([]*Group, error) {
 	var groups []*Group
 
 	bind := make([]string, len(ids))
-	intfIds := make([]interface{}, len(ids))
+	intfIds := make([]interface{}, len(ids)+1)
+	intfIds[0] = org.GetId()
 
 	for i, d := range ids {
-		bind[i] = fmt.Sprintf("$%d", i+1)
-		intfIds[i] = d
+		bind[i] = fmt.Sprintf("$%d", i+2)
+		intfIds[i+1] = d
 	}
-	sqlStatement := fmt.Sprintf(`SELECT name, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
+	sqlStatement := fmt.Sprintf(`SELECT name, g.id, organization_id, u.user_ids, c.client_ids, mg.group_ids FROM goiardi.groups g
 	LEFT JOIN 
 		(SELECT gau.group_id AS ugid, ARRAY_AGG(gau.user_id) AS user_ids FROM goiardi.group_actor_users gau JOIN goiardi.groups gs ON gs.id = gau.group_id group by gau.group_id) u ON u.ugid = g.id 
 	LEFT JOIN 
 		(SELECT gac.group_id AS cgid, ARRAY_AGG(gac.client_id) AS client_ids FROM goiardi.group_actor_clients gac JOIN goiardi.groups gs ON gs.id = gac.group_id group by gac.group_id) c ON c.cgid = g.id
 	LEFT JOIN 
 		(SELECT gg.group_id AS ggid, ARRAY_AGG(gg.member_group_id) AS group_ids FROM goiardi.group_groups gg JOIN goiardi.groups gs ON gs.id = gg.group_id group by gg.group_id) mg ON mg.ggid = g.id
-	WHERE id IN (%s)`, strings.Join(bind, ", "))
+	WHERE organization_id = $1 AND id IN (%s)`, strings.Join(bind, ", "))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -391,6 +393,7 @@ func GroupsByIdSQL(ids []int64) ([]*Group, error) {
 	}
 	for rows.Next() {
 		mg := new(Group)
+		mg.org = org
 		err = mg.fillGroupFromSQL(rows)
 		if err != nil {
 			return nil, err
