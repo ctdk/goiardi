@@ -197,7 +197,8 @@ func (g *Group) Delete() util.Gerror {
 	defer g.m.RUnlock()
 	g.org.PermCheck.RemoveACLRole(g)
 	if config.UsingDB() {
-
+		// Yes, Virginia, there was a completely missing method.
+		return util.CastErr(g.deleteSQL())
 	}
 	ds := datastore.New()
 	ds.Delete(g.org.DataKey("group"), g.Name)
