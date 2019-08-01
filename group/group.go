@@ -166,6 +166,9 @@ func (g *Group) save() util.Gerror {
 		if err := g.saveSQL(); err != nil {
 			return util.CastErr(err)
 		}
+	} else {
+		ds := datastore.New()
+		ds.Set(g.org.DataKey("group"), g.Name, g)
 	}
 
 	// Save the actors and groups in the ACL
@@ -173,8 +176,6 @@ func (g *Group) save() util.Gerror {
 		return err
 	}
 
-	ds := datastore.New()
-	ds.Set(g.org.DataKey("group"), g.Name, g)
 	return nil
 }
 
@@ -285,6 +286,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 		oldMembers := g.AllMembers()
 
 		if us, uok := acts["users"].([]interface{}); uok {
+			logger.Debugf("In g.Edit: users: %v", us)
 			for _, un := range us {
 				unv, err := util.ValidateAsString(un)
 				if err != nil {
@@ -299,6 +301,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 			}
 		}
 		if cs, cok := acts["clients"].([]interface{}); cok {
+			logger.Debugf("In g.Edit: clients: %v", cs)
 			for _, cn := range cs {
 				cnv, err := util.ValidateAsString(cn)
 				if err != nil {
@@ -313,6 +316,7 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 			}
 		}
 		if grs, ok := acts["groups"].([]interface{}); ok {
+			logger.Debugf("In g.Edit: groups: %v", grs)
 			for _, gn := range grs {
 				gnv, err := util.ValidateAsString(gn)
 				if err != nil {
@@ -322,7 +326,6 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 				if err != nil {
 					return err
 				}
-				logger.Debugf("group we got? %v", addGr)
 				newGroups[gnv] = true
 				groups = append(groups, addGr)
 			}

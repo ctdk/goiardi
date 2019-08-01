@@ -486,7 +486,7 @@ func pgKeyReplace(key string, re, bs, ps *regexp.Regexp) string {
 }
 
 func spewCallers() {
-	return // TODO: make this settable with a flag. Deactivating for now.
+	//return // TODO: make this settable with a flag. Deactivating for now.
 	pc := make([]uintptr, 10)
 	n := runtime.Callers(2, pc)
 	if n == 0 {

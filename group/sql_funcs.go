@@ -32,6 +32,7 @@ import (
 	"github.com/lib/pq"
 	"net/http"
 	"strings"
+	"log"
 )
 
 // *sob*
@@ -117,6 +118,9 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 		var userez []*user.User
 		var clientez []*client.Client
 
+		log.Printf("userIds in fillGroupFromSQL: %v", userIds.val())
+		log.Printf("clientIds in fillGroupFromSQL: %v", clientIds.val())
+
 		if len(userIds.val()) > 0 {
 			userez, err = user.UsersByIdSQL(userIds.val())
 			if err != nil {
@@ -127,7 +131,7 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 		if len(clientIds.val()) > 0 {
 			clientez, err = client.ClientsByIdSQL(clientIds.val(), g.org)
 			if err != nil {
-				return nil
+				return err
 			}
 		}
 
@@ -141,6 +145,7 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 			actorez[i+clientOffset] = c
 		}
 
+		log.Printf("actorez is: %+v", actorez)
 		g.Actors = actorez
 	}
 
@@ -196,6 +201,7 @@ func (g *Group) saveSQL() error {
 
 	// and actors
 	for _, act := range g.Actors {
+		log.Printf("in saveSQL, actor is: %s is user? %v", act.GetName(), act.IsUser())
 		if act.IsUser() {
 			userIds = append(userIds, act.GetId())
 		} else {
@@ -215,7 +221,7 @@ func (g *Group) renameSQL(newName string) error {
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.rename_group($1, $2)", g.Name, newName)
+	_, err = tx.Exec("SELECT goiardi.rename_group($1, $2, $3)", g.Name, newName, g.org.GetId())
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())
