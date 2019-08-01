@@ -215,7 +215,7 @@ func (g *Group) saveSQL() error {
 // The Add/Del Actor/Group methods don't need SQL methods, so they're left out
 // in here.
 
-func (g *Group) renameSQL(newName string) error {
+func (g *Group) renameSQL(newName string) util.Gerror {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		gerr := util.Errorf(err.Error())
@@ -224,6 +224,7 @@ func (g *Group) renameSQL(newName string) error {
 	_, err = tx.Exec("SELECT goiardi.rename_group($1, $2, $3)", g.Name, newName, g.org.GetId())
 	if err != nil {
 		tx.Rollback()
+		log.Printf("rename group err: '%s'", err.Error())
 		gerr := util.Errorf(err.Error())
 		if strings.Contains(err.Error(), "already exists, cannot rename") {
 			gerr.SetStatus(http.StatusConflict)

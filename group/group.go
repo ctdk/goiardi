@@ -59,7 +59,20 @@ func New(org *organization.Organization, name string) (*Group, util.Gerror) {
 
 	var found bool
 	if config.UsingDB() {
+		// wow, forgot another db function :-/
+		tmpG, tmpErr := getGroupSQL(name, org)
 
+		if tmpErr != nil {
+			logger.Debugf("is tmpErr == to sql.ErrNoRows? %v", tmpErr == sql.ErrNoRows)
+			logger.Debugf("tmpErr: '%+v'", tmpErr)
+			logger.Debugf("sql.ErrNoRows: '%+v'", sql.ErrNoRows)
+		}
+		if tmpErr != nil && tmpErr != sql.ErrNoRows {
+			return nil, util.CastErr(tmpErr)
+		}
+		if tmpG != nil {
+			found = true
+		}
 	} else {
 		ds := datastore.New()
 		_, found = ds.Get(org.DataKey("group"), name)
@@ -84,7 +97,12 @@ func Get(org *organization.Organization, name string) (*Group, util.Gerror) {
 	if config.UsingDB() {
 		g, err := getGroupSQL(name, org)
 		if err != nil {
-			return nil, util.CastErr(err)
+			uerr := util.CastErr(err)
+			// d'oh
+			if err == sql.ErrNoRows {
+				uerr.SetStatus(http.StatusNotFound)
+			}
+			return nil, uerr
 		}
 		return g, nil
 	}
@@ -139,7 +157,7 @@ func (g *Group) Rename(newName string) util.Gerror {
 	oldName := g.Name
 	if config.UsingDB() {
 		if err := g.renameSQL(newName); err != nil {
-			return util.CastErr(err)
+			return err
 		}
 	} else {
 		ds := datastore.New()
@@ -200,10 +218,13 @@ func (g *Group) Delete() util.Gerror {
 	if config.UsingDB() {
 		// Yes, Virginia, there was a completely missing method.
 		if derr := g.deleteSQL(); derr != nil {
+			logger.Debugf("we have a derr: %s", derr.Error())
 			uerr := util.CastErr(derr)
 			if derr == sql.ErrNoRows {
+				logger.Debugf("derr did == sql.ErrNoRows")
 				uerr.SetStatus(http.StatusNotFound)
 			}
+			logger.Debugf("after all is said and done, uerr is %+v", uerr)
 			return uerr
 		}
 		return nil
