@@ -17,6 +17,7 @@
 package group
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
@@ -198,7 +199,14 @@ func (g *Group) Delete() util.Gerror {
 	g.org.PermCheck.RemoveACLRole(g)
 	if config.UsingDB() {
 		// Yes, Virginia, there was a completely missing method.
-		return util.CastErr(g.deleteSQL())
+		if derr := g.deleteSQL(); derr != nil {
+			uerr := util.CastErr(derr)
+			if derr == sql.ErrNoRows {
+				uerr.SetStatus(http.StatusNotFound)
+			}
+			return uerr
+		}
+		return nil
 	}
 	ds := datastore.New()
 	ds.Delete(g.org.DataKey("group"), g.Name)
