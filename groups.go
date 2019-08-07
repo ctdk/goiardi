@@ -55,7 +55,7 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 
 	// hmm
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		if f, err := org.PermCheck.CheckItemPerm(g, opUser, "read"); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
@@ -63,7 +63,7 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "you are not allowed to perform that action", http.StatusForbidden)
 			return
 		}
-	case "DELETE":
+	case http.MethodDelete:
 		if f, err := org.PermCheck.CheckItemPerm(g, opUser, "delete"); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
@@ -76,7 +76,7 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
-	case "PUT":
+	case http.MethodPut:
 		if f, err := org.PermCheck.CheckItemPerm(g, opUser, "update"); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
@@ -151,13 +151,13 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 
 	var response map[string]interface{}
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		groups := group.AllGroups(org)
 		response = make(map[string]interface{})
 		for _, g := range groups {
 			response[g.Name] = util.ObjURL(g)
 		}
-	case "POST":
+	case http.MethodPost:
 		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "groups", "create"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
