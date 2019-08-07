@@ -520,7 +520,7 @@ func (c *Checker) RemoveACLRole(gRole aclhelper.Role) error {
 	}()
 
 	if polErr := c.e.LoadPolicy(); polErr != nil {
-		return util.CastErr(polErr)
+		return polErr
 	}
 	c.e.DeleteRole(gRole.ACLName())
 	return c.e.SavePolicy()
