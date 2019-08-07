@@ -162,7 +162,15 @@ func (g *Group) Rename(newName string) util.Gerror {
 			return err
 		}
 		ds.Delete(g.org.DataKey("group"), g.Name)
-		g.org.PermCheck.RemoveACLRole(g)
+
+		// Wait a sec, I think maybe this shouldn't be here? I don't
+		// the RenameItemACL below will work properly if this stays.
+		/* if aerr := g.org.PermCheck.RemoveACLRole(g); aerr != nil {
+			uerr := util.CastErr(aerr)
+			uerr.SetStatus(http.StatusInternalServerError)
+			return uerr
+		} */
+
 		g.Name = newName
 		err := g.save()
 		if err != nil {
@@ -213,7 +221,6 @@ func (g *Group) Delete() util.Gerror {
 	if config.UsingDB() {
 		// Yes, Virginia, there was a completely missing method.
 		if derr := g.deleteSQL(); derr != nil {
-			logger.Debugf("we have a derr: %s", derr.Error())
 			uerr := util.CastErr(derr)
 			if derr == sql.ErrNoRows {
 				logger.Debugf("derr did == sql.ErrNoRows")
@@ -222,18 +229,19 @@ func (g *Group) Delete() util.Gerror {
 			logger.Debugf("after all is said and done, uerr is %+v", uerr)
 			return uerr
 		}
-		return nil
-	}
-	ds := datastore.New()
-	ds.Delete(g.org.DataKey("group"), g.Name)
-	ag := AllGroups(g.org)
-	for _, cg := range ag {
-		j, _ := cg.checkForGroup(g.Name)
-		if j {
-			cg.DelGroup(g)
-			cg.Save()
+	} else {
+		ds := datastore.New()
+		ds.Delete(g.org.DataKey("group"), g.Name)
+		ag := AllGroups(g.org)
+		for _, cg := range ag {
+			j, _ := cg.checkForGroup(g.Name)
+			if j {
+				cg.DelGroup(g)
+				cg.Save()
+			}
 		}
 	}
+
 	_, aerr := g.org.PermCheck.DeleteItemACL(g)
 	if aerr != nil {
 		return util.CastErr(aerr)
