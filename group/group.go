@@ -62,11 +62,6 @@ func New(org *organization.Organization, name string) (*Group, util.Gerror) {
 		// wow, forgot another db function :-/
 		tmpG, tmpErr := getGroupSQL(name, org)
 
-		if tmpErr != nil {
-			logger.Debugf("is tmpErr == to sql.ErrNoRows? %v", tmpErr == sql.ErrNoRows)
-			logger.Debugf("tmpErr: '%+v'", tmpErr)
-			logger.Debugf("sql.ErrNoRows: '%+v'", sql.ErrNoRows)
-		}
 		if tmpErr != nil && tmpErr != sql.ErrNoRows {
 			return nil, util.CastErr(tmpErr)
 		}

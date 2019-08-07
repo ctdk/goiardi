@@ -21,7 +21,6 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/lib/pq"
 	"net/http"
-	"log"
 )
 
 // anything specific enough to postgres that weird conditionals inside a common
@@ -33,9 +32,6 @@ func (g *Group) savePostgreSQL(userIds []int64, clientIds []int64, groupIds []in
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	log.Printf("group savePostgreSQL user ids: %v", userIds)
-	log.Printf("group savePostgreSQL client ids: %v", clientIds)
-	log.Printf("group savePostgreSQL group ids: %v", groupIds)
 
 	_, err = tx.Exec("SELECT goiardi.merge_groups($1, $2, $3, $4, $5)", g.Name, g.org.GetId(), pq.Int64Array(userIds), pq.Int64Array(clientIds), pq.Int64Array(groupIds))
 	if err != nil {

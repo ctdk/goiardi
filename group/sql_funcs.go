@@ -201,7 +201,6 @@ func (g *Group) saveSQL() error {
 
 	// and actors
 	for _, act := range g.Actors {
-		log.Printf("in saveSQL, actor is: %s is user? %v", act.GetName(), act.IsUser())
 		if act.IsUser() {
 			userIds = append(userIds, act.GetId())
 		} else {
