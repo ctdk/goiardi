@@ -51,14 +51,22 @@ type LogInfo struct {
 	org          *organization.Organization
 }
 
+// TODO: make me a config option
+const debugLogEvent = false
+
 // LogEvent writes an event of the action type, performed by the given actor,
 // against the given object.
 func LogEvent(org *organization.Organization, doer actor.Actor, obj util.GoiardiObj, action string) error {
 	if !config.Config.LogEvents {
-		logger.Debugf("Not logging this event")
+		if debugLogEvent {
+			logger.Debugf("Not logging this event")
+		}
 		return nil
 	}
-	logger.Debugf("Logging event")
+
+	if debugLogEvent {
+		logger.Debugf("Logging event")
+	}
 
 	var actorType string
 	if doer.IsUser() {
