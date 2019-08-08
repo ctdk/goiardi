@@ -55,7 +55,7 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 	response := make(map[string]interface{})
 
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		if f, ferr := org.PermCheck.CheckItemPerm(con, opUser, "read"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
@@ -63,7 +63,7 @@ func containerHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
 			return
 		}
-	case "DELETE":
+	case http.MethodDelete:
 		if f, ferr := org.PermCheck.CheckItemPerm(con, opUser, "delete"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
@@ -119,7 +119,7 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 	var response interface{}
 
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		cList := container.GetList(org)
 		rp := make(map[string]interface{})
 		for _, c := range cList {
@@ -127,7 +127,7 @@ func containerListHandler(w http.ResponseWriter, r *http.Request) {
 			rp[c] = util.CustomURL(conURL)
 		}
 		response = rp
-	case "POST":
+	case http.MethodPost:
 		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "containers", "create"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
