@@ -85,6 +85,8 @@ func Get(org *organization.Organization, name string) (*Container, util.Gerror) 
 			} else {
 				return nil, util.CastErr(err)
 			}
+		} else {
+			found = true // mother... x2
 		}
 	} else {
 		ds := datastore.New()

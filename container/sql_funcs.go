@@ -55,14 +55,9 @@ func (c *Container) fillContainerFromSQL(row datastore.ResRow) error {
 }
 
 func getContainerSQL(name string, org *organization.Organization) (*Container, error) {
-	var sqlStatement string
 	c := new(Container)
 
-	if config.Config.UseMySQL {
-		sqlStatement = "SELECT name, organization_id FROM containers WHERE organization_id = ? AND name = ?"
-	} else if config.Config.UsePostgreSQL {
-		sqlStatement = "SELECT name, organization_id FROM goiardi.containers WHERE organization_id = $1 AND name = $2"
-	}
+	sqlStatement := "SELECT name, organization_id FROM goiardi.containers WHERE organization_id = $1 AND name = $2"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -80,14 +75,7 @@ func getContainerSQL(name string, org *organization.Organization) (*Container, e
 // There doesn't seem to be any sort of case where you would need to update a
 // container once it's been created, so here we get to just go an insert.
 func (c *Container) saveSQL() error {
-	var sqlStmt string
-
-	// Will we keep MySQL? I'm still uncertain.
-	if config.Config.UseMySQL {
-
-	} else {
-		sqlStmt = "INSERT INTO goiardi.containers (name, organization_id, created_at, updated_at) VALUES ($1, $2, NOW(), NOW())"
-	}
+	sqlStmt := "INSERT INTO goiardi.containers (name, organization_id, created_at, updated_at) VALUES ($1, $2, NOW(), NOW())"
 
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
