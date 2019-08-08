@@ -45,6 +45,7 @@ type PgQuery struct {
 	fullQuery    string
 	allArgs      []interface{}
 	searchSchema string
+	org *organization.Organization
 }
 
 type gClause struct {
@@ -64,7 +65,7 @@ func (p *PostgresSearch) Search(org *organization.Organization, idx string, q st
 	}
 	defer stmt.Close()
 	var zzz int
-	serr = stmt.QueryRow(1, idx).Scan(&zzz) // don't care about zzz
+	serr = stmt.QueryRow(org.GetId(), idx).Scan(&zzz) // don't care about zzz
 	if serr != nil {
 		if serr == sql.ErrNoRows {
 			serr = fmt.Errorf("I don't know how to search for %s data objects.", idx)
@@ -99,9 +100,9 @@ func (p *PostgresSearch) Search(org *organization.Organization, idx string, q st
 		}
 		defer stmt.Close()
 		if builtinIdx {
-			err = stmt.QueryRow(1).Scan(&res)
+			err = stmt.QueryRow(org.GetId()).Scan(&res)
 		} else {
-			err = stmt.QueryRow(1, idx).Scan(&res)
+			err = stmt.QueryRow(org.GetId(), idx).Scan(&res)
 		}
 		if err != nil && err != sql.ErrNoRows {
 			return nil, err
@@ -117,7 +118,7 @@ func (p *PostgresSearch) Search(org *organization.Organization, idx string, q st
 		qq.Execute()
 		qchain := qq.Evaluate()
 
-		pgQ := &PgQuery{idx: idx, queryChain: qchain, searchSchema: searchSchema}
+		pgQ := &PgQuery{idx: idx, queryChain: qchain, searchSchema: searchSchema, org: org}
 
 		err := pgQ.execute()
 		if err != nil {
@@ -246,7 +247,7 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 				return nerr
 			}
 			p = nend
-			np := &PgQuery{queryChain: newq, searchSchema: pq.searchSchema}
+			np := &PgQuery{queryChain: newq, searchSchema: pq.searchSchema, org: pq.org}
 			err := np.execute(t)
 			if err != nil {
 				return err
@@ -265,7 +266,7 @@ func (pq *PgQuery) execute(startTableID ...*int) error {
 		curOp = p.Op()
 		p = p.Next()
 	}
-	fullQ, allArgs := craftFullQuery(1, pq.idx, pq.paths, pq.arguments, pq.queryStrs, t, pq.searchSchema)
+	fullQ, allArgs := craftFullQuery(pq.org.GetId(), pq.idx, pq.paths, pq.arguments, pq.queryStrs, t, pq.searchSchema)
 	searchQueryDebugf("pg search info:")
 	searchQueryDebugf("pg search schema: %s", pq.searchSchema)
 	searchQueryDebugf("full query: %s", fullQ)
@@ -329,13 +330,10 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op, searchSchema
 		// i.item_name = found_items.item_name AND found_items.path
 		// OPERATOR(goiardi.~) 'action'))
 
-		q = fmt.Sprintf("((f%d.path OPERATOR(%s.~) _ARG_ AND f%d.value %s _ARG_) %s (f%d.path OPERATOR(%s.~) _ARG_))", *tNum, searchSchema, *tNum, cop, clauseJoin, *tNum, searchSchema)
+		q = fmt.Sprintf("((f%d.path OPERATOR(goiardi.~) _ARG_ AND f%d.value %s _ARG_) %s (f%d.path OPERATOR(goiardi.~) _ARG_))", *tNum, *tNum, cop, clauseJoin, *tNum)
 		if notPath {
-			q = fmt.Sprintf("("+q+" OR NOT EXISTS (SELECT 1 FROM found_items WHERE i.item_name = found_items.item_name AND found_items.path OPERATOR(%s.~) _ARG_))", searchSchema)
+			q = fmt.Sprintf("("+q+" OR NOT EXISTS (SELECT 1 FROM found_items WHERE i.item_name = found_items.item_name AND found_items.path OPERATOR(goiardi.~) _ARG_))")
 		}
-		/*******
-		q = fmt.Sprintf("%s((f%d.path OPERATOR(%s.~) _ARG_ AND f%d.value %s _ARG_) %s (f%d.path OPERATOR(%s.~) _ARG_))", opStr, *tNum, searchSchema, *tNum, cop, clauseJoin, *tNum, searchSchema)
-		*******/
 		q = opStr + q
 
 		args = append(args, string(term.term))
@@ -379,7 +377,7 @@ func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op, searchS
 		groupedArgs = append(groupedArgs, fmt.Sprintf("%s.%s%s", basePath, ltreeNot, util.PgSearchQueryKey(string(orgTerm))))
 		ltNum++
 
-		groupedPaths = append(groupedPaths, &gClause{fmt.Sprintf("f%d.path OPERATOR(%s.~) _ARG_", ltNum, searchSchema), v.mod})
+		groupedPaths = append(groupedPaths, &gClause{fmt.Sprintf("f%d.path OPERATOR(goiardi.~) _ARG_", ltNum), v.mod})
 		args = append(args, string(v.term))
 	}
 	var clauseArr []string
@@ -408,7 +406,7 @@ func buildGroupedQuery(field Field, terms []QueryTerm, tNum *int, op Op, searchS
 	}
 	clauses := strings.Join(clauseArr, " ")
 	ltClauses := strings.Join(ltClauseArr, " ")
-	q = fmt.Sprintf("%s((f%d.path OPERATOR(%s.~) _ARG_ AND (%s)) OR (%s))", opStr, *tNum, searchSchema, clauses, ltClauses)
+	q = fmt.Sprintf("%s((f%d.path OPERATOR(goiardi.~) _ARG_ AND (%s)) OR (%s))", opStr, *tNum, clauses, ltClauses)
 	*tNum = ltNum
 	args = append(args, groupedArgs...)
 	return args, xtraPath, q
@@ -442,14 +440,14 @@ func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool
 		s := fmt.Sprintf("f%d.value >%s _ARG_", *tNum, equals)
 		ranges = append(ranges, s)
 		args = append(args, string(start))
-		rangePaths = append(rangePaths, fmt.Sprintf("f%d.path OPERATOR(%s.>%s) _ARG_", *tNum, searchSchema, equals))
+		rangePaths = append(rangePaths, fmt.Sprintf("f%d.path OPERATOR(goiardi.>%s) _ARG_", *tNum, equals))
 		rangeArgs = append(rangeArgs, fmt.Sprintf("%s.%s", string(field), util.PgSearchQueryKey(string(start))))
 	}
 	if string(end) != "*" {
 		e := fmt.Sprintf("f%d.value <%s _ARG_", *tNum, equals)
 		ranges = append(ranges, e)
 		args = append(args, string(end))
-		rangePaths = append(rangePaths, fmt.Sprintf("f%d.path OPERATOR(%s.<%s) _ARG_", *tNum, searchSchema, equals))
+		rangePaths = append(rangePaths, fmt.Sprintf("f%d.path OPERATOR(goiardi.<%s) _ARG_", *tNum, equals))
 		rangeArgs = append(rangeArgs, fmt.Sprintf("%s.%s", string(field), util.PgSearchQueryKey(string(end))))
 	}
 
@@ -464,9 +462,9 @@ func buildRangeQuery(field Field, start RangeTerm, end RangeTerm, inclusive bool
 		rangeStr = fmt.Sprintf(" AND (%s)", strings.Join(ranges, " AND "))
 		// Add the first path match to keep the range query with ltrees
 		// from shooting off into the distance
-		rangePathStr = fmt.Sprintf(" OR (f%d.path OPERATOR(%s.~) _ARG_ AND %s)", *tNum, searchSchema, strings.Join(rangePaths, " AND "))
+		rangePathStr = fmt.Sprintf(" OR (f%d.path OPERATOR(goiardi.~) _ARG_ AND %s)", *tNum, strings.Join(rangePaths, " AND "))
 	}
-	q = fmt.Sprintf("%s%s(f%d.path OPERATOR(%s.~) _ARG_%s%s)", opStr, notRange, *tNum, searchSchema, rangeStr, rangePathStr)
+	q = fmt.Sprintf("%s%s(f%d.path OPERATOR(goiardi.~) _ARG_%s%s)", opStr, notRange, *tNum, rangeStr, rangePathStr)
 	return args, xtraPath, q
 }
 
@@ -502,7 +500,7 @@ func binOp(op Op) string {
 	return opStr
 }
 
-func craftFullQuery(orgID int, idx string, paths []string, arguments []string, queryStrs []string, tNum *int, searchSchema string) (string, []interface{}) {
+func craftFullQuery(orgID int64, idx string, paths []string, arguments []string, queryStrs []string, tNum *int, searchSchema string) (string, []interface{}) {
 	allArgs := make([]interface{}, 0, len(paths)+len(arguments)+2)
 	allArgs = append(allArgs, orgID)
 	allArgs = append(allArgs, idx)
@@ -518,7 +516,7 @@ func craftFullQuery(orgID int, idx string, paths []string, arguments []string, q
 
 	var itemsStatement string
 	if idx == "node" || idx == "client" || idx == "environment" || idx == "role" {
-		itemsStatement = fmt.Sprintf("SELECT name AS item_name FROM %s.%ss WHERE organization_id = $1", searchSchema, idx)
+		itemsStatement = fmt.Sprintf("SELECT name AS item_name FROM goiardi.%ss WHERE organization_id = $1", idx)
 	} else {
 		itemsStatement = fmt.Sprintf("SELECT orig_name AS item_name FROM %s.data_bag_items JOIN %s.data_bags ON %s.data_bag_items.data_bag_id = %s.data_bags.id WHERE %s.data_bags.organization_id = $1 AND %s.data_bags.name = $2", searchSchema, searchSchema, searchSchema, searchSchema, searchSchema, searchSchema)
 		pcount = 3
@@ -530,7 +528,7 @@ func craftFullQuery(orgID int, idx string, paths []string, arguments []string, q
 		pcount++
 	}
 
-	withStatement := fmt.Sprintf("WITH found_items AS (SELECT item_name, path, value FROM %s.search_items si WHERE si.organization_id = $1 AND si.search_collection_id = (SELECT id FROM %s.search_collections WHERE name = $2) AND path OPERATOR(%s.?) ARRAY[ %s ]::%s.lquery[]), items AS (%s)", searchSchema, searchSchema, searchSchema, strings.Join(params, ", "), searchSchema, itemsStatement)
+	withStatement := fmt.Sprintf("WITH found_items AS (SELECT item_name, path, value FROM %s.search_items si WHERE si.organization_id = $1 AND si.search_collection_id = (SELECT id FROM %s.search_collections WHERE name = $2) AND path OPERATOR(goiardi.?) ARRAY[ %s ]::goiardi.lquery[]), items AS (%s)", searchSchema, searchSchema, strings.Join(params, ", "), itemsStatement)
 	var selectStmt string
 	if *tNum == 1 {
 		selectStmt = fmt.Sprintf("SELECT COALESCE(ARRAY_AGG(DISTINCT item_name), '{}'::text[]) FROM found_items f0 WHERE %s", queryStrs[0])

@@ -82,18 +82,13 @@ func getMultiSQL(clientNames []string, org *organization.Organization) ([]*Clien
 		return nil, err
 	}
 	defer stmt.Close()
-	nameArgs := make([]interface{}, len(clientNames))
+	nameArgs := make([]interface{}, len(clientNames) + 1)
+	nameArgs[0] = org.GetId()
 	for i, v := range clientNames {
-		nameArgs[i] = v
-	}
-	qargs := make([]interface{}, len(nameArgs)+1)
-	qargs[0] = org.GetId()
-
-	for i, v := range nameArgs {
-		qargs[i+1] = v
+		nameArgs[i+1] = v
 	}
 
-	rows, err := stmt.Query(qargs)
+	rows, err := stmt.Query(nameArgs...)
 	if err != nil {
 		return nil, err
 	}

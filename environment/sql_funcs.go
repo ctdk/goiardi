@@ -115,7 +115,7 @@ func getMultiSQL(envNames []string, org *organization.Organization) ([]*ChefEnvi
 	nameArgs[0] = org.GetId()
 
 	for i, v := range envNames {
-		nameArgs[i] = v
+		nameArgs[i+1] = v
 	}
 	rows, err := stmt.Query(nameArgs...)
 	if err != nil {

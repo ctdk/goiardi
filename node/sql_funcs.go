@@ -116,7 +116,7 @@ func getMultiSQL(org *organization.Organization, nodeNames []string) ([]*Node, e
 		return nil, err
 	}
 	defer stmt.Close()
-	nameArgs := make([]interface{}, len(nodeNames))
+	nameArgs := make([]interface{}, len(nodeNames)+1)
 	nameArgs[0] = org.GetId()
 	for i, v := range nodeNames {
 		nameArgs[i+1] = v
