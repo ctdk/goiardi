@@ -45,12 +45,11 @@ import (
 // explained elsewhere.
 type User struct {
 	Username    string `json:"username"`
-	Name        string `json:"name"`
+	Name        string `json:"display_name"`
 	Email       string `json:"email"`
 	Admin       bool   `json:"admin"`
 	FirstName   string `json:"first_name"`
 	LastName    string `json:"last_name"`
-	DisplayName string `json:"display_name"`
 	Recoveror   bool   `json:"recovery_authentication_enabled"`
 	pubKey      string
 	passwd      string
@@ -61,12 +60,11 @@ type User struct {
 
 type privUser struct {
 	Username    *string `json:"username"`
-	Name        *string `json:"name"`
+	Name        *string `json:"display_name"`
 	Email       *string `json:"email"`
 	Admin       *bool   `json:"admin"`
 	FirstName   *string `json:"first_name"`
 	LastName    *string `json:"last_name"`
-	DisplayName *string `json:"display_name"`
 	PublicKey   *string `json:"public_key"`
 	Passwd      *string `json:"password"`
 	Salt        *[]byte `json:"salt"`
@@ -296,9 +294,12 @@ func (u *User) Rename(newName string) util.Gerror {
 func NewFromJSON(jsonUser map[string]interface{}) (*User, util.Gerror) {
 	var nameFromJSON interface{}
 	var ok bool
-	if nameFromJSON, ok = jsonUser["name"]; !ok {
-		nameFromJSON, ok = jsonUser["username"]
+	if nameFromJSON, ok = jsonUser["display_name"]; !ok {
+		if nameFromJSON, ok = jsonUser["name"]; !ok {
+			nameFromJSON, ok = jsonUser["username"]
+		}
 	}
+
 	userName, nerr := util.ValidateAsString(nameFromJSON)
 	if nerr != nil {
 		return nil, nerr
@@ -403,7 +404,7 @@ func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
 		if verr != nil {
 			return verr
 		}
-		u.DisplayName = d
+		u.Name = d
 	} else {
 		return util.Errorf("no display_name given")
 	}
@@ -466,7 +467,7 @@ func (u *User) ToJSON() map[string]interface{} {
 	toJSON["email"] = u.Email
 	toJSON["first_name"] = u.FirstName
 	toJSON["last_name"] = u.LastName
-	toJSON["display_name"] = u.DisplayName
+	toJSON["display_name"] = u.Name
 	toJSON["public_key"] = u.PublicKey()
 
 	return toJSON
@@ -690,7 +691,7 @@ func (u *User) OrgName() string {
 }
 
 func (u *User) export() *privUser {
-	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt, FirstName: &u.FirstName, LastName: &u.LastName, DisplayName: &u.DisplayName, Recoveror: &u.Recoveror, AuthzID: &u.AuthzID}
+	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt, FirstName: &u.FirstName, LastName: &u.LastName, Recoveror: &u.Recoveror, AuthzID: &u.AuthzID}
 }
 
 func (u *User) GobEncode() ([]byte, error) {

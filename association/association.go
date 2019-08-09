@@ -27,6 +27,7 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"net/url"
 )
 
 type Association struct {
@@ -43,7 +44,8 @@ type AssociationReq struct {
 }
 
 func (a *AssociationReq) Key() string {
-	return util.JoinStr(a.User.Name, "-", a.Org.Name)
+	// *rolls eyes*
+	return url.PathEscape(util.JoinStr(a.User.Name, "-", a.Org.Name))
 }
 
 func (a *Association) Key() string {
