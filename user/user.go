@@ -660,6 +660,7 @@ func (u *User) Passwd() string {
 
 func validateUserName(name string) util.Gerror {
 	if !util.ValidateUserName(name) {
+		logger.Debugf("invalid name is: '%s'", name)
 		err := util.Errorf("Field 'name' invalid")
 		return err
 	}
