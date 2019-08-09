@@ -127,7 +127,7 @@ func Get(name string) (*User, util.Gerror) {
 				gerr = util.Errorf(err.Error())
 				gerr.SetStatus(http.StatusInternalServerError)
 			} else {
-				gerr = util.Errorf("Client %s not found", name)
+				gerr = util.Errorf("User %s not found", name)
 				gerr.SetStatus(http.StatusNotFound)
 			}
 			return nil, gerr
