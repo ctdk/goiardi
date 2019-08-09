@@ -33,7 +33,7 @@ func (u *User) savePostgreSQL() util.Gerror {
 		gerr := util.CastErr(err)
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.merge_users($1, $2, $3, $4, $5, $6, $7, $8)", u.Username, u.Name, u.Email, u.Admin, u.pubKey, u.passwd, u.salt, defaultOrgID)
+	err = tx.QueryRow("SELECT goiardi.merge_users($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)", u.Username, u.Name, u.Email, u.Admin, u.pubKey, u.passwd, u.salt, u.FirstName, u.LastName, u.Recoveror, u.AuthzID).Scan(&u.id)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)
@@ -52,11 +52,11 @@ func (u *User) renamePostgreSQL(newName string) util.Gerror {
 		gerr := util.Errorf(err.Error())
 		return gerr
 	}
-	_, err = tx.Exec("SELECT goiardi.rename_user($1, $2, $3)", u.Username, newName, defaultOrgID)
+	_, err = tx.Exec("SELECT goiardi.rename_user($1, $2)", u.Username, newName)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.Errorf(err.Error())
-		if strings.HasPrefix(err.Error(), "a client  with") || strings.Contains(err.Error(), "already exists, cannot rename") {
+		if strings.HasPrefix(err.Error(), "one or more clients") || strings.Contains(err.Error(), "already exists, cannot rename") {
 			gerr.SetStatus(http.StatusConflict)
 		} else {
 			gerr.SetStatus(http.StatusInternalServerError)

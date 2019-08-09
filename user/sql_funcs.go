@@ -52,21 +52,45 @@ func checkForUserSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
 
 func (u *User) fillUserFromSQL(row datastore.ResRow) error {
 	var email sql.NullString
-	err := row.Scan(&u.Username, &u.Name, &u.Admin, &u.pubKey, &email, &u.passwd, &u.salt, &u.id)
+	var fName sql.NullString
+	var lName sql.NullString
+	var authzId sql.NullString
+
+	err := row.Scan(&u.Username, &u.Name, &u.Admin, &u.pubKey, &email, &u.passwd, &u.salt, &u.id, &fName, &lName, &u.Recoveror, &authzId)
 	if err != nil {
 		return err
 	}
+
 	if !email.Valid {
 		u.Email = ""
 	} else {
 		u.Email = email.String
 	}
+
+	if !fName.Valid {
+		u.FirstName = ""
+	} else {
+		u.FirstName = fName.String
+	}
+
+	if !lName.Valid {
+		u.LastName = ""
+	} else {
+		u.LastName = lName.String
+	}
+
+	if !authzId.Valid {
+		u.AuthzID = ""
+	} else {
+		u.AuthzID = authzId.String
+	}
+
 	return nil
 }
 
 func getUserSQL(name string) (*User, error) {
 	user := new(User)
-	sqlStatement := "select name, displayname, admin, public_key, email, passwd, salt, id FROM goiardi.users WHERE name = $1"
+	sqlStatement := "SELECT name, displayname, admin, public_key, email, passwd, salt, id, first_name, last_name, recoveror, authz_id FROM goiardi.users WHERE name = $1"
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
 		return nil, err
@@ -141,7 +165,7 @@ func getListSQL() []string {
 
 func allUsersSQL() []*User {
 	var users []*User
-	sqlStatement := "SELECT name, displayname, admin, public_key, email, passwd, salt FROM goiardi.users"
+	sqlStatement := "SELECT name, displayname, admin, public_key, email, passwd, salt, id, first_name, last_name, recoveror, authz_id FROM goiardi.users"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -184,7 +208,7 @@ func UsersByIdSQL(ids []int64) ([]*User, error) {
 		bind[i] = fmt.Sprintf("$%d", i+1)
 		intfIds[i] = d
 	}
-	sqlStatement := fmt.Sprintf("SELECT name, displayname, admin, public_key, email, passwd, salt, id FROM goiardi.users WHERE id IN (%s)", strings.Join(bind, ", "))
+	sqlStatement := fmt.Sprintf("SELECT name, displayname, admin, public_key, email, passwd, salt, id, first_name, last_name, recoveror, authz_id FROM goiardi.users WHERE id IN (%s)", strings.Join(bind, ", "))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {

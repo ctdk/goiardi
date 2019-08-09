@@ -42,7 +42,7 @@ func checkForClientSQL(dbhandle datastore.Dbhandle, org *organization.Organizati
 
 // TODO: Don't fill the client Orgname like this
 func (c *Client) fillClientFromSQL(row datastore.ResRow) error {
-	err := row.Scan(&c.Name, &c.NodeName, &c.Validator, &c.Admin, &c.Orgname, &c.pubKey, &c.Certificate, &c.id)
+	err := row.Scan(&c.Name, &c.NodeName, &c.Validator, &c.Admin, &c.Orgname, &c.pubKey, &c.Certificate, &c.AuthzID, &c.id)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func getClientSQL(name string, org *organization.Organization) (*Client, error) 
 	client := new(Client)
 	client.org = org
 
-	sqlStatement := "select c.name, nodename, validator, admin, o.name, public_key, certificate, c.id FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE organization_id = $1 AND c.name = $2"
+	sqlStatement := "select c.name, nodename, validator, admin, o.name, public_key, certificate, authz_id, c.id FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE organization_id = $1 AND c.name = $2"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -76,7 +76,7 @@ func getMultiSQL(clientNames []string, org *organization.Organization) ([]*Clien
 	for i := range clientNames {
 		bind[i] = fmt.Sprintf("$%d", i+2)
 	}
-	sqlStmt := fmt.Sprintf("select c.name, nodename, validator, admin, o.name, public_key, certificate, c.id FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE organization_id = $1 AND c.name IN (%s)", strings.Join(bind, ", "))
+	sqlStmt := fmt.Sprintf("select c.name, nodename, validator, admin, o.name, public_key, certificate, authz_id, c.id FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE organization_id = $1 AND c.name IN (%s)", strings.Join(bind, ", "))
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
@@ -176,7 +176,7 @@ func getListSQL(org *organization.Organization) []string {
 func allClientsSQL(org *organization.Organization) []*Client {
 	var clients []*Client
 	var sqlStatement string
-	sqlStatement = "SELECT c.name, nodename, validator, admin, o.name, public_key, certificate FROM goiardi.clients c JOIN goiardi.organizations o ON c.organization_id = o.id WHERE organization_id = $1"
+	sqlStatement = "SELECT c.name, nodename, validator, admin, o.name, public_key, certificate, authz_id, id FROM goiardi.clients c JOIN goiardi.organizations o ON c.organization_id = o.id WHERE organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -224,7 +224,7 @@ func ClientsByIdSQL(ids []int64, org *organization.Organization) ([]*Client, err
 
 	// Make this a little bit safer and less likely to accidentally be able
 	// to return clients that don't belong to this org.
-	sqlStatement := fmt.Sprintf("SELECT c.name, nodename, validator, admin, o.name, public_key, certificate, c.id FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE organization_id = $1 AND c.id IN (%s)", strings.Join(bind, ", "))
+	sqlStatement := fmt.Sprintf("SELECT c.name, nodename, validator, admin, o.name, public_key, certificate, authz_id, c.id FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE organization_id = $1 AND c.id IN (%s)", strings.Join(bind, ", "))
 	log.Printf("sqlStatement: '%s'", sqlStatement)
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
