@@ -194,16 +194,17 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 
 		var nameFromJSON interface{}
 		var ok bool
-		if nameFromJSON, ok = userData["name"]; !ok {
-			nameFromJSON, _ = userData["username"]
+		if nameFromJSON, ok = userData["username"]; !ok {
+			nameFromJSON, _ = userData["name"]
 		}
+		
 		jsonName, sterr := util.ValidateAsString(nameFromJSON)
 		if sterr != nil {
 			jsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
 			return
 		}
 
-		/* If userName and userData["name"] aren't the
+		/* If userName and userData["username"] aren't the
 		 * same, we're renaming. Check the new name doesn't
 		 * already exist. */
 		jsonUser := chefUser.ToJSON()
@@ -432,8 +433,8 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		var nameFromJSON interface{}
 		var ok bool
-		if nameFromJSON, ok = userData["name"]; !ok {
-			nameFromJSON, _ = userData["username"]
+		if nameFromJSON, ok = userData["username"]; !ok {
+			nameFromJSON, _ = userData["name"]
 		}
 		userName, sterr := util.ValidateAsString(nameFromJSON)
 		if sterr != nil || userName == "" {
@@ -483,7 +484,7 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
-		userResponse["uri"] = util.CustomURL(util.JoinStr("/users/", chefUser.Name))
+		userResponse["uri"] = util.CustomURL(util.JoinStr("/users/", chefUser.Username))
 		w.WriteHeader(http.StatusCreated)
 	default:
 		jsonErrorReport(w, r, "Method not allowed for clients or users", http.StatusMethodNotAllowed)

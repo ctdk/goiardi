@@ -152,7 +152,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 				for i, ua := range userReqs {
 					m := make(map[string]interface{})
 					m["id"] = ua.Key()
-					m["username"] = ua.User.Name
+					m["username"] = ua.User.Username
 					oR[i] = m
 				}
 				orgResponse = oR

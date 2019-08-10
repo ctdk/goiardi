@@ -626,7 +626,7 @@ func createDefaultActors(cworg *organization.Organization) {
 				os.Exit(1)
 			}
 			if config.Config.UseAuth {
-				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, admin.Name)); ferr == nil {
+				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, admin.Username)); ferr == nil {
 					fp.Chmod(0600)
 					fp.WriteString(pem)
 					fp.Close()

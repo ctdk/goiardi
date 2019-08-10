@@ -69,7 +69,7 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 	response := make([]map[string]map[string]string, len(userList))
 	for i, u := range userList {
 		ur := make(map[string]map[string]string)
-		ur["user"] = map[string]string{"username": u.Name}
+		ur["user"] = map[string]string{"username": u.Username}
 		response[i] = ur
 	}
 	enc := json.NewEncoder(w)
@@ -120,7 +120,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
 			return
 		} else if f && opUser.IsSelf(chefUser) {
-			errMsg := util.JoinStr("Please remove ", chefUser.Name, " from this organization's admins group before removing him or her from the organization.")
+			errMsg := util.JoinStr("Please remove ", chefUser.Username, " from this organization's admins group before removing him or her from the organization.")
 			jsonErrorNonArrayReport(w, r, errMsg, http.StatusForbidden)
 			return
 		}
@@ -159,7 +159,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 		_, err = association.GetAssoc(chefUser, org)
 		if err != nil {
 			if err.Status() == http.StatusForbidden {
-				err = util.Errorf("Cannot find a user %s in organization %s", chefUser.Name, org.Name)
+				err = util.Errorf("Cannot find a user %s in organization %s", chefUser.Username, org.Name)
 				err.SetStatus(http.StatusNotFound)
 			}
 			jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
@@ -279,7 +279,7 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := vars["id"]
-	re := regexp.MustCompile(util.JoinStr(user.Name, "-(.+)"))
+	re := regexp.MustCompile(util.JoinStr(user.Username, "-(.+)"))
 	o := re.FindStringSubmatch(id)
 	if o == nil {
 		jsonErrorReport(w, r, util.JoinStr("Association request ", id, " is invalid. Must be ", userName, "-orgname."), http.StatusBadRequest)

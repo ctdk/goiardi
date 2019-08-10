@@ -45,11 +45,11 @@ type AssociationReq struct {
 
 func (a *AssociationReq) Key() string {
 	// *rolls eyes*
-	return url.PathEscape(util.JoinStr(a.User.Name, "-", a.Org.Name))
+	return url.PathEscape(util.JoinStr(a.User.Username, "-", a.Org.Name))
 }
 
 func (a *Association) Key() string {
-	return util.JoinStr(a.User.Name, "-", a.Org.Name)
+	return util.JoinStr(a.User.Username, "-", a.Org.Name)
 }
 
 func SetReq(user *user.User, org *organization.Organization, inviter actor.Actor) (*AssociationReq, util.Gerror) {
@@ -92,8 +92,8 @@ func SetReq(user *user.User, org *organization.Organization, inviter actor.Actor
 		return nil, err
 	}
 	ds.Set("associationreq", assoc.Key(), assoc)
-	ds.SetAssociationReq(org.Name, "users", user.Name, user)
-	ds.SetAssociationReq(user.Name, "organizations", org.Name, org)
+	ds.SetAssociationReq(org.Name, "users", user.Username, user)
+	ds.SetAssociationReq(user.Username, "organizations", org.Name, org)
 	return assoc, nil
 }
 
@@ -102,7 +102,7 @@ func GetReq(user *user.User, org *organization.Organization) (*AssociationReq, u
 	if config.UsingDB() {
 		return getAssociationReqSQL(user, org)
 	} else {
-		key := util.JoinStr(user.Name, "-", org.Name)
+		key := util.JoinStr(user.Username, "-", org.Name)
 		ds := datastore.New()
 		a, found := ds.Get("associationreq", key)
 		if !found {
@@ -139,7 +139,7 @@ func (a *AssociationReq) Accept() util.Gerror {
 	}
 	// apparently we create a USAG, but what are they like?
 	// use BS hex value until we have some idea what's supposed to be there
-	usagName := fmt.Sprintf("%x", []byte(a.User.Name))
+	usagName := fmt.Sprintf("%x", []byte(a.User.Username))
 	usag, err := group.New(a.Org, usagName)
 	if err != nil {
 		return err
@@ -172,14 +172,14 @@ func (a *AssociationReq) Delete() util.Gerror {
 	}
 	ds := datastore.New()
 	ds.Delete("associationreq", a.Key())
-	ds.DelAssociationReq(a.Org.Name, "users", a.User.Name)
-	ds.DelAssociationReq(a.User.Name, "organizations", a.Org.Name)
+	ds.DelAssociationReq(a.Org.Name, "users", a.User.Username)
+	ds.DelAssociationReq(a.User.Username, "organizations", a.Org.Name)
 	return nil
 }
 
 func OrgAssocReqs(user *user.User) ([]*organization.Organization, util.Gerror) {
 	ds := datastore.New()
-	o := ds.GetAssociationReqs(user.Name, "organizations")
+	o := ds.GetAssociationReqs(user.Username, "organizations")
 	orgs := make([]*organization.Organization, len(o))
 	for i, v := range o {
 		orgs[i] = v.(*organization.Organization)
@@ -193,7 +193,7 @@ func OrgAssociations(user *user.User) ([]*organization.Organization, util.Gerror
 		return orgAssociationsSQL(user)
 	}
 	ds := datastore.New()
-	o := ds.GetAssociations(user.Name, "organizations")
+	o := ds.GetAssociations(user.Username, "organizations")
 	orgs := make([]*organization.Organization, len(o))
 	for i, v := range o {
 		orgs[i] = v.(*organization.Organization)
@@ -382,13 +382,13 @@ func SetAssoc(user *user.User, org *organization.Organization) (*Association, ut
 	ds := datastore.New()
 	_, found := ds.Get("association", assoc.Key())
 	if found {
-		err := util.Errorf("User %s already associated with org %s", user.Name, org.Name)
+		err := util.Errorf("User %s already associated with org %s", user.Username, org.Name)
 		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
 	ds.Set("association", assoc.Key(), assoc)
-	ds.SetAssociation(org.Name, "users", user.Name, user)
-	ds.SetAssociation(user.Name, "organizations", org.Name, org)
+	ds.SetAssociation(org.Name, "users", user.Username, user)
+	ds.SetAssociation(user.Username, "organizations", org.Name, org)
 	return assoc, nil
 }
 
@@ -398,10 +398,10 @@ func GetAssoc(user *user.User, org *organization.Organization) (*Association, ut
 		return getAssociationSQL(user, org)
 	} else {
 		ds := datastore.New()
-		key := util.JoinStr(user.Name, "-", org.Name)
+		key := util.JoinStr(user.Username, "-", org.Name)
 		a, found := ds.Get("association", key)
 		if !found {
-			gerr := util.Errorf("'%s' not associated with organization '%s'", user.Name, org.Name)
+			gerr := util.Errorf("'%s' not associated with organization '%s'", user.Username, org.Name)
 			gerr.SetStatus(http.StatusForbidden)
 			return nil, gerr
 		}
@@ -418,7 +418,7 @@ func (a *Association) Delete() util.Gerror {
 		return a.deleteSQL()
 	}
 	ds := datastore.New()
-	usagName := fmt.Sprintf("%x", []byte(a.User.Name))
+	usagName := fmt.Sprintf("%x", []byte(a.User.Username))
 	usag, err := group.Get(a.Org, usagName)
 	if err != nil {
 		return err
@@ -442,7 +442,7 @@ func (a *Association) Delete() util.Gerror {
 	}
 
 	ds.Delete("association", a.Key())
-	ds.DelAssociation(a.Org.Name, "users", a.User.Name)
-	ds.DelAssociation(a.User.Name, "organizations", a.Org.Name)
+	ds.DelAssociation(a.Org.Name, "users", a.User.Username)
+	ds.DelAssociation(a.User.Username, "organizations", a.Org.Name)
 	return nil
 }

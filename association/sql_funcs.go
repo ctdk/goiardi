@@ -93,7 +93,7 @@ func getAssociationSQL(user *user.User, org *organization.Organization) (*Associ
 		if err != sql.ErrNoRows {
 			return nil, util.CastErr(err)
 		}
-		gerr := util.Errorf("'%s' not associated with organization '%s'", user.Name, org.Name)
+		gerr := util.Errorf("'%s' not associated with organization '%s'", user.Username, org.Name)
 		gerr.SetStatus(http.StatusForbidden)
 		return nil, gerr
 	}

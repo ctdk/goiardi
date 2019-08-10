@@ -45,7 +45,7 @@ import (
 // explained elsewhere.
 type User struct {
 	Username    string `json:"username"`
-	Name        string `json:"display_name"`
+	DisplayName        string `json:"display_name"`
 	Email       string `json:"email"`
 	Admin       bool   `json:"admin"`
 	FirstName   string `json:"first_name"`
@@ -60,7 +60,7 @@ type User struct {
 
 type privUser struct {
 	Username    *string `json:"username"`
-	Name        *string `json:"display_name"`
+	DisplayName        *string `json:"display_name"`
 	Email       *string `json:"email"`
 	Admin       *bool   `json:"admin"`
 	FirstName   *string `json:"first_name"`
@@ -105,7 +105,7 @@ func New(name string) (*User, util.Gerror) {
 	}
 	user := &User{
 		Username: name,
-		Name:     name,
+		DisplayName: name,
 		Admin:    false,
 		Email:    "",
 		pubKey:   "",
@@ -276,7 +276,6 @@ func (u *User) Rename(newName string) util.Gerror {
 		ds.Delete("user", u.Username)
 	}
 	u.Username = newName
-	u.Name = newName
 	if config.UsingExternalSecrets() {
 		err := secret.SetPublicKey(u, pk)
 		if err != nil {
@@ -294,10 +293,8 @@ func (u *User) Rename(newName string) util.Gerror {
 func NewFromJSON(jsonUser map[string]interface{}) (*User, util.Gerror) {
 	var nameFromJSON interface{}
 	var ok bool
-	if nameFromJSON, ok = jsonUser["display_name"]; !ok {
-		if nameFromJSON, ok = jsonUser["name"]; !ok {
-			nameFromJSON, ok = jsonUser["username"]
-		}
+	if nameFromJSON, ok = jsonUser["username"]; !ok {
+		nameFromJSON, ok = jsonUser["name"]
 	}
 
 	userName, nerr := util.ValidateAsString(nameFromJSON)
@@ -326,8 +323,8 @@ func NewFromJSON(jsonUser map[string]interface{}) (*User, util.Gerror) {
 func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
 	var nameFromJSON interface{}
 	var ok bool
-	if nameFromJSON, ok = jsonUser["name"]; !ok {
-		nameFromJSON, ok = jsonUser["username"]
+	if nameFromJSON, ok = jsonUser["username"]; !ok {
+		nameFromJSON, ok = jsonUser["name"]
 	}
 	userName, nerr := util.ValidateAsString(nameFromJSON)
 	if nerr != nil {
@@ -404,7 +401,7 @@ func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
 		if verr != nil {
 			return verr
 		}
-		u.Name = d
+		u.DisplayName = d
 	} else {
 		return util.Errorf("no display_name given")
 	}
@@ -467,7 +464,7 @@ func (u *User) ToJSON() map[string]interface{} {
 	toJSON["email"] = u.Email
 	toJSON["first_name"] = u.FirstName
 	toJSON["last_name"] = u.LastName
-	toJSON["display_name"] = u.Name
+	toJSON["display_name"] = u.DisplayName
 	toJSON["public_key"] = u.PublicKey()
 
 	return toJSON
@@ -661,7 +658,7 @@ func (u *User) Passwd() string {
 func validateUserName(name string) util.Gerror {
 	if !util.ValidateUserName(name) {
 		logger.Debugf("invalid name is: '%s'", name)
-		err := util.Errorf("Field 'name' invalid")
+		err := util.Errorf("Field 'username' invalid")
 		return err
 	}
 	return nil
@@ -692,7 +689,7 @@ func (u *User) OrgName() string {
 }
 
 func (u *User) export() *privUser {
-	return &privUser{Name: &u.Name, Username: &u.Username, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt, FirstName: &u.FirstName, LastName: &u.LastName, Recoveror: &u.Recoveror, AuthzID: &u.AuthzID}
+	return &privUser{Username: &u.Username, DisplayName: &u.DisplayName, PublicKey: &u.pubKey, Admin: &u.Admin, Email: &u.Email, Passwd: &u.passwd, Salt: &u.salt, FirstName: &u.FirstName, LastName: &u.LastName, Recoveror: &u.Recoveror, AuthzID: &u.AuthzID}
 }
 
 func (u *User) GobEncode() ([]byte, error) {

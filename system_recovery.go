@@ -67,7 +67,7 @@ func systemRecoveryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := make(map[string]interface{})
-	resp["display_name"] = resetter.Name
+	resp["display_name"] = resetter.DisplayName
 	resp["email"] = resetter.Email
 	resp["username"] = resetter.Username
 	resp["recovery_authentication_enabled"] = resetter.Recoveror

@@ -56,7 +56,7 @@ func (u *User) fillUserFromSQL(row datastore.ResRow) error {
 	var lName sql.NullString
 	var authzId sql.NullString
 
-	err := row.Scan(&u.Username, &u.Name, &u.Admin, &u.pubKey, &email, &u.passwd, &u.salt, &u.id, &fName, &lName, &u.Recoveror, &authzId)
+	err := row.Scan(&u.Username, &u.DisplayName, &u.Admin, &u.pubKey, &email, &u.passwd, &u.salt, &u.id, &fName, &lName, &u.Recoveror, &authzId)
 	if err != nil {
 		return err
 	}
