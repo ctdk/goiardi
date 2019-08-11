@@ -70,7 +70,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch op {
 	case "_validator_key":
-		if r.Method == "POST" {
+		if r.Method == http.MethodPost {
 			valname := util.JoinStr(org.Name, "-validator")
 			val, err := client.Get(org, valname)
 			if err != nil {
@@ -91,7 +91,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	case "association_requests":
 		if len(pathArray) == 4 {
-			if r.Method != "DELETE" {
+			if r.Method != http.MethodDelete {
 				jsonErrorReport(w, r, "unrecognized method", http.StatusMethodNotAllowed)
 				return
 			}
@@ -133,7 +133,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 			orgResponse = oR
 		} else {
 			switch r.Method {
-			case "GET":
+			case http.MethodGet:
 				// returns a list of associations with
 				// this org.
 				userReqs, err := association.GetAllUsersAssociationReqs(org)
@@ -157,7 +157,7 @@ func orgToolHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				orgResponse = oR
 
-			case "POST":
+			case http.MethodPost:
 				// creates the association.
 				arData, jerr := parseObjJSON(r.Body)
 				if jerr != nil {
@@ -234,9 +234,9 @@ func orgMainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "GET", "DELETE":
+	case http.MethodGet, http.MethodDelete:
 		orgResponse = org.ToJSON()
-		if r.Method == "DELETE" {
+		if r.Method == http.MethodDelete {
 			if f, ferr := org.PermCheck.RootCheckPerm(opUser, "delete"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
@@ -250,7 +250,7 @@ func orgMainHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-	case "PUT":
+	case http.MethodPut:
 		if f, ferr := org.PermCheck.RootCheckPerm(opUser, "update"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
@@ -323,14 +323,14 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		orgList := organization.GetList()
 		orgResponse = make(map[string]interface{})
 		for _, o := range orgList {
 			itemURL := fmt.Sprintf("/organizations/%s", o)
 			orgResponse[o] = util.CustomURL(itemURL)
 		}
-	case "POST":
+	case http.MethodPost:
 		if f, ferr := orgDef.PermCheck.RootCheckPerm(opUser, "create"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return

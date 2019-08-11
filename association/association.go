@@ -28,6 +28,7 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"net/url"
+	"log"
 )
 
 type Association struct {
@@ -121,14 +122,19 @@ func GetReq(user *user.User, org *organization.Organization) (*AssociationReq, u
 
 func (a *AssociationReq) Accept() util.Gerror {
 	if config.UsingDB() {
-		return a.acceptSQL()
+		if err := a.acceptSQL(); err != nil {
+			return err
+		}
+	} else {
+		// group stuff happens here, once that all gets figured out
+		// This one I think *does* happen. I think.
+		_, err := SetAssoc(a.User, a.Org)
+		if err != nil {
+			return err
+		}
 	}
-	// group stuff happens here, once that all gets figured out
-	// This one I think *does* happen. I think.
-	_, err := SetAssoc(a.User, a.Org)
-	if err != nil {
-		return err
-	}
+	log.Println("made it past acceptSQL")
+
 	g, err := group.Get(a.Org, "users")
 	if err != nil {
 		return err
@@ -137,6 +143,8 @@ func (a *AssociationReq) Accept() util.Gerror {
 	if err != nil {
 		return err
 	}
+	log.Printf("past adding user %s to users group", a.User.GetName())
+
 	// apparently we create a USAG, but what are they like?
 	// use BS hex value until we have some idea what's supposed to be there
 	usagName := fmt.Sprintf("%x", []byte(a.User.Username))
@@ -148,14 +156,17 @@ func (a *AssociationReq) Accept() util.Gerror {
 	if err != nil {
 		return nil
 	}
+	log.Printf("adding group usag %s", usag.Name)
 	err = g.AddGroup(usag)
 	if err != nil {
 		return err
 	}
+	log.Println("adding succeeded")
 	err = g.Save()
 	if err != nil {
 		return err
 	}
+	log.Println("saving users group succeeded")
 	return a.Delete()
 }
 
@@ -414,10 +425,6 @@ func GetAssoc(user *user.User, org *organization.Organization) (*Association, ut
 }
 
 func (a *Association) Delete() util.Gerror {
-	if config.UsingDB() {
-		return a.deleteSQL()
-	}
-	ds := datastore.New()
 	usagName := fmt.Sprintf("%x", []byte(a.User.Username))
 	usag, err := group.Get(a.Org, usagName)
 	if err != nil {
@@ -441,6 +448,11 @@ func (a *Association) Delete() util.Gerror {
 		return err
 	}
 
+	if config.UsingDB() {
+		return a.deleteSQL()
+	}
+
+	ds := datastore.New()
 	ds.Delete("association", a.Key())
 	ds.DelAssociation(a.Org.Name, "users", a.User.Username)
 	ds.DelAssociation(a.User.Username, "organizations", a.Org.Name)

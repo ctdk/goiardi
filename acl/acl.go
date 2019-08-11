@@ -17,6 +17,7 @@
 package acl
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/casbin/casbin"
 	"github.com/casbin/casbin/model"
@@ -247,15 +248,23 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 // processing association requests, so that's something.
 func testAssociation(doer aclhelper.Actor, org *organization.Organization) util.Gerror {
 	if doer.IsUser() {
+		// keep this in our pocket so we don't duplicate the err
+		// creation code.
+		err := util.Errorf("'%s' not associated with organization '%s'", doer.GetName(), org.Name)
+		err.SetStatus(http.StatusForbidden)
+
 		// This will be much easier with a DB. Alas.
 		if config.UsingDB() {
-
+			f, terr := testAssociationSQL(doer, org)
+			if terr != nil {
+				return terr
+			} else if !f {
+				return err
+			}
 		} else {
 			ds := datastore.New()
 			key := util.JoinStr(doer.GetName(), "-", org.Name)
 			if _, found := ds.Get("association", key); !found {
-				err := util.Errorf("'%s' not associated with organization '%s'", doer.GetName(), org.Name)
-				err.SetStatus(http.StatusForbidden)
 				return err
 			}
 		}
@@ -267,6 +276,32 @@ func testAssociation(doer aclhelper.Actor, org *organization.Organization) util.
 		}
 	}
 	return nil
+}
+
+// Duplicated from association/sql_funcs.go, but we can't really do anything
+// about it sadly.
+func testAssociationSQL(u actor.Actor, org *organization.Organization) (bool, util.Gerror) {
+	var z int
+	sqlStmt := "SELECT count(*) AS c FROM goiardi.associations WHERE user_id = $1 AND organization_id = $2"
+
+	dbhandle := datastore.Dbh // simplify dragging this over a bit
+
+	stmt, err := dbhandle.Prepare(sqlStmt)
+	if err != nil {
+		return false, util.CastErr(err)
+	}
+	defer stmt.Close()
+	err = stmt.QueryRow(u.GetId(), org.GetId()).Scan(&z)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, util.CastErr(err)
+	}
+	if z > 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, perms []string, action string) util.Gerror {

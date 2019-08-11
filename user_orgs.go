@@ -57,7 +57,7 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
 		return
 	}
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -98,21 +98,28 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 
 	var response map[string]interface{}
 
+	// better get this ahead of time for perm checking. Check the err after
+	// doing the real perm check.
+	chefUser, err := user.Get(userName)
+
 	if f, ferr := org.PermCheck.RootCheckPerm(opUser, "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
-		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		if !opUser.IsSelf(chefUser) {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
+	}
+
+	// Doing the err check from the user.Get above.
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
 
 	switch r.Method {
-	case "DELETE":
-		chefUser, err := user.Get(userName)
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
-		}
+	case http.MethodDelete:
 		if f, ferr := org.PermCheck.RootCheckPerm(opUser, "delete"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
@@ -150,12 +157,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		response = make(map[string]interface{})
 		response["response"] = "ok"
-	case "GET":
-		chefUser, err := user.Get(userName)
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
-		}
+	case http.MethodGet:
 		_, err = association.GetAssoc(chefUser, org)
 		if err != nil {
 			if err.Status() == http.StatusForbidden {
@@ -172,8 +174,8 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	enc := json.NewEncoder(w)
-	if err := enc.Encode(&response); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	if encErr := enc.Encode(&response); encErr != nil {
+		jsonErrorReport(w, r, encErr.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -187,7 +189,7 @@ func userAssocHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -220,7 +222,7 @@ func userAssocHandler(w http.ResponseWriter, r *http.Request) {
 
 func userAssocCountHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -263,7 +265,7 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if r.Method != "PUT" {
+	if r.Method != http.MethodPut {
 		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}

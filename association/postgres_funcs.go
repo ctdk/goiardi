@@ -18,6 +18,7 @@ package association
 
 import (
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
@@ -49,10 +50,10 @@ func (a *Association) fillAssociationFromPostgreSQL(row datastore.ResRow) error 
 }
 
 func (a *AssociationReq) fillAssociationReqFromPostgreSQL(row datastore.ResRow) util.Gerror {
-	var userName, orgName, inviterName string
+	var userName, orgName, inviterType string
+	var inviterId int64
 
-	err := row.Scan(&userName, &orgName, &inviterName, &a.Status)
-	if err != nil {
+	if err := row.Scan(&userName, &orgName, &inviterId, &inviterType, &a.Status); err != nil {
 		return util.CastErr(err)
 	}
 
@@ -69,11 +70,28 @@ func (a *AssociationReq) fillAssociationReqFromPostgreSQL(row datastore.ResRow) 
 	}
 	a.Org = o
 
-	i, err := actor.GetActor(o, inviterName)
-	if err != nil {
-		return util.CastErr(err)
+	var invitinator actor.Actor
+
+	switch inviterType {
+	case "users":
+		u, err := user.UsersByIdSQL([]int64{inviterId})
+		if err != nil {
+			return util.CastErr(err)
+		}
+		if len(u) > 0 {
+			invitinator = u[0]
+		}
+	case "clients":
+		c, err := client.ClientsByIdSQL([]int64{inviterId}, o)
+		if err != nil {
+			return util.CastErr(err)
+		}
+		if len(c) > 0 {
+			invitinator = c[0]
+		}
 	}
-	a.Inviter = i
+
+	a.Inviter = invitinator
 
 	return nil
 }

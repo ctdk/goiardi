@@ -120,7 +120,13 @@ func getAssociationReqSQL(uReq *user.User, org *organization.Organization) (*Ass
 
 	row := stmt.QueryRow(uReq.GetId(), org.GetId())
 	if err = row.Scan(&inviterId, &inviterType); err != nil {
-		return nil, util.CastErr(err)
+		if err != sql.ErrNoRows {
+			return nil, util.CastErr(err)
+		}
+		key := util.JoinStr(uReq.Username, "-", org.Name)
+		arErr := util.Errorf("Cannot find association request: %s", key)
+		arErr.SetStatus(http.StatusNotFound)
+		return nil, arErr
 	}
 
 	var inviter actor.Actor
@@ -154,7 +160,7 @@ func getAssociationReqSQL(uReq *user.User, org *organization.Organization) (*Ass
 func getExactAssociationReqSQL(user *user.User, org *organization.Organization, inviter actor.Actor, status string) (*AssociationReq, util.Gerror) {
 	a := new(AssociationReq)
 
-	sqlStmt := fmt.Sprintf("SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name, status FROM goiardi.association_requests assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE u.id = $1 AND o.id = $2 AND i.name = $3 AND assoc.inviter_type = $4 AND assoc.status = $5", inviterType(inviter))
+	sqlStmt := fmt.Sprintf("SELECT u.name AS user_name, o.name AS org_name, inviter_id, inviter_type, status FROM goiardi.association_requests assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE u.id = $1 AND o.id = $2 AND i.name = $3 AND assoc.inviter_type = $4 AND assoc.status = $5", inviterType(inviter))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -193,7 +199,7 @@ func (a *Association) deleteSQL() util.Gerror {
 }
 
 func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Gerror) {
-	sqlStmt := "SELECT user_id FROM goiardi.associations WHERE organization_id = $1"
+	sqlStmt := "SELECT distinct user_id FROM goiardi.associations WHERE organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -233,7 +239,7 @@ func userAssociationsSQL(org *organization.Organization) ([]*user.User, util.Ger
 }
 
 func orgAssociationsSQL(u *user.User) ([]*organization.Organization, util.Gerror) {
-	sqlStmt := "SELECT organization_id FROM goiardi.associations WHERE user_id = $1"
+	sqlStmt := "SELECT distinct organization_id FROM goiardi.associations WHERE user_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -328,7 +334,7 @@ func (a *AssociationReq) deleteSQL() util.Gerror {
 	if err != nil {
 		return util.CastErr(err)
 	}
-	_, err = tx.Exec(sqlStmt, a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), inviterType(a.Inviter), a.Status)
+	_, err = tx.Exec(sqlStmt, a.User.GetId(), a.Org.GetId(), a.Inviter.GetId(), inviterType(a.Inviter))
 
 	if err != nil {
 		tx.Rollback()
@@ -377,7 +383,7 @@ func userAssociationReqCountSQL(org *organization.Organization) (int, util.Gerro
 }
 
 func getOrgAssociationReqsSQL(user *user.User) ([]*AssociationReq, util.Gerror) {
-	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.association_requests assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE user_id = $1"
+	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name, inviter_id, inviter_type, status FROM goiardi.association_requests assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id WHERE user_id = $1 AND status = 'pending'"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -410,7 +416,7 @@ func getOrgAssociationReqsSQL(user *user.User) ([]*AssociationReq, util.Gerror) 
 }
 
 func getUserAssociationReqsSQL(org *organization.Organization) ([]*AssociationReq, util.Gerror) {
-	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name, i.name AS inviter_name FROM goiardi.association_requests assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id LEFT JOIN goiardi.%s i ON assoc.inviter_id = i.id WHERE organization_id = $1"
+	sqlStmt := "SELECT u.name AS user_name, o.name AS org_name, inviter_id, inviter_type, status FROM goiardi.association_requests assoc LEFT JOIN goiardi.users u ON assoc.user_id = u.id LEFT JOIN goiardi.organizations o ON assoc.organization_id = o.id WHERE organization_id = $1 AND status = 'pending'"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
