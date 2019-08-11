@@ -407,6 +407,7 @@ func (db *DataBag) GetMultiDBItems(dbItemNames []string) ([]*DataBagItem, util.G
 		for _, d := range dbItemNames {
 			do, _ := db.DataBagItems[d]
 			if do != nil {
+				do.org = db.org
 				dbis = append(dbis, do)
 			}
 		}

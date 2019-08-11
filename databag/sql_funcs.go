@@ -139,6 +139,7 @@ func (db *DataBag) getMultiDBItemSQL(dbItemNames []string) ([]*DataBagItem, erro
 			rows.Close()
 			return nil, err
 		}
+		d.org = db.org
 		dbis = append(dbis, d)
 	}
 
@@ -211,6 +212,7 @@ func (db *DataBag) allDBItemsSQL() (map[string]*DataBagItem, error) {
 			rows.Close()
 			return nil, err
 		}
+		dbi.org = db.org
 		dbis[dbi.origName] = dbi
 	}
 	rows.Close()

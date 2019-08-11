@@ -90,7 +90,7 @@ func (p *PostgresSearch) Search(org *organization.Organization, idx string, q st
 			builtinIdx = true
 			sqlStmt = fmt.Sprintf("SELECT COALESCE(ARRAY_AGG(name), '{}'::text[]) FROM %s.%ss WHERE organization_id = $1", searchSchema, idx)
 		} else {
-			sqlStmt = fmt.Sprintf("SELECT COALESCE(ARRAY_AGG(orig_name), '{}'::text[]) FROM %s.data_bag_items JOIN %s.data_bags ON %s.data_bag_items.data_bag_id = %s.data_bags.id WHERE %s.data_bags.organization_id = $1 AND %s.data_bags.name = $2", searchSchema, searchSchema, searchSchema, searchSchema, searchSchema, searchSchema)
+			sqlStmt = "SELECT COALESCE(ARRAY_AGG(orig_name), '{}'::text[]) FROM goiardi.data_bag_items JOIN goiardi.data_bags ON goiardi.data_bag_items.data_bag_id = goiardi.data_bags.id WHERE goiardi.data_bags.organization_id = $1 AND goiardi.data_bags.name = $2"
 		}
 
 		var res util.StringSlice
@@ -299,7 +299,7 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op, searchSchema
 	args := []string{string(field)}
 	var xtraPath string
 	if originalTerm == "*" || originalTerm == "" {
-		q = fmt.Sprintf("%s(f%d.path ~ _ARG_)", opStr, *tNum)
+		q = fmt.Sprintf("%s(f%d.path OPERATOR(goiardi.~) _ARG_)", opStr, *tNum)
 	} else if field == "" { // feeling REALLY iffy about this one, but it
 		// duplicates the previous behavior.
 		q = fmt.Sprintf("%s(f%d.value %s _ARG_)", opStr, *tNum, cop)
@@ -518,7 +518,7 @@ func craftFullQuery(orgID int64, idx string, paths []string, arguments []string,
 	if idx == "node" || idx == "client" || idx == "environment" || idx == "role" {
 		itemsStatement = fmt.Sprintf("SELECT name AS item_name FROM goiardi.%ss WHERE organization_id = $1", idx)
 	} else {
-		itemsStatement = fmt.Sprintf("SELECT orig_name AS item_name FROM %s.data_bag_items JOIN %s.data_bags ON %s.data_bag_items.data_bag_id = %s.data_bags.id WHERE %s.data_bags.organization_id = $1 AND %s.data_bags.name = $2", searchSchema, searchSchema, searchSchema, searchSchema, searchSchema, searchSchema)
+		itemsStatement = "SELECT orig_name AS item_name FROM goiardi.data_bag_items JOIN goiardi.data_bags ON goiardi.data_bag_items.data_bag_id = goiardi.data_bags.id WHERE goiardi.data_bags.organization_id = $1 AND goiardi.data_bags.name = $2"
 		pcount = 3
 	}
 

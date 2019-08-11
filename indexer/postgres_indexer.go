@@ -253,7 +253,7 @@ func (p *PostgresIndex) Endpoints(org IndexerOrg) ([]string, error) {
 	}
 	defer stmt.Close()
 	var endpoints util.StringSlice
-	err = stmt.QueryRow(1).Scan(&endpoints)
+	err = stmt.QueryRow(org.GetId()).Scan(&endpoints)
 	if err != nil {
 		return nil, err
 	}
