@@ -225,7 +225,6 @@ func ClientsByIdSQL(ids []int64, org *organization.Organization) ([]*Client, err
 	// Make this a little bit safer and less likely to accidentally be able
 	// to return clients that don't belong to this org.
 	sqlStatement := fmt.Sprintf("SELECT c.name, nodename, validator, admin, o.name, public_key, certificate, authz_id, c.id FROM goiardi.clients c JOIN goiardi.organizations o on c.organization_id = o.id WHERE organization_id = $1 AND c.id IN (%s)", strings.Join(bind, ", "))
-	log.Printf("sqlStatement: '%s'", sqlStatement)
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {

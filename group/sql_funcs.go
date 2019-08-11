@@ -32,7 +32,6 @@ import (
 	"github.com/lib/pq"
 	"net/http"
 	"strings"
-	"log"
 )
 
 // *sob*
@@ -118,9 +117,6 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 		var userez []*user.User
 		var clientez []*client.Client
 
-		log.Printf("userIds in fillGroupFromSQL: %v", userIds.val())
-		log.Printf("clientIds in fillGroupFromSQL: %v", clientIds.val())
-
 		if len(userIds.val()) > 0 {
 			userez, err = user.UsersByIdSQL(userIds.val())
 			if err != nil {
@@ -145,7 +141,6 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 			actorez[i+clientOffset] = c
 		}
 
-		log.Printf("actorez is: %+v", actorez)
 		g.Actors = actorez
 	}
 
@@ -223,7 +218,6 @@ func (g *Group) renameSQL(newName string) util.Gerror {
 	_, err = tx.Exec("SELECT goiardi.rename_group($1, $2, $3)", g.Name, newName, g.org.GetId())
 	if err != nil {
 		tx.Rollback()
-		log.Printf("rename group err: '%s'", err.Error())
 		gerr := util.Errorf(err.Error())
 		if strings.Contains(err.Error(), "already exists, cannot rename") {
 			gerr.SetStatus(http.StatusConflict)

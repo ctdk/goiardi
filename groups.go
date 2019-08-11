@@ -23,7 +23,6 @@ import (
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
-	"log"
 	"net/http"
 )
 
@@ -45,8 +44,6 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	groupName := vars["group_name"]
-	log.Printf("group name: %s", groupName)
-	log.Printf("Method: %v", r.Method)
 	g, gerr := group.Get(org, groupName)
 	if gerr != nil {
 		jsonErrorReport(w, r, gerr.Error(), gerr.Status())
@@ -89,7 +86,6 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 			return
 		}
-		log.Printf("Json: %v", gData)
 		if gName, ok := gData["groupname"].(string); ok {
 			if gName != groupName {
 				err := g.Rename(gName)
@@ -170,8 +166,6 @@ func groupListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
 		}
-		log.Printf("group data: %v", gData)
-		//jsonErrorReport(w, r, "Not working yet!", http.StatusNotImplemented)
 
 		var gBase interface{}
 		if h, ok := gData["id"]; ok && h != "" {
