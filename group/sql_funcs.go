@@ -343,7 +343,7 @@ func clearActorSQL(org *organization.Organization, act actor.Actor) error {
 
 	sqlStmt := fmt.Sprintf("DELETE FROM goiardi.group_actor_%ss WHERE organization_id = $1 AND %s_id = $1", actType, actType)
 
-	_, err = tx.Exec(sqlStmt, act.GetName(), org.GetId())
+	_, err = tx.Exec(sqlStmt, org.GetId(), act.GetId())
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {

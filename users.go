@@ -112,6 +112,10 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			for _, o := range orgs {
 				group.ClearActor(o, chefUser)
 				o.PermCheck.RemoveUser(chefUser)
+				usagName := fmt.Sprintf("%x", []byte(chefUser.Username))
+				if usag, _ := group.Get(o, usagName); usag != nil {
+					usag.Delete() // fire and forget
+				}
 			}
 		}(orgs, chefUser)
 

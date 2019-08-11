@@ -28,7 +28,6 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"net/url"
-	"log"
 )
 
 type Association struct {
@@ -133,7 +132,6 @@ func (a *AssociationReq) Accept() util.Gerror {
 			return err
 		}
 	}
-	log.Println("made it past acceptSQL")
 
 	g, err := group.Get(a.Org, "users")
 	if err != nil {
@@ -143,7 +141,6 @@ func (a *AssociationReq) Accept() util.Gerror {
 	if err != nil {
 		return err
 	}
-	log.Printf("past adding user %s to users group", a.User.GetName())
 
 	// apparently we create a USAG, but what are they like?
 	// use BS hex value until we have some idea what's supposed to be there
@@ -156,17 +153,14 @@ func (a *AssociationReq) Accept() util.Gerror {
 	if err != nil {
 		return nil
 	}
-	log.Printf("adding group usag %s", usag.Name)
 	err = g.AddGroup(usag)
 	if err != nil {
 		return err
 	}
-	log.Println("adding succeeded")
 	err = g.Save()
 	if err != nil {
 		return err
 	}
-	log.Println("saving users group succeeded")
 	return a.Delete()
 }
 
