@@ -528,7 +528,9 @@ func MakeDefaultGroups(org *organization.Organization) util.Gerror {
 }
 
 func (g *Group) checkForActor(name string) (bool, int) {
+	logger.Debugf("checkForActor %s", name)
 	for i, a := range g.Actors {
+		logger.Debugf("checkForActor actor: %s", a.GetName())
 		if a.GetName() == name {
 			return true, i
 		}

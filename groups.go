@@ -107,6 +107,7 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, ederr.Error(), statChk(ederr.Status()))
 			return
 		}
+		g.Reload()
 	default:
 		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 		return

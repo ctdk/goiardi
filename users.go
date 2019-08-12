@@ -560,13 +560,21 @@ func isOrgAdminForUser(chkUser *user.User, opUser actor.Actor) (bool, util.Gerro
 	if err != nil {
 		return false, err
 	}
+	logger.Debugf("number of orgs for %s: %d", chkUser.Username, len(orgs))
 	for _, org := range orgs {
+		logger.Debugf("in org %s", org.Name)
 		admin, err := group.Get(org, "admins")
 		// unlikely
 		if err != nil {
 			return false, err
 		}
+		logger.Debugf("still here. Number of actors? %d", len(admin.Actors))
+		logger.Debugf("wtf do we think the group is: %+v", admin)
+		for _, aa := range admin.Actors {
+			logger.Debugf("%s", aa.GetName())
+		}
 		if admin.SeekActor(opUser) {
+			logger.Debugf("user %s is an admin in %s", opUser.GetName(), org.Name)
 			return true, nil
 		}
 	}

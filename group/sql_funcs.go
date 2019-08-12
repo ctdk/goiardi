@@ -31,6 +31,7 @@ import (
 	"github.com/ctdk/goiardi/util"
 	"github.com/lib/pq"
 	"net/http"
+	// "sort"
 	"strings"
 )
 
@@ -202,6 +203,24 @@ func (g *Group) saveSQL() error {
 			clientIds = append(clientIds, act.GetId())
 		}
 	}
+
+	// remove the dupes.
+	/*
+	if len(userIds) > 0 {
+		sort.Sort(util.Int64Sort(userIds))
+		userIds = util.RemoveDupInt64s(userIds)
+	}
+
+	if len(clientIds) > 0 {
+		sort.Sort(util.Int64Sort(clientIds))
+		clientIds = util.RemoveDupInt64s(clientIds)
+	}
+
+	if len(groupIds) > 0 {
+		sort.Sort(util.Int64Sort(groupIds))
+		groupIds = util.RemoveDupInt64s(groupIds)
+	}
+	*/
 
 	return g.savePostgreSQL(userIds, clientIds, groupIds)
 }
