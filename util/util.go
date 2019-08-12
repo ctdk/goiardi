@@ -412,7 +412,7 @@ func JoinStr(str ...string) string {
 // JSONErrorReport spits out the given error and HTTP status code formatted as
 // JSON for the client's benefit before completing the errored out request.
 func JSONErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
-	spewCallers()
+	SpewCallers()
 	logger.Infof(errorStr)
 	jsonError := map[string][]string{"error": []string{errorStr}}
 	sendErrorReport(w, jsonError, status)
@@ -420,7 +420,7 @@ func JSONErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, st
 }
 
 func JSONErrorNonArrayReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
-	spewCallers()
+	SpewCallers()
 	logger.Infof(errorStr)
 	jsonError := map[string]string{"error": errorStr}
 	sendErrorReport(w, jsonError, status)
@@ -428,7 +428,7 @@ func JSONErrorNonArrayReport(w http.ResponseWriter, r *http.Request, errorStr st
 }
 
 func JSONErrorMapReport(w http.ResponseWriter, r *http.Request, errMap map[string]interface{}, status int) {
-	spewCallers()
+	SpewCallers()
 	logger.Infof("%+v", errMap)
 	sendErrorReport(w, errMap, status)
 	return
@@ -485,7 +485,7 @@ func pgKeyReplace(key string, re, bs, ps *regexp.Regexp) string {
 	return k
 }
 
-func spewCallers() {
+func SpewCallers() {
 	//return // TODO: make this settable with a flag. Deactivating for now.
 	pc := make([]uintptr, 10)
 	n := runtime.Callers(2, pc)

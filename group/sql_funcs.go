@@ -334,6 +334,7 @@ func allGroupsSQL(org *organization.Organization) ([]*Group, error) {
 	for rows.Next() {
 		g := new(Group)
 		g.org = org
+		g.getChildren = true
 		err = g.fillGroupFromSQL(rows)
 		if err != nil {
 			return nil, err

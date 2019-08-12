@@ -223,10 +223,8 @@ func (g *Group) Delete() util.Gerror {
 		if derr := g.deleteSQL(); derr != nil {
 			uerr := util.CastErr(derr)
 			if derr == sql.ErrNoRows {
-				logger.Debugf("derr did == sql.ErrNoRows")
 				uerr.SetStatus(http.StatusNotFound)
 			}
-			logger.Debugf("after all is said and done, uerr is %+v", uerr)
 			return uerr
 		}
 	} else {
@@ -319,7 +317,6 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 		oldMembers := g.AllMembers()
 
 		if us, uok := acts["users"].([]interface{}); uok {
-			logger.Debugf("In g.Edit: users: %v", us)
 			for _, un := range us {
 				unv, err := util.ValidateAsString(un)
 				if err != nil {
@@ -334,7 +331,6 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 			}
 		}
 		if cs, cok := acts["clients"].([]interface{}); cok {
-			logger.Debugf("In g.Edit: clients: %v", cs)
 			for _, cn := range cs {
 				cnv, err := util.ValidateAsString(cn)
 				if err != nil {
@@ -349,7 +345,6 @@ func (g *Group) Edit(jsonData interface{}) util.Gerror {
 			}
 		}
 		if grs, ok := acts["groups"].([]interface{}); ok {
-			logger.Debugf("In g.Edit: groups: %v", grs)
 			for _, gn := range grs {
 				gnv, err := util.ValidateAsString(gn)
 				if err != nil {
@@ -528,9 +523,7 @@ func MakeDefaultGroups(org *organization.Organization) util.Gerror {
 }
 
 func (g *Group) checkForActor(name string) (bool, int) {
-	logger.Debugf("checkForActor %s", name)
 	for i, a := range g.Actors {
-		logger.Debugf("checkForActor actor: %s", a.GetName())
 		if a.GetName() == name {
 			return true, i
 		}
