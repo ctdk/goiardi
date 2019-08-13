@@ -375,6 +375,7 @@ func (c *Cookbook) sortedCookbookVersionsSQL() []*CookbookVersion {
 	}
 	for rows.Next() {
 		cbv := new(CookbookVersion)
+		cbv.org = c.org
 		err = cbv.fillCookbookVersionFromSQL(rows)
 		if err != nil {
 			log.Fatal(err)
