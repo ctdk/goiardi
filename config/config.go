@@ -135,6 +135,8 @@ var GitHash = "unknown"
 
 var pprofWhitelist []net.IP
 
+const defaultIndexValTrim = 150
+
 // LogLevelNames give convenient, easier to remember than number name for the
 // different levels of logging.
 var LogLevelNames = map[string]int{"debug": 5, "info": 4, "warning": 3, "error": 2, "critical": 1, "fatal": 0}
@@ -224,7 +226,7 @@ type Options struct {
 	UseExtSecrets        bool         `long:"use-external-secrets" description:"Use an external service to store secrets (currently user/client public keys). Currently only vault is supported." env:"GOIARDI_USE_EXTERNAL_SECRETS"`
 	VaultAddr            string       `long:"vault-addr" description:"Specify address of vault server (i.e. https://127.0.0.1:8200). Defaults to the value of VAULT_ADDR."`
 	VaultShoveyKey       string       `long:"vault-shovey-key" description:"Specify a path in vault holding shovey's private key. The key must be put in vault as 'privateKey=<contents>'." env:"GOIARDI_VAULT_SHOVEY_KEY"`
-	IndexValTrim         int          `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If not set or set <= 0, trimming is disabled. This behavior will change with the next major release." env:"GOIARDI_INDEX_VAL_TRIM"`
+	IndexValTrim         int          `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If set < 0, trimming is disabled. The default is 150 characters." env:"GOIARDI_INDEX_VAL_TRIM"`
 	PprofWhitelist       []string     `short:"y" long:"pprof-whitelist" description:"Address to allow to access /debug/pprof (in addition to localhost). Specify multiple times to allow more addresses." env:"GOIARDI_PPROF_WHITELIST" env-delim:","`
 	PurgeReportsAfter    string       `long:"purge-reports-after" description:"Time to purge old reports after, given in golang duration format (e.g. \"720h\"). Default is not to purge them at all." env:"GOIARDI_PURGE_REPORTS_AFTER"`
 	PurgeNodeStatusAfter string       `long:"purge-status-after" description:"Time to purge old node statuses after, given in golang duration format (e.g. \"720h\"). Default is not to purge them at all." env:"GOIARDI_PURGE_STATUS_AFTER"`
@@ -794,12 +796,13 @@ func ParseConfigOptions() error {
 	if opts.IndexValTrim != 0 {
 		Config.IndexValTrim = opts.IndexValTrim
 	}
-	if Config.IndexValTrim <= 0 {
+	if Config.IndexValTrim < 0 {
 		logger.Infof("Trimming values in search index disabled")
-		if Config.IndexValTrim == 0 {
-			logger.Warningf("index-val-trim's default behavior when not set or set to 0 is to disable search index value trimming; this behavior will change with the next goiardi release")
-		}
 	} else {
+		if Config.IndexValTrim == 0 {
+			Config.IndexValTrim = defaultIndexValTrim
+			logger.Warningf("Setting index-val-trim to %d characters. Set it to -1 to disable.", defaultIndexValTrim)
+		}
 		logger.Infof("Trimming values in search index to %d characters", Config.IndexValTrim)
 	}
 
