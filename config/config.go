@@ -81,7 +81,6 @@ type Conf struct {
 	ImpExFile            string
 	ObjMaxSize           int64    `toml:"obj-max-size"`
 	JSONReqMaxSize       int64    `toml:"json-req-max-size"`
-	UseUnsafeMemStore    bool     `toml:"use-unsafe-mem-store"`
 	DbPoolSize           int      `toml:"db-pool-size"`
 	MaxConn              int      `toml:"max-connections"`
 	UseSerf              bool     `toml:"use-serf"`
@@ -202,7 +201,7 @@ type Options struct {
 	Import               string       `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Cannot be used at the same time as -x/--export."`
 	ObjMaxSize           int64        `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)." env:"GOIARDI_OBJ_MAX_SIZE"`
 	JSONReqMaxSize       int64        `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000." env:"GOIARDI_JSON_REQ_MAX_SIZE"`
-	UseUnsafeMemStore    bool         `long:"use-unsafe-mem-store" description:"Use the faster, but less safe, old method of storing data in the in-memory data store with pointers, rather than encoding the data with gob and giving a new copy of the object to each requestor. If this is enabled goiardi will run faster in in-memory mode, but one goroutine could change an object while it's being used by another. Has no effect when using an SQL backend. (DEPRECATED - will be removed in a future release.)"`
+	UseUnsafeMemStore    bool         `long:"use-unsafe-mem-store" description:"deprecated option you shouldn't be able to see" hidden:"true"`
 	DbPoolSize           int          `long:"db-pool-size" description:"Number of idle db connections to maintain. Only useful when using one of the SQL backends. Default is 0 - no idle connections retained" env:"GOIARDI_DB_POOL_SIZE"`
 	MaxConn              int          `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited." env:"GOIARDI_MAX_CONN"`
 	UseSerf              bool         `long:"use-serf" description:"If set, have goidari use serf to send and receive events and queries from a serf cluster. Required for shovey." env:"GOIARDI_USE_SERF"`
@@ -665,8 +664,7 @@ func ParseConfigOptions() error {
 	}
 
 	if opts.UseUnsafeMemStore {
-		Config.UseUnsafeMemStore = opts.UseUnsafeMemStore
-		logger.Warningf("UseUnsafeMemStore is deprecated, and will be removed in a future version of goiardi.")
+		logger.Fatalf("--use-unsafe-mem-store has been removed and no longer works. Please restart goiardi without this option.")
 	}
 
 	if opts.DbPoolSize != 0 {

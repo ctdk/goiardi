@@ -40,7 +40,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ctdk/goiardi/config"
 	"github.com/pmylund/go-cache"
 	"github.com/tideland/golib/logger"
 )
@@ -106,15 +105,13 @@ func (ds *DataStore) Set(keyType string, key string, val interface{}) {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	ds.updated = true
-	if config.Config.UseUnsafeMemStore {
-		ds.dsc.Set(dsKey, val, -1)
-	} else {
-		valBytes, err := encodeSafeVal(val)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		ds.dsc.Set(dsKey, valBytes, -1)
+
+	valBytes, err := encodeSafeVal(val)
+	if err != nil {
+		log.Fatalln(err)
 	}
+	ds.dsc.Set(dsKey, valBytes, -1)
+
 	ds.addToList(keyType, key)
 }
 
@@ -127,20 +124,17 @@ func (ds *DataStore) Get(keyType string, key string) (interface{}, bool) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
 
-	if config.Config.UseUnsafeMemStore {
-		val, found = ds.dsc.Get(dsKey)
-	} else {
-		valEnc, f := ds.dsc.Get(dsKey)
-		found = f
+	valEnc, f := ds.dsc.Get(dsKey)
+	found = f
 
-		if valEnc != nil {
-			var err error
-			val, err = decodeSafeVal(valEnc)
-			if err != nil {
-				log.Fatalln(err)
-			}
+	if valEnc != nil {
+		var err error
+		val, err = decodeSafeVal(valEnc)
+		if err != nil {
+			log.Fatalln(err)
 		}
 	}
+
 	if val != nil {
 		ChkNilArray(val)
 	}
@@ -239,15 +233,13 @@ func (ds *DataStore) SetNodeStatus(nodeName string, orgName string, obj interfac
 	} else {
 		nextID = getNextID(ns)
 	}
-	if config.Config.UseUnsafeMemStore {
-		ns[nextID] = obj
-	} else {
-		n, err := encodeSafeVal(obj)
-		if err != nil {
-			return err
-		}
-		ns[nextID] = n
+
+	n, err := encodeSafeVal(obj)
+	if err != nil {
+		return err
 	}
+	ns[nextID] = n
+
 	nslist[nodeName] = append(nslist[nodeName], nextID)
 
 	ds.dsc.Set(nsKey, ns, -1)
@@ -289,15 +281,11 @@ func (ds *DataStore) ReplaceNodeStatuses(nodeName string, orgName string, objs [
 
 	for _, o := range objs {
 		nextID := getNextID(ns)
-		if config.Config.UseUnsafeMemStore {
-			ns[nextID] = o
-		} else {
-			n, err := encodeSafeVal(o)
-			if err != nil {
-				return err
-			}
-			ns[nextID] = n
+		n, err := encodeSafeVal(o)
+		if err != nil {
+			return err
 		}
+		ns[nextID] = n
 		nslist[nodeName] = append(nslist[nodeName], nextID)
 	}
 	ds.dsc.Set(nsKey, ns, -1)
@@ -324,15 +312,11 @@ func (ds *DataStore) AllNodeStatuses(nodeName string, orgName string) ([]interfa
 	nslist := a.(map[string][]int)
 	arr := make([]interface{}, len(nslist[nodeName]))
 	for i, v := range nslist[nodeName] {
-		if config.Config.UseUnsafeMemStore {
-			arr[i] = ns[v]
-		} else {
-			n, err := decodeSafeVal(ns[v])
-			if err != nil {
-				return nil, err
-			}
-			arr[i] = n
+		n, err := decodeSafeVal(ns[v])
+		if err != nil {
+			return nil, err
 		}
+		arr[i] = n
 	}
 	return arr, nil
 }
@@ -363,13 +347,9 @@ func (ds *DataStore) LatestNodeStatus(nodeName string, orgName string) (interfac
 	var n interface{}
 	var err error
 
-	if config.Config.UseUnsafeMemStore {
-		n = ns[nsarr[0]]
-	} else {
-		n, err = decodeSafeVal(ns[nsarr[0]])
-		if err != nil {
-			return nil, err
-		}
+	n, err = decodeSafeVal(ns[nsarr[0]])
+	if err != nil {
+		return nil, err
 	}
 
 	return n, nil
@@ -409,16 +389,12 @@ func (ds *DataStore) deleteStatuses(nodeName string, orgName string) error {
 func (ds *DataStore) getLogInfoMap(orgName string) map[int]interface{} {
 	dsKey := ds.makeKey(joinStr("loginfo-", orgName), "loginfos")
 	var a interface{}
-	if config.Config.UseUnsafeMemStore {
-		a, _ = ds.dsc.Get(dsKey)
-	} else {
-		aEnc, _ := ds.dsc.Get(dsKey)
-		if aEnc != nil {
-			var err error
-			a, err = decodeSafeVal(aEnc)
-			if err != nil {
-				log.Fatalln(err)
-			}
+	aEnc, _ := ds.dsc.Get(dsKey)
+	if aEnc != nil {
+		var err error
+		a, err = decodeSafeVal(aEnc)
+		if err != nil {
+			log.Fatalln(err)
 		}
 	}
 	if a == nil {
@@ -430,15 +406,11 @@ func (ds *DataStore) getLogInfoMap(orgName string) map[int]interface{} {
 
 func (ds *DataStore) setLogInfoMap(orgName string, liMap map[int]interface{}) {
 	dsKey := ds.makeKey(joinStr("loginfo-", orgName), "loginfos")
-	if config.Config.UseUnsafeMemStore {
-		ds.dsc.Set(dsKey, liMap, -1)
-	} else {
-		valBytes, err := encodeSafeVal(liMap)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		ds.dsc.Set(dsKey, valBytes, -1)
+	valBytes, err := encodeSafeVal(liMap)
+	if err != nil {
+		log.Fatalln(err)
 	}
+	ds.dsc.Set(dsKey, valBytes, -1)
 }
 
 // SetLogInfo sets a loginfo in the data store. Unlike most of these objects,
@@ -746,16 +718,12 @@ func (ds *DataStore) setAssocMap(name, variant string, associations map[string]i
 func (ds *DataStore) getAssocMapBase(cont string, name string, variant string) map[string]interface{} {
 	dsKey := ds.makeKey(joinStr(cont, "-", variant), name)
 	var a interface{}
-	if config.Config.UseUnsafeMemStore {
-		a, _ = ds.dsc.Get(dsKey)
-	} else {
-		aEnc, _ := ds.dsc.Get(dsKey)
-		if aEnc != nil {
-			var err error
-			a, err = decodeSafeVal(aEnc)
-			if err != nil {
-				log.Fatalln(err)
-			}
+	aEnc, _ := ds.dsc.Get(dsKey)
+	if aEnc != nil {
+		var err error
+		a, err = decodeSafeVal(aEnc)
+		if err != nil {
+			log.Fatalln(err)
 		}
 	}
 	if a == nil {
@@ -768,15 +736,11 @@ func (ds *DataStore) getAssocMapBase(cont string, name string, variant string) m
 
 func (ds *DataStore) setAssocMapBase(cont string, name string, variant string, associations map[string]interface{}) {
 	dsKey := ds.makeKey(joinStr(cont, "-", variant), name)
-	if config.Config.UseUnsafeMemStore {
-		ds.dsc.Set(dsKey, associations, -1)
-	} else {
-		valBytes, err := encodeSafeVal(associations)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		ds.dsc.Set(dsKey, valBytes, -1)
+	valBytes, err := encodeSafeVal(associations)
+	if err != nil {
+		log.Fatalln(err)
 	}
+	ds.dsc.Set(dsKey, valBytes, -1)
 }
 
 func (ds *DataStore) SetAssociation(name string, variant string, key string, obj interface{}) {

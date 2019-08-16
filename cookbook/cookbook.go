@@ -217,12 +217,6 @@ func Get(org *organization.Organization, name string) (*Cookbook, util.Gerror) {
 			cookbook = c.(*Cookbook)
 			cookbook.org = org
 		}
-		/* hrm. */
-		if cookbook != nil && config.Config.UseUnsafeMemStore {
-			for _, v := range cookbook.Versions {
-				datastore.ChkNilArray(v)
-			}
-		}
 	}
 	if !found {
 		err := util.Errorf("Cannot find a cookbook named %s", name)
