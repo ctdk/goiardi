@@ -123,11 +123,11 @@ func (c *Container) Delete() util.Gerror {
 		if err := c.deleteSQL(); err != nil {
 			return util.CastErr(err)
 		}
-		return nil
+	} else { 
+		ds := datastore.New()
+		ds.Delete(c.Org.DataKey("container"), c.Name)
 	}
 
-	ds := datastore.New()
-	ds.Delete(c.Org.DataKey("container"), c.Name)
 	if _, err := c.Org.PermCheck.DeleteItemACL(c); err != nil {
 		return util.CastErr(err)
 	}
