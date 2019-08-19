@@ -47,7 +47,7 @@ const (
 )
 
 func init() {
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 }
 
 func randStringBytesMaskImprSrc(n int) string {

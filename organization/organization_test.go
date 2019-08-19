@@ -25,7 +25,7 @@ import (
 )
 
 func init() {
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 }
 
 func TestOrgCreation(t *testing.T) {

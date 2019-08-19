@@ -31,7 +31,7 @@ import (
 var org *organization.Organization
 
 func init() {
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 }
 
 func TestGobEncodeDecode(t *testing.T) {
@@ -39,7 +39,7 @@ func TestGobEncodeDecode(t *testing.T) {
 	org, _ = organization.New("default", "boo")
 	fakeacl.LoadFakeACL(org)
 	org.Save()
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, org)
 	c, _ := New(org, "foo")
 
 	saved := new(bytes.Buffer)

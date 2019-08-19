@@ -31,14 +31,14 @@ import (
 var org *organization.Organization
 
 func init() {
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 }
 
 func TestActionAtADistance(t *testing.T) {
 	gob.Register(new(organization.Organization))
 	org, _ = orgloader.New("default", "boo")
 	org.Save()
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, org)
 
 	n, _ := New(org, "foo2")
 	gob.Register(n)

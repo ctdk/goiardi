@@ -31,7 +31,7 @@ import (
 var org *organization.Organization
 
 func init() {
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 }
 
 func TestActorClient(t *testing.T) {
@@ -41,7 +41,7 @@ func TestActorClient(t *testing.T) {
 	org.Save()
 
 	config.Config.UseAuth = true
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, org)
 
 	c, _ := client.New(org, "fooclient")
 	gob.Register(c)

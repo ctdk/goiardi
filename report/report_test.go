@@ -32,7 +32,7 @@ import (
 var org *organization.Organization
 
 func init() {
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 }
 
 func TestReportCreation(t *testing.T) {

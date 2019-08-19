@@ -27,7 +27,7 @@ import (
 )
 
 func init() {
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 }
 
 // More group tests will be coming, as

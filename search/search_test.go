@@ -62,7 +62,7 @@ var orgName = "default"
 var org *organization.Organization
 
 func init() {
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 	gob.Register(new(organization.Organization))
 	var err error
 	org, err = orgloader.New("default", "defaultyboo")
@@ -73,6 +73,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	indexer.Initialize(config.Config, org)
 
 	/* Gotta populate the search index */
 	nodes := make([]*node.Node, 4)

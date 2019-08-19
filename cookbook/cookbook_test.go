@@ -38,14 +38,14 @@ const minimalCookPath string = "./minimal-cook.json"
 const minimal110CookPath string = "./minimal-cook-1.1.0.json"
 
 func init() {
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 }
 
 func TestLatestConstrained(t *testing.T) {
 	gob.Register(new(organization.Organization))
 	org, _ := orgloader.New("default", "boo")
 	org.Save()
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, org)
 	cbname := "minimal"
 	cb, _ := New(org, cbname)
 

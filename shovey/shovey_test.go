@@ -28,7 +28,7 @@ import (
 )
 
 func init() {
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 }
 
 var org *organization.Organization
@@ -37,7 +37,7 @@ func TestShoveyCreation(t *testing.T) {
 	gob.Register(new(organization.Organization))
 	org, _ = orgloader.New("default", "boo")
 	org.Save()
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, org)
 	nn := new(node.Node)
 	ns := new(node.NodeStatus)
 	gob.Register(nn)

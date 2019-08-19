@@ -31,7 +31,7 @@ import (
 var pivotal *user.User
 
 func init() {
-	indexer.Initialize(config.Config)
+	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 }
 
 func TestAssociationReqCreation(t *testing.T) {

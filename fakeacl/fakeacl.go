@@ -96,6 +96,10 @@ func (f *FakeChecker) RenameMember(m aclhelper.Member, o string) error {
 	return nil
 }
 
+func (f *FakeChecker) DeletePolicy() error {
+	return nil
+}
+
 func LoadFakeACL(o PermTaker) {
 	f := new(FakeChecker)
 	o.SetPermCheck(f)
