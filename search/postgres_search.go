@@ -45,7 +45,7 @@ type PgQuery struct {
 	fullQuery    string
 	allArgs      []interface{}
 	searchSchema string
-	org *organization.Organization
+	org          *organization.Organization
 }
 
 type gClause struct {
@@ -332,7 +332,7 @@ func buildBasicQuery(field Field, term QueryTerm, tNum *int, op Op, searchSchema
 
 		q = fmt.Sprintf("((f%d.path OPERATOR(goiardi.~) _ARG_ AND f%d.value %s _ARG_) %s (f%d.path OPERATOR(goiardi.~) _ARG_))", *tNum, *tNum, cop, clauseJoin, *tNum)
 		if notPath {
-			q = fmt.Sprintf("("+q+" OR NOT EXISTS (SELECT 1 FROM found_items WHERE i.item_name = found_items.item_name AND found_items.path OPERATOR(goiardi.~) _ARG_))")
+			q = fmt.Sprintf("(" + q + " OR NOT EXISTS (SELECT 1 FROM found_items WHERE i.item_name = found_items.item_name AND found_items.path OPERATOR(goiardi.~) _ARG_))")
 		}
 		q = opStr + q
 

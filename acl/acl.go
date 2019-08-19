@@ -59,12 +59,12 @@ const (
 )
 
 const (
-	enforceEffect = "allow"
-	denyEffect    = "deny"
-	pgPolicyFileFmt = "org-%d-policy.csv"
+	enforceEffect    = "allow"
+	denyEffect       = "deny"
+	pgPolicyFileFmt  = "org-%d-policy.csv"
 	memPolicyFileFmt = "org-%s-policy.csv"
-	addPerm       = "add"
-	removePerm    = "remove"
+	addPerm          = "add"
+	removePerm       = "remove"
 )
 
 // Bleh. Do what we must, I guess.

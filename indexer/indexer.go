@@ -101,7 +101,7 @@ func (o *DummyOrg) SearchSchemaName() string {
 	return fmt.Sprintf(util.SearchSchemaSkel, o.id)
 }
 
-var DefaultDummyOrg = &DummyOrg{"default", 1} // sigh	
+var DefaultDummyOrg = &DummyOrg{"default", 1} // sigh
 
 var indexMap Index
 var objIndex ObjIndexer

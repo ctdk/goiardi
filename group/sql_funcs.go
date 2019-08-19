@@ -206,20 +206,20 @@ func (g *Group) saveSQL() error {
 
 	// remove the dupes.
 	/*
-	if len(userIds) > 0 {
-		sort.Sort(util.Int64Sort(userIds))
-		userIds = util.RemoveDupInt64s(userIds)
-	}
+		if len(userIds) > 0 {
+			sort.Sort(util.Int64Sort(userIds))
+			userIds = util.RemoveDupInt64s(userIds)
+		}
 
-	if len(clientIds) > 0 {
-		sort.Sort(util.Int64Sort(clientIds))
-		clientIds = util.RemoveDupInt64s(clientIds)
-	}
+		if len(clientIds) > 0 {
+			sort.Sort(util.Int64Sort(clientIds))
+			clientIds = util.RemoveDupInt64s(clientIds)
+		}
 
-	if len(groupIds) > 0 {
-		sort.Sort(util.Int64Sort(groupIds))
-		groupIds = util.RemoveDupInt64s(groupIds)
-	}
+		if len(groupIds) > 0 {
+			sort.Sort(util.Int64Sort(groupIds))
+			groupIds = util.RemoveDupInt64s(groupIds)
+		}
 	*/
 
 	return g.savePostgreSQL(userIds, clientIds, groupIds)

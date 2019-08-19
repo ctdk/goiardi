@@ -201,7 +201,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		if nameFromJSON, ok = userData["username"]; !ok {
 			nameFromJSON, _ = userData["name"]
 		}
-		
+
 		jsonName, sterr := util.ValidateAsString(nameFromJSON)
 		if sterr != nil {
 			jsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)

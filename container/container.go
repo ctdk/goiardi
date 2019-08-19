@@ -123,7 +123,7 @@ func (c *Container) Delete() util.Gerror {
 		if err := c.deleteSQL(); err != nil {
 			return util.CastErr(err)
 		}
-	} else { 
+	} else {
 		ds := datastore.New()
 		ds.Delete(c.Org.DataKey("container"), c.Name)
 	}

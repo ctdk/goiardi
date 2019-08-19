@@ -45,7 +45,7 @@ import (
 // explained elsewhere.
 type User struct {
 	Username    string `json:"username"`
-	DisplayName        string `json:"display_name"`
+	DisplayName string `json:"display_name"`
 	Email       string `json:"email"`
 	Admin       bool   `json:"admin"`
 	FirstName   string `json:"first_name"`
@@ -60,7 +60,7 @@ type User struct {
 
 type privUser struct {
 	Username    *string `json:"username"`
-	DisplayName        *string `json:"display_name"`
+	DisplayName *string `json:"display_name"`
 	Email       *string `json:"email"`
 	Admin       *bool   `json:"admin"`
 	FirstName   *string `json:"first_name"`
@@ -104,13 +104,13 @@ func New(name string) (*User, util.Gerror) {
 		return nil, err
 	}
 	user := &User{
-		Username: name,
+		Username:    name,
 		DisplayName: name,
-		Admin:    false,
-		Email:    "",
-		pubKey:   "",
-		salt:     salt,
-		AuthzID:  util.MakeAuthzID(),
+		Admin:       false,
+		Email:       "",
+		pubKey:      "",
+		salt:        salt,
+		AuthzID:     util.MakeAuthzID(),
 	}
 	return user, nil
 }

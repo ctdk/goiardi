@@ -18,8 +18,8 @@ package util
 
 type Int64Sort []int64
 
-func (i6 Int64Sort) Len() int { return len(i6) }
-func (i6 Int64Sort) Swap(i, j int) { i6[i], i6[j] = i6[j], i6[i] }
+func (i6 Int64Sort) Len() int           { return len(i6) }
+func (i6 Int64Sort) Swap(i, j int)      { i6[i], i6[j] = i6[j], i6[i] }
 func (i6 Int64Sort) Less(i, j int) bool { return i6[i] < i6[j] }
 
 // RemoveDupInt64s removes duplicates from a slice of int64s. The slice must
@@ -46,7 +46,7 @@ func RemoveDupInt64s(i6s []int64) []int64 {
 			continue
 		}
 		// don't really need the overhead of yet another little function
-		pos := i+1
+		pos := i + 1
 		i6s = append(i6s[:pos], i6s[pos+s:]...)
 	}
 	return i6s
