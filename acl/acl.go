@@ -61,7 +61,8 @@ const (
 const (
 	enforceEffect = "allow"
 	denyEffect    = "deny"
-	policyFileFmt = "org-%d-policy.csv"
+	pgPolicyFileFmt = "org-%d-policy.csv"
+	memPolicyFileFmt = "org-%s-policy.csv"
 	addPerm       = "add"
 	removePerm    = "remove"
 )
@@ -136,7 +137,13 @@ func loadPolicyFileAdapter(org *organization.Organization, policyRoot string) (p
 }
 
 func makePolicyPath(org *organization.Organization, policyRoot string) string {
-	fn := fmt.Sprintf(policyFileFmt, org.GetId())
+	var fn string
+	if config.UsingDB() {
+		fn = fmt.Sprintf(pgPolicyFileFmt, org.GetId())
+	} else {
+		fn = fmt.Sprintf(memPolicyFileFmt, org.Name)
+	}
+
 	policyPath := path.Join(policyRoot, fn)
 	return policyPath
 }
