@@ -106,7 +106,7 @@ func userOrgHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
-		if !opUser.IsSelf(chefUser) {
+		if chefUser != nil && !opUser.IsSelf(chefUser) {
 			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
 			return
 		}
