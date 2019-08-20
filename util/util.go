@@ -62,7 +62,7 @@ var ps *regexp.Regexp
 // And a regexp for matching roles in DeepMerge
 var roleMatch *regexp.Regexp
 
-// EnableSpew is supplied on the command line when building goiardi (via 
+// EnableSpew is supplied on the command line when building goiardi (via
 // '-ldflags "-X github.com/ctdk/goiardi/util.EnableSpew=true". If set, the
 // various JSON error report functions will print a stack trace of the calls
 // that led to that function being called.
@@ -493,7 +493,7 @@ func pgKeyReplace(key string, re, bs, ps *regexp.Regexp) string {
 
 func SpewCallers() {
 	if EnableSpew != "true" {
-		return 
+		return
 	}
 	pc := make([]uintptr, 10)
 	n := runtime.Callers(2, pc)
