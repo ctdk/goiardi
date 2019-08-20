@@ -128,8 +128,9 @@ type SigningKeys struct {
 // Key is the initialized shovey public and private keys.
 var Key = &SigningKeys{}
 
-// GitHash is the git hash (supplied with '-ldflags "-X config.GitHash=<hash>"')
-// of goiardi when it was compiled.
+// GitHash is the git hash (supplied with '-ldflags 
+// "-X github.com/ctdk/goiardi/config.GitHash=<hash>"') of goiardi when it was
+// compiled.
 var GitHash = "unknown"
 
 var pprofWhitelist []net.IP
