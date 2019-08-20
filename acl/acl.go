@@ -582,7 +582,6 @@ func (c *Checker) AddMembers(gRole aclhelper.Role, adding []aclhelper.Member) er
 	for _, m := range adding {
 		c.e.AddRoleForUser(m.ACLName(), gRole.ACLName())
 	}
-	logger.Debugf("added %d members to %s ACL role", len(adding), gRole.GetName())
 
 	return c.e.SavePolicy()
 }
@@ -601,7 +600,6 @@ func (c *Checker) RemoveMembers(gRole aclhelper.Role, removing []aclhelper.Membe
 	for _, m := range removing {
 		c.e.DeleteRoleForUser(m.ACLName(), gRole.ACLName())
 	}
-	logger.Debugf("deleted %d members from %s ACL role", len(removing), gRole.GetName())
 
 	return c.e.SavePolicy()
 }
