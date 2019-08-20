@@ -77,7 +77,7 @@ func TestGobEncodeDecode(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	if c2.Name != c.Name {
+	if c2.Username != c.Username {
 		t.Errorf("saved user doesn't seem to be equal to original: %v vs %v", c2, c)
 	}
 }

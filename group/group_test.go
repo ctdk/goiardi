@@ -177,6 +177,6 @@ func TestSeekActor(t *testing.T) {
 	}
 	tt := g.SeekActor(a)
 	if !tt {
-		t.Errorf("SeekActor failed to find %s in the %s group", a.Name, g.Name)
+		t.Errorf("SeekActor failed to find %s in the %s group", a.Username, g.Name)
 	}
 }

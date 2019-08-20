@@ -63,7 +63,7 @@ func TestLatestConstrained(t *testing.T) {
 	var data []byte
 	for _, chk := range a {
 		f := &filestore.FileStore{Chksum: chk, Data: &data}
-		f.SetOrgName(org.Name)
+		f.SetOrg(org)
 		err := f.Save()
 		if err != nil {
 			t.Error(err)

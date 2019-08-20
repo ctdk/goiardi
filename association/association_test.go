@@ -56,7 +56,7 @@ func TestAssociationReqCreation(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	a2, err := GetReq(assoc.Key())
+	a2, err := GetReq(u, o)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -79,7 +79,7 @@ func TestAssociationReqDeletion(t *testing.T) {
 	}
 	key := assoc.Key()
 	assoc.Delete()
-	a2, err := GetReq(key)
+	a2, err := GetReq(u, o)
 	if err == nil {
 		t.Errorf("deleting %s didn't work. Value: %v", key, a2)
 	}
@@ -135,12 +135,11 @@ func TestAcceptRemoveReq(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	key := assoc.Key()
 	err = assoc.Accept()
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	areq, _ := GetReq(key)
+	areq, _ := GetReq(u, o)
 	if areq != nil {
 		t.Errorf("Curious, this req shouldn't have been there: %+v", areq)
 	}

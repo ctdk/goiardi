@@ -120,7 +120,7 @@ func TestNodeStatusDelete(t *testing.T) {
 
 	from := 14 * day
 	expected := 15
-	del, err := DeleteNodeStatusesByAge(from)
+	del, err := DeleteNodeStatusesByAge(org, from)
 	if err != nil {
 		t.Error(err)
 	}

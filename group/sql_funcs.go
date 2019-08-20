@@ -264,7 +264,7 @@ func (g *Group) deleteSQL() error {
 	if err != nil {
 		terr := tx.Rollback()
 		if terr != nil {
-			err = fmt.Errorf("deleting group %s from organization %s had an error '%s', and then rolling back the transaction gave another error '%s'", g.Name, err.Error(), terr.Error())
+			err = fmt.Errorf("deleting group %s from organization %s had an error '%s', and then rolling back the transaction gave another error '%s'", g.Name, g.org.Name, err.Error(), terr.Error())
 		}
 		return err
 	}

@@ -457,7 +457,7 @@ func TestEditFromJSON(t *testing.T) {
 
 	// Man, this is a lot of hoops to jump through to simulate some JSON.
 	granters, _ := mj["grant"].(map[string][]string)["actors"]
-	granters = append(granters, u1.Name)
+	granters = append(granters, u1.Username)
 
 	// Something's fishy here.
 	groupers, _ := mj["grant"].(map[string][]string)["groups"]
