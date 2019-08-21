@@ -13,15 +13,15 @@ The easiest way to use the event log is with the knife-goiardi-event-log knife p
 
 The event API endpoints work as follows:
 
-* ``GET /events`` - optionally taking ``offset``, ``limit``, ``from``, ``until``, ``object_type``, ``object_name``, and ``doer`` query parameters.
+* ``GET /organization/ORG/events`` - optionally taking ``offset``, ``limit``, ``from``, ``until``, ``object_type``, ``object_name``, and ``doer`` query parameters.
 
   List the logged events, starting with the most recent. Use the ``offset`` and ``limit`` query parameters to view smaller chunks of the event log at one time. The ``from``, ``until``, ``object_type``, ``object_name``, and ``doer`` query parameters can be used to narrow the results returned further, by time range (for ``from`` and ``until``), the type of object and the name of the object (for ``object_type`` and ``object_name``) and the name of the performer of the action (for ``doer``). These options may be used in singly or in concert.
 
-* ``DELETE /events?purge=1234`` - purge logged events older than the given id from the event log.
+* ``DELETE /organization/ORG/events?purge=1234`` - purge logged events older than the given id from the event log.
 
-* ``GET /events/1234`` - get a single logged event with the given id.
+* ``GET /organization/ORG/events/1234`` - get a single logged event with the given id.
 
-* ``DELETE /events/1234`` - delete a single logged event from the event log.
+* ``DELETE /organization/ORG/events/1234`` - delete a single logged event from the event log.
 
 A user or client must be an administrator account to use the ``/events`` endpoint.
 
