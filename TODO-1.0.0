@@ -1,6 +1,5 @@
 * Orgify metrics
-* orgify secrets
-* orgify universe
+* orgify universe - already done? universe may need some massaging still though.
 * Check out s3 uploads that they'll actually work properly with orgs
 * Go over new functionality for org appropriateness in general. New items are:
 	o metrics

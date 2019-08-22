@@ -418,7 +418,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* log the URL */
 	logger.Debugf("Serving %s -- %s", r.URL.Path, r.Method)
 
-	// block /debug/pprof if not localhost
+	// block /debug/pprof if not localhost and not whitelisted
 	if strings.HasPrefix(r.URL.Path, "/debug") {
 		fwded := strings.Split(r.Header.Get("X-Forwarded-For"), ", ")
 		remoteIP, _, rerr := net.SplitHostPort(r.RemoteAddr)
