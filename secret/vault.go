@@ -27,8 +27,10 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/util"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/tideland/golib/logger"
+	"strings"
 	"sync"
 	"time"
 )
@@ -180,13 +182,27 @@ func (v *vaultSecretStore) deletePublicKey(c ActorKeyer) error {
 }
 
 func makePubKeyPath(c ActorKeyer) string {
-	return fmt.Sprintf("keys/%s/%s", c.URLType(), c.GetName())
+	pfx := "keys"
+
+	// Those newfangled string builder dealies might be useful here.
+	if c.OrgName() != util.UserOrgNameVal {
+		pfx = strings.Join([]string{pfx, "organization", c.OrgName()}, "/")
+	}
+
+	return strings.Join([]string{pfx, c.URLType(), c.GetName()}, "/")
 }
 
 func makeHashPath(c ActorKeyer) string {
 	// strictly speaking only users actually have passwords, but in case
 	// something else ever comes up, make the path a little longer.
-	return fmt.Sprintf("keys/passwd/%s/%s", c.URLType(), c.GetName())
+
+	pfx := "keys/passwd"
+
+	if c.OrgName() != util.UserOrgNameVal {
+		pfx = strings.Join([]string{pfx, "organization", c.OrgName()}, "/")
+	}
+
+	return strings.Join([]string{pfx, c.URLType(), c.GetName()}, "/")
 }
 
 func newSecretVal(path string, secretType string, value interface{}, t time.Time, s *vault.Secret) *secretVal {

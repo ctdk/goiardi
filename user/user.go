@@ -686,7 +686,7 @@ func (u *User) ContainerKind() string {
 // OrgName satisfies the GoiardiObj interface, but at the moment isn't really
 // a thing for users.
 func (u *User) OrgName() string {
-	return "not-an-organization"
+	return util.UserOrgNameVal
 }
 
 func (u *User) export() *privUser {

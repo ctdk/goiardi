@@ -51,6 +51,11 @@ const SearchSchemaSkel = "goiardi_search_org_%d"
 // goiardi. This schema is cloned for each organization.
 const BaseSearchSchema = "goiardi_search_base"
 
+// UserOrgNameVal is set as a constant to make quick testing to determine that
+// the mystery object being examined is a user who doesn't belong to an org that
+// way.
+const UserOrgNameVal = "not-an-organization"
+
 // declare some postgres search key regexps once up here, so they aren't
 // reallocated every time the function is called.
 
