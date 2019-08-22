@@ -404,7 +404,7 @@ func AllNodes(org *organization.Organization) []*Node {
 	return nodes
 }
 
-// Count returns a count of all nodes in this organization on this server.
+// Count returns a count of all nodes on the this server.
 func Count() int64 {
 	if config.UsingDB() {
 		c, _ := countSQL()
@@ -417,4 +417,16 @@ func Count() int64 {
 		i += len(nl)
 	}
 	return int64(i)
+}
+
+// OrgCount returns a count of all nodes on the given organization on this
+// server.
+func OrgCount(org *organization.Organization) int64 {
+	if config.UsingDB() {
+		c, _ := orgCountSQL(org)
+		return c
+	}
+	nl := GetList(org)
+
+	return int64(len(nl))
 }

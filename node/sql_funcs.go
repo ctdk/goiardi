@@ -433,3 +433,19 @@ func countSQL() (int64, error) {
 	}
 	return c, nil
 }
+
+func orgCountSQL(org *organization.Organization) (int64, error) {
+	var c int64
+
+	sqlStmt := "SELECT COUNT(*) FROM goiardi.nodes WHERE organization_id = $1"
+
+	stmt, err := datastore.Dbh.Prepare(sqlStmt)
+	if err != nil {
+		return 0, err
+	}
+	err = stmt.QueryRow(org.GetId()).Scan(&c)
+	if err != nil {
+		return 0, err
+	}
+	return c, nil
+}
