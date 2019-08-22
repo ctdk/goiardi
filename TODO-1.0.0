@@ -3,8 +3,6 @@
 * orgify universe
 * Check out s3 uploads that they'll actually work properly with orgs
 * Go over new functionality for org appropriateness in general. New items are:
-	o secrets
-	o s3 uploads
 	o metrics
 	o pprof info
 * Document undocumented functions, methods, and vars
