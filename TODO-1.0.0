@@ -7,7 +7,6 @@
 	o s3 uploads
 	o metrics
 	o pprof info
-* Make an org-specific version of node.Count
 * Document undocumented functions, methods, and vars
 * metrics for universe?
 * Check out import/export for org appropriateness - may have been done already,
