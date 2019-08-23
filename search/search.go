@@ -101,7 +101,7 @@ type TrieSearch struct {
 // Search parses the given query string and search the given index for any
 // matching results.
 func (t *TrieSearch) Search(org *organization.Organization, idx string, query string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
-	defer trackSearchTiming(time.Now(), query, inMemSearchTimings)
+	defer trackSearchTiming(org, time.Now(), query)
 	m.Lock()
 	defer m.Unlock()
 	qq := &Tokenizer{Buffer: query}

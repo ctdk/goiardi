@@ -19,27 +19,71 @@
 package search
 
 import (
-	"time"
-
+	"fmt"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/raintank/met"
 	"github.com/tideland/golib/logger"
+	"strings"
+	"time"
 )
 
-var inMemSearchTimings met.Timer
-var pgSearchTimings met.Timer
+const (
+	pgTiming = "pg"
+	inMemTiming = "in_mem"
+)
+
+type searchTimer struct {
+	variety string
+	root met.Timer
+	orgTiming map[string]met.Timer
+	backend met.Backend
+}
+
+var searchTimings *searchTimer
 
 // InitializeMetrics initializes the statsd timers for search queries.
 func InitializeMetrics(metricsBackend met.Backend) {
-	inMemSearchTimings = metricsBackend.NewTimer("search.in_mem", 0)
-	pgSearchTimings = metricsBackend.NewTimer("search.pg", 0)
+	// harness the power of, um, the config.
+	searchTimings = new(searchTimer)
+
+	if config.Config.PgSearch {
+		searchTimings.variety = pgTiming
+	} else {
+		searchTimings.variety = inMemTiming
+	}
+
+	searchTimings.backend = metricsBackend
+
+	searchTimings.root = metricsBackend.NewTimer(searchTimings.rootMetricName(), 0)
 }
 
-func trackSearchTiming(start time.Time, query string, timing met.Timer) {
+func trackSearchTiming(org *organization.Organization, start time.Time, query string) {
 	if !config.Config.UseStatsd {
 		return
 	}
+
 	elapsed := time.Since(start)
-	timing.Value(elapsed)
-	logger.Debugf("search '%s' took %d microseconds", query, elapsed/time.Microsecond)
+
+	searchTimings.root.Value(elapsed)
+	searchTimings.orgTime(org, elapsed)
+
+	logger.Debugf("search '%s' in org '%s' took %d microseconds", query, org.Name, elapsed/time.Microsecond)
+}
+
+func (s *searchTimer) orgTime(org *organization.Organization, e time.Duration) {
+	if _, ok := s.orgTiming[org.Name]; !ok {
+		s.orgTiming[org.Name] = s.backend.NewTimer(s.orgMetricName(org), 0)
+	}
+	s.orgTiming[org.Name].Value(e)
+}
+
+func (s *searchTimer) rootMetricName() string {
+	return fmt.Sprintf("search.%s", s.variety)
+}
+
+func (s *searchTimer) orgMetricName(org *organization.Organization) string {
+	r := s.rootMetricName()
+	// strings.ToLower may be overkill?
+	return fmt.Sprintf("%s.org.%s", r, strings.ToLower(org.Name))
 }
