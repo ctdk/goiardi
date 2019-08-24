@@ -23,6 +23,7 @@ import (
 	"database/sql"
 	"encoding/gob"
 	"encoding/json"
+	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
@@ -33,6 +34,8 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -79,14 +82,25 @@ func (b ByTime) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b ByTime) Less(i, j int) bool { return b[i].EndTime.Before(b[j].EndTime) }
 
 // statsd metric holders
-var (
+
+type reportEntitiesMetrics struct {
+	org 		 *organization.Organization
 	runsStarted      met.Count
 	runsOK           met.Count
 	runsFailed       met.Count
 	runRunTime       met.Timer
 	runTotalResCount met.Count
 	runUpdatedRes    met.Count
-)
+}
+
+type reportMetrication struct {
+	root *reportEntitiesMetrics
+	orgs map[string]*reportEntitiesMetrics
+	backend met.Backend
+	m *sync.Mutex
+}
+
+var reportMetrics *reportMetrication
 
 // New creates a new report.
 func New(org *organization.Organization, runID string, nodeName string) (*Report, util.Gerror) {
@@ -459,29 +473,71 @@ func (r *Report) OrgName() string {
 // TODO: orgify metrics
 
 func InitializeMetrics(metrics met.Backend) {
-	runsStarted = metrics.NewCount("client.run.started")
-	runsOK = metrics.NewCount("client.run.success")
-	runsFailed = metrics.NewCount("client.run.failure")
-	runRunTime = metrics.NewTimer("client.run.run_time", 0)
-	runTotalResCount = metrics.NewCount("client.run.total_resource_count")
-	runUpdatedRes = metrics.NewCount("client.run.updated_resources")
+	reportMetrics = new(reportMetrication)
+	reportMetrics.backend = metrics
+	reportMetrics.root = new(reportEntitiesMetrics)
+	reportMetrics.root.init(metrics, nil)
+	reportMetrics.orgs = make(map[string]*reportEntitiesMetrics)
+	reportMetrics.m = new(sync.Mutex)
 }
 
 func (r *Report) registerMetrics() {
 	if !config.Config.UseStatsd {
 		return
 	}
+	reportMetrics.root.registerReportMetrics(r)
+	reportMetrics.orgMetrics(r)
+}
+
+// metric handling methods
+
+func (rn *reportMetrication) orgMetrics(r *Report) {
+	rn.m.Lock()
+	defer rn.m.Unlock()
+	rn.checkOrg(r.org)
+	rn.orgs[r.org.Name].registerReportMetrics(r)
+}
+
+func (rn *reportMetrication) checkOrg(org *organization.Organization) {
+	if _, ok := rn.orgs[org.Name]; !ok {
+		rem := new(reportEntitiesMetrics)
+		rem.init(rn.backend, org)
+		rn.orgs[org.Name] = rem
+	}
+}
+
+func (rem *reportEntitiesMetrics) init(backend met.Backend, org *organization.Organization) {
+	rem.org = org
+	pfx := rem.statsdPrefix()
+	rem.runsStarted = backend.NewCount(fmt.Sprintf("%s.run.started", pfx))
+	rem.runsOK = backend.NewCount(fmt.Sprintf("%s.run.success", pfx))
+	rem.runsFailed = backend.NewCount(fmt.Sprintf("%s.run.failure", pfx))
+	rem.runRunTime = backend.NewTimer(fmt.Sprintf("%s.run.run_time", pfx), 0)
+	rem.runTotalResCount = backend.NewCount(fmt.Sprintf("%s.run.total_resource_count", pfx))
+	rem.runUpdatedRes = backend.NewCount(fmt.Sprintf("%s.run.updated_resources", pfx))
+}
+
+func (rem *reportEntitiesMetrics) statsdPrefix() string {
+	pfx := "client."
+	if rem.org == nil {
+		return pfx
+	}
+	pfx = fmt.Sprintf("%sorg.%s.", pfx, strings.ToLower(rem.org.Name))
+	return pfx
+}
+
+func (rem *reportEntitiesMetrics) registerReportMetrics(r *Report) {
 	switch r.Status {
 	case "started":
-		runsStarted.Inc(1)
+		rem.runsStarted.Inc(1)
 	case "success":
-		runsOK.Inc(1)
+		rem.runsOK.Inc(1)
 	case "failure":
-		runsFailed.Inc(1)
+		rem.runsFailed.Inc(1)
 	}
 	if r.Status != "started" {
-		runRunTime.Value(r.EndTime.Sub(r.StartTime))
-		runTotalResCount.Inc(int64(r.TotalResCount))
-		runUpdatedRes.Inc(int64(len(r.Resources)))
+		rem.runRunTime.Value(r.EndTime.Sub(r.StartTime))
+		rem.runTotalResCount.Inc(int64(r.TotalResCount))
+		rem.runUpdatedRes.Inc(int64(len(r.Resources)))
 	}
 }
