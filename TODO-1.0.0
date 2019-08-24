@@ -3,7 +3,6 @@
 * Check out s3 uploads that they'll actually work properly with orgs
 * Go over new functionality for org appropriateness in general. New items are:
 	o metrics
-* Document undocumented functions, methods, and vars
 * metrics for universe?
 * Check out import/export for org appropriateness - may have been done already,
   but may also need updating for things like secrets and s3 for orgs

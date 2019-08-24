@@ -1,4 +1,7 @@
 * More documentation where appropriate
+* Document undocumented functions, methods, and vars (but see moving many
+  modules under internal/).
+
 * For 1.0.0 specifics, see TODO-1.0.0
 
 Also see https://github.com/ctdk/goiardi/issues?state=open
