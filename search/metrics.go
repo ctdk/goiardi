@@ -25,6 +25,7 @@ import (
 	"github.com/raintank/met"
 	"github.com/tideland/golib/logger"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -38,6 +39,7 @@ type searchTimer struct {
 	root met.Timer
 	orgTiming map[string]met.Timer
 	backend met.Backend
+	m *sync.Mutex
 }
 
 var searchTimings *searchTimer
@@ -54,6 +56,8 @@ func InitializeMetrics(metricsBackend met.Backend) {
 	}
 
 	searchTimings.backend = metricsBackend
+	searchTimings.m = new(sync.Mutex)
+	searchTimings.orgTiming = make(map[string]met.Timer)
 
 	searchTimings.root = metricsBackend.NewTimer(searchTimings.rootMetricName(), 0)
 }
@@ -72,6 +76,9 @@ func trackSearchTiming(org *organization.Organization, start time.Time, query st
 }
 
 func (s *searchTimer) orgTime(org *organization.Organization, e time.Duration) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
 	if _, ok := s.orgTiming[org.Name]; !ok {
 		s.orgTiming[org.Name] = s.backend.NewTimer(s.orgMetricName(org), 0)
 	}
