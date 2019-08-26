@@ -86,6 +86,11 @@ type apiTimerInfo struct {
 	method  string
 }
 
+type apiPathInfo struct {
+	orgName string
+	handlerInfo string
+}
+
 var noOpUserReqs = []string{
 	"file_store",
 	"universe",
@@ -280,7 +285,7 @@ func main() {
 	// may be broken up more later
 	s.HandleFunc("/containers", containerListHandler)
 	s.HandleFunc("/containers/{name}", containerHandler)
-	s.HandleFunc("/containers/{name}/_acl", containerACLHandler)
+	s.HandleFunc("/containers/{name}/_acl", containerACLHandler)`
 	s.HandleFunc("/containers/{name}/_acl/{perm}", containerACLPermHandler)
 	s.HandleFunc("/cookbooks", cookbookHandler)
 	s.HandleFunc("/cookbooks/{name}", cookbookHandler)
@@ -405,6 +410,63 @@ func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
 
 		logger.Debugf("in apiChan %s: %d microseconds %s %s", metricStr, timeInfo.elapsed/time.Microsecond, timeInfo.path, timeInfo.method)
 	}
+}
+
+// extract the organization, if any, and the handler from the path inside an
+// apiPathInfo . The handler may be in the form "foo.bar" if it's relevant.
+// NOTE: Right now, though, we aren't going to try mucking about with that.
+func diceApiURL(urlPath string) (*apiPathInfo, error) {
+	cleanPath := path.Clean(urlPath)
+	pathElements := strings.Split(cleanPath, "/")
+
+	pathInfo := new(apiPathInfo)
+
+	// If the only thing in the path is "/", bail and return "root"
+	if len(pathElements) < 1 || len(pathElements) == 2 && pathElements[1] == "" {
+		pathInfo.handlerInfo = "root"
+		return pathInfo, nil
+	}
+
+	// shift path over
+	p := p[1:]
+
+	// NOTE: Do any of these need any cleanup for statsd's benefit?
+
+	// the path isn't empty, so move on. Keeping it simple still for now.
+	switch op := pathElements[0]:
+	case "authenticate_user", "users", "system_recovery":
+		// orgless handlers
+
+	case "organizations":
+		// orgful handlers. These may be specifically against the org
+		// itself (which is only sort of orgful, and more like the cases
+		// above, or more commonly there's a different relevant handler.
+		//
+		// ohai, another switch
+		switch pLen := len(pathElements) {
+		case 1, 2:
+			pathInfo.handlerInfo = "organizations"
+
+			// If len == 2, there's a specific org, but no
+			// sub-handler
+			if len(pathElements) == 2 {
+				pathInfo.orgName = pathElements[1]
+			}
+		// room to crank it up up up later. For now, it's very high
+		// level.
+		default:
+			pathElements.orgName = pathElements[1]
+			pathElements.handlerInfo = pathElements[2]
+
+		}
+	default:
+		// don't try and do metrics for completely unknown URLs. Return
+		// an error and soldier on.
+		err := fmt.Errorf("unknown first URL element '%s', not saving a metric.", op)
+		return nil, err
+	}
+
+	return pathInfo, nil
 }
 
 func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
