@@ -395,18 +395,26 @@ func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
 	}
 	metrics := make(map[string]met.Timer)
 	for timeInfo := range apiChan {
-		p := path.Clean(timeInfo.path)
-		pathTmp := strings.Split(p, "/")
-		if len(pathTmp) > 1 {
-			p = pathTmp[1]
-		} else {
-			p = "root"
+		handlerMetric, err := diceApiURL(timeInfo.path)
+		if err != nil {
+			logger.Infof("error recording metrics for path '%s': %s", timeInfo.path)
+			continue
 		}
-		metricStr := fmt.Sprintf("api.timing.%s.%s", p, strings.ToLower(timeInfo.method))
+
+		metricStr := fmt.Sprintf("api.timing.%s.%s", handlerMetric.handlerInfo, strings.ToLower(timeInfo.method))
 		if _, ok := metrics[metricStr]; !ok {
 			metrics[metricStr] = metricsBackend.NewTimer(metricStr, 0)
 		}
 		metrics[metricStr].Value(timeInfo.elapsed)
+
+		// do we have an org?
+		if handlerMetric.orgName != "" {
+			orgMetricString := strings.Join([]string{"api.timing.org", handlerMetric.orgName, handlerMetric.handlerInfo, strings.ToLower(timeInfo.method)}, ".")
+			if _, ok := metrics[orgMetricString]; !ok {
+				metrics[orgMetricString] = metricsBackend.NewTimer(orgMetricString, 0)
+			}
+			metrics[orgMetricString].Value(timeInfo.elapsed)
+		}
 
 		logger.Debugf("in apiChan %s: %d microseconds %s %s", metricStr, timeInfo.elapsed/time.Microsecond, timeInfo.path, timeInfo.method)
 	}
