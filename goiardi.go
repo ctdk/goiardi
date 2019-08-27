@@ -285,7 +285,7 @@ func main() {
 	// may be broken up more later
 	s.HandleFunc("/containers", containerListHandler)
 	s.HandleFunc("/containers/{name}", containerHandler)
-	s.HandleFunc("/containers/{name}/_acl", containerACLHandler)`
+	s.HandleFunc("/containers/{name}/_acl", containerACLHandler)
 	s.HandleFunc("/containers/{name}/_acl/{perm}", containerACLPermHandler)
 	s.HandleFunc("/cookbooks", cookbookHandler)
 	s.HandleFunc("/cookbooks/{name}", cookbookHandler)
@@ -422,18 +422,19 @@ func diceApiURL(urlPath string) (*apiPathInfo, error) {
 	pathInfo := new(apiPathInfo)
 
 	// If the only thing in the path is "/", bail and return "root"
-	if len(pathElements) < 1 || len(pathElements) == 2 && pathElements[1] == "" {
+	if len(pathElements) < 1 || (len(pathElements) == 2 && pathElements[1] == "") {
 		pathInfo.handlerInfo = "root"
 		return pathInfo, nil
 	}
 
 	// shift path over
-	p := p[1:]
+	pathElements = pathElements[1:]
 
 	// NOTE: Do any of these need any cleanup for statsd's benefit?
 
 	// the path isn't empty, so move on. Keeping it simple still for now.
-	switch op := pathElements[0]:
+	op := pathElements[0]
+	switch op {
 	case "authenticate_user", "users", "system_recovery":
 		// orgless handlers
 
@@ -443,7 +444,8 @@ func diceApiURL(urlPath string) (*apiPathInfo, error) {
 		// above, or more commonly there's a different relevant handler.
 		//
 		// ohai, another switch
-		switch pLen := len(pathElements) {
+		pLen := len(pathElements)
+		switch pLen {
 		case 1, 2:
 			pathInfo.handlerInfo = "organizations"
 
@@ -455,8 +457,8 @@ func diceApiURL(urlPath string) (*apiPathInfo, error) {
 		// room to crank it up up up later. For now, it's very high
 		// level.
 		default:
-			pathElements.orgName = pathElements[1]
-			pathElements.handlerInfo = pathElements[2]
+			pathInfo.orgName = pathElements[1]
+			pathInfo.handlerInfo = pathElements[2]
 
 		}
 	default:
