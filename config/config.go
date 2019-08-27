@@ -141,7 +141,10 @@ const defaultIndexValTrim = 150
 // different levels of logging.
 var LogLevelNames = map[string]int{"debug": 5, "info": 4, "warning": 3, "error": 2, "critical": 1, "fatal": 0}
 
-// MySQLdb holds MySQL connection options.
+// MySQLdb holds MySQL connection options. WARNING: These are no longer used,
+// since MySQL support has been removed. They're still lurking here prevent
+// goiardi from blowing up on startup too early before a more meaningful error
+// message can be displayed.
 type MySQLdb struct {
 	Username    string            `long:"username" hidden:"true" env:"GOIARDI_MYSQL_USERNAME"`
 	Password    string            `long:"password" hidden:"true" env:"GOIARDI_MYSQL_PASSWORD"`

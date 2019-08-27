@@ -1,6 +1,10 @@
 * More documentation where appropriate
 * Document undocumented functions, methods, and vars (but see moving many
   modules under internal/).
+* metrics for universe?
+* allow open universes on a per-org basis
+* crafty data bag + secrets bit
+* AWS Secrets Manager as another option for an external secrets store.
 
 * For 1.0.0 specifics, see TODO-1.0.0
 

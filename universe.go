@@ -24,8 +24,6 @@ import (
 	"net/http"
 )
 
-// TODO: Handle orgloader universes
-
 func universeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 

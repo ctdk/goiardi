@@ -1,9 +1,4 @@
-* Orgify metrics
-* orgify universe - already done? universe may need some massaging still though.
 * Check out s3 uploads that they'll actually work properly with orgs
-* Go over new functionality for org appropriateness in general. New items are:
-	o metrics
-* metrics for universe?
 * Check out import/export for org appropriateness - may have been done already,
   but may also need updating for things like secrets and s3 for orgs
 * Policyfile
@@ -15,8 +10,9 @@ And there's more...
 * update the goiardi knife plugins
 	o list those knife plugins in the documentation
 * update schob for org-ness if needed (it's probably needed)
+* goiardi plugin for rebuilding the search index -- this has been removed from
+  knife in recent versions
 * find link to the last free fake-s3. Also see if the patch in the docs is still
   necessary
 * document moving items stored externally, like objects in s3, secrets, etc.
 * Move internal modules under github.com/ctdk/goiardi/internal where appropriate
-
