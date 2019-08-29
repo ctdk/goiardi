@@ -7,6 +7,8 @@
 
 And there's more...
 
+* Urk! There are still uses of IsAdmin() in the code. These need to be reviewed
+  to see which have legitimate use or (more likely) need to be replaced.
 * update the goiardi knife plugins
 	o list those knife plugins in the documentation
 * update schob for org-ness if needed (it's probably needed)
@@ -16,3 +18,7 @@ And there's more...
   necessary
 * document moving items stored externally, like objects in s3, secrets, etc.
 * Move internal modules under github.com/ctdk/goiardi/internal where appropriate
+* Unless something's depending directly on it, remove the chefcrypto/ dir inside
+  of goiardi.
+* Update stuff in vendor
+* Oh, update the CHANGELOG (dur)
