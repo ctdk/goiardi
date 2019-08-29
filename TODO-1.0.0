@@ -12,8 +12,6 @@ And there's more...
 * update the goiardi knife plugins
 	o list those knife plugins in the documentation
 * update schob for org-ness if needed (it's probably needed)
-* goiardi plugin for rebuilding the search index -- this has been removed from
-  knife in recent versions
 * find link to the last free fake-s3. Also see if the patch in the docs is still
   necessary
 * document moving items stored externally, like objects in s3, secrets, etc.
@@ -22,3 +20,5 @@ And there's more...
   of goiardi.
 * Update stuff in vendor
 * Oh, update the CHANGELOG (dur)
+* actual per-org reindex, instead of always reindexing everything
+* a url to explicity reindex the entire server
