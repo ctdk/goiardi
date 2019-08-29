@@ -131,7 +131,7 @@ func CreateOrgDex(org IndexerOrg) error {
 
 // DeleteOrgDex deletes an organization's index.
 func DeleteOrgDex(org IndexerOrg) error {
-	return objIndex.CreateOrgDex(org)
+	return objIndex.DeleteOrgDex(org)
 }
 
 // CreateNewCollection creates an index for data bags when they are created,
@@ -190,12 +190,13 @@ func LoadIndex() error {
 }
 
 // ClearIndex of all collections and documents
-func ClearIndex(org IndexerOrg) {
+func ClearIndex(org IndexerOrg) error {
 	err := objIndex.Clear(org)
 	if err != nil {
 		logger.Errorf("Error clearing db for reindexing: %s", err.Error())
+		return err
 	}
-	return
+	return nil
 }
 
 // ReIndex rebuilds the search index from scratch

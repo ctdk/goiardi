@@ -176,7 +176,7 @@ func getListSQL(org *organization.Organization) []string {
 func allClientsSQL(org *organization.Organization) []*Client {
 	var clients []*Client
 	var sqlStatement string
-	sqlStatement = "SELECT c.name, nodename, validator, admin, o.name, public_key, certificate, authz_id, id FROM goiardi.clients c JOIN goiardi.organizations o ON c.organization_id = o.id WHERE organization_id = $1"
+	sqlStatement = "SELECT c.name, nodename, validator, admin, o.name, public_key, certificate, authz_id, c.id FROM goiardi.clients c JOIN goiardi.organizations o ON c.organization_id = o.id WHERE organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {

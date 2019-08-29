@@ -277,9 +277,13 @@ func reindexAll() {
 	orgs, _ := orgloader.AllOrganizations()
 	for _, org := range orgs {
 		logger.Debugf("Clearing %s search schema and tables", org.Name)
-		indexer.ClearIndex(org)
+		if err := indexer.ClearIndex(org); err != nil {
+			logger.Errorf("attempting to clear %s org index failed: %s", org.Name, err.Error())
+			continue
+		}
+
 		logger.Debugf("Starting to reindex org %s", org.Name)
-		indexer.CreateOrgDex(org)
+
 		// Send the objects to be reindexed in somewhat more manageable chunks
 		clientObjs := make([]indexer.Indexable, 0, 100)
 		for _, v := range client.AllClients(org) {
