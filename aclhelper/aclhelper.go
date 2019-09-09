@@ -71,6 +71,29 @@ func (r *RootACL) ContainerType() string {
 	return r.Subkind
 }
 
+// dummy Item type for root ACLs
+type MasterACL struct {
+	Name    string
+	Kind    string
+	Subkind string
+}
+
+func (r *MasterACL) GetName() string {
+	return r.Name
+}
+
+func (r *MasterACL) ContainerKind() string {
+	return r.Kind
+}
+
+func (r *MasterACL) ContainerType() string {
+	return r.Subkind
+}
+
+func GetMasterACL() *MasterACL {
+	return &MasterACL{Name: "$$main$$", Kind: "all", Subkind: "$$master$$",}
+}
+
 // Pretty sure this will be useful in only one or two places, but so it goes.
 type ACL struct {
 	Name    string

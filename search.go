@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/node"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/role"
@@ -209,7 +210,45 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// rebuild all indices for all organizations
 func reindexHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	reindexResponse := make(map[string]interface{})
+	vars := mux.Vars(r)
+
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
+	if f, ferr := org.PermCheck.RootCheckPerm(opUser, "update"); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		return
+	}
+	switch r.Method {
+	case http.MethodPost:
+		if !opUser.IsAdmin() {
+			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+			return
+		}
+		go reindexOrg(org)
+		reindexResponse["reindex"] = "OK"
+	default:
+		jsonErrorReport(w, r, "Method not allowed.", http.StatusMethodNotAllowed)
+		return
+	}
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&reindexResponse); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// reindex one organization
+func reindexOrgHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	reindexResponse := make(map[string]interface{})
 	vars := mux.Vars(r)
@@ -236,7 +275,7 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return
 		}
-		go reindexAll()
+		go reindexOrg(org)
 		reindexResponse["reindex"] = "OK"
 	default:
 		jsonErrorReport(w, r, "Method not allowed. If you're trying to do something with a data bag named 'reindex', it's not going to work I'm afraid.", http.StatusMethodNotAllowed)
@@ -246,6 +285,10 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 	if err := enc.Encode(&reindexResponse); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func reindexOrg(org *organization.Organization) {
+
 }
 
 // TODO: This needs to be able to be done per-org.

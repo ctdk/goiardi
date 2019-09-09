@@ -26,7 +26,6 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/aclhelper"
 	"io"
 	"io/ioutil"
 	"net"
@@ -40,6 +39,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/authentication"
@@ -270,6 +270,9 @@ func main() {
 	muxer.HandleFunc("/users/{name}/association_requests/{id}", userAssocIDHandler)
 	muxer.HandleFunc("/users/{name}/organizations", userListOrgHandler)
 	muxer.HandleFunc("/system_recovery", systemRecoveryHandler)
+	// rebuild all indices across all orgs - for the per-org version of
+	// this, see reindexOrgHandler
+	muxer.HandleFunc("/reindex", reindexHandler)
 	// organization routes
 	s := muxer.PathPrefix("/organizations/{org}/").Subrouter()
 	// get the org tool routes out of the way, out of order
@@ -336,7 +339,7 @@ func main() {
 	s.HandleFunc("/roles/{name}/environments/{env_name}", roleHandler)
 	s.HandleFunc("/sandboxes", sandboxHandler)
 	s.HandleFunc("/sandboxes/{id}", sandboxHandler)
-	s.Path("/search/reindex").HandlerFunc(reindexHandler)
+	s.Path("/search/reindex").HandlerFunc(reindexOrgHandler)
 	s.HandleFunc("/search", searchHandler)
 	s.HandleFunc("/search/{index}", searchHandler)
 	s.HandleFunc("/shovey/jobs", shoveyHandler)
@@ -443,7 +446,7 @@ func diceApiURL(urlPath string) (*apiPathInfo, error) {
 	// the path isn't empty, so move on. Keeping it simple still for now.
 	op := pathElements[0]
 	switch op {
-	case "authenticate_user", "users", "system_recovery":
+	case "authenticate_user", "users", "system_recovery", "reindex":
 		// orgless handlers
 
 	case "organizations":

@@ -170,6 +170,12 @@ p, role##admins, shoveys, containers, $$default$$, delete, allow
 p, role##admins, shoveys, containers, $$default$$, grant, allow
 p, role##clients, shoveys, containers, $$default$$, update, allow
 
+p, role##master_admins, $$master$$, all, $$main$$, create, allow
+p, role##master_admins, $$master$$, all, $$main$$, read, allow
+p, role##master_admins, $$master$$, all, $$main$$, update, allow
+p, role##master_admins, $$master$$, all, $$main$$, delete, allow
+p, role##master_admins, $$master$$, all, $$main$$, grant, allow
+
 p, role##billing-admins, $$default$$, groups, billing-admins, read, allow
 p, role##billing-admins, $$default$$, groups, billing-admins, update, allow
 
