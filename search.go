@@ -20,6 +20,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/databag"
@@ -214,7 +215,6 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 func reindexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	reindexResponse := make(map[string]interface{})
-	vars := mux.Vars(r)
 
 	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
@@ -222,7 +222,7 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if f, ferr := org.PermCheck.RootCheckPerm(opUser, "update"); ferr != nil {
+	if f, ferr := aclhelper.MasterCheckPerm(opUser, "update"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -235,7 +235,7 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return
 		}
-		go reindexOrg(org)
+		go reindexAll()
 		reindexResponse["reindex"] = "OK"
 	default:
 		jsonErrorReport(w, r, "Method not allowed.", http.StatusMethodNotAllowed)
@@ -288,7 +288,111 @@ func reindexOrgHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func reindexOrg(org *organization.Organization) {
+	// Take the mutex before starting to reindex everything. This way at
+	// least reindexing jobs won't pile up on top of each other all trying
+	// to execute simultaneously.
+	rdex := reindexNum
+	reindexNum++
+	logger.Infof("Taking mutex for reindex %d ($$ %d) against org %s", rdex, pid, org.Name)
+	riM.Lock()
+	logger.Infof("mutex acquired %d ($$ %d) against %s", rdex, pid, org.Name)
+	rCh := make(chan struct{}, ReindexableTypes)
+	defer func() {
+		for u := 0; u < ReindexableTypes; u++ {
+			<-rCh
+			logger.Debugf("a reindexing goroutine for org %s finished", org.Name)
+		}
+		logger.Infof("all reindexing goroutines finished, release reindexing mutex for %d ($$ %d) %s", rdex, pid, org.Name)
+		riM.Unlock()
+		logger.Debugf("reindexing mutex for %d ($$ %d) %s unlocked", rdex, pid, org.Name)
+	}()
 
+	reindexOrgWorker(org, rCh)
+}
+
+func reindexOrgWorker(org *organization.Organization, rCh chan struct{}) {
+	// We clear the index, *then* do the fetch because if
+	// something comes in between the time we fetch the
+	// objects to reindex and when it gets done, they'll
+	// just be added naturally
+	logger.Infof("Beginning org %s search schema reindexing now", org.Name)
+	logger.Debugf("Clearing %s search schema and tables", org.Name)
+
+	if err := indexer.ClearIndex(org); err != nil {
+		logger.Errorf("attempting to clear %s org index failed: %s", org.Name, err.Error())
+
+		for b := 0; b < ReindexableTypes; b++ {
+			rCh <- struct{}{}
+		}
+		logger.Debugf("sent all empty structs for %s to rCh", org.Name)
+
+		return
+	}
+
+	logger.Debugf("Starting to reindex org %s", org.Name)
+
+	// Send the objects to be reindexed in somewhat more manageable chunks
+	clientObjs := make([]indexer.Indexable, 0, 100)
+	for _, v := range client.AllClients(org) {
+		clientObjs = append(clientObjs, v)
+	}
+	logger.Debugf("reindexing %s clients", org.Name)
+	indexer.ReIndex(org, clientObjs, rCh)
+
+	nodeObjs := make([]indexer.Indexable, 0, 100)
+	for _, v := range node.AllNodes(org) {
+		nodeObjs = append(nodeObjs, v)
+	}
+	logger.Debugf("reindexing %s nodes", org.Name)
+	indexer.ReIndex(org, nodeObjs, rCh)
+
+	roleObjs := make([]indexer.Indexable, 0, 100)
+	for _, v := range role.AllRoles(org) {
+		roleObjs = append(roleObjs, v)
+	}
+
+	logger.Debugf("reindexing %s roles", org.Name)
+	indexer.ReIndex(org, roleObjs, rCh)
+
+	environmentObjs := make([]indexer.Indexable, 0, 100)
+	for _, v := range environment.AllEnvironments(org) {
+		environmentObjs = append(environmentObjs, v)
+	}
+	defaultEnv, _ := environment.Get(org, "_default")
+	environmentObjs = append(environmentObjs, defaultEnv)
+	logger.Debugf("reindexing environments %s", org.Name)
+	indexer.ReIndex(org, environmentObjs, rCh)
+
+	dbagObjs := make([]indexer.Indexable, 0, 100)
+	// data bags have to be done separately
+	dbags := databag.GetList(org)
+	for _, db := range dbags {
+		dbag, err := databag.Get(org, db)
+		if err != nil {
+			continue
+		}
+		// Don't forget to create the collections, because we
+		// weren't for the postgres search index. (Somehow a
+		// regression snuck in here, but what do you do?
+		indexer.CreateNewCollection(org, dbag.GetName())
+		dbis := make([]indexer.Indexable, dbag.NumDBItems())
+		i := 0
+		allDBItems, derr := dbag.AllDBItems()
+		if derr != nil {
+			logger.Errorf(derr.Error())
+			continue
+		}
+		for _, k := range allDBItems {
+			n := k
+			dbis[i] = n
+			i++
+		}
+		dbagObjs = append(dbagObjs, dbis...)
+	}
+	logger.Debugf("Reindexing %s data bags", org.Name)
+	indexer.ReIndex(org, dbagObjs, rCh)
+
+	return
 }
 
 // TODO: This needs to be able to be done per-org.
@@ -298,16 +402,21 @@ func reindexAll() {
 	// to execute simultaneously.
 	rdex := reindexNum
 	reindexNum++
-	logger.Infof("Taking mutex for reindex %d ($$ %d)", rdex, pid)
+	logger.Infof("Taking mutex for all org reindex %d ($$ %d)", rdex, pid)
 	riM.Lock()
-	logger.Infof("mutex acquired %d ($$ %d)", rdex, pid)
-	rCh := make(chan struct{}, ReindexableTypes)
+	logger.Infof("mutex acquired for all org %d ($$ %d)", rdex, pid)
+
+	orgs, _ := orgloader.AllOrganizations()
+
+	rTypeNum := len(orgs) * ReindexableTypes
+
+	rCh := make(chan struct{}, rTypeNum)
 	defer func() {
-		for u := 0; u < ReindexableTypes; u++ {
+		for u := 0; u < rTypeNum; u++ {
 			<-rCh
 			logger.Debugf("a reindexing goroutine finished")
 		}
-		logger.Infof("all reindexing goroutines finished, release reindexing mutex for %d ($$ %d)", rdex, pid)
+		logger.Infof("all reindexing goroutines finished, release reindexing mutex for all org  %d ($$ %d)", rdex, pid)
 		riM.Unlock()
 		logger.Debugf("reindexing mutex for %d ($$ %d) unlocked", rdex, pid)
 	}()
@@ -316,77 +425,10 @@ func reindexAll() {
 	// something comes in between the time we fetch the
 	// objects to reindex and when it gets done, they'll
 	// just be added naturally
-	logger.Infof("Beginning org search schema reindexing now")
-	orgs, _ := orgloader.AllOrganizations()
+	logger.Infof("Beginning all org search schema reindexing now")
+	
 	for _, org := range orgs {
-		logger.Debugf("Clearing %s search schema and tables", org.Name)
-		if err := indexer.ClearIndex(org); err != nil {
-			logger.Errorf("attempting to clear %s org index failed: %s", org.Name, err.Error())
-			continue
-		}
-
-		logger.Debugf("Starting to reindex org %s", org.Name)
-
-		// Send the objects to be reindexed in somewhat more manageable chunks
-		clientObjs := make([]indexer.Indexable, 0, 100)
-		for _, v := range client.AllClients(org) {
-			clientObjs = append(clientObjs, v)
-		}
-		logger.Debugf("reindexing %s clients", org.Name)
-		indexer.ReIndex(org, clientObjs, rCh)
-
-		nodeObjs := make([]indexer.Indexable, 0, 100)
-		for _, v := range node.AllNodes(org) {
-			nodeObjs = append(nodeObjs, v)
-		}
-		logger.Debugf("reindexing %s nodes", org.Name)
-		indexer.ReIndex(org, nodeObjs, rCh)
-
-		roleObjs := make([]indexer.Indexable, 0, 100)
-		for _, v := range role.AllRoles(org) {
-			roleObjs = append(roleObjs, v)
-		}
-
-		logger.Debugf("reindexing %s roles", org.Name)
-		indexer.ReIndex(org, roleObjs, rCh)
-
-		environmentObjs := make([]indexer.Indexable, 0, 100)
-		for _, v := range environment.AllEnvironments(org) {
-			environmentObjs = append(environmentObjs, v)
-		}
-		defaultEnv, _ := environment.Get(org, "_default")
-		environmentObjs = append(environmentObjs, defaultEnv)
-		logger.Debugf("reindexing environments %s", org.Name)
-		indexer.ReIndex(org, environmentObjs, rCh)
-
-		dbagObjs := make([]indexer.Indexable, 0, 100)
-		// data bags have to be done separately
-		dbags := databag.GetList(org)
-		for _, db := range dbags {
-			dbag, err := databag.Get(org, db)
-			if err != nil {
-				continue
-			}
-			// Don't forget to create the collections, because we
-			// weren't for the postgres search index. (Somehow a
-			// regression snuck in here, but what do you do?
-			indexer.CreateNewCollection(org, dbag.GetName())
-			dbis := make([]indexer.Indexable, dbag.NumDBItems())
-			i := 0
-			allDBItems, derr := dbag.AllDBItems()
-			if derr != nil {
-				logger.Errorf(derr.Error())
-				continue
-			}
-			for _, k := range allDBItems {
-				n := k
-				dbis[i] = n
-				i++
-			}
-			dbagObjs = append(dbagObjs, dbis...)
-		}
-		logger.Debugf("Reindexing %s data bags", org.Name)
-		indexer.ReIndex(org, dbagObjs, rCh)
+		reindexOrgWorker(org, rCh)
 	}
 	return
 }

@@ -71,7 +71,8 @@ func (r *RootACL) ContainerType() string {
 	return r.Subkind
 }
 
-// dummy Item type for root ACLs
+// dummy Item type for master ACLs (affecting all of goiardi). Putting it here
+// because I'm at a bit of a loss as to where I should put it.
 type MasterACL struct {
 	Name    string
 	Kind    string
@@ -92,6 +93,11 @@ func (r *MasterACL) ContainerType() string {
 
 func GetMasterACL() *MasterACL {
 	return &MasterACL{Name: "$$main$$", Kind: "all", Subkind: "$$master$$",}
+}
+
+func MasterCheckPerm(doer Actor, perm string) (bool, util.Gerror) {
+	// TODO: make this actually do something
+	return true, nil
 }
 
 // Pretty sure this will be useful in only one or two places, but so it goes.
