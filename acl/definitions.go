@@ -170,11 +170,7 @@ p, role##admins, shoveys, containers, $$default$$, delete, allow
 p, role##admins, shoveys, containers, $$default$$, grant, allow
 p, role##clients, shoveys, containers, $$default$$, update, allow
 
-p, role##master_admins, $$master$$, all, $$main$$, create, allow
-p, role##master_admins, $$master$$, all, $$main$$, read, allow
-p, role##master_admins, $$master$$, all, $$main$$, update, allow
-p, role##master_admins, $$master$$, all, $$main$$, delete, allow
-p, role##master_admins, $$master$$, all, $$main$$, grant, allow
+
 
 p, role##billing-admins, $$default$$, groups, billing-admins, read, allow
 p, role##billing-admins, $$default$$, groups, billing-admins, update, allow
@@ -203,4 +199,13 @@ p, role##admins, $$default$$, groups, $$default$$, update, allow
 p, role##admins, $$default$$, groups, $$default$$, delete, allow
 p, role##admins, $$default$$, groups, $$default$$, grant, allow
 p, role##users, $$default$$, groups, $$default$$, read, allow
+`
+
+// The policy for permissions affecting goiardi overall need to be stored in a
+// separate file (or, someday, in the postgres db).
+const masterPolicySkel = `p, role##master_admins, $$master$$, all, $$main$$, create, allow
+p, role##master_admins, $$master$$, all, $$main$$, read, allow
+p, role##master_admins, $$master$$, all, $$main$$, update, allow
+p, role##master_admins, $$master$$, all, $$main$$, delete, allow
+p, role##master_admins, $$master$$, all, $$main$$, grant, allow
 `
