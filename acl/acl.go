@@ -127,7 +127,7 @@ func loadPolicyAdapter(org *organization.Organization) (persist.Adapter, error) 
 
 func loadPolicyFileAdapter(org *organization.Organization, policyRoot string) (persist.Adapter, error) {
 	if !policyExists(org, policyRoot) {
-		err := fmt.Errorf("Cannot load ACL policy for organization %s: file already exists.", org.Name)
+		err := fmt.Errorf("Cannot load ACL policy for organization %s: file does not exist.", org.Name)
 		return nil, err
 	}
 
