@@ -21,12 +21,12 @@ package masteracl
 import (
 	"errors"
 	"github.com/casbin/casbin"
-	"github.com/casbin/casbin/model"
 	"github.com/casbin/casbin/persist"
 	"github.com/casbin/casbin/persist/file-adapter"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
+	"net/http"
 	"os"
 	"path"
 )
@@ -41,29 +41,58 @@ type Actor interface {
 	GetId() int64
 }
 
-// MasterACL lets us easily do perm checks that affect goiardi as a whole,
+type MasterACLItem uint8
+
+const (
+	Organizations MasterACLItem = iota
+	Reindex
+)
+
+var aclLookup = map[MasterACLItem]string{
+	Organizations: "organizations",
+	Reindex: "reindex",
+}
+
+// masterACL lets us easily do perm checks that affect goiardi as a whole,
 // rather than specific to an organization.
-type MasterACL struct {
-	e *casbin.SyncedEnforcer
+type masterACL struct {
+	*casbin.SyncedEnforcer
 }
 
-func MasterCheckPerm(doer Actor, perm string) (bool, util.Gerror) {
-	// TODO: make this actually do something
-	return true, nil
+// For now, don't load the master policy file into memory. This may change down
+// the road.
+
+func MasterCheckPerm(doer Actor, item MasterACLItem, perm string) (bool, util.Gerror) {
+	if doer.IsClient() {
+		gerr := util.Errorf("clients are ineligible to have permissions to perform this action")
+		return false, gerr
+	}
+	masterChecker, err := loadMasterACL()
+	if err != nil {
+		gerr := util.CastErr(err)
+		gerr.SetStatus(http.StatusInternalServerError)
+		return false, gerr
+	}
+
+	cond := []interface{}{doer.GetName(), aclLookup[item], perm}
+	chk := masterChecker.Enforce(cond...)
+	return chk, nil
 }
 
-func LoadMasterACL() error {
+func loadMasterACL() (*masterACL, error) {
 	m := casbin.NewModel(modelDefinition)
-}
-
-func initializeMasterACL(m model.Model) (*casbin.SyncedEnforcer, error) {
-	if err := initializeMasterPolicy(); err != nil {
-		return nil, err
+	if !masterPolicyExists() {
+		if err := initializeMasterPolicy(); err != nil {
+			return nil, err
+		}
 	}
 	adp, err := loadMasterPolicyAdapter() 
 	if err != nil {
 		return nil, err
 	}
+	e := casbin.NewSyncedEnforcer(m, adp, config.Config.PolicyLogging)
+	mc := &masterACL{e}
+	return mc, nil
 }
 
 func getMasterPolicyFile() string {
@@ -75,7 +104,7 @@ func masterPolicyExists() bool {
 	return !os.IsNotExist(err) // bit heavy handed, but eh
 }
 
-func loadMasterPolicyAdapter(policyFile string) (persist.Adapter, error) {
+func loadMasterPolicyAdapter() (persist.Adapter, error) {
 	if !masterPolicyExists() {
 		err := errors.New("Cannot load master policy file: file does not exist.")
 		return nil, err
