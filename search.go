@@ -20,12 +20,12 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
@@ -222,7 +222,7 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if f, ferr := aclhelper.MasterCheckPerm(opUser, "update"); ferr != nil {
+	if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Reindex, "update"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
