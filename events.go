@@ -211,6 +211,10 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodHead:
 		pcheck := func(r *http.Request, eventIDstr string, opUser actor.Actor, org *organization.Organization) util.Gerror {
 			//org.PermCheck.CheckItemPerm(chefNode, opUser, "delete")
+			// hmmm. Trying something that seems a little weird, but
+			// might be the most straightforward without changing
+			// all the other things.
+			fakeEvent := loginfo.LogInfo{Actor: opUser
 			if org.PermCheck {
 				return headForbidden()
 			}
