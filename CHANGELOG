@@ -1,8 +1,11 @@
 1.0.0 (not released yet)
 -----
-* Organizations and RBAC (in progress). This includes stuff like groups, ACLs,
-  and whatnot.
+* Organizations and RBAC. This includes stuff like groups, ACLs, and whatnot.
 * Refactor of HTTP handling to use gorilla-mux.
+* Dropped MySQL support. It's the in-memory store, PostgreSQL, or nothin'.
+* Removed the long-deprecated --use-unsafe-mem-store option.
+* Changed index-val-trim's default behavior - if not set, it defaults to
+  trimming values at 150 characters.
 * TODO: Plenty more to add when this is finally ready to release.
 
 0.11.10 (Unreleased at this time)
