@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/container"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/group"
+	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
@@ -309,13 +310,10 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	// try the default org for this
-	orgDef, err := orgloader.Get("default")
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	if f, ferr := orgDef.PermCheck.RootCheckPerm(opUser, "read"); ferr != nil {
+
+	// Use the master acl checks for this. Woo! However, it looks like the
+	// read permission for /organizations may need to be opened up more?
+	if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Organizations, "read"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -331,7 +329,7 @@ func orgHandler(w http.ResponseWriter, r *http.Request) {
 			orgResponse[o] = util.CustomURL(itemURL)
 		}
 	case http.MethodPost:
-		if f, ferr := orgDef.PermCheck.RootCheckPerm(opUser, "create"); ferr != nil {
+		if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Organizations, "create"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
