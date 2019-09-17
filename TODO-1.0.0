@@ -20,5 +20,3 @@ And there's more...
   of goiardi.
 * Update stuff in vendor
 * Oh, update the CHANGELOG (dur)
-* actual per-org reindex, instead of always reindexing everything
-* a url to explicity reindex the entire server
