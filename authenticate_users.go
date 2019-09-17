@@ -24,7 +24,6 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	"log"
 	"net/http"
 )
 
@@ -53,7 +52,7 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 		return
 	}
-	log.Printf("authJSON now: %+v", authJSON)
+
 	auth, authErr := validateJSON(authJSON)
 	if authErr != nil {
 		jsonErrorReport(w, r, authErr.Error(), authErr.Status())
