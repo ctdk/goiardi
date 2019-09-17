@@ -209,8 +209,9 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodHead:
-		pcheck := func(r *http.Request, eventIDstr string, opUser actor.Actor) util.Gerror {
-			if !opUser.IsAdmin() {
+		pcheck := func(r *http.Request, eventIDstr string, opUser actor.Actor, org *organization.Organization) util.Gerror {
+			//org.PermCheck.CheckItemPerm(chefNode, opUser, "delete")
+			if org.PermCheck {
 				return headForbidden()
 			}
 			return nil

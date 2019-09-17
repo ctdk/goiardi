@@ -52,7 +52,7 @@ type headChecker interface {
 
 type exists func(org *organization.Organization, resource string) (bool, util.Gerror)
 
-type permChecker func(r *http.Request, resource string, obj actor.Actor) util.Gerror
+type permChecker func(r *http.Request, resource string, obj actor.Actor, org *organization.Organization) util.Gerror
 
 // for when no perm check is actually necessary
 func nilPermCheck(r *http.Request, resource string, obj actor.Actor) util.Gerror {
@@ -75,7 +75,7 @@ func headChecking(w http.ResponseWriter, r *http.Request, obj actor.Actor, org *
 	if err != nil {
 		headResponse(w, r, err.Status())
 	}
-	err = permCheck(r, resource, obj)
+	err = permCheck(r, resource, obj, org)
 	if err != nil {
 		headResponse(w, r, err.Status())
 	}
