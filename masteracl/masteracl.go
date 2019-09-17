@@ -59,13 +59,14 @@ type masterACL struct {
 	*casbin.SyncedEnforcer
 }
 
+var ClientErr = util.Errorf("clients are ineligible to have permissions to perform this action")
+
 // For now, don't load the master policy file into memory. This may change down
 // the road.
 
 func MasterCheckPerm(doer Actor, item MasterACLItem, perm string) (bool, util.Gerror) {
 	if doer.IsClient() {
-		gerr := util.Errorf("clients are ineligible to have permissions to perform this action")
-		return false, gerr
+		return false, ClientErr
 	}
 	masterChecker, err := loadMasterACL()
 	if err != nil {

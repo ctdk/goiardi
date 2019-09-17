@@ -26,6 +26,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/user"
@@ -298,7 +299,6 @@ func TestClients(t *testing.T) {
 	gg.Save()
 
 	r1 := org.PermCheck.Enforcer().GetRolesForUser(c.GetName())
-	fmt.Printf("roles for client: %v\n", r1)
 
 	if !util.StringPresentInSlice(gg.ACLName(), r1) {
 		t.Errorf("Didn't find %s in %s's roles.", gg.ACLName(), c.GetName())
@@ -559,6 +559,59 @@ func TestItemRename(t *testing.T) {
 	opol := pc.GetItemPolicies(oldName, c.ContainerKind(), c.ContainerType())
 	if opol != nil && len(opol) != 0 {
 		t.Errorf("old policies for client %s (was %s) should have been empty, but had %d elements", c.Name, oldName, len(opol))
+	}
+}
+
+func TestMasterACL(t *testing.T) {
+	org, _ := buildOrg()
+	c, _ := client.New(org, "masterclient")
+	c.Save()
+	u1, _ := user.New("master_user")
+	u1.Save()
+
+	aclLookup := map[masteracl.MasterACLItem]string{
+		masteracl.Organizations: "organizations",
+		masteracl.Reindex: "reindex",
+	}
+
+	perm := "read"
+	ops := []masteracl.MasterACLItem{masteracl.Organizations, masteracl.Reindex}
+
+	// clients
+	for _, o := range ops {
+		ok, err := masteracl.MasterCheckPerm(c, o, perm)
+		if ok {
+			t.Errorf("A client passed a master ACL perm check (%s on %s), but it shouldn't have.", perm, aclLookup[o])
+		}
+		if err != nil {
+			if err != masteracl.ClientErr {
+				t.Errorf("A client should have gotten ClientErr back from MasterCheckPerm (%s on %s), but got '%s' instead.", perm, aclLookup[o], err.Error())
+			}
+		} else {
+			t.Errorf("A client should have gotten an error with the master ACL check (%s on %s), but didn't.", perm, aclLookup[o])
+		}
+	}
+
+	// users
+	for _, o := range ops {
+		ok, err := masteracl.MasterCheckPerm(u1, o, perm)
+		if ok {
+			t.Errorf("A user passed a master ACL perm check (%s on %s), but it shouldn't have.", perm, aclLookup[o])
+		}
+		if err != nil {
+			t.Errorf("A user should not have gotten an error with the master ACL check (%s on %s), even if the check wasn't supposed to succeed, but did. The error was: '%s'", perm, aclLookup[o], err.Error())
+		}
+	}
+
+	// pivotal
+	for _, o := range ops {
+		ok, err := masteracl.MasterCheckPerm(pivotal, o, perm)
+		if !ok {
+			t.Errorf("The pivotal user failed a master ACL perm check (%s on %s), but it shouldn't have.", perm, aclLookup[o])
+		}
+		if err != nil {
+			t.Errorf("The pivotal user should not have gotten an error with the master ACL check (%s on %s), but did. The error was: '%s'", perm, aclLookup[o], err.Error())
+		}
 	}
 }
 
