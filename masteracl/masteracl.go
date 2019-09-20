@@ -46,11 +46,13 @@ type MasterACLItem uint8
 const (
 	Organizations MasterACLItem = iota
 	Reindex
+	Users
 )
 
 var aclLookup = map[MasterACLItem]string{
 	Organizations: "organizations",
 	Reindex: "reindex",
+	Users: "users",
 }
 
 // masterACL lets us easily do perm checks that affect goiardi as a whole,

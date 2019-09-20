@@ -34,6 +34,7 @@ import (
 	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/util"
@@ -600,6 +601,7 @@ func (u *User) CheckPermEdit(userData map[string]interface{}, perm string) util.
 			return gerr
 		}
 	}
+
 	return nil
 }
 

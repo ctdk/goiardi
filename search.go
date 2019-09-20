@@ -25,7 +25,6 @@ import (
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/indexer"
-	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
@@ -231,10 +230,8 @@ func reindexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodPost:
-		if !opUser.IsAdmin() {
-			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
-			return
-		}
+		// Don't really need the IsAdmin check anymore, since there's
+		// already the check above.
 		go reindexAll()
 		reindexResponse["reindex"] = "OK"
 	default:
@@ -271,10 +268,7 @@ func reindexOrgHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodPost:
-		if !opUser.IsAdmin() {
-			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
-			return
-		}
+		// IsAdmin() check, again, is superfluous.
 		go reindexOrg(org)
 		reindexResponse["reindex"] = "OK"
 	default:

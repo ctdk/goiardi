@@ -51,5 +51,11 @@ p, $$master_admins, reindex, update
 p, $$master_admins, reindex, delete
 p, $$master_admins, reindex, grant
 
+p, $$master_admins, users, create
+p, $$master_admins, users, read
+p, $$master_admins, users, update
+p, $$master_admins, users, delete
+p, $$master_admins, users, grant
+
 g, pivotal, $$master_admins
 `

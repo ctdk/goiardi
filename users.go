@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/loginfo"
+	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/reqctx"
@@ -62,7 +63,9 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodHead:
 		permCheck := func(r *http.Request, userName string, opUser actor.Actor) util.Gerror {
-			if !opUser.IsAdmin() {
+			if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "read"); ferr != nil {
+				return ferr
+			} else if !f {
 				chefUser, err := user.Get(userName)
 				if err != nil {
 					return err
@@ -73,6 +76,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 					return err
 				}
 			}
+
 			return nil
 		}
 		headChecking(w, r, opUser, org, userName, user.DoesExist, permCheck)
@@ -83,8 +87,13 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
-		if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
-			jsonErrorReport(w, r, "Deleting that user is forbidden", http.StatusForbidden)
+		if !opUser.IsSelf(chefUser) {
+			if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "delete"); ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			} else if !f {
+				jsonErrorReport(w, r, "Deleting that user is forbidden", http.StatusForbidden)
+			}
+
 			return
 		}
 		/* Docs were incorrect. It does want the body of the
@@ -142,15 +151,19 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
-		if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
-			orgAdmin, oerr := isOrgAdminForUser(chefUser, opUser)
-			if oerr != nil {
-				jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-				return
-			}
-			if !orgAdmin {
-				jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
-				return
+		if !opUser.IsSelf(chefUser) {
+			if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "read"); ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			} else if !f {
+				orgAdmin, oerr := isOrgAdminForUser(chefUser, opUser)
+				if oerr != nil {
+					jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+					return
+				}
+				if !orgAdmin {
+					jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+					return
+				}
 			}
 		}
 
@@ -184,11 +197,15 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
+		f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "update")
+		if ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		}
+		if !f && !opUser.IsSelf(chefUser) {
 			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return
 		}
-		if !opUser.IsAdmin() {
+		if !f {
 			aerr := opUser.CheckPermEdit(userData, "admin")
 			if aerr != nil {
 				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
@@ -380,13 +397,16 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		// Seems the user has to be a superuser for this functionality
 		// now.
-		if !opUser.IsAdmin() {
+		if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "read"); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		} else if !f {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return
 		}
+
 		if email == "" {
 			if verbose {
 				users := user.AllUsers()
@@ -411,7 +431,7 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-	case "POST":
+	case http.MethodPost:
 		userData, jerr := parseObjJSON(r.Body)
 		if jerr != nil {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
@@ -505,7 +525,7 @@ func userListOrgHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userName := vars["name"]
 
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		jsonErrorReport(w, r, "unrecognized method", http.StatusMethodNotAllowed)
 		return
 	}
@@ -518,15 +538,19 @@ func userListOrgHandler(w http.ResponseWriter, r *http.Request) {
 
 	chefUser, err := user.Get(userName)
 
-	if !opUser.IsAdmin() && !opUser.IsSelf(chefUser) {
-		ook, err := isOrgAdminForUser(chefUser, opUser)
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
-		}
-		if !ook {
-			jsonErrorReport(w, r, "you are not allowed to perform that action", http.StatusForbidden)
-			return
+	if !opUser.IsSelf(chefUser) {
+		if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "read"); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		} else if !f {
+			ook, err := isOrgAdminForUser(chefUser, opUser)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			if !ook {
+				jsonErrorReport(w, r, "you are not allowed to perform that action", http.StatusForbidden)
+				return
+			}
 		}
 	}
 
