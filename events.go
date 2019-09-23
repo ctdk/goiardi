@@ -210,9 +210,12 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodHead:
 		pcheck := func(r *http.Request, eventIDstr string, opUser actor.Actor) util.Gerror {
-			if !opUser.IsAdmin() {
-				return headForbidden()
-			}
+			// opUser.IsAdmin() call removed here. It was checking
+			// to see if the opUser was not an admin, and returning
+			// 403 if they weren't and were trying to do a HEAD
+			// request. If the user doesn't have at least read
+			// access to the events, though, they wouldn't even be
+			// able to get here.
 			return nil
 		}
 		headChecking(w, r, opUser, org, eventIDstr, loginfo.DoesExist, pcheck)
