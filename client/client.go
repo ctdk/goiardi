@@ -543,6 +543,8 @@ func (c *Client) Flatten() map[string]interface{} {
 // IsAdmin returns true if the client is an admin. If use-auth is false, this
 // always returns true.
 func (c *Client) IsAdmin() bool {
+	// Question is, should this *ever* be able to be true? Leaving it as it
+	// is for now, but there is a strong likelihood that it´ll be ganked.
 	if !useAuth() {
 		return true
 	}

@@ -62,6 +62,7 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	resp, rerr := validateLogin(auth)
 	if rerr != nil {
 		s := rerr.Status()
+		// Another area that I can
 		if !opUser.IsAdmin() {
 			s = http.StatusForbidden
 		}
