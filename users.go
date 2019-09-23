@@ -441,20 +441,25 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, averr.Error(), averr.Status())
 			return
 		}
-		if !opUser.IsAdmin() && !opUser.IsValidator() {
-			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
-			return
-		} else if !opUser.IsAdmin() && opUser.IsValidator() {
-			if aerr := opUser.CheckPermEdit(userData, "admin"); aerr != nil {
-				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
-				return
-			}
-			if verr := opUser.CheckPermEdit(userData, "validator"); verr != nil {
-				jsonErrorReport(w, r, verr.Error(), verr.Status())
-				return
-			}
+		if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "update"); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		} else if !f {
+			if opUser.IsValidator() {
+				if aerr := opUser.CheckPermEdit(userData, "admin"); aerr != nil {
+					jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+					return
+				}
+				if verr := opUser.CheckPermEdit(userData, "validator"); verr != nil {
+					jsonErrorReport(w, r, verr.Error(), verr.Status())
+					return
+				}
 
+			} else {
+				jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
+				return
+			}
 		}
+
 		var nameFromJSON interface{}
 		var ok bool
 		if nameFromJSON, ok = userData["username"]; !ok {
