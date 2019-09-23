@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/user"
 	"log"
 	"net/http"
@@ -35,7 +36,14 @@ func systemRecoveryHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if !opUser.IsAdmin() {
+
+	// This requires looking at what exactly's expected with
+	// /system_recovery. For the time being. use the Organization masteracl
+	// "update" check.
+	if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Organizations, "update"); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
 		jsonErrorReport(w, r, "missing create permission", http.StatusForbidden)
 		return
 	}
