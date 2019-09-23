@@ -54,6 +54,7 @@ import (
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/loginfo"
+	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
@@ -596,11 +597,15 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
 			return
 		}
-		if org != nil && u.IsUser() && !u.IsAdmin() {
-			_, aerr := association.GetAssoc(u.(*user.User), org)
-			if aerr != nil {
-				jsonErrorReport(w, r, aerr.Error(), aerr.Status())
-				return
+		if org != nil && u.IsUser() {
+			if f, ferr := masteracl.MasterCheckPerm(u, masteracl.Organizations, "update"); ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			} else if !f {
+				_, aerr := association.GetAssoc(u.(*user.User), org)
+				if aerr != nil {
+					jsonErrorReport(w, r, aerr.Error(), aerr.Status())
+					return
+				}
 			}
 		}
 		userID = "pivotal"
