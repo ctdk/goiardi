@@ -600,6 +600,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if org != nil && u.IsUser() {
 			if f, ferr := masteracl.MasterCheckPerm(u, masteracl.Organizations, "update"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+				return
 			} else if !f {
 				_, aerr := association.GetAssoc(u.(*user.User), org)
 				if aerr != nil {
