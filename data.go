@@ -169,22 +169,15 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// This is what was happening in the auth-1.3 branch taken from
-		// the 0.11.3 master branch for HEAD responses. Since the
-		// IsAdmin() function isn't really productive anymore, this is
-		// going to need refactoring to fit with the 1.0.0 permissions.
-		// Commenting handling HEAD out for data bags for now until it
-		// gets sorted.
-		/**************************************************************
-		if opUser.IsValidator() || (!opUser.IsAdmin() && (r.Method != http.MethodGet && r.Method != http.MethodHead)) {
-			jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
-			return
-		}
+		// re-enabling data bag HEAD responses. There was some
+		// convoluted logic in here dealing with validators that was no
+		// longer necessary, so it's been snipped out.
 
 		// Do HEAD responses here, before starting to fetch full data
 		// bags and the like.
 		if r.Method == http.MethodHead {
 			permCheck := func(r *http.Request, dbName string, opUser actor.Actor) util.Gerror {
+				// This shouldn't be able to happen, but eh.
 				if opUser.IsValidator() {
 					return headForbidden()
 				}
@@ -205,7 +198,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-		**************************************************************/
+
 		chefDbag, err := databag.Get(org, dbName)
 		if err != nil {
 			var errMsg string
