@@ -90,6 +90,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		if !opUser.IsSelf(chefUser) {
 			if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "delete"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+				return
 			} else if !f {
 				jsonErrorReport(w, r, "Deleting that user is forbidden", http.StatusForbidden)
 			}
@@ -154,6 +155,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		if !opUser.IsSelf(chefUser) {
 			if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "read"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+				return
 			} else if !f {
 				orgAdmin, oerr := isOrgAdminForUser(chefUser, opUser)
 				if oerr != nil {
@@ -200,6 +202,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "update")
 		if ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
 		}
 		if !f && !opUser.IsSelf(chefUser) {
 			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
@@ -402,6 +405,7 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 		// now.
 		if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "read"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
 		} else if !f {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return
@@ -443,6 +447,7 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "update"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
 		} else if !f {
 			if opUser.IsValidator() {
 				if aerr := opUser.CheckPermEdit(userData, "admin"); aerr != nil {
@@ -546,6 +551,7 @@ func userListOrgHandler(w http.ResponseWriter, r *http.Request) {
 	if !opUser.IsSelf(chefUser) {
 		if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "read"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
 		} else if !f {
 			ook, err := isOrgAdminForUser(chefUser, opUser)
 			if err != nil {
