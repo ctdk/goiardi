@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/group"
+	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
@@ -198,10 +199,16 @@ func userAssocHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
 		return
 	}
-	if !user.IsSelf(opUser) && !opUser.IsAdmin() {
-		jsonErrorReport(w, r, "missing read permission", http.StatusForbidden)
-		return
+	if !user.IsSelf(opUser) {
+		if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "read"); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "missing read permission", http.StatusForbidden)
+			return
+		}
 	}
+
 	assoc, err := association.GetAllOrgsAssociationReqs(user)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
@@ -239,10 +246,17 @@ func userAssocCountHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
 		return
 	}
-	if !user.IsSelf(opUser) && !opUser.IsAdmin() {
-		jsonErrorReport(w, r, "missing read permission", http.StatusForbidden)
-		return
+
+	if !user.IsSelf(opUser) {
+		if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "read"); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "missing read permission", http.StatusForbidden)
+			return
+		}
 	}
+
 	count, err := association.OrgsAssociationReqCount(user)
 	if err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
@@ -275,9 +289,14 @@ func userAssocIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !opUser.IsAdmin() && !opUser.IsSelf(user) {
-		jsonErrorReport(w, r, "you may not accept that request on behalf of that user", http.StatusForbidden)
-		return
+	if !user.IsSelf(opUser) {
+		if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "update"); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "you may not accept that request on behalf of that user", http.StatusForbidden)
+			return
+		}
 	}
 
 	id := vars["id"]
