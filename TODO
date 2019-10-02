@@ -5,6 +5,13 @@
 * allow open universes on a per-org basis
 * crafty data bag + secrets bit
 * AWS Secrets Manager as another option for an external secrets store.
+* Various new golang features have become available that goiardi isn't taking
+  advantage of. It should do so.
+* SQL method cleanup: Since MySQL support was dropped with 1.0.0, there's no
+  particularly good reason that there should be postgres_func.go (or the
+  equivalent) files separate from sql_funcs.go. The files with all the SQL
+  methods should be merged together, and the now superfluous wrapper methods
+  should have their contents replaced with the relevant postgres method.
 
 * For 1.0.0 specifics, see TODO-1.0.0
 
