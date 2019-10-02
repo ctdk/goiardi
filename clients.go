@@ -87,7 +87,10 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	case http.MethodHead:
 		permCheck := func(r *http.Request, clientName string, opUser actor.Actor) util.Gerror {
-			if !opUser.IsAdmin() {
+			// removed IsAdmin call here
+			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "clients", "grant"); ferr != nil {
+				return ferr
+			} else if !f {
 				chefClient, gerr := client.Get(org, clientName)
 				if gerr != nil {
 					return gerr
