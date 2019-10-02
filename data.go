@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/orgloader"
@@ -188,7 +189,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				headChecking(w, r, opUser, org, dbName, databag.DoesExist, permCheck)
 			} else {
 				dbItemName := pathArray[2]
-				chefDbag, err := databag.Get(dbName)
+				chefDbag, err := databag.Get(org, dbName)
 				if err != nil {
 					headResponse(w, r, err.Status())
 					return

@@ -64,7 +64,7 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	if rerr != nil {
 		s := rerr.Status()
 		// removing an IsAdmin call here
-		if f, ferr := masteracl.MasterCheckPerm(u, masteracl.Users, "grant"); ferr != nil {
+		if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "grant"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
 		} else if !f {
@@ -84,7 +84,7 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	// this this whole function is pretty baffling to me now. I have no idea
 	// anymore why it behaves like this. :-/
 
-	if f, ferr := masteracl.MasterCheckPerm(u, masteracl.Users, "grant"); ferr != nil {
+	if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "grant"); ferr != nil {
 		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 		return
 	} else if !f {
@@ -112,8 +112,7 @@ func validateLogin(auth *authenticator) (authResponse, util.Gerror) {
 	// cannot allow the superuser to actually log in this way
 	// Removing yet another IsAdmin call. This should, at least, be it.
 	if f, ferr := masteracl.MasterCheckPerm(u, masteracl.Users, "grant"); ferr != nil {
-		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
-		return
+		return resp, ferr
 	} else if f { // return an error *if* the user is a superuser :-O
 		gerr := util.Errorf("forbidden")
 		gerr.SetStatus(http.StatusForbidden)
