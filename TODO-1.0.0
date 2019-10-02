@@ -7,8 +7,6 @@
 
 And there's more...
 
-* Urk! There are still uses of IsAdmin() in the code. These need to be reviewed
-  to see which have legitimate use or (more likely) need to be replaced.
 * update the goiardi knife plugins
 	o list those knife plugins in the documentation
 * update schob for org-ness if needed (it's probably needed)
