@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
@@ -62,8 +63,11 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	resp, rerr := validateLogin(auth)
 	if rerr != nil {
 		s := rerr.Status()
-		// Another area that I can
-		if !opUser.IsAdmin() {
+		// removing an IsAdmin call here
+		if f, ferr := masteracl.MasterCheckPerm(u, masteracl.Users, "grant"); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
 			s = http.StatusForbidden
 		}
 		jsonErrorReport(w, r, rerr.Error(), s)
@@ -75,7 +79,15 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if !opUser.IsAdmin() {
+
+	// removing an IsAdmin call here as well. Honestly, while I know I wrote
+	// this this whole function is pretty baffling to me now. I have no idea
+	// anymore why it behaves like this. :-/
+
+	if f, ferr := masteracl.MasterCheckPerm(u, masteracl.Users, "grant"); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
 		jsonErrorReport(w, r, "not permitted for this user", http.StatusForbidden)
 		return
 	}
@@ -98,7 +110,11 @@ func validateLogin(auth *authenticator) (authResponse, util.Gerror) {
 		return resp, gerr
 	}
 	// cannot allow the superuser to actually log in this way
-	if u.IsAdmin() {
+	// Removing yet another IsAdmin call. This should, at least, be it.
+	if f, ferr := masteracl.MasterCheckPerm(u, masteracl.Users, "grant"); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if f { // return an error *if* the user is a superuser :-O
 		gerr := util.Errorf("forbidden")
 		gerr.SetStatus(http.StatusForbidden)
 		return resp, gerr
