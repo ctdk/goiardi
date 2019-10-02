@@ -29,6 +29,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
@@ -71,10 +72,15 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 	}
 
 	// check association last of all?
-	if org != nil && u.IsUser() && !u.IsAdmin() {
-		_, aerr := association.GetAssoc(u.(*user.User), org)
-		if aerr != nil {
-			return aerr
+	// removed IsAdmin call here
+	if org != nil && u.IsUser() {
+		if f, ferr := masteracl.MasterCheckPerm(u, masteracl.Users, "grant"); ferr != nil {
+			return ferr
+		} else if !f {
+			_, aerr := association.GetAssoc(u.(*user.User), org)
+			if aerr != nil {
+				return aerr
+			}
 		}
 	}
 	return nil
