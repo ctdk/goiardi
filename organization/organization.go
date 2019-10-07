@@ -32,6 +32,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 )
 
 type Organization struct {
@@ -41,6 +42,9 @@ type Organization struct {
 	uuID      uuid.UUID
 	id        int64
 	PermCheck aclhelper.PermChecker `json:"-"`
+	orgIdentifier string // this is a handy string containing either the id
+			     // if we're using Postgres, or the name if we're
+			     // using in-mem.
 }
 
 type privOrganization struct {
@@ -272,4 +276,16 @@ func (o *Organization) GetId() int64 {
 // object's URL.
 func (o *Organization) OrgURLBase() string {
 	return fmt.Sprintf("/organizations/%s", o.Name)
+}
+
+// OrgIdentifier returns a string identifying this organization. If goiardi is
+// using the PostgreSQL storage backend, it's the org's ID stringified, but if
+// it's using the in-mem datastore it's the org name.
+func (o *Organization) OrgIdentifier() string {
+	// and if it's already set just return that.
+	if o.orgIdentifier != "" {
+		return o.orgIdentifier
+	}
+	var orgIdent string
+	
 }

@@ -942,3 +942,20 @@ func intify(i interface{}) (int64, bool) {
 	}
 	return retint, ok
 }
+
+// Now that there are potentially multiple orgs sending out shovey jobs, we must
+// differentiate between nodes that may have the same name in different orgs.
+// This simply joins the org ID and the node name together.
+func orgNodeName(org *organization.Organization, nodeName string) string {
+	orgIdentifier :=
+}
+
+// And to go along with the above, a handy dandy function to convert a slice of
+// node names to the new format.
+// Need to return?
+func orgNodeNameSlice(org *organization.Organization, nodeNames []string) {
+	for i, n := range nodeNames {
+		n2 := orgNodeName(org, n)
+		nodeNames[i] = n2
+	}
+}

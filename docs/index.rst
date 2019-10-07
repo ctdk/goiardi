@@ -35,6 +35,7 @@ The goiardi manual is licensed under a Creative Commons Attribution 4.0 License 
    features/metrics
    features/s3
    features/secrets
+   features/goiardi_knife_plugins
    changelog
 
 Indices and tables
