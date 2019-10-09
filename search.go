@@ -76,8 +76,10 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// if it's a HEAD response, just send back 200 no matter what, there's
-	// no meaningful way to use HEAD with search that I can see
+	// If it's a HEAD response, just send back 200 no matter what. The only
+	// meaningful way to use HEAD with search that I can see is confirming
+	// that this is a goiardi server before trying to reindex search tables
+	// by checking the headers.
 	if r.Method == http.MethodHead {
 		if opUser.IsValidator() {
 			headResponse(w, r, http.StatusForbidden)
