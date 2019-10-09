@@ -10,6 +10,9 @@ And there's more...
 * update the goiardi knife plugins
 	o list those knife plugins in the documentation
 * update schob for org-ness if needed (it's probably needed)
+* It seems likely that shovey ought to have a way to sign requests in a way tied  to the organization. Investigate ways to make that happen. Actually, come to
+  think of it, there should not be one public key used by all shovey clients
+  either.
 * find link to the last free fake-s3. Also see if the patch in the docs is still
   necessary
 * document moving items stored externally, like objects in s3, secrets, etc.
