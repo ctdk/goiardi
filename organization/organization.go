@@ -287,5 +287,11 @@ func (o *Organization) OrgIdentifier() string {
 		return o.orgIdentifier
 	}
 	var orgIdent string
-
+	if config.UsingDB() {
+		orgIdent = strconv.FormatInt(o.id, 10)
+	} else {
+		orgIdent = o.Name
+	}
+	o.orgIdentifier = orgIdent
+	return o.orgIdentifier
 }
