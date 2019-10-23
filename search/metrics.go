@@ -30,16 +30,16 @@ import (
 )
 
 const (
-	pgTiming = "pg"
+	pgTiming    = "pg"
 	inMemTiming = "in_mem"
 )
 
 type searchTimer struct {
-	variety string
-	root met.Timer
+	variety   string
+	root      met.Timer
 	orgTiming map[string]met.Timer
-	backend met.Backend
-	m *sync.Mutex
+	backend   met.Backend
+	m         *sync.Mutex
 }
 
 var searchTimings *searchTimer

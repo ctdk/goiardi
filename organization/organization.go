@@ -36,15 +36,15 @@ import (
 )
 
 type Organization struct {
-	Name      string `json:"name"`
-	FullName  string `json:"full_name"`
-	GUID      string `json:"guid"`
-	uuID      uuid.UUID
-	id        int64
-	PermCheck aclhelper.PermChecker `json:"-"`
-	orgIdentifier string // this is a handy string containing either the id
-			     // if we're using Postgres, or the name if we're
-			     // using in-mem.
+	Name          string `json:"name"`
+	FullName      string `json:"full_name"`
+	GUID          string `json:"guid"`
+	uuID          uuid.UUID
+	id            int64
+	PermCheck     aclhelper.PermChecker `json:"-"`
+	orgIdentifier string                // this is a handy string containing either the id
+	// if we're using Postgres, or the name if we're
+	// using in-mem.
 }
 
 type privOrganization struct {
@@ -287,5 +287,5 @@ func (o *Organization) OrgIdentifier() string {
 		return o.orgIdentifier
 	}
 	var orgIdent string
-	
+
 }

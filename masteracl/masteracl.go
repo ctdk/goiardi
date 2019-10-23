@@ -51,8 +51,8 @@ const (
 
 var aclLookup = map[MasterACLItem]string{
 	Organizations: "organizations",
-	Reindex: "reindex",
-	Users: "users",
+	Reindex:       "reindex",
+	Users:         "users",
 }
 
 // masterACL lets us easily do perm checks that affect goiardi as a whole,
@@ -89,7 +89,7 @@ func loadMasterACL() (*masterACL, error) {
 			return nil, err
 		}
 	}
-	adp, err := loadMasterPolicyAdapter() 
+	adp, err := loadMasterPolicyAdapter()
 	if err != nil {
 		return nil, err
 	}

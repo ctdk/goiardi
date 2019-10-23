@@ -421,7 +421,7 @@ func reindexAll() {
 	// objects to reindex and when it gets done, they'll
 	// just be added naturally
 	logger.Infof("Beginning all org search schema reindexing now")
-	
+
 	for _, org := range orgs {
 		reindexOrgWorker(org, rCh)
 	}

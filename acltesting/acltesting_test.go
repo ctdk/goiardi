@@ -571,7 +571,7 @@ func TestMasterACL(t *testing.T) {
 
 	aclLookup := map[masteracl.MasterACLItem]string{
 		masteracl.Organizations: "organizations",
-		masteracl.Reindex: "reindex",
+		masteracl.Reindex:       "reindex",
 	}
 
 	perm := "read"
