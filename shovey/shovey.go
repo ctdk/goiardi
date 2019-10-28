@@ -667,7 +667,7 @@ func (sr *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, 
 	if config.UsingDB() {
 		return sr.addStreamOutSQL(output, outputType, seq, isLast)
 	}
-	stream := &ShoveyRunStream{ShoveyUUID: sr.ShoveyUUID, NodeName: sr.NodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: time.Now()}
+	stream := &ShoveyRunStream{ShoveyUUID: sr.ShoveyUUID, NodeName: sr.NodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: time.Now(), org: sr.org}
 	ds := datastore.New()
 	streamKey := fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, seq)
 	logger.Debugf("Setting %s", streamKey)
@@ -947,7 +947,10 @@ func intify(i interface{}) (int64, bool) {
 // differentiate between nodes that may have the same name in different orgs.
 // This simply joins the org ID and the node name together.
 func orgNodeName(org *organization.Organization, nodeName string) string {
-	orgIdentifier :=
+	// making orgIdentifier a variable to make it easier to fiddle with how
+	// it's set later.
+	orgIdentifier := org.Name
+	return util.JoinStr(orgIdentifier, "-", nodeName)
 }
 
 // And to go along with the above, a handy dandy function to convert a slice of
