@@ -950,7 +950,7 @@ func orgNodeName(org *organization.Organization, nodeName string) string {
 	// making orgIdentifier a variable to make it easier to fiddle with how
 	// it's set later.
 	orgIdentifier := org.Name
-	return util.JoinStr(orgIdentifier, "-", nodeName)
+	return util.JoinStr(orgIdentifier, ":", nodeName)
 }
 
 // And to go along with the above, a handy dandy function to convert a slice of
