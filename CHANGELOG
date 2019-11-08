@@ -6,6 +6,8 @@
 * Removed the long-deprecated --use-unsafe-mem-store option.
 * Changed index-val-trim's default behavior - if not set, it defaults to
   trimming values at 150 characters.
+* Finally removed the deprecated & unused chefcrypto module inside goiardi - it
+  was moved to a separate module back in November of 2016.
 * TODO: Plenty more to add when this is finally ready to release.
 
 0.11.10 (Unreleased at this time)
