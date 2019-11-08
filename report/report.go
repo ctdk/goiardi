@@ -84,7 +84,7 @@ func (b ByTime) Less(i, j int) bool { return b[i].EndTime.Before(b[j].EndTime) }
 // statsd metric holders
 
 type reportEntitiesMetrics struct {
-	org 		 *organization.Organization
+	org              *organization.Organization
 	runsStarted      met.Count
 	runsOK           met.Count
 	runsFailed       met.Count
@@ -94,10 +94,10 @@ type reportEntitiesMetrics struct {
 }
 
 type reportMetrication struct {
-	root *reportEntitiesMetrics
-	orgs map[string]*reportEntitiesMetrics
+	root    *reportEntitiesMetrics
+	orgs    map[string]*reportEntitiesMetrics
 	backend met.Backend
-	m *sync.Mutex
+	m       *sync.Mutex
 }
 
 var reportMetrics *reportMetrication

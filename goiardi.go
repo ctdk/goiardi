@@ -88,7 +88,7 @@ type apiTimerInfo struct {
 }
 
 type apiPathInfo struct {
-	orgName string
+	orgName     string
 	handlerInfo string
 }
 

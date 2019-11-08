@@ -65,6 +65,7 @@ type ShoveyRun struct {
 	ID         int       `json:"-"`
 	ShoveyUUID string    `json:"run_id"`
 	NodeName   string    `json:"node_name"`
+	OrgNodeID  string    `json:"org_node_id"`
 	Status     string    `json:"status"`
 	AckTime    time.Time `json:"ack_time"`
 	EndTime    time.Time `json:"end_time"`
@@ -77,6 +78,7 @@ type ShoveyRun struct {
 type ShoveyRunStream struct {
 	ShoveyUUID string
 	NodeName   string
+	OrgNodeID  string
 	Seq        int
 	OutputType string
 	Output     string
@@ -371,6 +373,9 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 	payload["signature"] = sig
 	jsonPayload, _ := json.Marshal(payload)
 	ackCh := make(chan string, len(nodeNames))
+
+	orgNodeIDs := orgNodeNameSlice(s.org, nodeNames)
+
 	q := &serfclient.QueryParam{Name: "shovey", Payload: jsonPayload, FilterNodes: nodeNames, RequestAck: true, AckCh: ackCh}
 	errch := make(chan error)
 	go serfin.Query(q, errch)
@@ -424,7 +429,7 @@ func (s *Shovey) startJobs() Qerror {
 		for i, n := range upNodes {
 			tagNodes[i] = n.Name
 			d[n.Name] = true
-			sr := &ShoveyRun{ShoveyUUID: s.RunID, NodeName: n.Name, Status: "created"}
+			sr := &ShoveyRun{ShoveyUUID: s.RunID, NodeName: n.Name, OrgNodeID: orgNodeName(s.org, n.Name), Status: "created"}
 			err := sr.save()
 			if err != nil {
 				logger.Errorf("error saving shovey run: %s", err.Error())
@@ -434,7 +439,7 @@ func (s *Shovey) startJobs() Qerror {
 		}
 		for _, n := range s.NodeNames {
 			if !d[n] {
-				sr := &ShoveyRun{ShoveyUUID: s.RunID, NodeName: n, Status: "down", EndTime: time.Now()}
+				sr := &ShoveyRun{ShoveyUUID: s.RunID, NodeName: n, OrgNodeID: orgNodeName(s.org, n), Status: "down", EndTime: time.Now()}
 				err := sr.save()
 				if err != nil {
 					logger.Errorf("error saving shovey run: %s", err.Error())
@@ -947,18 +952,17 @@ func intify(i interface{}) (int64, bool) {
 // differentiate between nodes that may have the same name in different orgs.
 // This simply joins the org ID and the node name together.
 func orgNodeName(org *organization.Organization, nodeName string) string {
-	// making orgIdentifier a variable to make it easier to fiddle with how
-	// it's set later.
-	orgIdentifier := org.Name
-	return util.JoinStr(orgIdentifier, ":", nodeName)
+	return fmt.Sprintf("%s-%s", org.OrgIdentifier(), nodeName)
 }
 
 // And to go along with the above, a handy dandy function to convert a slice of
 // node names to the new format.
 // Need to return?
-func orgNodeNameSlice(org *organization.Organization, nodeNames []string) {
+func orgNodeNameSlice(org *organization.Organization, nodeNames []string) []string {
+	orgNodeIDs := make([]string, len(nodeNames))
 	for i, n := range nodeNames {
 		n2 := orgNodeName(org, n)
-		nodeNames[i] = n2
+		orgNodeIDs[i] = n2
 	}
+	return orgNodeIDs
 }
