@@ -18,3 +18,6 @@ And there's more...
   of goiardi.
 * Update stuff in vendor
 * Oh, update the CHANGELOG (dur)
+* The s3 upload docs have been partially updated, but do need to be finished
+  soon.
+* As part of org-ifying schob, the shovey docs also need to be updated.

@@ -3,7 +3,7 @@
 S3 File Uploads
 ===============
 
-With goiardi 0.11.0, you can store cookbook files in S3 (or a compatible service), instead of storing them locally.
+With goiardi 0.11.0 and above, you can store cookbook files in S3 (or a compatible service), instead of storing them locally.
 
 Configuration
 -------------
