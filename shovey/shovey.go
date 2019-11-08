@@ -672,7 +672,7 @@ func (sr *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, 
 	if config.UsingDB() {
 		return sr.addStreamOutSQL(output, outputType, seq, isLast)
 	}
-	stream := &ShoveyRunStream{ShoveyUUID: sr.ShoveyUUID, NodeName: sr.NodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: time.Now()}
+	stream := &ShoveyRunStream{ShoveyUUID: sr.ShoveyUUID, NodeName: sr.NodeName, Seq: seq, OutputType: outputType, Output: output, IsLast: isLast, CreatedAt: time.Now(), org: sr.org}
 	ds := datastore.New()
 	streamKey := fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, seq)
 	logger.Debugf("Setting %s", streamKey)
