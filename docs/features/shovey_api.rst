@@ -13,7 +13,7 @@ The Chef Pushy API located at http://docs.getchef.com/push_jobs.html#api-push-jo
 Shovey job control
 ------------------
 
-``/shovey/jobs``
+``/organization/ORG/shovey/jobs``
 
 Methods: GET, PUT
 
@@ -52,10 +52,10 @@ Methods: GET, PUT
 
       {
           "id": "76b745eb-45d6-4856-94f9-7830e79cb8cd",
-          "uri": "http://your.chef-server.local:4545/shovey/jobs/76b745eb-45d6-4856-94f9-7830e79cb8cd"
+          "uri": "http://your.chef-server.local:4545/organization/ORG/shovey/jobs/76b745eb-45d6-4856-94f9-7830e79cb8cd"
       }
 
-``/shovey/jobs/<JOB ID>``
+``/organization/ORG/shovey/jobs/<JOB ID>``
 
 * Method: GET
 
@@ -79,7 +79,7 @@ Methods: GET, PUT
         "updated_at": "2014-08-26T21:44:25.079010129-07:00"
       }
 
-``/shovey/jobs/<JOB ID>/<NODENAME>``
+``/organization/ORG/shovey/jobs/<JOB ID>/<NODENAME>``
 
 Methods: GET, PUT
 
@@ -134,7 +134,7 @@ Methods: GET, PUT
       }
 
 
-``/shovey/jobs/cancel``
+``/organization/ORG/shovey/jobs/cancel``
 
 Methods: PUT
 
@@ -168,7 +168,7 @@ Methods: PUT
 Streaming output
 ----------------
 
-``/shovey/stream/<JOB ID>/<NODE>``
+``/organization/ORG/shovey/stream/<JOB ID>/<NODE>``
 
 Methods: GET, PUT
 
@@ -217,7 +217,7 @@ Methods: GET, PUT
 Node status
 -----------
 
-``/status/all/nodes``
+``/organization/ORG/status/all/nodes``
 
 Methods: GET
 
@@ -244,7 +244,7 @@ Methods: GET
         }
       ]
 
-``/status/node/<NODENAME>/all``
+``/organization/ORG/status/node/<NODENAME>/all``
 
 Methods: GET
 
@@ -279,7 +279,7 @@ Methods: GET
         }
       ]
 
-``/status/node/<NODENAME>/latest``
+``/organization/ORG/status/node/<NODENAME>/latest``
 
 Methods: GET
 
