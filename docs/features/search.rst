@@ -38,7 +38,7 @@ It is strongly recommended that you also set ``convert-search = true``, because 
 
 Also note that as this is a pretty feature the details are subject to change. In particular, the indexes on the search_items table are likely not to be optimal; you should experiment with tweaking those as you see fit, and if you find something (or the removal of something) that works especially well, please let me know.
 
-This is very new, and while it's been tested pretty thoroughly and has been running reliably in production for a while it may still have some problems. If so, `filing issues <https://github.com/ctdk/goiardi/issues>`_ is appreciated.
+This has been around for a while now and it's been tested pretty thoroughly and  been running reliably in production it may still have some problems. If so, `filing issues <https://github.com/ctdk/goiardi/issues>`_ is appreciated.
 
 Search index trimming
 ---------------------
@@ -46,3 +46,8 @@ Search index trimming
 One option added in version 0.11.3 is the ability to trim the length of values (not keys) that will be stored in the index with ``-T/--index-val-trim``. This leads to smaller indexes and, hopefully, lower memory usage. Currently, it defaults to 0 (meaning that no values in the index will be trimmed), but this behavior will change with the next major release.
 
 Some thought should be put in to what the trim length should be. If it's too short, searches may have unexpected problems. In testing with chef-pedant locally, trimming values down to 50 characters caused some search tests to break, while 100 characters worked fine. A good value generally is 100 characters, but you may need to adjust the trim value and test until you find a good number if 100 characters doesn't work well for you.
+
+Rebuilding search indexes
+-------------------------
+
+Newer versions of ``knife`` have removed the ``knife index rebuild`` command. While Chef Server hasn't needed it for a long time, goiardi still makes use of that functionality, so a < LINK TO PLUGIN > has been made to reintroduce that functionality.
