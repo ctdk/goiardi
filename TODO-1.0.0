@@ -17,8 +17,6 @@ And there's more...
   necessary
 * document moving items stored externally, like objects in s3, secrets, etc.
 * Move internal modules under github.com/ctdk/goiardi/internal where appropriate
-* Unless something's depending directly on it, remove the chefcrypto/ dir inside
-  of goiardi.
 * Update stuff in vendor
 * Oh, update the CHANGELOG (dur)
 * The s3 upload docs have been partially updated, but do need to be finished
