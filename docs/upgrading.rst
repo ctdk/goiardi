@@ -8,11 +8,7 @@ Upgrading goiardi is generally a straightforward process. Usually all you should
 Upgrading to 1.0.0 from earlier versions
 ----------------------------------------
 
-The upgrade process from 0.11.x to 1.0.0 is definitely beefier than previous upgrades, but again should not be too painful. The process will be vastly easier for those folks running Postgres; in this case all you should need to do is run ``sqitch deploy`` to apply the various SQL patches, and your existing nodes, clients, cookbooks, etc. will be in the ``default`` organization. Internally, everything was in the ``default`` organization anyway, so the biggest change will be having to update ``knife.rb`` or ``client.rb`` accordingly to refer to the new URL.
-
-Since MySQL has been removed from goiardi as of version 1.0.0, the whole upgrade process is rather trickier. One option is to stay on 0.11.x - it won't get the latest and greatest features, certainly, but the plan for the foreseeable future is for it to still receive updates when needed. Otherwise, MySQL users will have to resort to using the same upgrade process as the in-mem users. Presumably most MySQL users would either switch to Postgres or stay on 0.11.x, but they could move to the in-mem model if they really wanted to for some reason.
-
-< TODO: detail upgrade progress for in-mem/MySQL folks >
+This should not be the most complicated upgrade imaginable, but since there are quite a few steps and moving parts in the upgrade process, it's documented at < TODO: LINK TO 1.0.0 UPGRADE DOC PAGE >.
 
 Upgrading to the latest 0.11.x from earlier versions
 ----------------------------------------------------
