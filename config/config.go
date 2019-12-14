@@ -104,6 +104,7 @@ type Conf struct {
 	UseExtSecrets        bool     `toml:"use-external-secrets"`
 	VaultAddr            string   `toml:"vault-addr"`
 	VaultShoveyKey       string   `toml:"vault-shovey-key"`
+	VaultShoveyKeyFmt   string   `toml:"vault-shovey-key-base"`
 	EnvVars              []string `toml:"env-vars"`
 	IndexValTrim         int      `toml:"index-val-trim"`
 	PprofWhitelist       []string `toml:"pprof-whitelist"`
@@ -228,7 +229,7 @@ type Options struct {
 	S3FilePeriod         int          `long:"s3-file-period" description:"Length of time, in minutes, to allow files to be saved to or retrieved from S3 by the client. Defaults to 15 minutes." env:"GOIARDI_S3_FILE_PERIOD"`
 	UseExtSecrets        bool         `long:"use-external-secrets" description:"Use an external service to store secrets (currently user/client public keys). Currently only vault is supported." env:"GOIARDI_USE_EXTERNAL_SECRETS"`
 	VaultAddr            string       `long:"vault-addr" description:"Specify address of vault server (i.e. https://127.0.0.1:8200). Defaults to the value of VAULT_ADDR."`
-	VaultShoveyKey       string       `long:"vault-shovey-key" description:"Specify a path in vault holding shovey's private key. The key must be put in vault as 'privateKey=<contents>'." env:"GOIARDI_VAULT_SHOVEY_KEY"`
+	VaultShoveyKeyFmt   string       `long:"vault-shovey-key-fmt" description:"Specify a format string for the path in vault holding an organization's shovey's private key. The default format string is 'keys/%s/shovey/signing'. Keys other than the default must include one '%s' for the organization identifier." env:"GOIARDI_VAULT_SHOVEY_KEY"`
 	IndexValTrim         int          `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If set < 0, trimming is disabled. The default is 150 characters." env:"GOIARDI_INDEX_VAL_TRIM"`
 	PprofWhitelist       []string     `short:"y" long:"pprof-whitelist" description:"Address to allow to access /debug/pprof (in addition to localhost). Specify multiple times to allow more addresses." env:"GOIARDI_PPROF_WHITELIST" env-delim:","`
 	PurgeReportsAfter    string       `long:"purge-reports-after" description:"Time to purge old reports after, given in golang duration format (e.g. \"720h\"). Default is not to purge them at all." env:"GOIARDI_PURGE_REPORTS_AFTER"`
@@ -716,16 +717,16 @@ func ParseConfigOptions() error {
 	if opts.SignPrivKey != "" {
 		Config.SignPrivKey = opts.SignPrivKey
 	}
-	if opts.VaultShoveyKey != "" {
-		Config.VaultShoveyKey = opts.VaultShoveyKey
+	if opts.VaultShoveyKeyFmt != "" {
+		Config.VaultShoveyKeyFmt = opts.VaultShoveyKeyFmt
 	}
 
 	// if using shovey, open the existing, or create if absent, signing
 	// keys.
 	if Config.UseShovey {
 		if Config.UseExtSecrets {
-			if Config.VaultShoveyKey == "" {
-				Config.VaultShoveyKey = "keys/shovey/signing"
+			if Config.VaultShoveyKeyFmt == "" {
+				Config.VaultShoveyKeyFmt = "keys/%s/shovey/signing"
 			}
 		} else {
 			if Config.SignPrivKey == "" {
