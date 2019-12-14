@@ -401,7 +401,19 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return
 		}
+	case "key":
+		switch r.Method {
+		case http.MethodHead:
+			headDefaultResponse(w, r)
+			return
+		case http.MethodGet:
 
+		case http.MethodPost:
+
+		default:
+			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+			return
+		}
 	default:
 		jsonErrorReport(w, r, "Unrecognized operation", http.StatusBadRequest)
 		return
