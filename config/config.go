@@ -104,7 +104,7 @@ type Conf struct {
 	UseExtSecrets        bool     `toml:"use-external-secrets"`
 	VaultAddr            string   `toml:"vault-addr"`
 	VaultShoveyKey       string   `toml:"vault-shovey-key"`
-	VaultShoveyKeyFmt   string   `toml:"vault-shovey-key-base"`
+	VaultShoveyKeyFmt    string   `toml:"vault-shovey-key-base"`
 	EnvVars              []string `toml:"env-vars"`
 	IndexValTrim         int      `toml:"index-val-trim"`
 	PprofWhitelist       []string `toml:"pprof-whitelist"`
@@ -213,7 +213,7 @@ type Options struct {
 	SerfEventAnnounce    bool         `long:"serf-event-announce" description:"Announce log events and joining the serf cluster over serf, as serf events. Requires --use-serf." env:"GOIARDI_SERF_EVENT_ANNOUNCE"`
 	SerfAddr             string       `long:"serf-addr" description:"IP address and port to use for RPC communication with a serf agent. Defaults to 127.0.0.1:7373." env:"GOIARDI_SERF_ADDR"`
 	UseShovey            bool         `long:"use-shovey" description:"Enable using shovey for sending jobs to nodes. Requires --use-serf." env:"GOIARDI_USE_SHOVEY"`
-	SignPrivKey          string       `long:"sign-priv-key" description:"Path to RSA private key used to sign shovey requests." env:"GOIARDI_SIGN_PRIV_KEY"`
+	SignPrivKey          string       `long:"sign-priv-key" description:"This shouldn't be visible." hidden:"true"`
 	DotSearch            bool         `long:"dot-search" description:"If set, searches will use . to separate elements instead of _." env:"GOIARDI_DOT_SEARCH"`
 	ConvertSearch        bool         `long:"convert-search" description:"If set, convert _ syntax searches to . syntax. Only useful if --dot-search is set." env:"GOIARDI_CONVERT_SEARCH"`
 	PgSearch             bool         `long:"pg-search" description:"Use the new Postgres based search engine instead of the default ersatz Solr. Requires --use-postgresql, automatically turns on --dot-search. --convert-search is recommended, but not required." env:"GOIARDI_PG_SEARCH"`
@@ -229,6 +229,7 @@ type Options struct {
 	S3FilePeriod         int          `long:"s3-file-period" description:"Length of time, in minutes, to allow files to be saved to or retrieved from S3 by the client. Defaults to 15 minutes." env:"GOIARDI_S3_FILE_PERIOD"`
 	UseExtSecrets        bool         `long:"use-external-secrets" description:"Use an external service to store secrets (currently user/client public keys). Currently only vault is supported." env:"GOIARDI_USE_EXTERNAL_SECRETS"`
 	VaultAddr            string       `long:"vault-addr" description:"Specify address of vault server (i.e. https://127.0.0.1:8200). Defaults to the value of VAULT_ADDR."`
+	VaultShoveyKey       string       `long:"vault-shovey-key" description:"nothing to see here" hidden:"true"`
 	VaultShoveyKeyFmt   string       `long:"vault-shovey-key-fmt" description:"Specify a format string for the path in vault holding an organization's shovey's private key. The default format string is 'keys/%s/shovey/signing'. Keys other than the default must include one '%s' for the organization identifier." env:"GOIARDI_VAULT_SHOVEY_KEY"`
 	IndexValTrim         int          `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If set < 0, trimming is disabled. The default is 150 characters." env:"GOIARDI_INDEX_VAL_TRIM"`
 	PprofWhitelist       []string     `short:"y" long:"pprof-whitelist" description:"Address to allow to access /debug/pprof (in addition to localhost). Specify multiple times to allow more addresses." env:"GOIARDI_PPROF_WHITELIST" env-delim:","`
@@ -714,9 +715,21 @@ func ParseConfigOptions() error {
 	}
 
 	// shovey signing key stuff
-	if opts.SignPrivKey != "" {
-		Config.SignPrivKey = opts.SignPrivKey
+	// First emit a fatal error if --sign-priv-key or --vault-shovey-key
+	// are given.
+	var shoveyDie bool
+	if Config.SignPrivKey || opts.SignPrivKey {
+		logger.Fatalf("--sign-priv-key is no longer a useful option. Shovey signing keys are now stored on a per-org basis in the db or an external secrets store; see the docs for details.")
+		shoveyDie = true
 	}
+	if Config.VaultShoveyKey || opts.VaultShoveyKey {
+		logger.Fatalf("--vault-shovey-key is no longer a valid option. Use --vault-shovey-key-base (or the toml equivalent in the config file) instead; see the docs for details.")
+		shoveyDie = true
+	}
+	if shoveyDie {
+		os.Exit(1)
+	}
+
 	if opts.VaultShoveyKeyFmt != "" {
 		Config.VaultShoveyKeyFmt = opts.VaultShoveyKeyFmt
 	}
@@ -728,36 +741,10 @@ func ParseConfigOptions() error {
 			if Config.VaultShoveyKeyFmt == "" {
 				Config.VaultShoveyKeyFmt = "keys/%s/shovey/signing"
 			}
-		} else {
-			if Config.SignPrivKey == "" {
-				Config.SignPrivKey = path.Join(Config.ConfRoot, "shovey-sign_rsa")
-			} else if !path.IsAbs(Config.SignPrivKey) {
-				Config.SignPrivKey = path.Join(Config.ConfRoot, Config.SignPrivKey)
-			}
-			privfp, err := os.Open(Config.SignPrivKey)
-			if err != nil {
-				logger.Fatalf("Private key %s for signing shovey requests not found. Please create a set of RSA keys for this purpose.", Config.SignPrivKey)
-				os.Exit(1)
-			}
-			privPem, err := ioutil.ReadAll(privfp)
-			if err != nil {
-				logger.Fatalf(err.Error())
-				os.Exit(1)
-			}
-			privBlock, _ := pem.Decode(privPem)
-			if privBlock == nil {
-				logger.Fatalf("Invalid block size for private key for shovey")
-				os.Exit(1)
-			}
-			privKey, err := x509.ParsePKCS1PrivateKey(privBlock.Bytes)
-			if err != nil {
-				logger.Fatalf(err.Error())
-				os.Exit(1)
-			}
-			Key.Lock()
-			defer Key.Unlock()
-			Key.PrivKey = privKey
 		}
+		// goiardi's no longer storing the shovey signing keys on disk.
+		// If they aren't stored in a secrets store of some kind,
+		// they're in the db. That's not the ideal, but it's an option.
 	}
 
 	if opts.DotSearch {
