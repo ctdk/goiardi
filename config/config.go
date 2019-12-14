@@ -138,6 +138,12 @@ var pprofWhitelist []net.IP
 
 const defaultIndexValTrim = 150
 
+const (
+	defaultShoveyKeyFmt = "keys/%s/shovey/signing"
+	defaultShoveyKeyOldStyle = "keys/shovey/signing"
+)
+
+
 // LogLevelNames give convenient, easier to remember than number name for the
 // different levels of logging.
 var LogLevelNames = map[string]int{"debug": 5, "info": 4, "warning": 3, "error": 2, "critical": 1, "fatal": 0}
@@ -230,7 +236,7 @@ type Options struct {
 	UseExtSecrets        bool         `long:"use-external-secrets" description:"Use an external service to store secrets (currently user/client public keys). Currently only vault is supported." env:"GOIARDI_USE_EXTERNAL_SECRETS"`
 	VaultAddr            string       `long:"vault-addr" description:"Specify address of vault server (i.e. https://127.0.0.1:8200). Defaults to the value of VAULT_ADDR."`
 	VaultShoveyKey       string       `long:"vault-shovey-key" description:"nothing to see here" hidden:"true"`
-	VaultShoveyKeyFmt   string       `long:"vault-shovey-key-fmt" description:"Specify a format string for the path in vault holding an organization's shovey's private key. The default format string is 'keys/%s/shovey/signing'. Keys other than the default must include one '%s' for the organization identifier." env:"GOIARDI_VAULT_SHOVEY_KEY"`
+	VaultShoveyKeyFmt   string       `long:"vault-shovey-key-fmt" description:fmt.Sprintf("Specify a format string for the path in vault holding an organization's shovey's private key. The default format string is '%s'. Keys other than the default must include one '%%s' for the organization identifier.", defaultShoveyKeyFmt) env:"GOIARDI_VAULT_SHOVEY_KEY"`
 	IndexValTrim         int          `short:"T" long:"index-val-trim" description:"Trim values indexed for chef search to this many characters (keys are untouched). If set < 0, trimming is disabled. The default is 150 characters." env:"GOIARDI_INDEX_VAL_TRIM"`
 	PprofWhitelist       []string     `short:"y" long:"pprof-whitelist" description:"Address to allow to access /debug/pprof (in addition to localhost). Specify multiple times to allow more addresses." env:"GOIARDI_PPROF_WHITELIST" env-delim:","`
 	PurgeReportsAfter    string       `long:"purge-reports-after" description:"Time to purge old reports after, given in golang duration format (e.g. \"720h\"). Default is not to purge them at all." env:"GOIARDI_PURGE_REPORTS_AFTER"`
@@ -739,7 +745,7 @@ func ParseConfigOptions() error {
 	if Config.UseShovey {
 		if Config.UseExtSecrets {
 			if Config.VaultShoveyKeyFmt == "" {
-				Config.VaultShoveyKeyFmt = "keys/%s/shovey/signing"
+				Config.VaultShoveyKeyFmt = defaultShoveyKeyFmt
 			}
 		}
 		// goiardi's no longer storing the shovey signing keys on disk.
