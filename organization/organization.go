@@ -18,6 +18,7 @@ package organization
 
 import (
 	"bytes"
+	"crypto/rsa"
 	"database/sql"
 	"encoding/gob"
 	"fmt"
@@ -32,6 +33,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"sync"
 )
 
 type Organization struct {
@@ -41,9 +43,7 @@ type Organization struct {
 	uuID          uuid.UUID
 	id            int64
 	PermCheck     aclhelper.PermChecker `json:"-"`
-	orgIdentifier string                // this is a handy string containing either the id
-	// if we're using Postgres, or the name if we're
-	// using in-mem.
+	shoveyKey     *SigningKeys
 }
 
 type privOrganization struct {
@@ -52,6 +52,12 @@ type privOrganization struct {
 	GUID     *string
 	UUID     *uuid.UUID
 	ID       *int64
+}
+
+// SigningKeys are the public and private keys for signing shovey requests.
+type SigningKeys struct {
+	sync.RWMutex
+	PrivKey *rsa.PrivateKey
 }
 
 func New(name, fullName string) (*Organization, util.Gerror) {
