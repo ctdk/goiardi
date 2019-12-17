@@ -186,11 +186,6 @@ func (v *vaultSecretStore) deletePublicKey(c ActorKeyer) error {
 func makePubKeyPath(c ActorKeyer) string {
 	pfx := makeSecretPathBase("pubkeys", c)
 
-	// Those newfangled string builder dealies might be useful here.
-	if c.OrgName() != util.UserOrgNameVal {
-		pfx = strings.Join([]string{pfx, "organization", c.OrgName()}, "/")
-	}
-
 	return strings.Join([]string{pfx, c.URLType(), c.GetName()}, "/")
 }
 
@@ -198,9 +193,6 @@ func makeHashPath(c ActorKeyer) string {
 	// strictly speaking only users actually have passwords, but in case
 	// something else ever comes up, make the path a little longer.
 
-	if c.OrgName() != util.UserOrgNameVal {
-		pfx = strings.Join([]string{pfx, "organization", c.OrgName()}, "/")
-	}
 	pfx := makeSecretPathBase("passwd", c)
 
 	return strings.Join([]string{pfx, c.URLType(), c.GetName()}, "/")
@@ -210,7 +202,7 @@ func makeHashPath(c ActorKeyer) string {
 // users. Make it more general.
 func makeSecretPathBase(kind string, o util.GoiardiObj) string {
 	p := []string{vaultKeyBasePfx}
-	if c.OrgName() != util.UserOrgNameVal {
+	if o.OrgName() != util.UserOrgNameVal {
 		p = append(p, []string{"organization", o.OrgName()}...)
 	}
 	p = append(p, kind)
