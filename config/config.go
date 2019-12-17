@@ -21,11 +21,7 @@
 package config
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -33,7 +29,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -104,7 +99,7 @@ type Conf struct {
 	UseExtSecrets        bool     `toml:"use-external-secrets"`
 	VaultAddr            string   `toml:"vault-addr"`
 	VaultShoveyKey       string   `toml:"vault-shovey-key"`
-	VaultShoveyKeyFmt    string   `toml:"vault-shovey-key-base"`
+	VaultShoveyKeyFmt    string   `toml:"vault-shovey-key-fmt"`
 	EnvVars              []string `toml:"env-vars"`
 	IndexValTrim         int      `toml:"index-val-trim"`
 	PprofWhitelist       []string `toml:"pprof-whitelist"`
@@ -119,15 +114,6 @@ type Conf struct {
 	PurgeSandboxesDur    time.Duration
 	SearchQueryDebug     bool
 }
-
-// SigningKeys are the public and private keys for signing shovey requests.
-type SigningKeys struct {
-	sync.RWMutex
-	PrivKey *rsa.PrivateKey
-}
-
-// Key is the initialized shovey public and private keys.
-var Key = &SigningKeys{}
 
 // GitHash is the git hash (supplied with '-ldflags
 // "-X github.com/ctdk/goiardi/config.GitHash=<hash>"') of goiardi when it was
@@ -724,11 +710,12 @@ func ParseConfigOptions() error {
 	// First emit a fatal error if --sign-priv-key or --vault-shovey-key
 	// are given.
 	var shoveyDie bool
-	if Config.SignPrivKey || opts.SignPrivKey {
+	if Config.SignPrivKey != "" || opts.SignPrivKey != ""{
 		logger.Fatalf("--sign-priv-key is no longer a useful option. Shovey signing keys are now stored on a per-org basis in the db or an external secrets store; see the docs for details.")
 		shoveyDie = true
 	}
-	if Config.VaultShoveyKey || opts.VaultShoveyKey {
+
+	if Config.VaultShoveyKey != "" || opts.VaultShoveyKey != "" {
 		logger.Fatalf("--vault-shovey-key is no longer a valid option. Use --vault-shovey-key-base (or the toml equivalent in the config file) instead; see the docs for details.")
 		shoveyDie = true
 	}
