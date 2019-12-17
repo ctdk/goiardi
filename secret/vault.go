@@ -47,6 +47,8 @@ const MaxStaleAgeSeconds = 3600 // configurable later, but make it an hour for
 // now
 const StaleTryAgainSeconds = 60 // try stale values again in a minute
 
+const vaultKeyBasePfx = "keys"
+
 type secretVal struct {
 	path          string
 	secretType    string
@@ -182,7 +184,7 @@ func (v *vaultSecretStore) deletePublicKey(c ActorKeyer) error {
 }
 
 func makePubKeyPath(c ActorKeyer) string {
-	pfx := "keys"
+	pfx := makeSecretPathBase("pubkeys", c)
 
 	// Those newfangled string builder dealies might be useful here.
 	if c.OrgName() != util.UserOrgNameVal {
@@ -196,13 +198,24 @@ func makeHashPath(c ActorKeyer) string {
 	// strictly speaking only users actually have passwords, but in case
 	// something else ever comes up, make the path a little longer.
 
-	pfx := "keys/passwd"
-
 	if c.OrgName() != util.UserOrgNameVal {
 		pfx = strings.Join([]string{pfx, "organization", c.OrgName()}, "/")
 	}
+	pfx := makeSecretPathBase("passwd", c)
 
 	return strings.Join([]string{pfx, c.URLType(), c.GetName()}, "/")
+}
+
+// makeSecretPathBase could be for any number of things, not just clients or
+// users. Make it more general.
+func makeSecretPathBase(kind string, o util.GoiardiObj) string {
+	p := []string{vaultKeyBasePfx}
+	if c.OrgName() != util.UserOrgNameVal {
+		p = append(p, []string{"organization", o.OrgName()}...)
+	}
+	p = append(p, kind)
+
+	return strings.Join(p, "/")
 }
 
 func newSecretVal(path string, secretType string, value interface{}, t time.Time, s *vault.Secret) *secretVal {

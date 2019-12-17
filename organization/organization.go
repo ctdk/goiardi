@@ -18,6 +18,7 @@ package organization
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/rsa"
 	"database/sql"
 	"encoding/gob"
@@ -281,4 +282,32 @@ func (o *Organization) GetId() int64 {
 // object's URL.
 func (o *Organization) OrgURLBase() string {
 	return fmt.Sprintf("/organizations/%s", o.Name)
+}
+
+// ShoveyPrivKey returns this organization's private key for signing shovey
+// requests, and an error if the key cannot be found.
+func (o *Organization) ShoveyPrivKey() (*rsa.PrivateKey, error) {
+	o.shoveyKey.RLock()
+	defer o.shoveyKey.RUnlock()
+
+	if o.shoveyKey.PrivKey == nil {
+		return nil, fmt.Errorf("No signing key available for org %s!", o.Name)
+	}
+
+	// I believe the extra confusing seeming step is to ensure the private
+	// key doesn't change from under us. This may not be desirable anymore.
+	j := *o.shoveyKey.PrivKey
+	return &j, nil
+}
+
+// ShoveyPrivKey returns this organization's private key for signing shovey
+// requests, and an error if the key cannot be found.
+func (o *Organization) ShoveyPubKey() (crypto.PublicKey, error) {
+	o.shoveyKey.RLock()
+	defer o.shoveyKey.RUnlock()
+
+	if o.shoveyKey.PrivKey == nil {
+		return nil, fmt.Errorf("No private key for signing shovey request can be found for org %s, so the public key can not be retrieved either.", o.Name)
+	}
+	return o.shoveyKey.PrivKey.Public(), nil
 }

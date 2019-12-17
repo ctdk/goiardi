@@ -376,7 +376,7 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 
 	orgNodeIDs := orgNodeNameSlice(s.org, nodeNames)
 
-	q := &serfclient.QueryParam{Name: "shovey", Payload: jsonPayload, FilterNodes: nodeNames, RequestAck: true, AckCh: ackCh}
+	q := &serfclient.QueryParam{Name: "shovey", Payload: jsonPayload, FilterNodes: orgNodeIDs, RequestAck: true, AckCh: ackCh}
 	errch := make(chan error)
 	go serfin.Query(q, errch)
 	err := <-errch
@@ -805,10 +805,10 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 			return "", err
 		}
 	} else {
-		config.Key.RLock()
-		defer config.Key.RUnlock()
-		j := *config.Key.PrivKey
-		pk = &j
+		var err error
+		if pk, err = s.org.ShoveyPrivKey(); err != nil {
+			return "", err
+		}
 	}
 	sig, err := chefcrypto.SignTextBlock(payloadBlock, pk)
 	if err != nil {
@@ -952,7 +952,14 @@ func intify(i interface{}) (int64, bool) {
 // differentiate between nodes that may have the same name in different orgs.
 // This simply joins the org ID and the node name together.
 func orgNodeName(org *organization.Organization, nodeName string) string {
-	return fmt.Sprintf("%s-%s", org.OrgIdentifier(), nodeName)
+	var orgDesignator string
+	if config.UsingDB() {
+		orgDesignator = strconv.FormatInt(org.GetId(), 10)
+	} else {
+		orgDesignator = org.GetName()
+	}
+
+	return fmt.Sprintf("%s-%s", orgDesignator, nodeName)
 }
 
 // And to go along with the above, a handy dandy function to convert a slice of
