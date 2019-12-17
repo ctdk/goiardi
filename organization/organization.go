@@ -18,11 +18,11 @@ package organization
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/rsa"
 	"database/sql"
 	"encoding/gob"
 	"fmt"
+	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
@@ -53,6 +53,7 @@ type privOrganization struct {
 	GUID     *string
 	UUID     *uuid.UUID
 	ID       *int64
+	ShoveyKey *string
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -95,7 +96,11 @@ func New(name, fullName string) (*Organization, util.Gerror) {
 		}
 	}
 
-	o := &Organization{Name: name, FullName: fullName, GUID: guid, uuID: uuID}
+	// Create the SigningKeys struct. Holding off on assigning anything to
+	// it until that's completely hammered out.
+	sk := new(SigningKeys)
+
+	o := &Organization{Name: name, FullName: fullName, GUID: guid, uuID: uuID, shoveyKey: sk,}
 	err := o.Save()
 	if err != nil {
 		return nil, err
@@ -214,7 +219,13 @@ func AllOrganizations() ([]*Organization, error) {
 }
 
 func (o *Organization) export() *privOrganization {
-	return &privOrganization{Name: &o.Name, FullName: &o.FullName, GUID: &o.GUID, UUID: &o.uuID, ID: &o.id}
+	var shovKey string
+	if !config.UsingExternalSecrets() && o.shoveyKey.PrivKey != nil {
+		// hope for the best, eh
+		shovKey, _ = chefcrypto.PublicKeyToString(o.shoveyKey.PrivKey.Public)
+	}
+
+	return &privOrganization{Name: &o.Name, FullName: &o.FullName, GUID: &o.GUID, UUID: &o.uuID, ID: &o.id, ShoveyKey: &shovKey }
 }
 
 func (o *Organization) GobEncode() ([]byte, error) {
@@ -302,12 +313,18 @@ func (o *Organization) ShoveyPrivKey() (*rsa.PrivateKey, error) {
 
 // ShoveyPrivKey returns this organization's private key for signing shovey
 // requests, and an error if the key cannot be found.
-func (o *Organization) ShoveyPubKey() (crypto.PublicKey, error) {
+func (o *Organization) ShoveyPubKey() (string, error) {
 	o.shoveyKey.RLock()
 	defer o.shoveyKey.RUnlock()
 
 	if o.shoveyKey.PrivKey == nil {
-		return nil, fmt.Errorf("No private key for signing shovey request can be found for org %s, so the public key can not be retrieved either.", o.Name)
+		return "", fmt.Errorf("No private key for signing shovey request can be found for org %s, so the public key can not be retrieved either.", o.Name)
 	}
-	return o.shoveyKey.PrivKey.Public(), nil
+
+	p, err := chefcrypto.PublicKeyToString(o.shoveyKey.PrivKey.PublicKey)
+	if err != nil {
+		return "", err
+	}
+
+	return p, nil
 }
