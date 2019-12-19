@@ -18,6 +18,7 @@ package organization
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/rsa"
 	"database/sql"
 	"encoding/gob"
@@ -222,7 +223,7 @@ func (o *Organization) export() *privOrganization {
 	var shovKey string
 	if !config.UsingExternalSecrets() && o.shoveyKey.PrivKey != nil {
 		// hope for the best, eh
-		shovKey, _ = chefcrypto.PublicKeyToString(o.shoveyKey.PrivKey.Public)
+		shovKey, _ = chefcrypto.PublicKeyToString(o.shoveyKey.PrivKey.PublicKey)
 	}
 
 	return &privOrganization{Name: &o.Name, FullName: &o.FullName, GUID: &o.GUID, UUID: &o.uuID, ID: &o.id, ShoveyKey: &shovKey }
@@ -293,6 +294,20 @@ func (o *Organization) GetId() int64 {
 // object's URL.
 func (o *Organization) OrgURLBase() string {
 	return fmt.Sprintf("/organizations/%s", o.Name)
+}
+
+// GenerateShoveyKey generates a new private key for signing shovey requests
+// and sets that key in the org object.
+func (o *Organization) GenerateShoveyKey() error {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+
+	o.shoveyKey.RLock()
+	defer o.shoveyKey.RUnlock()
+	o.shoveyKey.PrivKey = priv
+	return nil
 }
 
 // ShoveyPrivKey returns this organization's private key for signing shovey
