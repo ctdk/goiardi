@@ -348,6 +348,7 @@ func main() {
 	s.HandleFunc("/shovey/jobs/{job_id}/{node_name}", shoveyHandler)
 	s.HandleFunc("/shovey/stream/{job_id}/{node_name}", shoveyHandler)
 	s.HandleFunc("/shovey/key", shoveyHandler)
+	s.HandleFunc("/shovey/key/reset", shoveyHandler)
 	s.HandleFunc("/status/{specif}/nodes", statusHandler)
 	s.HandleFunc("/status/{specif}/{node_name}/{op}", statusHandler)
 	s.HandleFunc("/users", userOrgListHandler)

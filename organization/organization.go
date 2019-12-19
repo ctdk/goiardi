@@ -326,7 +326,7 @@ func (o *Organization) ShoveyPrivKey() (*rsa.PrivateKey, error) {
 	return &j, nil
 }
 
-// ShoveyPrivKey returns this organization's private key for signing shovey
+// ShoveyPublicKey returns this organization's public key for verifying shovey
 // requests, and an error if the key cannot be found.
 func (o *Organization) ShoveyPubKey() (string, error) {
 	o.shoveyKey.RLock()

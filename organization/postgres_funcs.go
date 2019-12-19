@@ -17,6 +17,7 @@
 package organization
 
 import (
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 )
@@ -26,11 +27,20 @@ import (
  */
 
 func (o *Organization) savePostgreSQL() util.Gerror {
+	var pk string
+	if config.Config.UseShovey && !config.Config.UseExtSecrets {
+		var err error
+		if pk, err = o.ShoveyPrivKey(); err != nil {
+			return util.CastErr(err)
+		}
+	}
+	
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return util.CastErr(err)
 	}
 
+	// Looks like we've got some postgres functions to update
 	err = tx.QueryRow("SELECT goiardi.merge_orgs($1, $2, $3, $4)", o.Name, o.FullName, o.GUID, o.uuID).Scan(&o.id)
 
 	if err != nil {
