@@ -49,12 +49,18 @@ func checkForOrgSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
 
 func (o *Organization) fillOrgFromSQL(row datastore.ResRow) error {
 	var fn sql.NullString
-	err := row.Scan(&o.Name, &fn, &o.GUID, &o.uuID, &o.id)
+	var pk sql.NullString
+	err := row.Scan(&o.Name, &fn, &o.GUID, &o.uuID, &pk, &o.id)
 	if err != nil {
 		return err
 	}
 	if fn.Valid {
 		o.FullName = fn.String
+	}
+	if !config.UsingExternalSecrets() && pk.Valid {
+		if pk.String != "" {
+
+		}
 	}
 
 	return nil
@@ -67,7 +73,7 @@ func (o *Organization) saveSQL() util.Gerror {
 func getOrgSQL(name string) (*Organization, error) {
 	org := new(Organization)
 
-	sqlStatement := "SELECT name, description, translate(guid::TEXT, '-', ''), uuid, id FROM goiardi.organizations WHERE name = $1"
+	sqlStatement := "SELECT name, description, translate(guid::TEXT, '-', ''), uuid, shovey_key, id FROM goiardi.organizations WHERE name = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {

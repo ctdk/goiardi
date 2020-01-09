@@ -221,9 +221,13 @@ func AllOrganizations() ([]*Organization, error) {
 
 func (o *Organization) export() *privOrganization {
 	var shovKey string
+
+	o.shoveyKey.RLock()
+	defer o.shoveyKey.RUnlock()
+
 	if !config.UsingExternalSecrets() && o.shoveyKey.PrivKey != nil {
 		// hope for the best, eh
-		shovKey, _ = chefcrypto.PublicKeyToString(o.shoveyKey.PrivKey.PublicKey)
+		shovKey, _ = chefcrypto.PrivateKeyToString(o.shoveyKey.PrivKey)
 	}
 
 	return &privOrganization{Name: &o.Name, FullName: &o.FullName, GUID: &o.GUID, UUID: &o.uuID, ID: &o.id, ShoveyKey: &shovKey }

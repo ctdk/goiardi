@@ -17,6 +17,7 @@
 package organization
 
 import (
+	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
@@ -28,10 +29,22 @@ import (
 
 func (o *Organization) savePostgreSQL() util.Gerror {
 	var pk string
-	if config.Config.UseShovey && !config.Config.UseExtSecrets {
-		var err error
-		if pk, err = o.ShoveyPrivKey(); err != nil {
-			return util.CastErr(err)
+
+	// determine if there's a private key to save.
+	if config.Config.UseShovey && !config.UsingExternalSecrets() {
+		// don't absolutely flip out if shovey's enabled, external
+		// secrets are disabled, and there's no private key. Shovey may
+		// have only just been enabled and no key is present, and if
+		// shovey private key gets nuked somehow it'll generate another
+		// one.
+		o.shoveyKey.RLock()
+		defer o.shoveyKey.RUnlock()
+		privKey, _ := o.shoveyKey.PrivKey
+		if privKey != nil {
+			var pkerr error
+			if pk, pkerr = chefcrypto.PublicKeyToString(privKey); pkerr != nil {
+				return util.CastErr(pkerr)
+			}
 		}
 	}
 	
@@ -41,7 +54,7 @@ func (o *Organization) savePostgreSQL() util.Gerror {
 	}
 
 	// Looks like we've got some postgres functions to update
-	err = tx.QueryRow("SELECT goiardi.merge_orgs($1, $2, $3, $4)", o.Name, o.FullName, o.GUID, o.uuID).Scan(&o.id)
+	err = tx.QueryRow("SELECT goiardi.merge_orgs($1, $2, $3, $4, $5)", o.Name, o.FullName, o.GUID, o.uuID, pk).Scan(&o.id)
 
 	if err != nil {
 		tx.Rollback()
