@@ -22,6 +22,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
@@ -59,7 +60,19 @@ func (o *Organization) fillOrgFromSQL(row datastore.ResRow) error {
 	}
 	if !config.UsingExternalSecrets() && pk.Valid {
 		if pk.String != "" {
+			k, pkerr := chefcrypto.PemToPrivateKey(pk.String)
 
+			// NOTE: this may need to be removed, depending on how
+			// some potential edge cases behave.
+			if pkerr != nil {
+				return pkerr
+			}
+			if o.shoveyKey == nil {
+				o.shoveyKey = new(SigningKeys)
+			}
+			o.shoveyKey.Lock()
+			defer o.shoveyKey.Unlock()
+			o.shoveyKey.PrivKey = k
 		}
 	}
 
@@ -139,7 +152,7 @@ func getListSQL() []string {
 func allOrgsSQL() ([]*Organization, error) {
 	orgs := make([]*Organization, 0)
 
-	sqlStatement := "SELECT name, description, translate(guid::TEXT, '-', ''), uuid, id FROM goiardi.organizations"
+	sqlStatement := "SELECT name, description, translate(guid::TEXT, '-', ''), uuid, shovey_key, id FROM goiardi.organizations"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {
@@ -185,7 +198,7 @@ func OrgsByIdSQL(ids []int64) ([]*Organization, error) {
 		bind[i] = fmt.Sprintf("$%d", i+1)
 		intfIds[i] = d
 	}
-	sqlStatement := fmt.Sprintf("SELECT name, description, translate(guid::TEXT, '-', ''), uuid, id FROM goiardi.organizations WHERE id IN (%s)", strings.Join(bind, ", "))
+	sqlStatement := fmt.Sprintf("SELECT name, description, translate(guid::TEXT, '-', ''), uuid, shovey_key, id FROM goiardi.organizations WHERE id IN (%s)", strings.Join(bind, ", "))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStatement)
 	if err != nil {

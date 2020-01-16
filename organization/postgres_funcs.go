@@ -39,10 +39,10 @@ func (o *Organization) savePostgreSQL() util.Gerror {
 		// one.
 		o.shoveyKey.RLock()
 		defer o.shoveyKey.RUnlock()
-		privKey, _ := o.shoveyKey.PrivKey
+		privKey := o.shoveyKey.PrivKey
 		if privKey != nil {
 			var pkerr error
-			if pk, pkerr = chefcrypto.PublicKeyToString(privKey); pkerr != nil {
+			if pk, pkerr = chefcrypto.PrivateKeyToString(privKey); pkerr != nil {
 				return util.CastErr(pkerr)
 			}
 		}
