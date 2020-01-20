@@ -97,11 +97,18 @@ func New(name, fullName string) (*Organization, util.Gerror) {
 		}
 	}
 
-	// Create the SigningKeys struct. Holding off on assigning anything to
-	// it until that's completely hammered out.
-	sk := new(SigningKeys)
+	// Create the SigningKeys struct.
+	var sk *SigningKeys
 
 	o := &Organization{Name: name, FullName: fullName, GUID: guid, uuID: uuID, shoveyKey: sk,}
+
+	if config.Config.UseShovey && !config.UsingExternalSecrets() {
+		o.shoveyKey = new(SigningKeys)
+		if skErr := o.GenerateShoveyKey(); skErr != nil {
+			return nil, skErr
+		}
+	}
+
 	err := o.Save()
 	if err != nil {
 		return nil, err
@@ -222,12 +229,14 @@ func AllOrganizations() ([]*Organization, error) {
 func (o *Organization) export() *privOrganization {
 	var shovKey string
 
-	o.shoveyKey.RLock()
-	defer o.shoveyKey.RUnlock()
+	if o.shoveyKey != nil {
+		o.shoveyKey.RLock()
+		defer o.shoveyKey.RUnlock()
 
-	if !config.UsingExternalSecrets() && o.shoveyKey.PrivKey != nil {
-		// hope for the best, eh
-		shovKey, _ = chefcrypto.PrivateKeyToString(o.shoveyKey.PrivKey)
+		if !config.UsingExternalSecrets() && o.shoveyKey.PrivKey != nil {
+			// hope for the best, eh
+			shovKey, _ = chefcrypto.PrivateKeyToString(o.shoveyKey.PrivKey)
+		}
 	}
 
 	return &privOrganization{Name: &o.Name, FullName: &o.FullName, GUID: &o.GUID, UUID: &o.uuID, ID: &o.id, ShoveyKey: &shovKey }
@@ -302,10 +311,12 @@ func (o *Organization) OrgURLBase() string {
 
 // GenerateShoveyKey generates a new private key for signing shovey requests
 // and sets that key in the org object.
-func (o *Organization) GenerateShoveyKey() error {
+func (o *Organization) GenerateShoveyKey() util.Gerror {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return err
+		gerr := util.CastErr(err)
+		gerr.SetStatus(http.StatusInternalServerError)
+		return gerr
 	}
 
 	o.shoveyKey.RLock()

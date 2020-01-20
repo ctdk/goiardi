@@ -21,6 +21,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/fakeacl"
 	"github.com/ctdk/goiardi/indexer"
+	"strings"
 	"testing"
 )
 
@@ -80,5 +81,44 @@ func TestOrgGet(t *testing.T) {
 	}
 	if o.Name != o2.Name {
 		t.Errorf("names did not match, got %s and %s", o.Name, o2.Name)
+	}
+}
+
+func TestOrgShoveyKey(t *testing.T) {
+	ov := config.Config.UseShovey
+	defer func() { config.Config.UseShovey = ov }()
+	config.Config.UseShovey = true
+
+	name := "harumph"
+	fullName := "Harumph AB"
+	o, err := New(name, fullName)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	fakeacl.LoadFakeACL(o)
+	err = o.Save()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	if o.shoveyKey == nil {
+		t.Error("Odd, o.shoveyKey should not be null if UseShovey is true.")
+	}
+
+	pk, gerr := o.ShoveyPrivKey()
+	if gerr != nil {
+		t.Errorf(gerr.Error())
+	}
+	if pk == nil {
+		t.Error("aiiieeeee, the private key should not have been null")
+	}
+
+	pub, gerr := o.ShoveyPubKey()
+	if gerr != nil {
+		t.Errorf(gerr.Error())
+	}
+
+	if !strings.HasPrefix(pub, "-----BEGIN PUBLIC KEY-----") {
+		t.Errorf("pub should have had the BEGIN PUBLIC KEY header, but didn't. Actual contents:\n\n%s\n\n", pub)
 	}
 }
