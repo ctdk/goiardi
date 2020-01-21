@@ -27,6 +27,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"strings"
+	"sync"
 )
 
 func checkForOrgSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -67,12 +68,8 @@ func (o *Organization) fillOrgFromSQL(row datastore.ResRow) error {
 			if pkerr != nil {
 				return pkerr
 			}
-			if o.shoveyKey == nil {
-				o.shoveyKey = new(SigningKeys)
-			}
-			o.shoveyKey.Lock()
-			defer o.shoveyKey.Unlock()
-			o.shoveyKey.PrivKey = k
+			skm := new(sync.RWMutex)
+			o.shoveyKey = &SigningKeys{skm, k}
 		}
 	}
 

@@ -31,7 +31,7 @@ func (o *Organization) savePostgreSQL() util.Gerror {
 	var pk string
 
 	// determine if there's a private key to save.
-	if config.Config.UseShovey && !config.UsingExternalSecrets() {
+	if config.Config.UseShovey && !config.UsingExternalSecrets() && o.shoveyKey != nil {
 		// don't absolutely flip out if shovey's enabled, external
 		// secrets are disabled, and there's no private key. Shovey may
 		// have only just been enabled and no key is present, and if

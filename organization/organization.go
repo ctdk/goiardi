@@ -59,7 +59,7 @@ type privOrganization struct {
 
 // SigningKeys are the public and private keys for signing shovey requests.
 type SigningKeys struct {
-	sync.RWMutex
+	*sync.RWMutex
 	PrivKey *rsa.PrivateKey
 }
 
@@ -97,13 +97,12 @@ func New(name, fullName string) (*Organization, util.Gerror) {
 		}
 	}
 
-	// Create the SigningKeys struct.
-	var sk *SigningKeys
+	o := &Organization{Name: name, FullName: fullName, GUID: guid, uuID: uuID,}
 
-	o := &Organization{Name: name, FullName: fullName, GUID: guid, uuID: uuID, shoveyKey: sk,}
-
+	// Create the SigningKeys struct, if needed.
 	if config.Config.UseShovey && !config.UsingExternalSecrets() {
-		o.shoveyKey = new(SigningKeys)
+		skm := new(sync.RWMutex)
+		o.shoveyKey = &SigningKeys{skm, nil}
 		if skErr := o.GenerateShoveyKey(); skErr != nil {
 			return nil, skErr
 		}
