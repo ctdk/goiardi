@@ -385,7 +385,7 @@ func (n *Node) allStatusesSQL() ([]*NodeStatus, error) {
 
 func unseenNodesSQL() ([]*Node, error) {
 	var nodes []*Node
-	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.node_latest_statuses n WHERE AND n.is_down = false AND n.updated_at < NOW() - INTERVAL '10 minute'"
+	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.node_latest_statuses n WHERE n.is_down = false AND n.updated_at < NOW() - INTERVAL '10 minute'"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
