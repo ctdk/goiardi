@@ -37,8 +37,8 @@ func (o *Organization) savePostgreSQL() util.Gerror {
 		// have only just been enabled and no key is present, and if
 		// shovey private key gets nuked somehow it'll generate another
 		// one.
-		o.shoveyKey.RLock()
-		defer o.shoveyKey.RUnlock()
+		o.shoveyKey.m.RLock()
+		defer o.shoveyKey.m.RUnlock()
 		privKey := o.shoveyKey.PrivKey
 		if privKey != nil {
 			var pkerr error

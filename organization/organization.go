@@ -59,7 +59,7 @@ type privOrganization struct {
 
 // SigningKeys are the public and private keys for signing shovey requests.
 type SigningKeys struct {
-	*sync.RWMutex
+	m *sync.RWMutex
 	PrivKey *rsa.PrivateKey
 }
 
@@ -229,8 +229,8 @@ func (o *Organization) export() *privOrganization {
 	var shovKey string
 
 	if o.shoveyKey != nil {
-		o.shoveyKey.RLock()
-		defer o.shoveyKey.RUnlock()
+		o.shoveyKey.m.RLock()
+		defer o.shoveyKey.m.RUnlock()
 
 		if !config.UsingExternalSecrets() && o.shoveyKey.PrivKey != nil {
 			// hope for the best, eh
@@ -318,8 +318,13 @@ func (o *Organization) GenerateShoveyKey() util.Gerror {
 		return gerr
 	}
 
-	o.shoveyKey.RLock()
-	defer o.shoveyKey.RUnlock()
+	if o.shoveyKey == nil { // make one real quick-like
+		skm := new(sync.RWMutex)
+		o.shoveyKey = &SigningKeys{skm, nil}
+	}
+
+	o.shoveyKey.m.RLock()
+	defer o.shoveyKey.m.RUnlock()
 	o.shoveyKey.PrivKey = priv
 	return nil
 }
@@ -327,8 +332,11 @@ func (o *Organization) GenerateShoveyKey() util.Gerror {
 // ShoveyPrivKey returns this organization's private key for signing shovey
 // requests, and an error if the key cannot be found.
 func (o *Organization) ShoveyPrivKey() (*rsa.PrivateKey, error) {
-	o.shoveyKey.RLock()
-	defer o.shoveyKey.RUnlock()
+	if o.shoveyKey == nil {
+		return nil, fmt.Errorf("No private key has been set for organization %s", o.Name)
+	}
+	o.shoveyKey.m.RLock()
+	defer o.shoveyKey.m.RUnlock()
 
 	if o.shoveyKey.PrivKey == nil {
 		return nil, fmt.Errorf("No signing key available for org %s!", o.Name)
@@ -343,8 +351,11 @@ func (o *Organization) ShoveyPrivKey() (*rsa.PrivateKey, error) {
 // ShoveyPublicKey returns this organization's public key for verifying shovey
 // requests, and an error if the key cannot be found.
 func (o *Organization) ShoveyPubKey() (string, error) {
-	o.shoveyKey.RLock()
-	defer o.shoveyKey.RUnlock()
+	if o.shoveyKey == nil {
+		return "", fmt.Errorf("No private key has been set for organization %s, so there's no public key either.", o.Name)
+	}
+	o.shoveyKey.m.RLock()
+	defer o.shoveyKey.m.RUnlock()
 
 	if o.shoveyKey.PrivKey == nil {
 		return "", fmt.Errorf("No private key for signing shovey request can be found for org %s, so the public key can not be retrieved either.", o.Name)
