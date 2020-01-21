@@ -444,7 +444,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if prErr := org.GenerateShoveyKey(); prErr != nil {
-				jsonErrorReport(w, r, prErr.Error(), http.StatusInternalServerError)
+				jsonErrorReport(w, r, prErr.Error(), prErr.Status())
 				return
 			}
 			if savErr := org.Save(); savErr != nil {

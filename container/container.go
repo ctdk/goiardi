@@ -25,7 +25,7 @@ import (
 	"net/http"
 )
 
-var DefaultContainers = [9]string{
+var DefaultContainers = [10]string{
 	"clients",
 	"containers",
 	"cookbooks",
@@ -35,6 +35,7 @@ var DefaultContainers = [9]string{
 	"nodes",
 	"roles",
 	"sandboxes",
+	"shoveys",
 }
 
 // there has GOT to be more to this
