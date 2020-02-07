@@ -401,66 +401,107 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return
 		}
-	case "key":
-		if pathArrayLen > 3 {
-			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
-			return
-		}
-
-		switch r.Method {
-		case http.MethodHead:
-			headDefaultResponse(w, r)
-			return
-		case http.MethodGet:
-			// The perm check at the top of this function will serve
-			// us fine.
-			if pathArrayLen != 2 {
-				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
-				return
-			}
-			pubKey, err := org.ShoveyPubKey()
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			// Returning the public key as a json attribute. Doing
-			// it this way because most everything in here comes
-			// out as JSON. We may as well be consistent.
-			shoveyResponse["public_key"] = pubKey
-		case http.MethodPost:
-			// However, we need to do another check for admin perms
-			// here. Using "grant".
-			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "shoveys", "grant"); ferr != nil {
-				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
-				return
-			} else if !f {
-				jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-				return
-			}
-
-			if pathArrayLen != 3 || pathArray[2] != "reset" {
-				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
-				return
-			}
-
-			if prErr := org.GenerateShoveyKey(); prErr != nil {
-				jsonErrorReport(w, r, prErr.Error(), prErr.Status())
-				return
-			}
-			if savErr := org.Save(); savErr != nil {
-				jsonErrorReport(w, r, savErr.Error(), savErr.Status())
-				return
-			}
-			shoveyResponse["response"] = "ok"
-		default:
-			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
-			return
-		}
 	default:
 		jsonErrorReport(w, r, "Unrecognized operation", http.StatusBadRequest)
 		return
 	}
 
+	enc := json.NewEncoder(w)
+	if jerr := enc.Encode(&shoveyResponse); jerr != nil {
+		jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
+	}
+
+	return
+}
+
+func shoveyKeyHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+	org, orgerr := orgloader.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+	if r.Method != "PUT" {
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "shovey-keys", "read"); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
+	}
+	if !config.Config.UseShovey {
+		jsonErrorReport(w, r, "shovey is not enabled", http.StatusPreconditionFailed)
+		return
+	}
+
+	pathArray := splitPath(r.URL.Path)[2:]
+	pathArrayLen := len(pathArray)
+
+	if pathArrayLen < 2 || pathArrayLen > 3 || pathArray[1] == "" {
+		jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	shoveyResponse := make(map[string]interface{})
+
+	switch r.Method {
+	case http.MethodHead:
+		headDefaultResponse(w, r)
+		return
+	case http.MethodGet:
+		// The perm check at the top of this function will serve
+		// us fine.
+		if pathArrayLen != 2 {
+			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			return
+		}
+		pubKey, err := org.ShoveyPubKey()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// Returning the public key as a json attribute. Doing
+		// it this way because most everything in here comes
+		// out as JSON. We may as well be consistent.
+		shoveyResponse["public_key"] = pubKey
+	case http.MethodPost:
+		// However, we need to do another check for admin perms
+		// here. Using "grant".
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "shovey-keys", "update"); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
+
+		if pathArrayLen != 3 || pathArray[2] != "reset" {
+			jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		if prErr := org.GenerateShoveyKey(); prErr != nil {
+			jsonErrorReport(w, r, prErr.Error(), prErr.Status())
+			return
+		}
+		if savErr := org.Save(); savErr != nil {
+			jsonErrorReport(w, r, savErr.Error(), savErr.Status())
+			return
+		}
+		shoveyResponse["response"] = "ok"
+	default:
+		jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
+		return
+	}
 	enc := json.NewEncoder(w)
 	if jerr := enc.Encode(&shoveyResponse); jerr != nil {
 		jsonErrorReport(w, r, jerr.Error(), http.StatusInternalServerError)
