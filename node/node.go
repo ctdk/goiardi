@@ -43,6 +43,9 @@ type Node struct {
 	Override        map[string]interface{} `json:"override"`
 	isDown          bool
 	org             *organization.Organization
+	// orgId's here for cases where, for whatever reason, it's not
+	// convenient to set n.org before calling fillNodeFromSQL.
+	orgId           int64
 }
 
 // New makes a new node.

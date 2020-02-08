@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/orgloader"
 	"log"
 	"strings"
 	"time"
@@ -53,7 +54,8 @@ func (n *Node) fillNodeFromSQL(row datastore.ResRow) error {
 		da []byte
 		oa []byte
 	)
-	err := row.Scan(&n.Name, &n.ChefEnvironment, &rl, &aa, &na, &da, &oa)
+
+	err := row.Scan(&n.Name, &n.ChefEnvironment, &rl, &aa, &na, &da, &oa, &n.orgId)
 	if err != nil {
 		return err
 	}
@@ -399,12 +401,27 @@ func unseenNodesSQL() ([]*Node, error) {
 		}
 		return nil, qerr
 	}
+
+	// cache orgs
+	orgCache := make(map[int64]*organization.Organization)
+
 	for rows.Next() {
 		no := new(Node)
 		err = no.fillNodeFromSQL(rows)
+
 		if err != nil {
 			return nil, err
 		}
+
+		if _, ok := orgCache[no.orgId]; !ok {
+			norg, err := orgloader.OrgByIdSQL(no.orgId)
+			if err != nil {
+				return nil, err
+			}
+			orgCache[no.orgId] = norg
+		}
+		no.org = orgCache[no.orgId]
+
 		nodes = append(nodes, no)
 	}
 	rows.Close()

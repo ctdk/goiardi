@@ -75,7 +75,7 @@ func (ns *NodeStatus) fillNodeStatusFromPostgreSQL(row datastore.ResRow) error {
 
 func getNodesByStatusPostgreSQL(org *organization.Organization, nodeNames []string, status string) ([]*Node, error) {
 	var nodes []*Node
-	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.node_latest_statuses n WHERE n.organization_id = $1 AND n.status = $2 AND n.name = ANY($2::text[])"
+	sqlStmt := "SELECT n.name, n.chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr, n.organization_id FROM goiardi.node_latest_statuses n WHERE n.organization_id = $1 AND n.status = $2 AND n.name = ANY($2::text[])"
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err
