@@ -165,6 +165,34 @@ Methods: PUT
         "updated_at"=>"2014-08-26T21:55:25.161713014-07:00"
       }
 
+Shovey Signing Keys
+-------------------
+
+``/organization/ORG/shovey/key``
+
+Methods: GET
+
+* Method: GET
+
+  Retrieves the public key that shovey clients use to verify that the jobs are
+  actually coming from the goiardi server. The client or user must have the
+  ``read`` permission on the ``shovey-keys`` container.
+
+  Response body format:
+
+  .. code-block:: javascript
+      {
+        "public_key": "<standard JSON escaped RSA public key>"
+      }
+
+``/organization/ORG/shovey/key/reset``
+
+Methods: POST
+
+* Method: POST
+
+  Resets the organization's 
+
 Streaming output
 ----------------
 
