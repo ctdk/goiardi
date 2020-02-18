@@ -39,27 +39,27 @@ import (
 )
 
 type Organization struct {
-	Name          string `json:"name"`
-	FullName      string `json:"full_name"`
-	GUID          string `json:"guid"`
-	uuID          uuid.UUID
-	id            int64
-	PermCheck     aclhelper.PermChecker `json:"-"`
-	shoveyKey     *SigningKeys
+	Name      string `json:"name"`
+	FullName  string `json:"full_name"`
+	GUID      string `json:"guid"`
+	uuID      uuid.UUID
+	id        int64
+	PermCheck aclhelper.PermChecker `json:"-"`
+	shoveyKey *SigningKeys
 }
 
 type privOrganization struct {
-	Name     *string
-	FullName *string
-	GUID     *string
-	UUID     *uuid.UUID
-	ID       *int64
+	Name      *string
+	FullName  *string
+	GUID      *string
+	UUID      *uuid.UUID
+	ID        *int64
 	ShoveyKey *string
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
 type SigningKeys struct {
-	m *sync.RWMutex
+	m       *sync.RWMutex
 	PrivKey *rsa.PrivateKey
 }
 
@@ -97,7 +97,7 @@ func New(name, fullName string) (*Organization, util.Gerror) {
 		}
 	}
 
-	o := &Organization{Name: name, FullName: fullName, GUID: guid, uuID: uuID,}
+	o := &Organization{Name: name, FullName: fullName, GUID: guid, uuID: uuID}
 
 	// Create the SigningKeys struct, if needed.
 	if config.Config.UseShovey && !config.UsingExternalSecrets() {
@@ -238,7 +238,7 @@ func (o *Organization) export() *privOrganization {
 		}
 	}
 
-	return &privOrganization{Name: &o.Name, FullName: &o.FullName, GUID: &o.GUID, UUID: &o.uuID, ID: &o.id, ShoveyKey: &shovKey }
+	return &privOrganization{Name: &o.Name, FullName: &o.FullName, GUID: &o.GUID, UUID: &o.uuID, ID: &o.id, ShoveyKey: &shovKey}
 }
 
 func (o *Organization) GobEncode() ([]byte, error) {

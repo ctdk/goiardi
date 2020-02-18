@@ -47,7 +47,7 @@ func (o *Organization) savePostgreSQL() util.Gerror {
 			}
 		}
 	}
-	
+
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
 		return util.CastErr(err)

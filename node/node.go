@@ -45,7 +45,7 @@ type Node struct {
 	org             *organization.Organization
 	// orgId's here for cases where, for whatever reason, it's not
 	// convenient to set n.org before calling fillNodeFromSQL.
-	orgId           int64
+	orgId int64
 }
 
 // New makes a new node.
