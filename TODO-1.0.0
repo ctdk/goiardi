@@ -12,7 +12,6 @@ And there's more...
 * find link to the last free fake-s3. Also see if the patch in the docs is still
   necessary
 * document moving items stored externally, like objects in s3, secrets, etc.
-* Move internal modules under github.com/ctdk/goiardi/internal where appropriate
 * Update stuff in vendor (or another option)
 * Oh, update the CHANGELOG (dur)
 * The s3 upload docs have been partially updated, but do need to be finished
