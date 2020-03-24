@@ -203,6 +203,16 @@ func main() {
 		startNodeMonitor()
 	}
 
+	/* Create default clients and users. Currently chef-validator,
+	 * chef-webui, and admin. */
+	createDefaultActors()
+
+	//if we are in a bootstrap mode, then we've done everything we needed and can exit now
+	if config.Config.DoBootstrap {
+		logger.Infof("Bootstrap completed")
+		os.Exit(0)
+	}
+
 	if config.Config.PurgeNodeStatusAfter != "" {
 		startNodeStatusPurge()
 	}
@@ -215,9 +225,6 @@ func main() {
 		startSandboxPurge()
 	}
 
-	/* Create default clients and users. Currently chef-validator,
-	 * chef-webui, and admin. */
-	createDefaultActors()
 	handleSignals()
 
 	/* Register the various handlers, found in their own source files. */
