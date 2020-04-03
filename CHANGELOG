@@ -10,6 +10,8 @@
   was moved to a separate module back in November of 2016.
 * Generate shovey signing keys within goiardi and provide the public key
   directly to clients.
+* Switched over to use 'go mod'. While it's been built with go1.12 and go1.14,
+  and might build with go1.11, it's unlikely to work with anything older.
 * TODO: Plenty more to add when this is finally ready to release.
 
 0.11.10 (Unreleased at this time)
