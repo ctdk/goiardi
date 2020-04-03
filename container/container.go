@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, Jeremy Bingham (<jbingham@gmail.com>)
+ * Copyright (c) 2013-2020, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,18 +25,14 @@ import (
 	"net/http"
 )
 
-var DefaultContainers = [10]string{
-	"clients",
-	"containers",
-	"cookbooks",
-	"data",
-	"environments",
-	"groups",
-	"nodes",
-	"roles",
-	"sandboxes",
-	"shoveys",
-}
+// Now, instead of filling in the container names by hand, we generate the
+// initial set of DefaultContainers from the permissions in the base acl
+// definition. Look in default-containers.go for the current list.
+//
+// Incidentally, this generate statement should be cross platform instead of
+// having a dependency on a Bourne shell. That's not too shabby.
+
+//go:generate go run ../generators/containers/gen-containers.go -f ../acl/definitions.go -o default-containers.go
 
 // there has GOT to be more to this
 type Container struct {
