@@ -20,9 +20,10 @@ package masteracl
 
 import (
 	"errors"
-	"github.com/casbin/casbin"
-	"github.com/casbin/casbin/persist"
-	"github.com/casbin/casbin/persist/file-adapter"
+	"github.com/casbin/casbin/v2"
+	"github.com/casbin/casbin/v2/model"
+	"github.com/casbin/casbin/v2/persist"
+	"github.com/casbin/casbin/v2/persist/file-adapter"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
@@ -78,12 +79,21 @@ func MasterCheckPerm(doer Actor, item MasterACLItem, perm string) (bool, util.Ge
 	}
 
 	cond := []interface{}{doer.GetName(), aclLookup[item], perm}
-	chk := masterChecker.Enforce(cond...)
+	chk, err := masterChecker.Enforce(cond...)
+	if err != nil {
+		gerr := util.CastErr(err)
+		return false, gerr
+	}
+
 	return chk, nil
 }
 
 func loadMasterACL() (*masterACL, error) {
-	m := casbin.NewModel(modelDefinition)
+	m, err := model.NewModelFromString(modelDefinition)
+	if err != nil {
+		return nil, err
+	}
+
 	if !masterPolicyExists() {
 		if err := initializeMasterPolicy(); err != nil {
 			return nil, err
@@ -93,7 +103,12 @@ func loadMasterACL() (*masterACL, error) {
 	if err != nil {
 		return nil, err
 	}
-	e := casbin.NewSyncedEnforcer(m, adp, config.Config.PolicyLogging)
+
+	e, err := casbin.NewSyncedEnforcer(m, adp, config.Config.PolicyLogging)
+	if err != nil {
+		return nil, err
+	}
+
 	mc := &masterACL{e}
 	return mc, nil
 }

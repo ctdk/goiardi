@@ -19,10 +19,10 @@ package acl
 import (
 	"database/sql"
 	"fmt"
-	"github.com/casbin/casbin"
-	"github.com/casbin/casbin/model"
-	"github.com/casbin/casbin/persist"
-	"github.com/casbin/casbin/persist/file-adapter"
+	"github.com/casbin/casbin/v2"
+	"github.com/casbin/casbin/v2/model"
+	"github.com/casbin/casbin/v2/persist"
+	"github.com/casbin/casbin/v2/persist/file-adapter"
 	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
@@ -79,7 +79,11 @@ func init() {
 }
 
 func LoadACL(org *organization.Organization) error {
-	m := casbin.NewModel(modelDefinition)
+	m, err := model.NewModelFromString(modelDefinition)
+	if err != nil {
+		return err
+	}
+
 	if !policyExists(org, config.Config.PolicyRoot) {
 		newE, err := initializeACL(org, m)
 		if err != nil {
@@ -93,8 +97,13 @@ func LoadACL(org *organization.Organization) error {
 	if err != nil {
 		return err
 	}
-	e := casbin.NewSyncedEnforcer(m, pa, config.Config.PolicyLogging)
+
+	e, err := casbin.NewSyncedEnforcer(m, pa, config.Config.PolicyLogging)
+	if err != nil {
+		return err
+	}
 	e.EnableAutoSave(true)
+
 	c := &Checker{org: org, e: e, inTransaction: false}
 	org.PermCheck = c
 
@@ -105,11 +114,16 @@ func initializeACL(org *organization.Organization, m model.Model) (*casbin.Synce
 	if err := initializePolicy(org, config.Config.PolicyRoot); err != nil {
 		return nil, err
 	}
+
 	adp, err := loadPolicyAdapter(org)
 	if err != nil {
 		return nil, err
 	}
-	e := casbin.NewSyncedEnforcer(m, adp, config.Config.PolicyLogging)
+
+	e, err := casbin.NewSyncedEnforcer(m, adp, config.Config.PolicyLogging)
+	if err != nil {
+		return nil, err
+	}
 
 	return e, nil
 }
@@ -188,7 +202,7 @@ func (c *Checker) releaseChanLock() {
 	return
 }
 
-func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm string) bool {
+func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm string) (bool, error) {
 	// Try getting this *user's* filtered policies, and make the test below
 	// more specific.
 	fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
@@ -197,18 +211,18 @@ func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm
 		for _, p := range fi {
 			// DON'T include perm!
 			if item.ContainerKind() == p[condKindPos] && item.ContainerType() == p[condSubkindPos] && item.GetName() == p[condNamePos] {
-				return true
+				return true, nil
 			}
 		}
 	}
 	// Also check for a relevant denyall##groups. (sigh)
 	if item.ContainerKind() == "groups" {
 		denyallp := buildDenySlice(item, perm)
-		dnyChk := c.e.Enforce(denyallp...)
-		return dnyChk // d'oh, need to invert this
+		dnyChk, err := c.e.Enforce(denyallp...)
+		return dnyChk, err // d'oh, need to invert this - Is this true?
 	}
 
-	return false
+	return false, nil
 }
 
 func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm string) (bool, util.Gerror) {
@@ -224,11 +238,19 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 
 	specific := buildEnforcingSlice(item, doer, perm)
 	var chkSucceeded bool
+	var chkErr error
 
 	// try the specific check first, then the general
-	if chkSucceeded = c.e.Enforce(specific...); !chkSucceeded {
-		if !c.testForAnyPol(item, doer, perm) {
-			chkSucceeded = c.e.Enforce(specific.general()...)
+	if chkSucceeded, chkErr = c.e.Enforce(specific...); chkErr != nil {
+		return false, util.CastErr(chkErr)
+	} else if !chkSucceeded {
+		if ok, err := c.testForAnyPol(item, doer, perm); err != nil {
+			return false, util.CastErr(err)
+		} else if ok {
+			chkSucceeded, chkErr = c.e.Enforce(specific.general()...)
+			if chkErr != nil {
+				return false, util.CastErr(chkErr)
+			}
 		}
 	}
 	if chkSucceeded {
@@ -320,7 +342,7 @@ func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, per
 		return util.CastErr(polErr)
 	}
 
-	var policyFunc func(p ...interface{}) bool
+	var policyFunc func(p ...interface{}) (bool, error)
 
 	switch action {
 	case addPerm:
@@ -740,7 +762,7 @@ func (c *Checker) RenameItemACL(item aclhelper.Item, oldName string) error {
 	// Wait until all new policies have been added before deleting the old
 	// ones.
 	for _, p := range oldPolicies {
-		if _, err := c.e.RemovePolicySafe(p...); err != nil {
+		if _, err := c.e.RemovePolicy(p...); err != nil {
 			return err
 		}
 	}
@@ -776,7 +798,7 @@ func (c *Checker) RenameMember(member aclhelper.Member, oldName string) error {
 		c.e.AddPolicy(newPolicy...)
 	}
 	for _, p := range oldPolicies {
-		if _, err := c.e.RemovePolicySafe(p...); err != nil {
+		if _, err := c.e.RemovePolicy(p...); err != nil {
 			return err
 		}
 	}
@@ -799,7 +821,7 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 	var err error
 
 	for _, p := range policies {
-		if rmok, err = c.e.RemovePolicySafe(p...); err != nil {
+		if rmok, err = c.e.RemovePolicy(p...); err != nil {
 			return false, err
 		}
 	}

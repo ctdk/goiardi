@@ -19,7 +19,7 @@
 package fakeacl
 
 import (
-	"github.com/casbin/casbin"
+	"github.com/casbin/casbin/v2"
 	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/util"
 )
