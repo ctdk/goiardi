@@ -1,4 +1,4 @@
-FROM circleci/golang:1.10
+FROM circleci/golang:1.14
 
 # A Dockerfile to use for building goiardi in circleci.
 
