@@ -1,7 +1,5 @@
 module github.com/ctdk/goiardi
 
-go 1.12
-
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/DataDog/datadog-go v3.5.0+incompatible // indirect
