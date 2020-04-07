@@ -21,6 +21,8 @@ github.com/ctdk/chefcrypto v0.2.0 h1:Wezo9291QCA2a6As8XtQb4ccPBmng7adthtMUruoMi8
 github.com/ctdk/chefcrypto v0.2.0/go.mod h1:mKE1NDHzVpXjzxquCu7p6qXwF7/yj6Sc8XpKkHyQv/I=
 github.com/ctdk/chefcrypto v0.2.1-0.20200116181729-af40e75ca641 h1:gJkhsi6fDi+Xs+H2ZRl3OgOH4dcsSgzo9VA0PffmMFM=
 github.com/ctdk/chefcrypto v0.2.1-0.20200116181729-af40e75ca641/go.mod h1:mKE1NDHzVpXjzxquCu7p6qXwF7/yj6Sc8XpKkHyQv/I=
+github.com/ctdk/chefcrypto v1.0.0 h1:g70yvqnaXm8ZdUc7U02oyobnEITDb9Do4S879KXDJvI=
+github.com/ctdk/chefcrypto v1.0.0/go.mod h1:8O66AIPfDqQHp4XHAUecZvYCM/cre1VfszqvM1oE94I=
 github.com/ctdk/go-trie v0.0.0-20161110000926-fe74c509b12e h1:SGErroaNvhPwriOHtkKbO/rwOGTLtfxp0ilroYeAOYs=
 github.com/ctdk/go-trie v0.0.0-20161110000926-fe74c509b12e/go.mod h1:wsN5IcPuVEauPDWHpM6zfIbdH1e5hFxUlPfaORH7WOI=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

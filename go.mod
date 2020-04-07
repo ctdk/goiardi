@@ -8,7 +8,7 @@ require (
 	github.com/alexcesaro/statsd v2.0.0+incompatible // indirect
 	github.com/aws/aws-sdk-go v1.30.3
 	github.com/casbin/casbin/v2 v2.2.2
-	github.com/ctdk/chefcrypto v0.2.1-0.20200116181729-af40e75ca641
+	github.com/ctdk/chefcrypto v1.0.0
 	github.com/ctdk/go-trie v0.0.0-20161110000926-fe74c509b12e
 	github.com/gorilla/mux v1.7.4
 	github.com/hashicorp/go-version v1.2.0
