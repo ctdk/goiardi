@@ -20,8 +20,7 @@ package container
 
 import ()
 
-var DefaultContainers = [14]string{
-	"$$root$$",
+var DefaultContainers = [13]string{
 	"clients",
 	"containers",
 	"cookbooks",
