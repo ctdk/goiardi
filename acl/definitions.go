@@ -21,7 +21,7 @@ import ()
 // Define the casbin RBAC model and the skeletal $$default$$ policy.
 
 const modelDefinition = `[request_definition]
-r = sub, obj, kind, subkind, act
+r = sub, obj, kind, subkind, act, eft
 
 [policy_definition]
 p = sub, obj, kind, subkind, act, eft
