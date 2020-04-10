@@ -429,7 +429,7 @@ func shoveyKeyHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if r.Method != "PUT" {
+	if r.Method != http.MethodPost {
 		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "shovey-keys", "read"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
