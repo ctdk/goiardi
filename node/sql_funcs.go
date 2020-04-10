@@ -89,7 +89,7 @@ func getSQL(org *organization.Organization, nodeName string) (*Node, error) {
 	node := new(Node)
 	node.org = org
 
-	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.nodes n WHERE n.organization_id = $1 AND n.name = $2"
+	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr, n.organization_id FROM goiardi.nodes n WHERE n.organization_id = $1 AND n.name = $2"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -111,7 +111,7 @@ func getMultiSQL(org *organization.Organization, nodeNames []string) ([]*Node, e
 	for i := range nodeNames {
 		bind[i] = fmt.Sprintf("$%d", i+2)
 	}
-	sqlStmt := fmt.Sprintf("SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.nodes n WHERE n.organization_id = $1 AND n.name IN (%s)", strings.Join(bind, ", "))
+	sqlStmt := fmt.Sprintf("SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr, n.organization_id FROM goiardi.nodes n WHERE n.organization_id = $1 AND n.name IN (%s)", strings.Join(bind, ", "))
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -276,7 +276,7 @@ func getListSQL(org *organization.Organization) []string {
 
 func getNodesInEnvSQL(org *organization.Organization, envName string) ([]*Node, error) {
 	var nodes []*Node
-	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.nodes n WHERE n.organization_id = $1 AND n.chef_environment = $2"
+	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr, n.organization_id FROM goiardi.nodes n WHERE n.organization_id = $1 AND n.chef_environment = $2"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -309,7 +309,7 @@ func getNodesInEnvSQL(org *organization.Organization, envName string) ([]*Node, 
 
 func allNodesSQL(org *organization.Organization) []*Node {
 	var nodes []*Node
-	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.nodes n WHERE n.organization_id = $1"
+	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr, n.organization_id FROM goiardi.nodes n WHERE n.organization_id = $1"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
@@ -387,7 +387,7 @@ func (n *Node) allStatusesSQL() ([]*NodeStatus, error) {
 
 func unseenNodesSQL() ([]*Node, error) {
 	var nodes []*Node
-	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr FROM goiardi.node_latest_statuses n WHERE n.is_down = false AND n.updated_at < NOW() - INTERVAL '10 minute'"
+	sqlStmt := "SELECT n.name, chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr, n.organization_id FROM goiardi.node_latest_statuses n WHERE n.is_down = false AND n.updated_at < NOW() - INTERVAL '10 minute'"
 
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
