@@ -734,6 +734,7 @@ func createDefaultActors(cworg *organization.Organization) {
 	}
 
 	if cwebui, _ := client.Get(cworg, "default-webui"); cwebui == nil {
+		logger.Debugf("creating webui client (ugh)")
 		if webui, nerr := client.New(cworg, "default-webui"); nerr != nil {
 			logger.Criticalf(nerr.Error())
 			os.Exit(1)
@@ -760,6 +761,7 @@ func createDefaultActors(cworg *organization.Organization) {
 	}
 
 	if cvalid, _ := client.Get(cworg, "default-validator"); cvalid == nil {
+		logger.Debugf("creating validator")
 		if validator, verr := client.New(cworg, "default-validator"); verr != nil {
 			logger.Criticalf(verr.Error())
 			os.Exit(1)
@@ -790,6 +792,8 @@ func createDefaultActors(cworg *organization.Organization) {
 			logger.Errorf("MakeDefaultEnvironment for default org had an error: %s", eerr.Error())
 		}
 	}
+
+	logger.Debugf("finished with any default actor creation work")
 
 	return
 }
