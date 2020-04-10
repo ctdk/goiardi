@@ -95,9 +95,11 @@ func main() {
 		subKind := f[subKindField]
 
 		// all containers are located before the groups. Keep it that
-		// way, yo.
+		// way, yo. Also, skip '$$root$$'.
 		if kind == "groups" {
 			break
+		} else if subKind == "$$root$$" {
+			continue
 		}
 
 		// take the easy way out. Not checking if it's already been set
