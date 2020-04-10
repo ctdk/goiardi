@@ -52,6 +52,7 @@ p, role##users, containers, containers, nodes, read, allow
 p, role##users, containers, containers, environments, create, allow
 p, role##users, containers, containers, environments, read, allow
 p, role##clients, containers, containers, environments, read, allow
+p, role##clients, containers, containers, shovey-keys, read, allow
 p, role##users, containers, containers, groups, read, allow
 
 p, role##users, containers, containers, clients, delete, allow
