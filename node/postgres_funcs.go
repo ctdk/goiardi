@@ -37,7 +37,7 @@ func (ns *NodeStatus) updateNodeStatusPostgreSQL() error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("SELECT goiardi.insert_node_status($1, $2)", ns.Node.Name, ns.Status)
+	_, err = tx.Exec("SELECT goiardi.insert_node_status($1, $2, $3)", ns.Node.Name, ns.Status, ns.Node.org.GetId())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -75,7 +75,7 @@ func (ns *NodeStatus) fillNodeStatusFromPostgreSQL(row datastore.ResRow) error {
 
 func getNodesByStatusPostgreSQL(org *organization.Organization, nodeNames []string, status string) ([]*Node, error) {
 	var nodes []*Node
-	sqlStmt := "SELECT n.name, n.chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr, n.organization_id FROM goiardi.node_latest_statuses n WHERE n.organization_id = $1 AND n.status = $2 AND n.name = ANY($2::text[])"
+	sqlStmt := "SELECT n.name, n.chef_environment, n.run_list, n.automatic_attr, n.normal_attr, n.default_attr, n.override_attr, n.organization_id FROM goiardi.node_latest_statuses n WHERE n.organization_id = $1 AND n.status = $2 AND n.name = ANY($3::text[])"
 	stmt, err := datastore.Dbh.Prepare(sqlStmt)
 	if err != nil {
 		return nil, err

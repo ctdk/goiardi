@@ -47,7 +47,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
-	if r.Method != "PUT" {
+	if r.Method != http.MethodPut {
 		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "shoveys", "read"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
@@ -125,6 +125,15 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 				return
 			}
+
+			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "shoveys", "create"); ferr != nil {
+				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+				return
+			} else if !f {
+				jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+				return
+			}
+
 			shvData, err := parseObjJSON(r.Body)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
