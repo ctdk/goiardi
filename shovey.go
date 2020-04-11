@@ -184,7 +184,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			shoveyResponse["id"] = s.RunID
-			shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/shovey/jobs/%s", s.RunID))
+			shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/organizations/%s/shovey/jobs/%s", org.GetName(), s.RunID))
 		case http.MethodPut:
 			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "shoveys", "update"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
