@@ -186,15 +186,16 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			shoveyResponse["id"] = s.RunID
 			shoveyResponse["uri"] = util.CustomURL(fmt.Sprintf("/organizations/%s/shovey/jobs/%s", org.GetName(), s.RunID))
 		case http.MethodPut:
-			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "shoveys", "update"); ferr != nil {
-				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
-				return
-			} else if !f {
-				jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-				return
-			}
 			switch pathArrayLen {
 			case 3:
+				if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "shoveys", "update"); ferr != nil {
+					jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+					return
+				} else if !f {
+					jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+					return
+				}
+
 				if vars["job_id"] != "cancel" {
 					jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
 					return
@@ -242,18 +243,29 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			case 4:
-				sjData, perr := parseObjJSON(r.Body)
-				if perr != nil {
-					jsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
-					return
-				}
-				nodeName := vars["node_name"]
-				logger.Debugf("sjData: %v", sjData)
 				shove, err := shovey.Get(org, vars["job_id"])
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
 					return
 				}
+
+				nodeName := vars["node_name"]
+
+				if f, ferr := org.PermCheck.CheckItemPerm(shove, opUser, "update"); ferr != nil {
+					jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+					return
+				} else if !f {
+					jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+					return
+				}
+
+				sjData, perr := parseObjJSON(r.Body)
+				if perr != nil {
+					jsonErrorReport(w, r, perr.Error(), http.StatusBadRequest)
+					return
+				}
+				logger.Debugf("sjData: %v", sjData)
+
 				sj, err := shove.GetRun(nodeName)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())
