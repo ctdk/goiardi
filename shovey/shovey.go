@@ -465,7 +465,8 @@ func (s *Shovey) startJobs() Qerror {
 		ackCh := make(chan string, len(tagNodes))
 		respCh := make(chan serfclient.NodeResponse, len(tagNodes))
 
-		q := &serfclient.QueryParam{Name: "shovey", Payload: jsonPayload, FilterNodes: tagNodes, RequestAck: true, AckCh: ackCh, RespCh: respCh}
+		orgNodeIDs := orgNodeNameSlice(s.org, tagNodes)
+		q := &serfclient.QueryParam{Name: "shovey", Payload: jsonPayload, FilterNodes: orgNodeIDs, RequestAck: true, AckCh: ackCh, RespCh: respCh}
 		qerrch := make(chan error)
 		go serfin.Query(q, qerrch)
 		qerr := <-qerrch
@@ -952,14 +953,7 @@ func intify(i interface{}) (int64, bool) {
 // differentiate between nodes that may have the same name in different orgs.
 // This simply joins the org ID and the node name together.
 func orgNodeName(org *organization.Organization, nodeName string) string {
-	var orgDesignator string
-	if config.UsingDB() {
-		orgDesignator = strconv.FormatInt(org.GetId(), 10)
-	} else {
-		orgDesignator = org.GetName()
-	}
-
-	return fmt.Sprintf("%s-%s", orgDesignator, nodeName)
+	return fmt.Sprintf("%s:%s", org.GetName(), nodeName)
 }
 
 // And to go along with the above, a handy dandy function to convert a slice of
