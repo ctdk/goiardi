@@ -244,6 +244,11 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 	if chkSucceeded, chkErr = c.e.Enforce(specific...); chkErr != nil {
 		return false, util.CastErr(chkErr)
 	} else if !chkSucceeded {
+		// This business with testForAnyPol was added for a reason, I'm
+		// certain, but I don't remember what it was. TODO: see if
+		// taking this out horribly breaks everything (or at least the
+		// tests).
+		/*
 		if ok, err := c.testForAnyPol(item, doer, perm); err != nil {
 			return false, util.CastErr(err)
 		} else if ok {
@@ -251,6 +256,11 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 			if chkErr != nil {
 				return false, util.CastErr(chkErr)
 			}
+		}
+		*/
+		chkSucceeded, chkErr = c.e.Enforce(specific.general()...)
+		if chkErr != nil {
+			return false, util.CastErr(chkErr)
 		}
 	}
 	if chkSucceeded {

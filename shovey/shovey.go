@@ -490,7 +490,13 @@ func (s *Shovey) startJobs() Qerror {
 				if a == "" {
 					continue
 				}
-				sr, err := s.GetRun(a)
+
+				ok, nn := s.extractNodeName(a)
+				if !ok {
+					continue
+				}
+
+				sr, err := s.GetRun(nn)
 				if err != nil {
 					logger.Debugf("err with sr %s: %s", a, err.Error())
 					continue
@@ -966,4 +972,17 @@ func orgNodeNameSlice(org *organization.Organization, nodeNames []string) []stri
 		orgNodeIDs[i] = n2
 	}
 	return orgNodeIDs
+}
+
+func (s *Shovey) extractNodeName(n string) (bool, string) {
+	info := strings.Split(n, ":")
+
+	var good bool
+	var nodeName string
+
+	if len(info) == 2 && info[0] == s.org.GetName() {
+		good = true
+		nodeName = info[1]
+	}
+	return good, nodeName
 }
