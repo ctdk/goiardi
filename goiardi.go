@@ -111,11 +111,7 @@ func main() {
 	/* Here goes nothing, db... */
 	if config.UsingDB() {
 		var derr error
-		if config.Config.UseMySQL {
-			datastore.Dbh, derr = datastore.ConnectDB("mysql", config.Config.MySQL)
-		} else if config.Config.UsePostgreSQL {
-			datastore.Dbh, derr = datastore.ConnectDB("postgres", config.Config.PostgreSQL)
-		}
+		datastore.Dbh, derr = datastore.ConnectDB("postgres", config.Config.PostgreSQL)
 		if derr != nil {
 			logger.Fatalf(derr.Error())
 			os.Exit(1)
