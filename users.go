@@ -87,16 +87,17 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
 			return
 		}
+
 		if !opUser.IsSelf(chefUser) {
 			if f, ferr := masteracl.MasterCheckPerm(opUser, masteracl.Users, "delete"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return
 			} else if !f {
 				jsonErrorReport(w, r, "Deleting that user is forbidden", http.StatusForbidden)
+				return
 			}
-
-			return
 		}
+
 		/* Docs were incorrect. It does want the body of the
 		 * deleted object. */
 		jsonUser := chefUser.ToJSON()
