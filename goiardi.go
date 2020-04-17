@@ -399,7 +399,7 @@ func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
 	for timeInfo := range apiChan {
 		handlerMetric, err := diceApiURL(timeInfo.path)
 		if err != nil {
-			logger.Infof("error recording metrics for path '%s': %s", timeInfo.path)
+			logger.Infof("error recording metrics for path '%s': %s", timeInfo.path, err.Error())
 			continue
 		}
 
