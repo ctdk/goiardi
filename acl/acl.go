@@ -208,6 +208,12 @@ func (c *Checker) releaseChanLock() {
 }
 
 func (c *Checker) testForMemberObjPolicy(item aclhelper.Item, doer aclhelper.Member, perm string) (bool, error) {
+	// return false if we're editing the organization or container ACLs
+	// themselves. Let's see how this plays out.
+	if item.ContainerKind() == "containers" && (item.ContainerType() == "$$root$$" || item.ContainerType() == "containers") {
+		return false, nil
+	}
+
 	// Try getting this *user's* filtered policies, and make the test below
 	// more specific.
 	fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
@@ -254,6 +260,9 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 
 	// *First*, check and see if there's a policy specific to this user. If
 	// so, enforce against the filtered policy. If not, move on.
+	//
+	// NB: _don't_ do this if we are editing the ACLs themselves. It causes
+	// lots of problems otherwise. *crosses fingers*
 	if memChk, err := c.testForMemberObjPolicy(item, doer, perm); err != nil {
 		return false, util.CastErr(err)
 	} else if memChk {
