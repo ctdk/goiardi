@@ -28,8 +28,8 @@ import (
 )
 
 const (
-	defLen = 7
-	kindField = 3
+	defLen       = 7
+	kindField    = 3
 	subKindField = 2
 )
 

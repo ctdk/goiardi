@@ -276,7 +276,7 @@ func (c *Checker) checkItemPerm(testFunc func(aclhelper.Item, aclhelper.Member, 
 		logger.Debugf("checking filtered policy")
 		// TODO: may need a wrapper or cast later to get the right kind
 		// of filter once goiardi gets policies stored in postgres.
-		fp := &fileadapter.Filter{P: []string{doer.ACLName(), item.ContainerType(), item.ContainerKind(),}, G: []string{},}
+		fp := &fileadapter.Filter{P: []string{doer.ACLName(), item.ContainerType(), item.ContainerKind()}, G: []string{}}
 
 		// same thing as above
 		fm, _ := model.NewModelFromString(modelDefinition)
