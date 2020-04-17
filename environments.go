@@ -78,7 +78,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 	if pathArrayLen == 1 {
 		// Somewhat weirdly, users can create environments even if they
 		// can't read them.
-		if r.Method != "POST" {
+		if r.Method != http.MethodPost {
 			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "environments", "read"); ferr != nil {
 				jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 				return

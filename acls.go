@@ -504,10 +504,10 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 
 	// Check the org's own ACL first. This may be overly restrictive and
 	// ends up never actually granting normal users permissions.
-	if orgACLerr := aclPermCheck(r, org, org, "grant"); orgACLerr != nil {
+	if orgACLerr := aclPermCheck(r, org, org); orgACLerr != nil {
 		// fall back to the general
 		rootACL := &aclhelper.RootACL{Name: "$$default$$", Kind: kind, Subkind: subkind}
-		if aerr := aclPermCheck(r, org, rootACL, "grant"); aerr != nil {
+		if aerr := aclPermCheck(r, org, rootACL); aerr != nil {
 			jsonErrorReport(w, r, aerr.Error(), aerr.Status())
 			return
 		}
@@ -528,7 +528,7 @@ func baseACLHandler(w http.ResponseWriter, r *http.Request, orgName string, kind
 }
 
 func baseItemACLHandler(w http.ResponseWriter, r *http.Request, org *organization.Organization, item aclhelper.Item) {
-	if err := aclPermCheck(r, org, item, "grant"); err != nil {
+	if err := aclPermCheck(r, org, item); err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
@@ -543,7 +543,7 @@ func baseItemACLHandler(w http.ResponseWriter, r *http.Request, org *organizatio
 }
 
 func baseACLPermHandler(w http.ResponseWriter, r *http.Request, org *organization.Organization, item aclhelper.Item, perm string) {
-	if err := aclPermCheck(r, org, item, "grant"); err != nil {
+	if err := aclPermCheck(r, org, item); err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
 	}
@@ -582,13 +582,13 @@ func sendResponse(w http.ResponseWriter, r *http.Request, response interface{}) 
 	}
 }
 
-func aclPermCheck(r *http.Request, org *organization.Organization, item aclhelper.Item, perm string) util.Gerror {
+func aclPermCheck(r *http.Request, org *organization.Organization, item aclhelper.Item) util.Gerror {
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
 		return oerr
 	}
 
-	if ok, err := org.PermCheck.CheckItemPerm(item, opUser, "grant"); err != nil {
+	if ok, err := org.PermCheck.CheckACLItemPerm(item, opUser, "grant"); err != nil {
 		return err
 	} else if !ok {
 		derr := util.Errorf("You do not have permission to do that")

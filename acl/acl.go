@@ -208,12 +208,6 @@ func (c *Checker) releaseChanLock() {
 }
 
 func (c *Checker) testForMemberObjPolicy(item aclhelper.Item, doer aclhelper.Member, perm string) (bool, error) {
-	// return false if we're editing the organization or container ACLs
-	// themselves. Let's see how this plays out.
-	if item.ContainerKind() == "containers" && (item.ContainerType() == "$$root$$" || item.ContainerType() == "containers") {
-		return false, nil
-	}
-
 	// Try getting this *user's* filtered policies, and make the test below
 	// more specific.
 	fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
@@ -243,7 +237,20 @@ func (c *Checker) testForMemberObjPolicy(item aclhelper.Item, doer aclhelper.Mem
 	return false, nil
 }
 
+func (c *Checker) CheckACLItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm string) (bool, util.Gerror) {
+	// Skip the per-item filtered policy check if we're editing the ACLs
+	// themselves.
+	skip := func(i aclhelper.Item, m aclhelper.Member, p string) (bool, error) {
+		return false, nil
+	}
+	return c.checkItemPerm(skip, item, doer, perm)
+}
+
 func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm string) (bool, util.Gerror) {
+	return c.checkItemPerm(c.testForMemberObjPolicy, item, doer, perm)
+}
+
+func (c *Checker) checkItemPerm(testFunc func(aclhelper.Item, aclhelper.Member, string) (bool, error), item aclhelper.Item, doer aclhelper.Actor, perm string) (bool, util.Gerror) {
 	c.waitForChanLock()
 	defer c.releaseChanLock()
 	c.m.RLock()
@@ -263,7 +270,7 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 	//
 	// NB: _don't_ do this if we are editing the ACLs themselves. It causes
 	// lots of problems otherwise. *crosses fingers*
-	if memChk, err := c.testForMemberObjPolicy(item, doer, perm); err != nil {
+	if memChk, err := testFunc(item, doer, perm); err != nil {
 		return false, util.CastErr(err)
 	} else if memChk {
 		logger.Debugf("checking filtered policy")
@@ -541,7 +548,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 }
 
 func (c *Checker) RootCheckPerm(doer aclhelper.Actor, perm string) (bool, util.Gerror) {
-	return c.CheckItemPerm(c.org, doer, perm)
+	return c.CheckACLItemPerm(c.org, doer, perm)
 }
 
 func (c *Checker) CheckContainerPerm(doer aclhelper.Actor, containerName string, perm string) (bool, util.Gerror) {

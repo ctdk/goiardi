@@ -32,6 +32,10 @@ type PermTaker interface {
 type FakeChecker struct {
 }
 
+func (f *FakeChecker) CheckACLItemPerm(i aclhelper.Item, a aclhelper.Actor, s string) (bool, util.Gerror) {
+	return true, nil
+}
+
 func (f *FakeChecker) CheckItemPerm(i aclhelper.Item, a aclhelper.Actor, s string) (bool, util.Gerror) {
 	return true, nil
 }
