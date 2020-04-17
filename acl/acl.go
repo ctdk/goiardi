@@ -19,7 +19,7 @@ package acl
 // generate us some acl definitions from a set of base files that are *much*
 // easier to edit than inside a go source file. Hooboy!
 
-//go:generate go run ../generators/acl/gen-acl-definitions.go -m base-definitions/model.csv.base -p base-definitions/policy.csv.base -o definitions.go
+//go:generate go run ../generators/acl/gen-acl-definitions.go -m base-definitions/model.conf.base -p base-definitions/policy.csv.base -o definitions.go
 
 import (
 	"database/sql"
