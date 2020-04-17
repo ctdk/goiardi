@@ -207,7 +207,7 @@ func (c *Checker) releaseChanLock() {
 	return
 }
 
-func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm string) (bool, error) {
+func (c *Checker) testForMemberObjPolicy(item aclhelper.Item, doer aclhelper.Member, perm string) (bool, error) {
 	// Try getting this *user's* filtered policies, and make the test below
 	// more specific.
 	fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
@@ -216,10 +216,17 @@ func (c *Checker) testForAnyPol(item aclhelper.Item, doer aclhelper.Member, perm
 		for _, p := range fi {
 			// DON'T include perm!
 			if item.ContainerKind() == p[condKindPos] && item.ContainerType() == p[condSubkindPos] && item.GetName() == p[condNamePos] {
+				logger.Debugf("testForMemberObjPolicy: all those things were true.")
 				return true, nil
 			}
 		}
 	}
+
+	// TODO: This may be superfluous now with the above, but in case it is
+	// not I'm leaving this weird bit of code in until I can confirm. ACLs
+	// need a bit of refactoring anyway given that I finally figured out how
+	// to enforce with a filtered policy. /me hangs his head.
+
 	// Also check for a relevant denyall##groups. (sigh)
 	if item.ContainerKind() == "groups" {
 		denyallp := buildDenySlice(item, perm)
@@ -245,24 +252,43 @@ func (c *Checker) CheckItemPerm(item aclhelper.Item, doer aclhelper.Actor, perm 
 	var chkSucceeded bool
 	var chkErr error
 
+	// *First*, check and see if there's a policy specific to this user. If
+	// so, enforce against the filtered policy. If not, move on.
+	if memChk, err := c.testForMemberObjPolicy(item, doer, perm); err != nil {
+		return false, util.CastErr(err)
+	} else if memChk {
+		logger.Debugf("checking filtered policy")
+		// TODO: may need a wrapper or cast later to get the right kind
+		// of filter once goiardi gets policies stored in postgres.
+		fp := &fileadapter.Filter{P: []string{doer.ACLName(), item.ContainerType(), item.ContainerKind(),}, G: []string{},}
+
+		// same thing as above
+		fm, _ := model.NewModelFromString(modelDefinition)
+		fadp := fileadapter.NewFilteredAdapter(makePolicyPath(c.org, config.Config.PolicyRoot))
+
+		fe, _ := casbin.NewEnforcer()
+		fe.InitWithModelAndAdapter(fm, fadp)
+
+		err = fe.LoadFilteredPolicy(fp)
+
+		if err != nil {
+			logger.Debugf("Got an error loading the filtered policy: %v", err)
+			return false, util.CastErr(err)
+		}
+
+		logger.Debugf("the filtered policy: %v", fe.GetPolicy())
+
+		chkSucceeded, chkErr = fe.Enforce(specific...)
+		if chkErr != nil {
+			return false, util.CastErr(chkErr)
+		}
+		return chkSucceeded, nil
+	}
+
 	// try the specific check first, then the general
 	if chkSucceeded, chkErr = c.e.Enforce(specific...); chkErr != nil {
 		return false, util.CastErr(chkErr)
 	} else if !chkSucceeded {
-		// This business with testForAnyPol was added for a reason, I'm
-		// certain, but I don't remember what it was. TODO: see if
-		// taking this out horribly breaks everything (or at least the
-		// tests).
-		/*
-		if ok, err := c.testForAnyPol(item, doer, perm); err != nil {
-			return false, util.CastErr(err)
-		} else if ok {
-			chkSucceeded, chkErr = c.e.Enforce(specific.general()...)
-			if chkErr != nil {
-				return false, util.CastErr(chkErr)
-			}
-		}
-		*/
 		chkSucceeded, chkErr = c.e.Enforce(specific.general()...)
 		if chkErr != nil {
 			return false, util.CastErr(chkErr)
