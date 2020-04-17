@@ -140,12 +140,12 @@ func TestInitACL(t *testing.T) {
 		for i, v := range policy[1:] {
 			enforceP[i] = v
 		}
-		z := e.Enforce(enforceP...)
+		z, _ := e.Enforce(enforceP...)
 		if z != expected {
 			t.Errorf("Expected '%s' to evaluate as %v, got %v", strings.Join(policy[1:], ", "), expected, z)
 		}
 	}
-	r := e.GetRolesForUser("test1")
+	r, _ := e.GetRolesForUser("test1")
 	if !util.StringPresentInSlice("role##admins", r) {
 		t.Errorf("test1 user should have been a member of the 'admins' group, but wasn't. These roles were found instead: %v", r)
 	}
@@ -224,11 +224,11 @@ func TestUserAdd(t *testing.T) {
 	us2.Save()
 
 	// check roles
-	r1 := org.PermCheck.Enforcer().GetRolesForUser(u1.Username)
+	r1, _ := org.PermCheck.Enforcer().GetRolesForUser(u1.Username)
 	if !util.StringPresentInSlice(us1.ACLName(), r1) {
 		t.Errorf("Role %s not found for %s, got %v instead", us1.ACLName(), u1.GetName(), r1)
 	}
-	r2 := org.PermCheck.Enforcer().GetRolesForUser(u2.Username)
+	r2, _ := org.PermCheck.Enforcer().GetRolesForUser(u2.Username)
 	if !util.StringPresentInSlice(us2.ACLName(), r2) {
 		t.Errorf("Role %s not found for %s, got %v instead", us2.ACLName(), u2.GetName(), r2)
 	}
@@ -260,11 +260,11 @@ func TestUserRemove(t *testing.T) {
 	gg.AddActor(u2)
 	gg.Save()
 
-	r1 := org.PermCheck.Enforcer().GetRolesForUser(u1.Username)
+	r1, _ := org.PermCheck.Enforcer().GetRolesForUser(u1.Username)
 	if !util.StringPresentInSlice(gg.ACLName(), r1) {
 		t.Errorf("Didn't find %s in %s's roles.", gg.ACLName(), u1.Username)
 	}
-	r2 := org.PermCheck.Enforcer().GetRolesForUser(u2.Username)
+	r2, _ := org.PermCheck.Enforcer().GetRolesForUser(u2.Username)
 	if !util.StringPresentInSlice(gg.ACLName(), r2) {
 		t.Errorf("Didn't find %s in %s's roles.", gg.ACLName(), u2.Username)
 	}
@@ -279,11 +279,11 @@ func TestUserRemove(t *testing.T) {
 	}
 	gg.Save()
 
-	r1 = org.PermCheck.Enforcer().GetRolesForUser(u1.Username)
+	r1, _ = org.PermCheck.Enforcer().GetRolesForUser(u1.Username)
 	if util.StringPresentInSlice(gg.ACLName(), r1) {
 		t.Errorf("Found %s in %s's roles, when it shouldn't have been.", gg.ACLName(), u1.Username)
 	}
-	r2 = org.PermCheck.Enforcer().GetRolesForUser(u2.Username)
+	r2, _ = org.PermCheck.Enforcer().GetRolesForUser(u2.Username)
 	if util.StringPresentInSlice(gg.ACLName(), r2) {
 		t.Errorf("Found %s in %s's roles, when it shouldn't have been.", gg.ACLName(), u2.Username)
 	}
@@ -298,7 +298,7 @@ func TestClients(t *testing.T) {
 	gg.AddActor(c)
 	gg.Save()
 
-	r1 := org.PermCheck.Enforcer().GetRolesForUser(c.GetName())
+	r1, _ := org.PermCheck.Enforcer().GetRolesForUser(c.GetName())
 
 	if !util.StringPresentInSlice(gg.ACLName(), r1) {
 		t.Errorf("Didn't find %s in %s's roles.", gg.ACLName(), c.GetName())
