@@ -351,6 +351,9 @@ func main() {
 	s.HandleFunc("/users/{name}", userOrgHandler)
 	s.HandleFunc("/universe", universe.UniverseHandler)
 	s.HandleFunc("/{any}/_acl", orgACLHandler)
+	// anything under /control just returns a 410, or 403 for non-admin
+	// types.
+	s.PathPrefix("/control").HandlerFunc(controlHandler)
 
 	/* TODO: figure out how to handle the root & not found pages */
 	muxer.HandleFunc("/", rootHandler)
