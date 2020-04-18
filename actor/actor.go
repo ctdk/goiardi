@@ -53,7 +53,7 @@ type Actor interface {
 func GetReqUser(org *organization.Organization, name string) (Actor, util.Gerror) {
 	/* If UseAuth is turned off, use the automatically created admin user */
 	if !config.Config.UseAuth {
-		name = "admin"
+		name = config.SuperuserName
 	}
 	var c Actor
 	var err error

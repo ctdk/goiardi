@@ -57,5 +57,8 @@ p, $$master_admins, users, update
 p, $$master_admins, users, delete
 p, $$master_admins, users, grant
 
+p, $$webui, webui, read
+
 g, pivotal, $$master_admins
+g, default-webui, $$webui
 `

@@ -34,7 +34,6 @@ import (
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-
 	"github.com/ctdk/chefcrypto"
 	"hash"
 	"io"
@@ -77,9 +76,15 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 		if f, ferr := masteracl.MasterCheckPerm(u, masteracl.Users, "grant"); ferr != nil {
 			return ferr
 		} else if !f {
-			_, aerr := association.GetAssoc(u.(*user.User), org)
-			if aerr != nil {
-				return aerr
+			// check for webui-ness too. Bleh.
+			w, werr := masteracl.MasterCheckPerm(u, masteracl.Webui, "read")
+			if werr != nil {
+				return werr
+			} else if !w {
+				_, aerr := association.GetAssoc(u.(*user.User), org)
+				if aerr != nil {
+					return aerr
+				}
 			}
 		}
 	}

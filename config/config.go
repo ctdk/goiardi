@@ -255,6 +255,13 @@ var SupportedAPIVersions = []string{"0", "1"}
 // in the X-OPS-TIMESTAMP header.
 const DefaultTimeSlew = "15m"
 
+// The default superuser, webui, and validator names
+const (
+	SuperuserName = "pivotal"
+	DefaultWebui = "default-webui"
+	DefaultValidator = "default-validator"
+)
+
 /* The general plan is to read the command-line options, then parse the config
  * file, fill in the config struct with those values, then apply the
  * command-line options to the config struct. We read the cli options first so

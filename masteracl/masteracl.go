@@ -48,12 +48,14 @@ const (
 	Organizations MasterACLItem = iota
 	Reindex
 	Users
+	Webui
 )
 
 var aclLookup = map[MasterACLItem]string{
 	Organizations: "organizations",
 	Reindex:       "reindex",
 	Users:         "users",
+	Webui:         "webui",
 }
 
 // masterACL lets us easily do perm checks that affect goiardi as a whole,

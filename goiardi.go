@@ -610,7 +610,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		userID = "pivotal"
+		userID = config.DefaultWebui
 	}
 	/* Only perform the authorization check if that's configured. Bomb with
 	 * an error if the check of the headers, timestamps, etc. fails. */
@@ -696,8 +696,8 @@ func cleanPath(p string) string {
 // TODO: this has to change for organizations.
 func createDefaultActors(cworg *organization.Organization) {
 	// the admin user is called 'pivotal' now with chef12 for some reason.
-	if uadmin, _ := user.Get("pivotal"); uadmin == nil {
-		if admin, aerr := user.New("pivotal"); aerr != nil {
+	if uadmin, _ := user.Get(config.SuperuserName); uadmin == nil {
+		if admin, aerr := user.New(config.SuperuserName); aerr != nil {
 			logger.Criticalf(aerr.Error())
 			os.Exit(1)
 		} else {
@@ -732,20 +732,20 @@ func createDefaultActors(cworg *organization.Organization) {
 		}
 	}
 
-	if cwebui, _ := client.Get(cworg, "default-webui"); cwebui == nil {
-		logger.Debugf("creating webui client (ugh)")
-		if webui, nerr := client.New(cworg, "default-webui"); nerr != nil {
+	if cwebui, _ := user.Get(config.DefaultWebui); cwebui == nil {
+		logger.Debugf("creating webui client (as unpriviledged user) (ugh)")
+		if webui, nerr := user.New(config.DefaultWebui); nerr != nil {
 			logger.Criticalf(nerr.Error())
 			os.Exit(1)
 		} else {
-			webui.Admin = true
+			// webui.Admin = true
 			pem, err := webui.GenerateKeys()
 			if err != nil {
 				logger.Criticalf(err.Error())
 				os.Exit(1)
 			}
 			if config.Config.UseAuth {
-				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, webui.Name)); ferr == nil {
+				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, webui.Username)); ferr == nil {
 					fp.Chmod(0600)
 					fp.WriteString(pem)
 					fp.Close()
@@ -759,9 +759,9 @@ func createDefaultActors(cworg *organization.Organization) {
 		}
 	}
 
-	if cvalid, _ := client.Get(cworg, "default-validator"); cvalid == nil {
+	if cvalid, _ := client.Get(cworg, config.DefaultValidator); cvalid == nil {
 		logger.Debugf("creating validator")
-		if validator, verr := client.New(cworg, "default-validator"); verr != nil {
+		if validator, verr := client.New(cworg, config.DefaultValidator); verr != nil {
 			logger.Criticalf(verr.Error())
 			os.Exit(1)
 		} else {
