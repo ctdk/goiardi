@@ -64,10 +64,12 @@ Testing it out
 
 If you're using fake-s3 to test it out, set the ``--aws-disable-ssl`` option (if you don't run fake-s3 with SSL enabled) and set ``--s3-endpoint`` to the bucket + fake-s3's hostname. (If you're using ``fakes3.local`` for your fake-s3 server and you're using a bucket named ``goiardi``, add ``goiardi.fakes3.local`` to ``/etc/hosts``.)
 
+**NB:** As of version 1.0.0 and later of fake-s3, the license has changed from MIT to a proprietary license. You can either get a license, the details of which are explained on the project page, or run the last free version, v0.2.5, which can be found at `commit 032d41b22f299974b33b871f74b1f70ccc2e0d2b<https://github.com/jubos/fake-s3/tree/032d41b22f299974b33b871f74b1f70ccc2e0d2b>`_. The `lphoward/fake-s3 <https://hub.docker.com/r/lphoward/fake-s3>`_ docker container is also built with v0.2.5.
+
 Converting from local file store to S3
 --------------------------------------
 
-A script is provided in ``scripts/lsf-conv.sh`` to make the local filestore to S3 transition easier. It requires the `aws-cli <http://LINK_TO_AWS_CLI>`_ utility, and the bucket needs to have been created and set up already.
+A script is provided in ``scripts/lsf-conv.sh`` to make the local filestore to S3 transition easier. It requires the `aws-cli <https://aws.amazon.com/cli/>`_ utility, and the bucket needs to have been created and set up already.
 
 Once your bucket and aws-cli are all configured, run the script to upload the cookbook files. The options are:
 
