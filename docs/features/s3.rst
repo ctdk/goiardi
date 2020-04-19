@@ -76,3 +76,8 @@ Once your bucket and aws-cli are all configured, run the script to upload the co
 ``Usage: -b <bucket> -d <local filestore directory>``
 
 Nothing's in place for converting back to the local filestore from S3, but it wouldn't be too hard. All you would need to do is download all of the files from S3 and make sure they all get back into the local filestore directory directly under the organization name (rather than the subdirectories derived from the first two letters of the hash).
+
+Upgrading from 0.11.x to 1.0.0
+------------------------------
+
+If you're upgrading an existing goiardi installation from 0.11.x to 1.0.0, you will need to adjust the file keys in s3 slightly. See < LINK TO RELEVANT SECTION IN UPGRADE DOCS > for details.

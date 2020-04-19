@@ -19,6 +19,7 @@ To use shovey, you will need:
 
 * Serf installed on the server goiardi is running on.
 * Serf installed on the node(s) running jobs.
+* The serf agent running on the nodes must use the naming scheme ``orgname:node-name`` as of version 1.0.0.
 * ``schob``, the shovey client, must be installed on the node(s) running jobs.
 * The ``knife-shove`` plugin must be installed on the workstation used to manage
   shovey jobs.

@@ -349,6 +349,8 @@ Shovey command
 
 Sent by goiardi to schob over serf to start a shovey run on a node.
 
+**NB:** Do note that as of 1.0.0 the node's serf agent will need to have its node name set to ``orgname:node-name`` instead of just ``node-name``.
+
 Serf parameters:
 
 * Name: "shovey"
@@ -364,7 +366,7 @@ JSON payload parameters:
 * command: the name of the command to run. Only required when action is "start".
 * time: RFC3339 formatted current timestamp
 * timeout: Time, in seconds, to kill the process if it hasn't finished by the time the timeout expires.
-* signature: assembled from the JSON payload by joining the elements of the JSON payload that aren't the signature, separated by newlines, in alphabetical order. The goiardi server must be given an RSA private key to sign the request with, and schob must have the public key matching that private key to verify the request.
+* signature: assembled from the JSON payload by joining the elements of the JSON payload that aren't the signature, separated by newlines, in alphabetical order. The goiardi server must have generated an RSA private key to sign the request with if it didn't have one, and schob must be able to retrieve the public key matching that private key to verify the request.
 
 
 The block to sign will look something like this:
