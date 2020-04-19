@@ -9,10 +9,10 @@ package gtrie
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
+	"fmt"
 )
 
 type NodeId int

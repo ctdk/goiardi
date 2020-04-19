@@ -1,10 +1,11 @@
 package client
 
 import (
-	"github.com/hashicorp/serf/coordinate"
-	"github.com/hashicorp/serf/serf"
 	"net"
 	"time"
+
+	"github.com/hashicorp/serf/coordinate"
+	"github.com/hashicorp/serf/serf"
 )
 
 const (
@@ -89,7 +90,8 @@ type eventRequest struct {
 }
 
 type forceLeaveRequest struct {
-	Node string
+	Node  string
+	Prune bool
 }
 
 type joinRequest struct {
@@ -144,6 +146,7 @@ type queryRequest struct {
 	FilterNodes []string
 	FilterTags  map[string]string
 	RequestAck  bool
+	RelayFactor uint8
 	Timeout     time.Duration
 	Name        string
 	Payload     []byte
