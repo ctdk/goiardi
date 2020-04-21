@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2020, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,24 @@ import (
 type Policy struct {
 	Name      string
 	URI       string
-	Revisions []string // We may want this to be a new type
+	Revisions []*PolicyRevision
 	org       *organization.Organization
+}
+
+// PolicyRevision currently contains more map[string]interface{} fields than I
+// feel all that comfortable with. At the moment, however, it kind of looks like
+// the structure of some of these fields is a bit freeform and inconsistent. For
+// the time being, we'll stick with this and change them to be real types when
+// possible down the road.
+type PolicyRevision struct {
+	RevisionId string
+	Name string
+	RunList []string
+	CookbookLocks map[string]interface{}
+	Default map[string]interface{}
+	Override map[string]interface{}
+	SolutionDependencies map[string]interface{}
+	org *organization.Organization
 }
 
 func New(name string, uri string, polOrg *organization.Organization) (*Policy, util.Gerror) {
