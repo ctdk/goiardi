@@ -17,9 +17,13 @@
 package gerror
 
 import (
+	"fmt"
+	"golang.org/x/xerrors"
 	"net/http"
 	"testing"
 )
+
+var gwrapper = New("christmas wrapping")
 
 func TestGerror(t *testing.T) {
 	errmsg := "foo bar"
@@ -33,5 +37,33 @@ func TestGerror(t *testing.T) {
 	err.SetStatus(http.StatusNotFound)
 	if err.Status() != http.StatusNotFound {
 		t.Errorf("SetStatus did not set Status correctly")
+	}
+}
+
+func TestUnwrap(t *testing.T) {
+	if gwrapper.Unwrap() == nil {
+		t.Error("Unwrap() method failed")
+	}
+
+	zerr := xerrors.Errorf("moar: %w", gwrapper)
+
+	if !xerrors.Is(zerr, gwrapper) {
+		t.Error("Somehow zerr was not grwapper")
+	}
+}
+
+func TestCastErr(t *testing.T) {
+	err := fmt.Errorf("an heroic error")
+	cerr := CastErr(err)
+	var v *gerror
+	if !xerrors.As(cerr, &v) {
+		t.Error("CastErr did not work properly")
+	}
+
+	cerr.SetStatus(http.StatusNotFound)
+
+	berr := CastErr(cerr)
+	if berr.Status() != http.StatusNotFound {
+		t.Error("CastErr improperly changed the original gerror's status.")
 	}
 }

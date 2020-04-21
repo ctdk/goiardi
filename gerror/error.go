@@ -22,13 +22,13 @@
 package gerror
 
 import (
-	"fmt"
+	"golang.org/x/xerrors"
 	"net/http"
 )
 
 // the private error struct
 type gerror struct {
-	msg    string
+	err error
 	status int
 }
 
@@ -39,33 +39,43 @@ type Error interface {
 	Error() string
 	Status() int
 	SetStatus(int)
+	Unwrap() error
 }
 
 // New makes a new Error. Usually you want Errorf.
 func New(text string) Error {
-	return &gerror{msg: text,
+	return &gerror{err: xerrors.New(text),
 		status: http.StatusBadRequest,
 	}
 }
 
 // Errorf creates a new Error, with a formatted error string.
 func Errorf(format string, a ...interface{}) Error {
-	return New(fmt.Sprintf(format, a...))
+	x := xerrors.Errorf(format, a...)
+	return &gerror{err: x, status: http.StatusBadRequest}
 }
 
 // CastErr will easily cast a different kind of error to a goiardi Error.
 func CastErr(err error) Error {
-	return Errorf(err.Error())
+	var e *gerror
+
+	// if the immediate error is a gerror, just return itself
+	if !xerrors.As(err, &e) {
+		e = &gerror{err: err, status: http.StatusBadRequest}
+	}
+
+	return e
 }
 
 // Error returns the error message.
 func (e *gerror) Error() string {
-	return e.msg
+	return e.err.Error()
 }
 
 // String returns the msg as a string.
 func (e *gerror) String() string {
-	return e.msg
+	// add the status maybe?
+	return e.Error()
 }
 
 // Set the Error HTTP status code.
@@ -80,6 +90,11 @@ func (e *gerror) Status() int {
 
 // StatusError makes an error with a string and a HTTP status code.
 func StatusError(msg string, status int) Error {
-	e := &gerror{msg: msg, status: status}
+	e := &gerror{err: xerrors.New(msg), status: status}
 	return e
+}
+
+// Unwrap implements the new Unwrap() interface for errors.
+func (e *gerror) Unwrap() error {
+	return e.err
 }
