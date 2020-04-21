@@ -15,7 +15,30 @@ Since MySQL has been removed from goiardi as of version 1.0.0, the whole upgrade
 
 < TODO: if needed, knife plugin updates >
 
-< TODO: Moving files in the local file store or s3 >
+Moving files for the upgrade process
+------------------------------------
+
+Rearranging the file storage as part of the upgrade is pretty straightforward; all you need to do is move the files from the filestore root into a subdirectory named ``default`` under that filestore root. There's an awful lot of leeway in how you do it, but here are a couple of suggestions.
+
+### Local file storage
+
+Assume for this exercise that the local filestore is at ``/var/lib/goiardi/lfs``, and the destination is at ``/var/lib/goiardi/lfs/default``. The destination directory will need to be created first if it doesn't already exist.
+
+Run this command to copy the filestore contents to the new organization specific location:
+
+``$ find /var/lib/goiardi/lfs -type f -d 1 -exec cp -p '{}' /var/lib/goiardi/lfs/default \;``
+
+This way is a bit safer, since in case something goes terribly wrong you still have the original files easily available. They can be deleted later at your leisure. If you're feeling confident, replace ``cp -p`` with ``mv``.
+
+### S3 file storage
+
+Assume for this exercise that the filestore is at ``s3://mah-bukkit``, and you're moving it to ``s3://mah-bukkit/default``. This requires installing ``aws-cli`` and a properly configured AWS account.
+
+Running this command to copy the files to the new location:
+
+``aws s3 cp s3://mah-bukkit s3://mah-bukkit/default --recursive --exclude="default"``
+
+Again, if you feel confident and don't feel like having to go back and delete the original files, replace ``cp`` above with ``mv``.
 
 < TODO: Moving secrets >
 

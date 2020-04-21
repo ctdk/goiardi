@@ -1,5 +1,7 @@
 module github.com/ctdk/goiardi
 
+go 1.14
+
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/DataDog/datadog-go v3.5.0+incompatible // indirect
@@ -20,6 +22,7 @@ require (
 	github.com/raintank/met v0.0.0-20190828160749-80f9c6e35175
 	github.com/tideland/golib v4.24.2+incompatible
 	github.com/tinylib/msgp v1.1.2
+	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
 	gopkg.in/alexcesaro/statsd.v1 v1.0.0-20160306065229-c289775e46fd // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 )
