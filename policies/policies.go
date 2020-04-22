@@ -114,7 +114,7 @@ func (p *Policy) Save() util.Gerror {
 		err = p.savePolicySQL()
 	} else {
 		ds := datastore.New()
-		ds.Set(p.org.DataKey("cookbook"), p.Name, p)
+		ds.Set(p.org.DataKey("policy"), p.Name, p)
 	}
 	if err != nil {
 		return util.CastErr(err)
