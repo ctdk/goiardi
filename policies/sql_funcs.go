@@ -35,16 +35,17 @@ func checkForPolicySQL(dbhandle datastore.Dbhandle, org *organization.Organizati
 	return false, nil
 }
 
-func getSQL(org *organization.Organization, name string) (*Policy, error) {
+func getPolicySQL(org *organization.Organization, name string) (*Policy, error) {
 
+	return nil, nil
 }
 
-func (p *Policy) saveSQL() error {
+func (p *Policy) savePolicySQL() error {
 
 	return nil
 }
 
-func (p *Policy) deleteSQL() error {
+func (p *Policy) deletePolicySQL() error {
 
 	return nil
 }

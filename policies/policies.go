@@ -38,9 +38,9 @@ type Policy struct {
 
 type ByName []*Policy
 
-func (p *Policy) Len() int { return len(p) }
-func (p *Policy) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
-func (p *Policy) Less(i, j int) bool { return p[i].Name < p[j].Name }
+func (p ByName) Len() int { return len(p) }
+func (p ByName) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+func (p ByName) Less(i, j int) bool { return p[i].Name < p[j].Name }
 
 func New(org *organization.Organization, name string) (*Policy, util.Gerror) {
 	var found bool
@@ -73,17 +73,58 @@ func New(org *organization.Organization, name string) (*Policy, util.Gerror) {
 }
 
 func Get(org *organization.Organization, name string) (*Policy, util.Gerror) {
-	return nil, nil
+	var pol *Policy
+	var found bool
+
+	if config.UsingDB() {
+		var err error
+		pol, err = getPolicySQL(org, name)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				found = false
+			} else {
+				gerr := util.CastErr(err)
+				gerr.SetStatus(http.StatusInternalServerError)
+				return nil, gerr
+			}
+		} else {
+			found = true
+		}
+	} else {
+		ds := datastore.New()
+		var p interface{}
+		p, found = ds.Get(org.DataKey("policy"), name)
+		if p != nil {
+			pol = p.(*Policy)
+			pol.org = org
+		}
+	}
+	if !found {
+		err := util.Errorf("Cannot find a policy named %s", name)
+		err.SetStatus(http.StatusNotFound)
+		return nil, err
+	}
+
+	return pol, nil
 }
 
 func (p *Policy) Save() util.Gerror {
-
+	var err error
+	if config.UsingDB() {
+		err = p.savePolicySQL()
+	} else {
+		ds := datastore.New()
+		ds.Set(p.org.DataKey("cookbook"), p.Name, p)
+	}
+	if err != nil {
+		return util.CastErr(err)
+	}
 	return nil
 }
 
 func (p *Policy) Delete() util.Gerror {
 	if config.UsingDB() {
-		if err := p.deleteSQL(); err != nil {
+		if err := p.deletePolicySQL(); err != nil {
 			return util.CastErr(err)
 		}
 	} else {
@@ -138,7 +179,7 @@ func AllPolicies(org *organization.Organization) ([]*Policy, util.Gerror) {
 	var policies []*Policy
 	if config.UsingDB() {
 		var err error
-		polices, err = allPoliciesSQL(org)
+		policies, err = allPoliciesSQL(org)
 		if err != nil && !xerrors.Is(err, sql.ErrNoRows) {
 			gerr := util.CastErr(err)
 			return nil, gerr
@@ -155,5 +196,5 @@ func AllPolicies(org *organization.Organization) ([]*Policy, util.Gerror) {
 		}	
 	}
 
-	return polices, nil
+	return policies, nil
 }

@@ -21,6 +21,7 @@
 package policies
 
 import (
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"time"
 )
@@ -44,11 +45,11 @@ type PolicyRevision struct {
 
 // Types to help sorting output
 
-type ByTime []*PolicyRevision
+type ByRevTime []*PolicyRevision
 
-func (pr *PolicyRevision) Len() int { return len(pr) }
-func (pr *PolicyRevision) Swap(i, j int) { pr[i], pr[j] = pr[j], pr[i] }
-func (pr *PolicyRevision) Less(i, j int) bool { return pr[i].creationTime.Before(pr[j].createdAt) }
+func (pr ByRevTime) Len() int { return len(pr) }
+func (pr ByRevTime) Swap(i, j int) { pr[i], pr[j] = pr[j], pr[i] }
+func (pr ByRevTime) Less(i, j int) bool { return pr[i].creationTime.Before(pr[j].creationTime) }
 
 // These methods are attached to Policy, not standalone functions.
 

@@ -28,6 +28,7 @@ import (
 type PolicyGroup struct {
 	Name string
 	Policies map[string]*Policy
+	org *organization.Organization
 }
 
 func NewPolicyGroup() (*PolicyGroup, util.Gerror) {
@@ -40,8 +41,10 @@ func GetPolicyGroup() (*PolicyGroup, util.Gerror) {
 
 func (pg *PolicyGroup) Save() util.Gerror {
 
+	return nil
 }
 
 func (pg *PolicyGroup) AddPolicy() util.Gerror {
 
+	return nil
 }
