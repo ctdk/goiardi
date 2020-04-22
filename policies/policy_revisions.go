@@ -63,6 +63,11 @@ func (p *Policy) GetPolicyRevision() (*PolicyRevision, util.Gerror) {
 	return nil, nil
 }
 
+func (p *Policy) MostRecentRevision() *PolicyRevision {
+
+	return nil
+}
+
 func (pr *PolicyRevision) Save() util.Gerror {
 
 	return nil
