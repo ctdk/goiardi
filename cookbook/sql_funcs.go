@@ -441,7 +441,7 @@ func (c *Cookbook) checkCookbookVersionSQL(cbVersion string) (bool, error) {
 	defer stmt.Close()
 
 	var cn int
-	err = stmt.QueryRow(c.id, maj, min, patch).Scan(&c)
+	err = stmt.QueryRow(c.id, maj, min, patch).Scan(&cn)
 	if err != nil && err != sql.ErrNoRows {
 		return false, err
 	}
