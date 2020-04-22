@@ -169,7 +169,8 @@ func (c *Cookbook) NumVersions() int {
 	return len(c.Versions)
 }
 
-// AllCookbooks returns all the cookbooks that have been uploaded to this server.
+// AllCookbooks returns all the cookbooks that have been uploaded to this
+// server.
 func AllCookbooks(org *organization.Organization) (cookbooks []*Cookbook) {
 	if config.UsingDB() {
 		cookbooks = allCookbooksSQL(org)
