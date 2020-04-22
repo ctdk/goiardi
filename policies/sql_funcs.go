@@ -24,7 +24,7 @@ import (
 )
 
 func checkForPolicySQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
-	_, err := datastore.CheckForOne(dbhandle, "roles", org.GetId(), name)
+	_, err := datastore.CheckForOne(dbhandle, "policies", org.GetId(), name)
 	if err == nil {
 		return true, nil
 	}
@@ -33,6 +33,29 @@ func checkForPolicySQL(dbhandle datastore.Dbhandle, org *organization.Organizati
 		return false, err
 	}
 	return false, nil
+}
+
+func (p *Policy) checkForRevisionSQL(dbhandle datastore.Dbhandle, revisionId string) (bool, error) {
+	var found bool
+
+	sqlStatement := "SELECT COUNT(pr.id) FROM goiardi.policy_revisions pr LEFT JOIN goiardi.policies p ON pr.policy_id = p.id WHERE pr.policy_id = $1 AND pr.revision_id = $2 AND p.organization_id = $3"
+
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	var cn int
+	err = stmt.QueryRow(p.id, revisionId, p.org.GetId()).Scan(&cn)
+	if err != nil && !xerrors.Is(err, sql.ErrNoRows) {
+		return false, err
+	}
+	if cn != 0 {
+		found = true
+	}
+
+	return found, nil
 }
 
 func getPolicySQL(org *organization.Organization, name string) (*Policy, error) {

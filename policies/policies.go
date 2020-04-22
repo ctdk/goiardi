@@ -34,6 +34,7 @@ type Policy struct {
 	Name      string
 	Revisions []*PolicyRevision
 	org       *organization.Organization
+	id        int64
 }
 
 type ByName []*Policy

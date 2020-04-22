@@ -21,8 +21,11 @@
 package policies
 
 import (
-	"github.com/ctdk/goiardi/organization"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+
 	"github.com/ctdk/goiardi/util"
+	"net/http"
 	"time"
 )
 
@@ -33,14 +36,13 @@ import (
 // possible down the road.
 type PolicyRevision struct {
 	RevisionId string
-	Name string
 	RunList []string
 	CookbookLocks map[string]interface{}
 	Default map[string]interface{}
 	Override map[string]interface{}
 	SolutionDependencies map[string]interface{}
 	creationTime time.Time
-	org *organization.Organization
+	pol *Policy
 }
 
 // Types to help sorting output
@@ -53,7 +55,42 @@ func (pr ByRevTime) Less(i, j int) bool { return pr[i].creationTime.Before(pr[j]
 
 // These methods are attached to Policy, not standalone functions.
 
-func (p *Policy) NewPolicyRevision() (*PolicyRevision, util.Gerror) {
+func (p *Policy) NewPolicyRevision(revisionId string) (*PolicyRevision, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var err error
+		found, err = p.checkForRevisionSQL(datastore.Dbh, revisionId)
+		if err != nil {
+			gerr := util.CastErr(err)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return nil, gerr
+		}
+	} else {
+		// hrmph. Brute force it.
+		for _, v := range p.Revisions {
+			if v.RevisionId == revisionId {
+				found = true
+				break
+			}
+		}
+	}
+
+	if found {
+		err := util.Errorf("Policy revision '%s' for policy '%s' already exists", revisionId, p.Name)
+		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
+
+	rev := &PolicyRevision{
+		RevisionId: revisionId,
+		pol: p,
+	}
+
+	return rev, nil
+}
+
+func (p *Policy) NewPolicyRevisionFromJSON(policyRevJSON map[string]interface{}) (*PolicyRevision, util.Gerror) {
+	_ = policyRevJSON
 
 	return nil, nil
 }
@@ -71,4 +108,8 @@ func (p *Policy) MostRecentRevision() *PolicyRevision {
 func (pr *PolicyRevision) Save() util.Gerror {
 
 	return nil
+}
+
+func (pr *PolicyRevision) PolicyName() string {
+	return pr.pol.Name
 }
