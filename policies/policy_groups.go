@@ -48,3 +48,8 @@ func (pg *PolicyGroup) AddPolicy() util.Gerror {
 
 	return nil
 }
+
+func (pg *PolicyGroup) RemovePolicy() util.Gerror {
+
+	return nil
+}
