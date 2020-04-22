@@ -53,6 +53,13 @@ func (pr ByRevTime) Len() int { return len(pr) }
 func (pr ByRevTime) Swap(i, j int) { pr[i], pr[j] = pr[j], pr[i] }
 func (pr ByRevTime) Less(i, j int) bool { return pr[i].creationTime.Before(pr[j].creationTime) }
 
+type ByRevId []*PolicyRevision
+
+func (pr ByRevId) Len() int { return len(pr) }
+func (pr ByRevId) Swap(i, j int) { pr[i], pr[j] = pr[j], pr[i] }
+func (pr ByRevId) Less(i, j int) bool { return pr[i].RevisionId < pr[j].RevisionId }
+
+
 // These methods are attached to Policy, not standalone functions.
 
 func (p *Policy) NewPolicyRevision(revisionId string) (*PolicyRevision, util.Gerror) {
