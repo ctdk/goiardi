@@ -30,10 +30,18 @@ type PolicyGroup struct {
 	Policies map[string]*Policy
 }
 
-func New() (*PolicyGroup, util.Gerror) {
+func NewPolicyGroup() (*PolicyGroup, util.Gerror) {
 	return nil, nil
 }
 
-func Get() (*PolicyGroup, util.Gerror) {
+func GetPolicyGroup() (*PolicyGroup, util.Gerror) {
 	return nil, nil
+}
+
+func (pg *PolicyGroup) Save() util.Gerror {
+
+}
+
+func (pg *PolicyGroup) AddPolicy() util.Gerror {
+
 }

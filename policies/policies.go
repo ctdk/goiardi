@@ -21,52 +21,139 @@
 package policies
 
 import (
+	"database/sql"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"golang.org/x/xerrors"
+	"net/http"
 )
 
 type Policy struct {
 	Name      string
-	URI       string
 	Revisions []*PolicyRevision
 	org       *organization.Organization
 }
 
-// PolicyRevision currently contains more map[string]interface{} fields than I
-// feel all that comfortable with. At the moment, however, it kind of looks like
-// the structure of some of these fields is a bit freeform and inconsistent. For
-// the time being, we'll stick with this and change them to be real types when
-// possible down the road.
-type PolicyRevision struct {
-	RevisionId string
-	Name string
-	RunList []string
-	CookbookLocks map[string]interface{}
-	Default map[string]interface{}
-	Override map[string]interface{}
-	SolutionDependencies map[string]interface{}
-	org *organization.Organization
-}
+type ByName []*Policy
 
-func New(name string, uri string, polOrg *organization.Organization) (*Policy, util.Gerror) {
-	p := new(Policy)
-	p.Name = name
-	p.URI = uri
-	p.org = polOrg
+func (p *Policy) Len() int { return len(p) }
+func (p *Policy) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+func (p *Policy) Less(i, j int) bool { return p[i].Name < p[j].Name }
 
-	// Don't forget to save!
-	if err := p.Save(); err != nil {
+func New(org *organization.Organization, name string) (*Policy, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var err error
+		found, err = checkForPolicySQL(datastore.Dbh, org, name)
+		if err != nil {
+			gerr := util.CastErr(err)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return nil, gerr
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get(org.DataKey("policy"), name)
+	}
+
+	if found {
+		err := util.Errorf("Policy '%s' already exists", name)
+		err.SetStatus(http.StatusConflict)
 		return nil, err
 	}
+
+	// validations?
+	
+	p := new(Policy)
+	p.Name = name
+	p.org = org
 
 	return p, nil
 }
 
-func Get() error {
-	return nil
+func Get(org *organization.Organization, name string) (*Policy, util.Gerror) {
+	return nil, nil
 }
 
 func (p *Policy) Save() util.Gerror {
 
 	return nil
+}
+
+func (p *Policy) Delete() util.Gerror {
+	if config.UsingDB() {
+		if err := p.deleteSQL(); err != nil {
+			return util.CastErr(err)
+		}
+	} else {
+		ds := datastore.New()
+		ds.Delete(p.org.DataKey("policy"), p.Name)
+	}
+	return nil
+}
+
+func GetList(org *organization.Organization) ([]string, util.Gerror) {
+	var polList []string
+	if config.UsingDB() {
+		var err error
+		polList, err = getListSQL(org)
+		if err != nil && !xerrors.Is(err, sql.ErrNoRows) {
+			gerr := util.CastErr(err)
+			return nil, gerr
+		}
+	} else {
+		ds := datastore.New()
+		polList = ds.GetList(org.DataKey("policy"))
+	}
+
+	return polList, nil
+}
+
+func (p *Policy) GetName() string {
+	return p.Name
+}
+
+func (p *Policy) URLType() string {
+	return "policies"
+}
+
+func (p *Policy) ContainerType() string {
+	return p.URLType()
+}
+
+func (p *Policy) ContainerKind() string {
+	return "containers"
+}
+
+func (p *Policy) OrgName() string {
+	return p.org.Name
+}
+
+func (p *Policy) URI() string {
+	return util.ObjURL(p)
+}
+
+func AllPolicies(org *organization.Organization) ([]*Policy, util.Gerror) {
+	var policies []*Policy
+	if config.UsingDB() {
+		var err error
+		polices, err = allPoliciesSQL(org)
+		if err != nil && !xerrors.Is(err, sql.ErrNoRows) {
+			gerr := util.CastErr(err)
+			return nil, gerr
+		}
+	} else {
+		polList, _ := GetList(org)
+		policies = make([]*Policy, 0, len(polList))
+		for _, p := range polList {
+			po, err := Get(org, p)
+			if err != nil {
+				continue
+			}
+			policies = append(policies, po)
+		}	
+	}
+
+	return polices, nil
 }
