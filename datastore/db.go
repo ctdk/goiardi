@@ -104,7 +104,7 @@ func EncodeBlob(obj interface{}) ([]byte, error) {
 	var err error
 	defer func() {
 		if x := recover(); x != nil {
-			err = fmt.Errorf("Something went wrong encoding an object for storing in the database with Gob")
+			err = fmt.Errorf("Something went wrong encoding an object for storing in the database")
 		}
 	}()
 	err = enc.Encode(obj)

@@ -601,6 +601,8 @@ func (ds *DataStore) Load(dsFile string) error {
 	return fp.Close()
 }
 
+// TODO: Is the below even needed anymore?
+
 // ChkNilArray examines an object, searching for empty slices.
 // When restoring an object from either the in-memory data store after it has
 // been saved to disk, or loading an object from the database with gob encoded
