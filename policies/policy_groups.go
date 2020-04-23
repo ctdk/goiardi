@@ -27,8 +27,9 @@ import (
 
 type PolicyGroup struct {
 	Name string
-	Policies map[string]*Policy
+	Policies map[string]*PolicyRevision
 	org *organization.Organization
+	id int64
 }
 
 func NewPolicyGroup() (*PolicyGroup, util.Gerror) {
@@ -52,4 +53,28 @@ func (pg *PolicyGroup) AddPolicy() util.Gerror {
 func (pg *PolicyGroup) RemovePolicy() util.Gerror {
 
 	return nil
+}
+
+func (pg *PolicyGroup) GetName() string {
+	return pg.Name
+}
+
+func (pg *PolicyGroup) URLType() string {
+	return "policy_groups"
+}
+
+func (pg *PolicyGroup) ContainerType() string {
+	return pg.URLType()
+}
+
+func (pg *PolicyGroup) ContainerKind() string {
+	return "containers"
+}
+
+func (pg *PolicyGroup) OrgName() string {
+	return pg.org.Name
+}
+
+func (pg *PolicyGroup) URI() string {
+	return util.ObjURL(pg)
 }

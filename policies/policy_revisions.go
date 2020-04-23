@@ -43,6 +43,7 @@ type PolicyRevision struct {
 	SolutionDependencies map[string]interface{}
 	creationTime time.Time
 	pol *Policy
+	id int64
 }
 
 // Types to help sorting output
