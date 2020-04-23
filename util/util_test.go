@@ -81,9 +81,11 @@ func TestGerror(t *testing.T) {
 	if err.Error() != errmsg {
 		t.Errorf("expected %s to match %s", err.Error(), errmsg)
 	}
+
 	if err.Status() != http.StatusBadRequest {
 		t.Errorf("err.Status() did not return expected default")
 	}
+
 	err.SetStatus(http.StatusNotFound)
 	if err.Status() != http.StatusNotFound {
 		t.Errorf("SetStatus did not set Status correctly")
