@@ -45,6 +45,10 @@ func (pg *PolicyGroup) Save() util.Gerror {
 	return nil
 }
 
+func (pg *PolicyGroup) Delete() util.Gerror {
+
+}
+
 func (pg *PolicyGroup) AddPolicy() util.Gerror {
 
 	return nil
