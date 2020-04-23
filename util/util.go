@@ -30,6 +30,8 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/tideland/golib/logger"
 	"net/http"
+	"net/url"
+	"path"
 	"reflect"
 	"regexp"
 	"runtime"
@@ -110,38 +112,74 @@ func CastErr(err error) Gerror {
 	return gerror.CastErr(err)
 }
 
+// These *URL functions should return a *net.URL and errors eventually
+
+func objURLObj(obj GoiardiObj) (*url.URL, error) {
+	bu := serverBaseURL()
+	p := path.Join("organizations", obj.OrgName(), obj.URLType(), obj.GetName())
+	fullURL, err := bu.Parse(p)
+	if err != nil {
+		logger.Warningf("Creating an ObjURL failed with path '%s'. More info: %v", p, err)
+		return nil, err
+	}
+	return fullURL, err
+}
+
 // ObjURL crafts a URL for an object.
 func ObjURL(obj GoiardiObj) string {
-	baseURL := config.ServerBaseURL()
+	fURL, _ := objURLObj(obj)
+	if fURL == nil {
+		return ""
+	}
 
-	fullURL := fmt.Sprintf("%s/organizations/%s/%s/%s", baseURL, obj.OrgName(), obj.URLType(), obj.GetName())
-	return fullURL
+	return fURL.String()
 }
 
 // BaseObjURL crafts a URL for an object outside of an organization.
 func BaseObjURL(obj GoiardiObj) string {
-	baseURL := config.ServerBaseURL()
+	baseURL := serverBaseURL()
+	p := path.Join(obj.URLType(), obj.GetName())
 
-	fullURL := fmt.Sprintf("%s/%s/%s", baseURL, obj.URLType(), obj.GetName())
-	return fullURL
+	fullURL, err := baseURL.Parse(p)
+	if err != nil {
+		logger.Warningf("BaseObjURL failed: could not parse path '%s'. More info: %v", p, err)
+	}
+
+	return fullURL.String()
 }
 
 // CustomObjURL crafts a URL for a Goiardi object with additional path elements.
-func CustomObjURL(obj GoiardiObj, path string) string {
-	chkPath(&path)
-	return fmt.Sprintf("%s%s", ObjURL(obj), path)
+func CustomObjURL(obj GoiardiObj, addPath string) string {
+	bu, _ := objURLObj(obj)
+	if bu == nil {
+		return ""
+	}
+
+	fullpath := path.Join(bu.Path, addPath)
+
+	f, err := bu.Parse(fullpath)
+	if err != nil {
+		logger.Errorf("CustomObjURL failed adding path '%s' to obj URL '%s'. More info: %v", addPath, bu.String(), err)
+		return ""
+	}
+
+	return f.String()
 }
 
 // CustomURL crafts a URL from the provided path, without providing an object.
 func CustomURL(path string) string {
-	chkPath(&path)
-	return fmt.Sprintf("%s%s", config.ServerBaseURL(), path)
+	bu := serverBaseURL()
+	d, err := bu.Parse(path)
+	if err != nil {
+		logger.Warningf("CustomURL failed: could not parse path '%s'. More info: %v", path, err)
+	}
+
+	return d.String()
 }
 
-func chkPath(p *string) {
-	if (*p)[0] != '/' {
-		*p = fmt.Sprintf("/%s", *p)
-	}
+func serverBaseURL() *url.URL {
+	bu, _ := url.Parse(config.ServerBaseURL())
+	return bu
 }
 
 // FlattenObj flattens an object and expand its keys into a map[string]string so
