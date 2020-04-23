@@ -23,9 +23,9 @@ package policies
 import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
-
 	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -120,4 +120,28 @@ func (pr *PolicyRevision) Save() util.Gerror {
 
 func (pr *PolicyRevision) PolicyName() string {
 	return pr.pol.Name
+}
+
+func (pr *PolicyRevision) GetName() string {
+	return strings.Join([]string{pr.pol.Name, pr.RevisionId}, "%%")
+}
+
+func (pr *PolicyRevision) URLType() string {
+	return "policies"
+}
+
+func (pr *PolicyRevision) ContainerType() string {
+	return p.URLType()
+}
+
+func (pr *PolicyRevision) ContainerKind() string {
+	return "containers"
+}
+
+func (pr *PolicyRevision) OrgName() string {
+	return pr.pol.org.Name
+}
+
+func (pr *PolicyRevision) URI() string {
+	return util.CustomObjURL(pr.pol, strings.Join([]string{"revisions", pr.RevisionId}, "/"))
 }

@@ -20,6 +20,7 @@ import (
 	"database/sql"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
+	"github.com/lib/pq"
 	"golang.org/x/xerrors"
 )
 
@@ -59,8 +60,121 @@ func (p *Policy) checkForRevisionSQL(dbhandle datastore.Dbhandle, revisionId str
 }
 
 func getPolicySQL(org *organization.Organization, name string) (*Policy, error) {
+	p := new(Policy)
+	p.org = org
 
-	return nil, nil
+	sqlStatement := "SELECT id, name FROM goiardi.policies WHERE organization_id = $1 AND name = $2"
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	row := stmt.QueryRow(org.GetId(), name)
+	err = p.fillPolicyFromSQL(row)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func (p *Policy) getRevisionSQL(revisionId string) (*PolicyRevision, error) {
+	pr := new(PolicyRevision)
+	pr.pol = p
+
+	sqlStatement := "SELECT id, revision_id, run_list, cookbook_locks, default_attr, override_attr, solution_dependencies, created_at FROM goiardi.policy_revisions WHERE policy_id = $1 AND revision_id = $2"
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	row := stmt.QueryRow(p.id, revisionId)
+	err = pr.fillPolicyRevisionFromSQL(row)
+	if err != nil {
+		return nil, err
+	}
+
+	return pr, nil
+}
+
+func (p *Policy) getAllRevisionsSQL() ([]*PolicyRevision, error) {
+	sqlStatement := "SELECT id, revision_id, run_list, cookbook_locks, default_attr, override_attr, solution_dependencies, created_at FROM goiardi.policy_revisions WHERE policy_id = $1"
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(p.id)
+	if err != nil {
+		return nil, err
+	}
+
+	pRevs := make([]*PolicyRevision)
+	for rows.Next() {
+		pr := new(PolicyRevision)
+		pr.pol = p
+		err = pr.fillPolicyRevisionFromSQL(row)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+		pRevs = append(pRevs, pr)
+	}
+
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return pr, nil
+}
+
+func (p *Policy) fillPolicyFromSQL(row datastore.ResRow) error {
+	err := row.Scan(&p.id, &p.Name)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (pr *PolicyRevision) fillPolicyRevisionFromSQL(row datastore.ResRow) error {
+	var (
+		rl []byte
+		cl []byte
+		sd []byte
+		da []byte
+		oa []byte
+		ct pq.NullTime
+	)
+
+	err := row.Scan(&pr.id, &pr.RevisionId, &rl, &cl, &da, &oa, &sd, &ct)
+	if err != nil {
+		return err
+	}
+	if ct.Valid {
+		pr.creationTime = ct.Time
+	}
+
+	if err = datastore.DecodeBlob(rl, &pr.RunList); err != nil {
+		return err
+	}
+	if err = datastore.DecodeBlob(cl, &pr.CookbookLocks); err != nil {
+		return err
+	}
+	if err = datastore.DecodeBlob(sd, &pr.SolutionDependencies); err != nil {
+		return err
+	}
+	if err = datastore.DecodeBlob(da, &pr.Default); err != nil {
+		return err
+	}
+	if err = datastore.DecodeBlob(oa, &pr.Override); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *Policy) savePolicySQL() error {
