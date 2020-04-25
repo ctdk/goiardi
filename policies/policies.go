@@ -139,7 +139,7 @@ func GetList(org *organization.Organization) ([]string, util.Gerror) {
 	var polList []string
 	if config.UsingDB() {
 		var err error
-		polList, err = getListSQL(org)
+		polList, err = getPolicyListSQL(org)
 		if err != nil && !xerrors.Is(err, sql.ErrNoRows) {
 			gerr := util.CastErr(err)
 			return nil, gerr

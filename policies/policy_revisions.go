@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 )
@@ -74,13 +75,7 @@ func (p *Policy) NewPolicyRevision(revisionId string) (*PolicyRevision, util.Ger
 			return nil, gerr
 		}
 	} else {
-		// hrmph. Brute force it.
-		for _, v := range p.Revisions {
-			if v.RevisionId == revisionId {
-				found = true
-				break
-			}
-		}
+		_, found = p.findRevisionId(revisionId)
 	}
 
 	if found {
@@ -103,18 +98,70 @@ func (p *Policy) NewPolicyRevisionFromJSON(policyRevJSON map[string]interface{})
 	return nil, nil
 }
 
-func (p *Policy) GetPolicyRevision() (*PolicyRevision, util.Gerror) {
-
-	return nil, nil
+func (p *Policy) findRevisionId(revisionId string) (int, bool) {
+	pRevLen := len(p.Revisions)
+	sort.Sort(ByRevId(p.Revisions))
+	i := sort.Search(pRevLen, func(i int) bool { return p.Revisions[i].RevisionId >= revisionId })
+	return i, i < pRevLen && p.Revisions[i].RevisionId == revisionId
 }
 
-func (p *Policy) MostRecentRevision() *PolicyRevision {
+func (p *Policy) GetPolicyRevision(revisionId string) (*PolicyRevision, util.Gerror) {
+	// Shouldn't need to re-fetch from the db. Famous last words, of course,
+	// but we could fall back to the db if it's not available to this
+	// policy in its in-memory slice of revisions.
 
-	return nil
+	// set up a handy error ahead of time since there's a few places it can
+	// be returned.
+
+	prErr := util.Errorf("no revisions found for policy '%s'", p.Name)
+	prErr.SetStatus(http.StatusNotFound)
+
+	if len(p.Revisions) == 0 {
+		return nil, prErr
+	}
+
+	i, found := p.findRevisionId(revisionId)
+	if !found {
+		return nil, prErr
+	}
+
+	return p.Revisions[i], nil
+}
+
+func (p *Policy) MostRecentRevision() (*PolicyRevision, util.Gerror) {
+	// see the note above
+	prErr := util.Errorf("no revisions found for policy '%s'", p.Name)
+	prErr.SetStatus(http.StatusNotFound)
+
+	if len(p.Revisions) == 0 {
+		return nil, prErr
+	}
+
+	sort.Sort(sort.Reverse(ByRevTime(p.Revisions)))
+
+	return p.Revisions[0], nil
 }
 
 func (pr *PolicyRevision) Save() util.Gerror {
+	if config.UsingDB() {
+		if err := pr.saveRevisionSQL(); err != nil {
+			return util.CastErr(err)
+		}
+		return nil
+	}
 
+	pr.creationTime = time.Now()
+
+	// TODO: insert this rather than merely appending
+	_, found := pr.pol.findRevisionId(pr.RevisionId)
+
+	if found {
+		err := util.Errorf("policy '%s' already has revision '%s'", pr.pol.Name, pr.RevisionId)
+		err.SetStatus(http.StatusConflict)
+		return err
+	}
+
+	pr.pol.Revisions = append(pr.pol.Revisions, pr)
 	return nil
 }
 
@@ -127,15 +174,15 @@ func (pr *PolicyRevision) GetName() string {
 }
 
 func (pr *PolicyRevision) URLType() string {
-	return "policies"
+	return pr.pol.URLType()
 }
 
 func (pr *PolicyRevision) ContainerType() string {
-	return p.URLType()
+	return pr.pol.ContainerType()
 }
 
 func (pr *PolicyRevision) ContainerKind() string {
-	return "containers"
+	return pr.pol.ContainerKind()
 }
 
 func (pr *PolicyRevision) OrgName() string {

@@ -20,7 +20,6 @@ import (
 	"database/sql"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
-	"github.com/lib/pq"
 	"golang.org/x/xerrors"
 )
 
@@ -34,29 +33,6 @@ func checkForPolicySQL(dbhandle datastore.Dbhandle, org *organization.Organizati
 		return false, err
 	}
 	return false, nil
-}
-
-func (p *Policy) checkForRevisionSQL(dbhandle datastore.Dbhandle, revisionId string) (bool, error) {
-	var found bool
-
-	sqlStatement := "SELECT COUNT(pr.id) FROM goiardi.policy_revisions pr LEFT JOIN goiardi.policies p ON pr.policy_id = p.id WHERE pr.policy_id = $1 AND pr.revision_id = $2 AND p.organization_id = $3"
-
-	stmt, err := datastore.Dbh.Prepare(sqlStatement)
-	if err != nil {
-		return false, err
-	}
-	defer stmt.Close()
-
-	var cn int
-	err = stmt.QueryRow(p.id, revisionId, p.org.GetId()).Scan(&cn)
-	if err != nil && !xerrors.Is(err, sql.ErrNoRows) {
-		return false, err
-	}
-	if cn != 0 {
-		found = true
-	}
-
-	return found, nil
 }
 
 func getPolicySQL(org *organization.Organization, name string) (*Policy, error) {
@@ -76,60 +52,13 @@ func getPolicySQL(org *organization.Organization, name string) (*Policy, error) 
 		return nil, err
 	}
 
+	pRevs, err := p.getAllRevisionsSQL()
+	if err != nil {
+		return nil, err
+	}
+	p.Revisions = pRevs
+
 	return p, nil
-}
-
-func (p *Policy) getRevisionSQL(revisionId string) (*PolicyRevision, error) {
-	pr := new(PolicyRevision)
-	pr.pol = p
-
-	sqlStatement := "SELECT id, revision_id, run_list, cookbook_locks, default_attr, override_attr, solution_dependencies, created_at FROM goiardi.policy_revisions WHERE policy_id = $1 AND revision_id = $2"
-	stmt, err := datastore.Dbh.Prepare(sqlStatement)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	row := stmt.QueryRow(p.id, revisionId)
-	err = pr.fillPolicyRevisionFromSQL(row)
-	if err != nil {
-		return nil, err
-	}
-
-	return pr, nil
-}
-
-func (p *Policy) getAllRevisionsSQL() ([]*PolicyRevision, error) {
-	sqlStatement := "SELECT id, revision_id, run_list, cookbook_locks, default_attr, override_attr, solution_dependencies, created_at FROM goiardi.policy_revisions WHERE policy_id = $1"
-	stmt, err := datastore.Dbh.Prepare(sqlStatement)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	rows, err := stmt.Query(p.id)
-	if err != nil {
-		return nil, err
-	}
-
-	pRevs := make([]*PolicyRevision)
-	for rows.Next() {
-		pr := new(PolicyRevision)
-		pr.pol = p
-		err = pr.fillPolicyRevisionFromSQL(row)
-		if err != nil {
-			rows.Close()
-			return nil, err
-		}
-		pRevs = append(pRevs, pr)
-	}
-
-	rows.Close()
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return pr, nil
 }
 
 func (p *Policy) fillPolicyFromSQL(row datastore.ResRow) error {
@@ -140,54 +69,33 @@ func (p *Policy) fillPolicyFromSQL(row datastore.ResRow) error {
 	return nil
 }
 
-func (pr *PolicyRevision) fillPolicyRevisionFromSQL(row datastore.ResRow) error {
-	var (
-		rl []byte
-		cl []byte
-		sd []byte
-		da []byte
-		oa []byte
-		ct pq.NullTime
-	)
-
-	err := row.Scan(&pr.id, &pr.RevisionId, &rl, &cl, &da, &oa, &sd, &ct)
-	if err != nil {
-		return err
-	}
-	if ct.Valid {
-		pr.creationTime = ct.Time
-	}
-
-	if err = datastore.DecodeBlob(rl, &pr.RunList); err != nil {
-		return err
-	}
-	if err = datastore.DecodeBlob(cl, &pr.CookbookLocks); err != nil {
-		return err
-	}
-	if err = datastore.DecodeBlob(sd, &pr.SolutionDependencies); err != nil {
-		return err
-	}
-	if err = datastore.DecodeBlob(da, &pr.Default); err != nil {
-		return err
-	}
-	if err = datastore.DecodeBlob(oa, &pr.Override); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (p *Policy) savePolicySQL() error {
 
 	return nil
 }
 
 func (p *Policy) deletePolicySQL() error {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM goiardi.policies WHERE id = $1", p.id)
+	if err != nil {
+		werr := xerrors.Errorf("deleting policy %s had an error: %w", p.Name, err)
+		terr := tx.Rollback()
+		if terr != nil {
+			werr = xerrors.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
+		}
+		return werr
+	}
+	tx.Commit()
 
 	return nil
 }
 
-func getListSQL(org *organization.Organization) ([]string, error) {
+// actually needed?
+func getPolicyListSQL(org *organization.Organization) ([]string, error) {
 
 	return nil, nil
 }
