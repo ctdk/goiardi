@@ -111,7 +111,6 @@ func checkAccept(w http.ResponseWriter, r *http.Request, acceptType string) erro
 func chkRunList(rl interface{}) ([]string, error) {
 	switch o := rl.(type) {
 	case []interface{}:
-		_ = o
 		newRunList := make([]string, len(o))
 		for i, v := range o {
 			switch v := v.(type) {
