@@ -26,10 +26,10 @@ import (
 )
 
 type PolicyGroup struct {
-	Name string
+	Name     string
 	Policies map[string]*PolicyRevision
-	org *organization.Organization
-	id int64
+	org      *organization.Organization
+	id       int64
 }
 
 func NewPolicyGroup() (*PolicyGroup, util.Gerror) {

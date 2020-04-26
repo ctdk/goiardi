@@ -36,31 +36,30 @@ import (
 // the time being, we'll stick with this and change them to be real types when
 // possible down the road.
 type PolicyRevision struct {
-	RevisionId string `json:"revision_id"`
-	RunList []string `json:"run_list"`
-	CookbookLocks map[string]interface{} `json:"cookbook_locks"`
-	Default map[string]interface{} `json:"default_attributes"`
-	Override map[string]interface{} `json:"override_attributes"`
+	RevisionId           string                 `json:"revision_id"`
+	RunList              []string               `json:"run_list"`
+	CookbookLocks        map[string]interface{} `json:"cookbook_locks"`
+	Default              map[string]interface{} `json:"default_attributes"`
+	Override             map[string]interface{} `json:"override_attributes"`
 	SolutionDependencies map[string]interface{} `json:"solution_dependencies"`
-	creationTime time.Time
-	pol *Policy
-	id int64
+	creationTime         time.Time
+	pol                  *Policy
+	id                   int64
 }
 
 // Types to help sorting output
 
 type ByRevTime []*PolicyRevision
 
-func (pr ByRevTime) Len() int { return len(pr) }
-func (pr ByRevTime) Swap(i, j int) { pr[i], pr[j] = pr[j], pr[i] }
+func (pr ByRevTime) Len() int           { return len(pr) }
+func (pr ByRevTime) Swap(i, j int)      { pr[i], pr[j] = pr[j], pr[i] }
 func (pr ByRevTime) Less(i, j int) bool { return pr[i].creationTime.Before(pr[j].creationTime) }
 
 type ByRevId []*PolicyRevision
 
-func (pr ByRevId) Len() int { return len(pr) }
-func (pr ByRevId) Swap(i, j int) { pr[i], pr[j] = pr[j], pr[i] }
+func (pr ByRevId) Len() int           { return len(pr) }
+func (pr ByRevId) Swap(i, j int)      { pr[i], pr[j] = pr[j], pr[i] }
 func (pr ByRevId) Less(i, j int) bool { return pr[i].RevisionId < pr[j].RevisionId }
-
 
 // These methods are attached to Policy, not standalone functions.
 
@@ -86,7 +85,7 @@ func (p *Policy) NewPolicyRevision(revisionId string) (*PolicyRevision, util.Ger
 
 	rev := &PolicyRevision{
 		RevisionId: revisionId,
-		pol: p,
+		pol:        p,
 	}
 
 	return rev, nil
@@ -107,7 +106,7 @@ func (p *Policy) NewPolicyRevisionFromJSON(policyRevJSON map[string]interface{})
 	if policyRevJSON["run_list"], err = util.ValidateRunList(policyRevJSON["run_list"]); err != nil {
 		return nil, err
 	}
-	mapAttrs := []string{"cookbook_locks", "default_attributes", "override_attributes", "solution_dependencies",}
+	mapAttrs := []string{"cookbook_locks", "default_attributes", "override_attributes", "solution_dependencies"}
 	for _, a := range mapAttrs {
 		if policyRevJSON[a], err = util.ValidateAttributes(a, policyRevJSON[a]); err != nil {
 			return nil, err

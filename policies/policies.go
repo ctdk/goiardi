@@ -39,8 +39,8 @@ type Policy struct {
 
 type ByName []*Policy
 
-func (p ByName) Len() int { return len(p) }
-func (p ByName) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+func (p ByName) Len() int           { return len(p) }
+func (p ByName) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 func (p ByName) Less(i, j int) bool { return p[i].Name < p[j].Name }
 
 func New(org *organization.Organization, name string) (*Policy, util.Gerror) {
@@ -65,7 +65,7 @@ func New(org *organization.Organization, name string) (*Policy, util.Gerror) {
 	}
 
 	// validations?
-	
+
 	p := new(Policy)
 	p.Name = name
 	p.org = org
@@ -194,7 +194,7 @@ func AllPolicies(org *organization.Organization) ([]*Policy, util.Gerror) {
 				continue
 			}
 			policies = append(policies, po)
-		}	
+		}
 	}
 
 	return policies, nil
