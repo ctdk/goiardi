@@ -36,12 +36,12 @@ import (
 // the time being, we'll stick with this and change them to be real types when
 // possible down the road.
 type PolicyRevision struct {
-	RevisionId string
-	RunList []string
-	CookbookLocks map[string]interface{}
-	Default map[string]interface{}
-	Override map[string]interface{}
-	SolutionDependencies map[string]interface{}
+	RevisionId string `json:"revision_id"`
+	RunList []string `json:"run_list"`
+	CookbookLocks map[string]interface{} `json:"cookbook_locks"`
+	Default map[string]interface{} `json:"default_attributes"`
+	Override map[string]interface{} `json:"override_attributes"`
+	SolutionDependencies map[string]interface{} `json:"solution_dependencies"`
 	creationTime time.Time
 	pol *Policy
 	id int64
@@ -93,9 +93,35 @@ func (p *Policy) NewPolicyRevision(revisionId string) (*PolicyRevision, util.Ger
 }
 
 func (p *Policy) NewPolicyRevisionFromJSON(policyRevJSON map[string]interface{}) (*PolicyRevision, util.Gerror) {
-	_ = policyRevJSON
+	revId, ok := policyRevJSON["revision_id"].(string)
+	if !ok {
+		err := util.Errorf("Invalid or missing 'revision_id' field. Contents were: '%+v'", policyRevJSON["revision_id"])
+		return nil, err
+	}
 
-	return nil, nil
+	pr, err := p.NewPolicyRevision(revId)
+	if err != nil {
+		return nil, err
+	}
+
+	if policyRevJSON["run_list"], err = util.ValidateRunList(policyRevJSON["run_list"]); err != nil {
+		return nil, err
+	}
+	mapAttrs := []string{"cookbook_locks", "default_attributes", "override_attributes", "solution_dependencies",}
+	for _, a := range mapAttrs {
+		if policyRevJSON[a], err = util.ValidateAttributes(a, policyRevJSON[a]); err != nil {
+			return nil, err
+		}
+	}
+
+	// theoretically all should be well
+	pr.RunList = policyRevJSON["run_list"].([]string)
+	pr.CookbookLocks = policyRevJSON["cookbook_locks"].(map[string]interface{})
+	pr.Default = policyRevJSON["default_attributes"].(map[string]interface{})
+	pr.Override = policyRevJSON["override_attributes"].(map[string]interface{})
+	pr.SolutionDependencies = policyRevJSON["solution_dependencies"].(map[string]interface{})
+
+	return pr, nil
 }
 
 func (p *Policy) findRevisionId(revisionId string) (int, bool) {
