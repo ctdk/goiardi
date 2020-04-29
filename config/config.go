@@ -257,8 +257,8 @@ const DefaultTimeSlew = "15m"
 
 // The default superuser, webui, and validator names
 const (
-	SuperuserName = "pivotal"
-	DefaultWebui = "default-webui"
+	SuperuserName    = "pivotal"
+	DefaultWebui     = "default-webui"
 	DefaultValidator = "default-validator"
 )
 

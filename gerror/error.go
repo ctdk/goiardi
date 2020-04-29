@@ -28,7 +28,7 @@ import (
 
 // the private error struct
 type gerror struct {
-	err error
+	err    error
 	status int
 }
 

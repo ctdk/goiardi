@@ -31,18 +31,18 @@ import (
 // It may be better to only use this for policy_group -> policy/policy rev links
 // now that I've been thinking about it.
 type pgRevisionInfo struct {
-	PolicyId int64 `json:"policy_id"`
-	PolicyRevId int64 `json:"policy_rev_id"`
-	PolicyName string `json:"name"`
-	RevisionId string `json:"revision_id"`
+	PolicyId    int64  `json:"policy_id"`
+	PolicyRevId int64  `json:"policy_rev_id"`
+	PolicyName  string `json:"name"`
+	RevisionId  string `json:"revision_id"`
 }
 
 type PolicyGroup struct {
-	Name     string
-	Policies map[string]*PolicyRevision // NB: only for in-mem
+	Name       string
+	Policies   map[string]*PolicyRevision // NB: only for in-mem
 	policyInfo map[string]*pgRevisionInfo // NB: for SQL
-	org      *organization.Organization
-	id       int64
+	org        *organization.Organization
+	id         int64
 }
 
 func (pgr *pgRevisionInfo) getRevId() string {

@@ -38,7 +38,7 @@ func checkForPolicyGroupSQL(dbhandle datastore.Dbhandle, org *organization.Organ
 func getPolicyGroupSQL(org *organization.Organization, name string) (*PolicyGroup, error) {
 	pg := new(PolicyGroup)
 	pg.org = org
-	
+
 	// hoo-boy, this is interesting
 	sqlStatement := `SELECT id, name,
 		(SELECT array_to_json(COALESCE(ARRAY_AGG(row_to_json(j)), ARRAY[]::json[]))
