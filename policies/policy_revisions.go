@@ -199,7 +199,7 @@ func (pr *PolicyRevision) Delete() util.Gerror {
 		// policy in memory as well
 	}
 	i, _ := pr.pol.findRevisionId(pr.RevisionId)
-	pr.pol.Revisions = append(pr.pol.Revisions[:i], prl.pol.Revisions[i+1:]...)
+	pr.pol.Revisions = append(pr.pol.Revisions[:i], pr.pol.Revisions[i+1:]...)
 
 	return nil
 }

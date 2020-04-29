@@ -192,7 +192,7 @@ func (pr *PolicyRevision) deleteRevisionSQL() error {
 
 	sqlStmt := "DELETE FROM goiardi.policy_revisions WHERE organization_id = $1 AND policy_id = $2 AND revision_id = $3"
 
-	_, err = tx.Exec(sqlStmt, r.org.GetId(), pr.pol.id, pr.RevisionId)
+	_, err = tx.Exec(sqlStmt, pr.pol.org.GetId(), pr.pol.id, pr.RevisionId)
 	if err != nil {
 		werr := xerrors.Errorf("deleting policy revision %s/%s had an error: %w", pr.PolicyName(), pr.RevisionId, err)
 		terr := tx.Rollback()

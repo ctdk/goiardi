@@ -21,6 +21,7 @@
 package policies
 
 import (
+	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
@@ -67,7 +68,7 @@ func GetPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, 
 	} else {
 		ds := datastore.New()
 		var p interface{}
-		p, found = ds.Get(org.DataKey("policy_group", name)
+		p, found = ds.Get(org.DataKey("policy_group"), name)
 		if p != nil {
 			pg = p.(*PolicyGroup)
 			pg.org = org
@@ -127,17 +128,21 @@ func (pg *PolicyGroup) RemovePolicy(policyName string) util.Gerror {
 
 // Ooof, that's an icky return type
 func (pg *PolicyGroup) GetPolicyMap() map[string]map[string]string {
-	var revsies []revisionator
+	var revsies map[string]revisionator
 
 	if config.UsingDB() {
-		revsies = pg.policyInfo
+		for k, v := range pg.policyInfo {
+			revsies[k] = v
+		}
 	} else {
-		revsies = pg.Policies
+		for k, v := range pg.Policies {
+			revsies[k] = v
+		}
 	}
 
 	pm := make(map[string]map[string]string, len(revsies))
 
-	foreach k, v := range revsies {
+	for k, v := range revsies {
 		m := make(map[string]string, 1)
 		m["revision_id"] = v.getRevId()
 		pm[k] = m
