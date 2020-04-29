@@ -25,7 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"strings"
 )
 
@@ -44,6 +44,29 @@ type Dbhandle interface {
 // QueryRow. Used for passing in a db handle or a transaction to a function.
 type ResRow interface {
 	Scan(dest ...interface{}) error
+}
+
+// For when we need to select a potentially null array of int64s. Moved here
+// from groups because we may also need it for policy groups.
+type NullInt64Array struct {
+	Int64s []int64
+	Valid  bool
+}
+
+func (n *NullInt64Array) Scan(value interface{}) error {
+	if value == nil {
+		n.Int64s, n.Valid = nil, false
+		return nil
+	}
+	n.Valid = true
+	return pq.Array(&n.Int64s).Scan(value)
+}
+
+func (n *NullInt64Array) val() []int64 {
+	if n.Valid {
+		return n.Int64s
+	}
+	return make([]int64, 0)
 }
 
 // ConnectDB connects to a database with the database name and a map of

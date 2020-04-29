@@ -35,28 +35,6 @@ import (
 	"strings"
 )
 
-// *sob*
-type nullInt64Array struct {
-	Int64s []int64
-	Valid  bool
-}
-
-func (n *nullInt64Array) Scan(value interface{}) error {
-	if value == nil {
-		n.Int64s, n.Valid = nil, false
-		return nil
-	}
-	n.Valid = true
-	return pq.Array(&n.Int64s).Scan(value)
-}
-
-func (n *nullInt64Array) val() []int64 {
-	if n.Valid {
-		return n.Int64s
-	}
-	return make([]int64, 0)
-}
-
 func checkForGroupSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
 	_, err := datastore.CheckForOne(dbhandle, "groups", org.GetId(), name)
 	if err == nil {
@@ -69,13 +47,10 @@ func checkForGroupSQL(dbhandle datastore.Dbhandle, org *organization.Organizatio
 }
 
 func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
-	var userIds nullInt64Array
-	var clientIds nullInt64Array
-	var groupIds nullInt64Array
+	var userIds util.NullInt64Array
+	var clientIds util.NullInt64Array
+	var groupIds util.NullInt64Array
 	var orgId int64
-
-	// arrrgh blargh, it looks like we may also need to create a special
-	// type for getting the arrays of ints out of postgres.
 
 	// eeesh, there isn't a whole lot we can fill in directly.
 	err := row.Scan(&g.Name, &g.id, &orgId, &userIds, &clientIds, &groupIds)
