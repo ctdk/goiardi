@@ -21,43 +21,129 @@
 package policies
 
 import (
+	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"net/http"
 )
+
+// It may be better to only use this for policy_group -> policy/policy rev links
+// now that I've been thinking about it.
+type pgRevisionInfo struct {
+	PolicyId int64 `json:"policy_id"`
+	PolicyRevId int64 `json:"policy_rev_id"`
+	PolicyName string `json:"name"`
+	RevisionId string `json:"revision_id"`
+}
 
 type PolicyGroup struct {
 	Name     string
-	Policies map[string]*PolicyRevision
+	Policies map[string]*PolicyRevision // NB: only for in-mem
+	policyInfo map[string]*pgRevisionInfo // NB: for SQL
 	org      *organization.Organization
 	id       int64
 }
 
-func NewPolicyGroup() (*PolicyGroup, util.Gerror) {
-	return nil, nil
+func (pgr *pgRevisionInfo) getRevId() string {
+	return pgr.RevisionId
 }
 
-func GetPolicyGroup() (*PolicyGroup, util.Gerror) {
-	return nil, nil
+type revisionator interface {
+	getRevId() string
+}
+
+func NewPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, util.Gerror) {
+	// check for existing, validate name, yadda yadda
+	pg := &PolicyGroup{Name: name, org: org}
+	return pg, nil
+}
+
+func GetPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, util.Gerror) {
+	var pg *PolicyGroup
+	var found bool
+
+	if config.UsingDB() {
+
+	} else {
+		ds := datastore.New()
+		var p interface{}
+		p, found = ds.Get(org.DataKey("policy_group", name)
+		if p != nil {
+			pg = p.(*PolicyGroup)
+			pg.org = org
+		}
+	}
+	if !found {
+		err := util.Errorf("Cannot find a policy group named %s", name)
+		err.SetStatus(http.StatusNotFound)
+	}
+
+	return pg, nil
 }
 
 func (pg *PolicyGroup) Save() util.Gerror {
+	var err error
+	if config.UsingDB() {
+
+	} else {
+		ds := datastore.New()
+		ds.Set(pg.org.DataKey("policy_group"), pg.Name, pg)
+	}
+	if err != nil {
+		return util.CastErr(err)
+	}
 
 	return nil
 }
 
 func (pg *PolicyGroup) Delete() util.Gerror {
+	if config.UsingDB() {
+
+	} else {
+		ds := datastore.New()
+		ds.Delete(pg.org.DataKey("policy_group"), pg.Name)
+	}
 
 	return nil
 }
 
-func (pg *PolicyGroup) AddPolicy() util.Gerror {
+func (pg *PolicyGroup) AddPolicy(pr *PolicyRevision) util.Gerror {
+	if config.UsingDB() {
+
+	}
+
+	pg.Policies[pr.PolicyName()] = pr
+	return nil
+}
+
+func (pg *PolicyGroup) RemovePolicy(policyName string) util.Gerror {
+	if config.UsingDB() {
+
+	}
+	delete(pg.Policies, policyName)
 
 	return nil
 }
 
-func (pg *PolicyGroup) RemovePolicy() util.Gerror {
+// Ooof, that's an icky return type
+func (pg *PolicyGroup) GetPolicyMap() map[string]map[string]string {
+	var revsies []revisionator
 
-	return nil
+	if config.UsingDB() {
+		revsies = pg.policyInfo
+	} else {
+		revsies = pg.Policies
+	}
+
+	pm := make(map[string]map[string]string, len(revsies))
+
+	foreach k, v := range revsies {
+		m := make(map[string]string, 1)
+		m["revision_id"] = v.getRevId()
+		pm[k] = m
+	}
+
+	return pm
 }
 
 func (pg *PolicyGroup) GetName() string {

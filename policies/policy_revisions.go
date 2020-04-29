@@ -190,6 +190,24 @@ func (pr *PolicyRevision) Save() util.Gerror {
 	return nil
 }
 
+func (pr *PolicyRevision) Delete() util.Gerror {
+	if config.UsingDB() {
+		if err := pr.deleteRevisionSQL(); err != nil {
+			return util.CastErr(err)
+		}
+		// not returning here so we can remove the pr from the parent
+		// policy in memory as well
+	}
+	i, _ := pr.pol.findRevisionId(pr.RevisionId)
+	pr.pol.Revisions = append(pr.pol.Revisions[:i], prl.pol.Revisions[i+1:]...)
+
+	return nil
+}
+
+func (pr *PolicyRevision) getRevId() string {
+	return pr.RevisionId
+}
+
 func (pr *PolicyRevision) PolicyName() string {
 	return pr.pol.Name
 }

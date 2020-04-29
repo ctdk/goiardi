@@ -183,3 +183,24 @@ func (pr *PolicyRevision) saveRevisionSQL() error {
 
 	return nil
 }
+
+func (pr *PolicyRevision) deleteRevisionSQL() error {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+
+	sqlStmt := "DELETE FROM goiardi.policy_revisions WHERE organization_id = $1 AND policy_id = $2 AND revision_id = $3"
+
+	_, err = tx.Exec(sqlStmt, r.org.GetId(), pr.pol.id, pr.RevisionId)
+	if err != nil {
+		werr := xerrors.Errorf("deleting policy revision %s/%s had an error: %w", pr.PolicyName(), pr.RevisionId, err)
+		terr := tx.Rollback()
+		if terr != nil {
+			werr = xerrors.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
+		}
+		return werr
+	}
+	tx.Commit()
+	return nil
+}
