@@ -91,3 +91,46 @@ func (pg *PolicyGroup) fillPolicyGroupFromSQL(row datastore.ResRow) error {
 
 	return nil
 }
+
+func (pg *PolicyGroup) savePolicyGroupSQL() error {
+
+	return nil
+}
+
+func (pg *PolicyGroup) deletePolicyGroupSQL() error {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM goiardi.policy_groups WHERE id = $1", pg.id)
+	if err != nil {
+		werr := xerrors.Errorf("deleting policy group %s had an error: %w", pg.Name, err)
+		terr := tx.Rollback()
+		if terr != nil {
+			werr = xerrors.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
+		}
+		return werr
+	}
+	tx.Commit()
+
+
+	return nil
+}
+
+func (pg *PolicyGroup) addPolicySQL(pr *PolicyRevision) error {
+
+	_ = pr
+	return nil, nil
+}
+
+func (pg *PolicyGroup) removePolicySQL(policyName string) error {
+
+	_ = policyName
+	return nil, nil
+}
+
+func getAllPolicyGroupsSQL(org *organization.Organization) ([]*PolicyGroup, error) {
+
+	return nil, nil
+}

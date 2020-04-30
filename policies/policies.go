@@ -81,7 +81,7 @@ func Get(org *organization.Organization, name string) (*Policy, util.Gerror) {
 		var err error
 		pol, err = getPolicySQL(org, name)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if xerrors.Is(err, sql.ErrNoRows) {
 				found = false
 			} else {
 				gerr := util.CastErr(err)

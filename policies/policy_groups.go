@@ -39,18 +39,9 @@ type pgRevisionInfo struct {
 
 type PolicyGroup struct {
 	Name       string
-	Policies   map[string]*PolicyRevision // NB: only for in-mem
-	policyInfo map[string]*pgRevisionInfo // NB: for SQL
+	policyInfo map[string]*pgRevisionInfo
 	org        *organization.Organization
 	id         int64
-}
-
-func (pgr *pgRevisionInfo) getRevId() string {
-	return pgr.RevisionId
-}
-
-type revisionator interface {
-	getRevId() string
 }
 
 func NewPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, util.Gerror) {
@@ -64,7 +55,19 @@ func GetPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, 
 	var found bool
 
 	if config.UsingDB() {
-
+		var err error
+		pg, err = getPolicyGroupSQL(org, name)
+		if err != nil {
+			if xerrors.Is(err, sql.ErrNoRows) {
+				found = false
+			} else {
+				gerr := util.CastErr(err)
+				gerr.SetStatus(http.StatusInternalServerError)
+				return nil, gerr
+			}
+		} else {
+			found = true
+		}
 	} else {
 		ds := datastore.New()
 		var p interface{}
@@ -77,6 +80,7 @@ func GetPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, 
 	if !found {
 		err := util.Errorf("Cannot find a policy group named %s", name)
 		err.SetStatus(http.StatusNotFound)
+		return nil, err
 	}
 
 	return pg, nil
@@ -85,7 +89,7 @@ func GetPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, 
 func (pg *PolicyGroup) Save() util.Gerror {
 	var err error
 	if config.UsingDB() {
-
+		err = pg.saveSQL()
 	} else {
 		ds := datastore.New()
 		ds.Set(pg.org.DataKey("policy_group"), pg.Name, pg)
@@ -99,7 +103,9 @@ func (pg *PolicyGroup) Save() util.Gerror {
 
 func (pg *PolicyGroup) Delete() util.Gerror {
 	if config.UsingDB() {
-
+		if err := pg.deletePolicyGroup(); err != nil {
+			return util.CastErr(err)
+		}
 	} else {
 		ds := datastore.New()
 		ds.Delete(pg.org.DataKey("policy_group"), pg.Name)
@@ -110,41 +116,73 @@ func (pg *PolicyGroup) Delete() util.Gerror {
 
 func (pg *PolicyGroup) AddPolicy(pr *PolicyRevision) util.Gerror {
 	if config.UsingDB() {
-
+		if err := pg.addPolicySQL(pr); err != nil {
+			gerr := util.CastErr(err)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
 	}
 
-	pg.Policies[pr.PolicyName()] = pr
+	pi := &policyInfo{PolicyName: pr.PolicyName(), RevisionId: pr.RevisionId}
+	pg.policyInfo[pr.PolicyName()] = pi
 	return nil
 }
 
 func (pg *PolicyGroup) RemovePolicy(policyName string) util.Gerror {
 	if config.UsingDB() {
-
+		if err := pg.removePolicySQL(policyName); err != nil && !xerrors.Is(err, sql.ErrNoRows) {
+			gerr := util.CastErr(err)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		}
 	}
-	delete(pg.Policies, policyName)
+
+	delete(pg.policyInfo, policyName)
 
 	return nil
 }
 
-// Ooof, that's an icky return type
-func (pg *PolicyGroup) GetPolicyMap() map[string]map[string]string {
-	var revsies map[string]revisionator
-
+// this is mostly for in-mem when deleting specific policy revisions without
+// deleting the whole policy.
+func (pg *PolicyGroup) removePolicyByRevision(policyName string, revisionId string) util.Gerror {
 	if config.UsingDB() {
-		for k, v := range pg.policyInfo {
-			revsies[k] = v
-		}
-	} else {
-		for k, v := range pg.Policies {
-			revsies[k] = v
-		}
+		return util.Errorf("removePolicyByRevision is only useful in in-memory mode when deleting just a specific policy revision and not the whole policy.")
 	}
 
-	pm := make(map[string]map[string]string, len(revsies))
+	pi, ok := pg.policyInfo[policyName]
+	if !ok {
+		return util.Errorf("policy %s not found in policy group %s", policyName, pg.Name)
+	}
+	if revisionId != pi.RevisionId {
+		return util.Errorf("policy group %s does not contain revision '%s' of policy %s (but does contain '%s')", pg.Name, revisionId, policyName, pi.RevisionId)
+	}
+	return pg.RemovePolicy(policyName)
+}
 
-	for k, v := range revsies {
+func (pg *PolicyGroup) GetPolicy(name string) (*PolicyRevision, util.Gerror) {
+	pi, ok := pg.policyInfo[name]
+	if !ok {
+		return nil, util.Errorf("Policy %s not associated with policy group %s", name, pg.Name)
+	}
+
+	p, err := Get(pi.PolicyName)
+	if err != nil {
+		return nil, err
+	}
+
+	pr, err := p.GetPolicyRevision(pi.RevisionId)
+	if err != nil {
+		return nil, err
+	}
+
+	return pr, nil
+}
+
+// Ooof, that's an icky return type
+func (pg *PolicyGroup) GetPolicyMap() map[string]map[string]string {
+	for k, v := range pg.policyInfo {
 		m := make(map[string]string, 1)
-		m["revision_id"] = v.getRevId()
+		m["revision_id"] = v.RevisionId
 		pm[k] = m
 	}
 
@@ -173,4 +211,24 @@ func (pg *PolicyGroup) OrgName() string {
 
 func (pg *PolicyGroup) URI() string {
 	return util.ObjURL(pg)
+}
+
+fucn GetAllPolicyGroups(org *organization.Organization) ([]*PolicyGroup, util.Gerror) {
+	if config.UsingDB() {
+		allPgs, err := getAllPolicyGroupsSQL(org)
+		if err != nil {
+			var s int
+			if xerrors.Is(err, sql.ErrNoRows) {
+				s = http.StatusNotFound
+			} else {
+				s = http.StatusInternalServerError
+			}
+			gerr := util.CastErr(err)
+			gerr.SetStatus(s)
+			return nil, gerr
+		}
+		return allPgs, nil
+	}
+
+	return nil, nil
 }

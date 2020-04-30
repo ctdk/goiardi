@@ -204,10 +204,6 @@ func (pr *PolicyRevision) Delete() util.Gerror {
 	return nil
 }
 
-func (pr *PolicyRevision) getRevId() string {
-	return pr.RevisionId
-}
-
 func (pr *PolicyRevision) PolicyName() string {
 	return pr.pol.Name
 }
