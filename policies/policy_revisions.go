@@ -197,6 +197,12 @@ func (pr *PolicyRevision) Delete() util.Gerror {
 		}
 		// not returning here so we can remove the pr from the parent
 		// policy in memory as well
+	} else {
+		// get them out of any policy groups that may include them
+		allPgs, _ := GetAllPolicyGroups(pr.pol.org)
+		for _, pg := range allPgs {
+			pg.removePolicyByRevision(pr.PolicyName(), pr.RevisionId)
+		}
 	}
 	i, _ := pr.pol.findRevisionId(pr.RevisionId)
 	pr.pol.Revisions = append(pr.pol.Revisions[:i], pr.pol.Revisions[i+1:]...)

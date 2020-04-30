@@ -131,6 +131,10 @@ func (p *Policy) Delete() util.Gerror {
 	} else {
 		ds := datastore.New()
 		ds.Delete(p.org.DataKey("policy"), p.Name)
+		allPgs, _ := GetAllPolicyGroups(p.org)
+		for _, pg := range allPgs {
+			pg.RemovePolicy(p.Name)
+		}
 	}
 	return nil
 }
