@@ -41,14 +41,15 @@ type pgRevisionInfo struct {
 
 type PolicyGroup struct {
 	Name       string
-	policyInfo map[string]*pgRevisionInfo
+	PolicyInfo map[string]*pgRevisionInfo
 	org        *organization.Organization
 	id         int64
 }
 
 func NewPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, util.Gerror) {
 	// check for existing, validate name, yadda yadda
-	pg := &PolicyGroup{Name: name, org: org}
+	m := make(map[string]*pgRevisionInfo)
+	pg := &PolicyGroup{Name: name, PolicyInfo: m, org: org}
 	return pg, nil
 }
 
@@ -126,7 +127,7 @@ func (pg *PolicyGroup) AddPolicy(pr *PolicyRevision) util.Gerror {
 	}
 
 	pi := &pgRevisionInfo{PolicyName: pr.PolicyName(), RevisionId: pr.RevisionId}
-	pg.policyInfo[pr.PolicyName()] = pi
+	pg.PolicyInfo[pr.PolicyName()] = pi
 	return nil
 }
 
@@ -139,9 +140,13 @@ func (pg *PolicyGroup) RemovePolicy(policyName string) util.Gerror {
 		}
 	}
 
-	delete(pg.policyInfo, policyName)
+	delete(pg.PolicyInfo, policyName)
 
 	return nil
+}
+
+func (pg *PolicyGroup) NumPolicies() int {
+	return len(pg.PolicyInfo)
 }
 
 // this is mostly for in-mem when deleting specific policy revisions without
@@ -151,7 +156,7 @@ func (pg *PolicyGroup) removePolicyByRevision(policyName string, revisionId stri
 		return util.Errorf("removePolicyByRevision is only useful in in-memory mode when deleting just a specific policy revision and not the whole policy.")
 	}
 
-	pi, ok := pg.policyInfo[policyName]
+	pi, ok := pg.PolicyInfo[policyName]
 	if !ok {
 		return util.Errorf("policy %s not found in policy group %s", policyName, pg.Name)
 	}
@@ -162,7 +167,7 @@ func (pg *PolicyGroup) removePolicyByRevision(policyName string, revisionId stri
 }
 
 func (pg *PolicyGroup) GetPolicy(name string) (*PolicyRevision, util.Gerror) {
-	pi, ok := pg.policyInfo[name]
+	pi, ok := pg.PolicyInfo[name]
 	if !ok {
 		return nil, util.Errorf("Policy %s not associated with policy group %s", name, pg.Name)
 	}
@@ -182,8 +187,8 @@ func (pg *PolicyGroup) GetPolicy(name string) (*PolicyRevision, util.Gerror) {
 
 // Ooof, that's an icky return type
 func (pg *PolicyGroup) GetPolicyMap() map[string]map[string]string {
-	pm := make(map[string]map[string]string, len(pg.policyInfo))
-	for k, v := range pg.policyInfo {
+	pm := make(map[string]map[string]string, len(pg.PolicyInfo))
+	for k, v := range pg.PolicyInfo {
 		m := make(map[string]string, 1)
 		m["revision_id"] = v.RevisionId
 		pm[k] = m

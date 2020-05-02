@@ -102,6 +102,7 @@ func (p *Policy) NewPolicyRevisionFromJSON(policyRevJSON map[string]interface{})
 	if err != nil {
 		return nil, err
 	}
+	pr.pol = p
 
 	if policyRevJSON["run_list"], err = util.ValidateRunList(policyRevJSON["run_list"]); err != nil {
 		return nil, err
@@ -149,6 +150,7 @@ func (p *Policy) GetPolicyRevision(revisionId string) (*PolicyRevision, util.Ger
 	if !found {
 		return nil, prErr
 	}
+	p.Revisions[i].pol = p
 
 	return p.Revisions[i], nil
 }
@@ -187,7 +189,7 @@ func (pr *PolicyRevision) Save() util.Gerror {
 	}
 
 	pr.pol.Revisions = append(pr.pol.Revisions, pr)
-	return nil
+	return pr.pol.Save()
 }
 
 func (pr *PolicyRevision) Delete() util.Gerror {
@@ -207,7 +209,7 @@ func (pr *PolicyRevision) Delete() util.Gerror {
 	i, _ := pr.pol.findRevisionId(pr.RevisionId)
 	pr.pol.Revisions = append(pr.pol.Revisions[:i], pr.pol.Revisions[i+1:]...)
 
-	return nil
+	return pr.pol.Save()
 }
 
 func (pr *PolicyRevision) PolicyName() string {

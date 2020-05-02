@@ -87,7 +87,7 @@ func (pg *PolicyGroup) fillPolicyGroupFromSQL(row datastore.ResRow) error {
 	for _, v := range revJSON {
 		rm[v.PolicyName] = v
 	}
-	pg.policyInfo = rm
+	pg.PolicyInfo = rm
 
 	return nil
 }

@@ -133,8 +133,7 @@ func makeJSONObj(raw string) map[string]interface{} {
 }
 
 func TestNewPolicyRevision(t *testing.T) {
-	polName := "aar"
-	p, _ := New(org, polName)
+	p, _ := New(org, policyName)
 	p.Save()
 
 	pr, err := p.NewPolicyRevisionFromJSON(revJSON)

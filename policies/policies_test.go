@@ -35,6 +35,11 @@ func init() {
 	gob.Register(new(PolicyRevision))
 	gob.Register(new(PolicyGroup))
 
+	m1 := make(map[string]interface{})
+	gob.Register(m1)
+	a1 := make([]interface{}, 0)
+	gob.Register(a1)
+
 	org, _ = orgloader.New("default", "lurp")
 }
 
