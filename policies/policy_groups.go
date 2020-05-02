@@ -21,10 +21,12 @@
 package policies
 
 import (
+	"database/sql"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
+	"golang.org/x/xerrors"
 	"net/http"
 )
 
@@ -89,7 +91,7 @@ func GetPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, 
 func (pg *PolicyGroup) Save() util.Gerror {
 	var err error
 	if config.UsingDB() {
-		err = pg.saveSQL()
+		err = pg.savePolicyGroupSQL()
 	} else {
 		ds := datastore.New()
 		ds.Set(pg.org.DataKey("policy_group"), pg.Name, pg)
@@ -103,7 +105,7 @@ func (pg *PolicyGroup) Save() util.Gerror {
 
 func (pg *PolicyGroup) Delete() util.Gerror {
 	if config.UsingDB() {
-		if err := pg.deletePolicyGroup(); err != nil {
+		if err := pg.deletePolicyGroupSQL(); err != nil {
 			return util.CastErr(err)
 		}
 	} else {
@@ -123,7 +125,7 @@ func (pg *PolicyGroup) AddPolicy(pr *PolicyRevision) util.Gerror {
 		}
 	}
 
-	pi := &policyInfo{PolicyName: pr.PolicyName(), RevisionId: pr.RevisionId}
+	pi := &pgRevisionInfo{PolicyName: pr.PolicyName(), RevisionId: pr.RevisionId}
 	pg.policyInfo[pr.PolicyName()] = pi
 	return nil
 }
@@ -165,7 +167,7 @@ func (pg *PolicyGroup) GetPolicy(name string) (*PolicyRevision, util.Gerror) {
 		return nil, util.Errorf("Policy %s not associated with policy group %s", name, pg.Name)
 	}
 
-	p, err := Get(pi.PolicyName)
+	p, err := Get(pg.org, pi.PolicyName)
 	if err != nil {
 		return nil, err
 	}
@@ -180,6 +182,7 @@ func (pg *PolicyGroup) GetPolicy(name string) (*PolicyRevision, util.Gerror) {
 
 // Ooof, that's an icky return type
 func (pg *PolicyGroup) GetPolicyMap() map[string]map[string]string {
+	pm := make(map[string]map[string]string, len(pg.policyInfo))
 	for k, v := range pg.policyInfo {
 		m := make(map[string]string, 1)
 		m["revision_id"] = v.RevisionId
@@ -213,7 +216,7 @@ func (pg *PolicyGroup) URI() string {
 	return util.ObjURL(pg)
 }
 
-fucn GetAllPolicyGroups(org *organization.Organization) ([]*PolicyGroup, util.Gerror) {
+func GetAllPolicyGroups(org *organization.Organization) ([]*PolicyGroup, util.Gerror) {
 	if config.UsingDB() {
 		allPgs, err := getAllPolicyGroupsSQL(org)
 		if err != nil {

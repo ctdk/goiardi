@@ -121,13 +121,13 @@ func (pg *PolicyGroup) deletePolicyGroupSQL() error {
 func (pg *PolicyGroup) addPolicySQL(pr *PolicyRevision) error {
 
 	_ = pr
-	return nil, nil
+	return nil
 }
 
 func (pg *PolicyGroup) removePolicySQL(policyName string) error {
 
 	_ = policyName
-	return nil, nil
+	return nil
 }
 
 func getAllPolicyGroupsSQL(org *organization.Organization) ([]*PolicyGroup, error) {
