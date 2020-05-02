@@ -70,7 +70,18 @@ func (p *Policy) fillPolicyFromSQL(row datastore.ResRow) error {
 }
 
 func (p *Policy) savePolicySQL() error {
+	tx, err := datastore.Dbh.Begin()
+	if err != nil {
+		return err
+	}
 
+	_, err = tx.Exec("SELECT goiardi.merge_policies($1, $2)", p.Name, p.org.GetId())
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
 	return nil
 }
 
@@ -96,11 +107,63 @@ func (p *Policy) deletePolicySQL() error {
 
 // actually needed?
 func getPolicyListSQL(org *organization.Organization) ([]string, error) {
+	var pl []byte
+	var polList []string
 
-	return nil, nil
+	// return a json blob? Might be interesting to try. If all else fails,
+	// we can either do the normal SELECT name and do lots of appends, or
+	// take the easy (but ultimately costly) way out and make the list of
+	// policy names from allPoliciesSQL.
+
+	sqlStatement := "SELECT array_to_json(COALESCE(ARRAY_AGG(name), ARRAY[]::text[])) AS policy_names FROM goiardi.policies WHERE organization_id = $1"
+
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	row := stmt.QueryRow(org.GetId())
+	if err = row.Scan(&pl); err != nil {
+		return nil, err
+	}
+	if err = datastore.DecodeBlob(pl, &polList); err != nil {
+		return nil, err
+	}
+
+	return polList, nil
 }
 
 func allPoliciesSQL(org *organization.Organization) ([]*Policy, error) {
+	allPol := make([]*Policy, 0)
 
-	return nil, nil
+	sqlStatement := "SELECT id, name FROM goiardi.policies WHERE organization_id = $1"
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(org.GetId())
+	if err != nil {
+		return nil, err // let the caller deal with it
+	}
+
+	for rows.Next() {
+		p := new(Policy)
+		p.org = org
+		err = p.fillPolicyFromSQL(rows)
+		if err != nil {
+			return nil, err
+		}
+
+		pRevs, err := p.getAllRevisionsSQL()
+		if err != nil {
+			return nil, err
+		}
+		p.Revisions = pRevs
+		allPol = append(allPol, p)
+	}
+
+	return allPol, nil
 }
