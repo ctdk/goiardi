@@ -47,7 +47,26 @@ type PolicyGroup struct {
 }
 
 func NewPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, util.Gerror) {
-	// check for existing, validate name, yadda yadda
+	var found bool
+	if config.UsingDB() {
+		var err error
+		found, err = checkForPolicyGroupSQL(datastore.Dbh, org, name)
+		if err != nil {
+			gerr := util.CastErr(err)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return nil, gerr
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get(org.DataKey("policy_group"), name)
+	}
+
+	if found {
+		err := util.Errorf("Policy group '%s' already exists", name)
+		err.SetStatus(http.StatusConflict)
+		return nil, err
+	}
+
 	m := make(map[string]*pgRevisionInfo)
 	pg := &PolicyGroup{Name: name, PolicyInfo: m, org: org}
 	return pg, nil
