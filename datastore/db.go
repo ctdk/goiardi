@@ -62,7 +62,7 @@ func (n *NullInt64Array) Scan(value interface{}) error {
 	return pq.Array(&n.Int64s).Scan(value)
 }
 
-func (n *NullInt64Array) val() []int64 {
+func (n *NullInt64Array) Val() []int64 {
 	if n.Valid {
 		return n.Int64s
 	}

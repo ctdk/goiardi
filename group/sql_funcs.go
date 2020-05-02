@@ -29,7 +29,6 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
-	"github.com/lib/pq"
 	"net/http"
 	// "sort"
 	"strings"
@@ -47,9 +46,9 @@ func checkForGroupSQL(dbhandle datastore.Dbhandle, org *organization.Organizatio
 }
 
 func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
-	var userIds util.NullInt64Array
-	var clientIds util.NullInt64Array
-	var groupIds util.NullInt64Array
+	var userIds datastore.NullInt64Array
+	var clientIds datastore.NullInt64Array
+	var groupIds datastore.NullInt64Array
 	var orgId int64
 
 	// eeesh, there isn't a whole lot we can fill in directly.
@@ -81,8 +80,8 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 		// fill in the actor and group slices with the appropriate
 		// objects. Will these need to be sorted? We'll see.
 
-		if len(groupIds.val()) > 0 {
-			groupez, err := GroupsByIdSQL(groupIds.val(), g.org)
+		if len(groupIds.Val()) > 0 {
+			groupez, err := GroupsByIdSQL(groupIds.Val(), g.org)
 			if err != nil {
 				return err
 			}
@@ -93,15 +92,15 @@ func (g *Group) fillGroupFromSQL(row datastore.ResRow) error {
 		var userez []*user.User
 		var clientez []*client.Client
 
-		if len(userIds.val()) > 0 {
-			userez, err = user.UsersByIdSQL(userIds.val())
+		if len(userIds.Val()) > 0 {
+			userez, err = user.UsersByIdSQL(userIds.Val())
 			if err != nil {
 				return err
 			}
 		}
 
-		if len(clientIds.val()) > 0 {
-			clientez, err = client.ClientsByIdSQL(clientIds.val(), g.org)
+		if len(clientIds.Val()) > 0 {
+			clientez, err = client.ClientsByIdSQL(clientIds.Val(), g.org)
 			if err != nil {
 				return err
 			}
