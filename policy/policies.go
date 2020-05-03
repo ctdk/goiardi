@@ -44,18 +44,9 @@ func (p ByName) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 func (p ByName) Less(i, j int) bool { return p[i].Name < p[j].Name }
 
 func New(org *organization.Organization, name string) (*Policy, util.Gerror) {
-	var found bool
-	if config.UsingDB() {
-		var err error
-		found, err = checkForPolicySQL(datastore.Dbh, org, name)
-		if err != nil {
-			gerr := util.CastErr(err)
-			gerr.SetStatus(http.StatusInternalServerError)
-			return nil, gerr
-		}
-	} else {
-		ds := datastore.New()
-		_, found = ds.Get(org.DataKey("policy"), name)
+	found, gerr := DoesExist(org, name)
+	if gerr != nil {
+		return nil, gerr
 	}
 
 	if found {
@@ -202,4 +193,22 @@ func AllPolicies(org *organization.Organization) ([]*Policy, util.Gerror) {
 	}
 
 	return policies, nil
+}
+
+func DoesExist(org *organization.Organization, policyName string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var err error
+		found, err = checkForPolicySQL(datastore.Dbh, org, policyName)
+		if err != nil {
+			gerr := util.CastErr(err)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return false, gerr
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get(org.DataKey("policy"), policyName)
+	}
+
+	return found, nil
 }
