@@ -212,3 +212,15 @@ func DoesExist(org *organization.Organization, policyName string) (bool, util.Ge
 
 	return found, nil
 }
+
+func (p *Policy) RevisionResponse() map[string]interface{} {
+	// bleh, ya know?
+	rm := make(map[string]interface{}, len(p.Revisions))
+
+	// this is a little bizarre, I won't deny it.
+	for _, pr := range p.Revisions {
+		rm[pr.RevisionId] = make(map[string]interface{})
+	}
+
+	return rm
+}
