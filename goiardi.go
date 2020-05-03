@@ -2,7 +2,7 @@
  * to learn more about programming in Go. */
 
 /*
- * Copyright (c) 2013-2019, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2020, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -321,6 +321,8 @@ func main() {
 	s.HandleFunc("/nodes/{name}/_acl/{perm}", nodeACLPermHandler)
 	s.HandleFunc("/organizations/_acl", orgACLHandler)
 	s.HandleFunc("/organizations/_acl/{perm}", orgACLEditHandler)
+	s.HandleFunc("/policies", policyHandler)
+	s.HandleFunc("/policies/{name}", policyHandler)
 	s.HandleFunc("/principals/{name}", principalHandler)
 	s.HandleFunc("/reports/", reportHandler)
 	s.HandleFunc("/reports/{foo}", reportHandler)
