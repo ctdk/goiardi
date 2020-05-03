@@ -176,23 +176,12 @@ func policyRevisionCreationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, err := policy.Get(org, policyName)
+	p, err := policy.GetOrCreatePolicy(org, policyName)
 	if err != nil {
-		if err.Status() != http.StatusNotFound {
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
-		}
-		p, err = policy.New(org, policyName)
-		if err != nil { // again?!?
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
-		}
-		if err = p.Save(); err != nil { // eesh
-			jsonErrorReport(w, r, err.Error(), err.Status())
-			return
-		}
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
 	}
-
+	
 	revData, jerr := parseObjJSON(r.Body)
 	if jerr != nil {
 		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)

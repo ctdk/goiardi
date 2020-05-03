@@ -100,6 +100,33 @@ func Get(org *organization.Organization, name string) (*Policy, util.Gerror) {
 	return pol, nil
 }
 
+// GetOrCreatePolicy is a helpful convenience function to get or create a policy
+// in one fell swoop, since the general policy workflow entails creating a
+// policy if one doesn't exist when creating a policy revision or associating a
+// policy revision with a policy group.
+func GetOrCreatePolicy(org *organization.Organization, name string) (*Policy, util.Gerror) {
+	var p *Policy
+	found, err := DoesPolicyExist(org, name)
+	if err != nil {
+		return nil, err
+	}
+
+	if found {
+		if p, err = Get(org, name); err != nil {
+			return nil, err
+		}
+	} else {
+		if p, err = New(org, name); err != nil {
+			return nil, err
+		}
+		if err = p.Save(); err != nil {
+			return nil, err
+		}
+	}
+
+	return p, nil
+}
+
 func (p *Policy) Save() util.Gerror {
 	var err error
 	if config.UsingDB() {
