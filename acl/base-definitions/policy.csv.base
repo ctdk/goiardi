@@ -135,16 +135,16 @@ p, role##admins, shovey-keys, containers, $$default$$, grant, allow
 p, role##clients, shovey-keys, containers, $$default$$, read, allow
 p, role##users, shovey-keys, containers, $$default$$, read, allow
 
-p, role##admins, policyfiles, containers, $$default$$, create, allow
-p, role##admins, policyfiles, containers, $$default$$, read, allow
-p, role##admins, policyfiles, containers, $$default$$, update, allow
-p, role##admins, policyfiles, containers, $$default$$, delete, allow
-p, role##admins, policyfiles, containers, $$default$$, grant, allow
-p, role##users, policyfiles, containers, $$default$$, create, allow
-p, role##users, policyfiles, containers, $$default$$, read, allow
-p, role##users, policyfiles, containers, $$default$$, update, allow
-p, role##users, policyfiles, containers, $$default$$, delete, allow
-p, role##clients, policyfiles, containers, $$default$$, read, allow
+p, role##admins, policies, containers, $$default$$, create, allow
+p, role##admins, policies, containers, $$default$$, read, allow
+p, role##admins, policies, containers, $$default$$, update, allow
+p, role##admins, policies, containers, $$default$$, delete, allow
+p, role##admins, policies, containers, $$default$$, grant, allow
+p, role##users, policies, containers, $$default$$, create, allow
+p, role##users, policies, containers, $$default$$, read, allow
+p, role##users, policies, containers, $$default$$, update, allow
+p, role##users, policies, containers, $$default$$, delete, allow
+p, role##clients, policies, containers, $$default$$, read, allow
 
 p, role##billing-admins, $$default$$, groups, billing-admins, read, allow
 p, role##billing-admins, $$default$$, groups, billing-admins, update, allow
