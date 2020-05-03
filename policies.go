@@ -62,12 +62,15 @@ func policyHandler(w http.ResponseWriter, r *http.Request) {
 	// HEAD check
 	if r.Method == http.MethodHead {
 		permCheck := func(r *http.Request, policyName string, opUser actor.Actor) util.Gerror {
-			if opUser.IsValidator() {
+			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "policies", "read"); ferr != nil {
+				return ferr
+			}
+			if !f {
 				return headForbidden()
 			}
 			return nil
 		}
-		headChecking(w, r, opUser, org, policyName, policy.DoesExist, permCheck)
+		headChecking(w, r, opUser, org, policyName, policy.DoesPolicyExist, permCheck)
 		return
 	}
 

@@ -44,7 +44,7 @@ func (p ByName) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 func (p ByName) Less(i, j int) bool { return p[i].Name < p[j].Name }
 
 func New(org *organization.Organization, name string) (*Policy, util.Gerror) {
-	found, gerr := DoesExist(org, name)
+	found, gerr := DoesPolicyExist(org, name)
 	if gerr != nil {
 		return nil, gerr
 	}
@@ -195,7 +195,7 @@ func AllPolicies(org *organization.Organization) ([]*Policy, util.Gerror) {
 	return policies, nil
 }
 
-func DoesExist(org *organization.Organization, policyName string) (bool, util.Gerror) {
+func DoesPolicyExist(org *organization.Organization, policyName string) (bool, util.Gerror) {
 	var found bool
 	if config.UsingDB() {
 		var err error
