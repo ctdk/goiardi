@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package policies
+package policy
 
 import (
 	"database/sql"

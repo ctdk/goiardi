@@ -18,7 +18,7 @@
  * At last, goiardi's going to get policyfile support.
  */
 
-package policies
+package policy
 
 import (
 	"github.com/ctdk/goiardi/config"
