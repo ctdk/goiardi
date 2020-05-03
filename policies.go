@@ -30,6 +30,11 @@ import (
 const (
 	policyListLen = 1
 	policyDetailLen = 2
+	revisionCreateLen = 3
+	revisionDetailLen = 4
+	groupListLen = 1
+	groupDetailLen = 2
+	groupPolicyDetailLen = 4
 )
 
 func policyHandler(w http.ResponseWriter, r *http.Request) {
@@ -64,8 +69,7 @@ func policyHandler(w http.ResponseWriter, r *http.Request) {
 		permCheck := func(r *http.Request, policyName string, opUser actor.Actor) util.Gerror {
 			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "policies", "read"); ferr != nil {
 				return ferr
-			}
-			if !f {
+			} else if !f {
 				return headForbidden()
 			}
 			return nil
@@ -135,7 +139,87 @@ func policyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/*
+func policyRevisionCreationHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+	org, orgerr := orgloader.Get(vars["org"])
+	if orgerr != nil {
+		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
+		return
+	}
+
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
+	pathArray := splitPath(r.URL.Path)[2:]
+	policyName := vars["name"]
+
+	if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "policies", "create"); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		return
+	}
+
+	if len(pathArray) != revisionCreateLen {
+		jsonErrorReport(w, r, "too many elements in the url", http.StatusBadRequest)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	p, err := policy.Get(org, policyName)
+	if err != nil {
+		if err.Status() != http.StatusNotFound {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		p, err = policy.New(org, policyName)
+		if err != nil { // again?!?
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		if err = p.Save(); err != nil { // eesh
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+	}
+
+	revData, jerr := parseObjJSON(r.Body)
+	if jerr != nil {
+		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+		return
+	}
+
+	pr, err := p.NewPolicyRevisionFromJSON(revData)
+	if err.Status() != http.StatusNotFound {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+
+	// save this bad boy
+	if err = pr.Save(); err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&pr); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	}
+	return
+}
+
 func policyRevisionHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -151,8 +235,61 @@ func policyRevisionHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
 		return
 	}
+
+	pathArray := splitPath(r.URL.Path)[2:]
+	policyName := vars["name"]
+	revisionId := vars["revision_id"]
+
+	if len(pathArray) != revisionDetailLen {
+		jsonErrorReport(w, r, "too many elements in the url", http.StatusBadRequest)
+		return
+	}
+
+	if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "policies", "read"); ferr != nil {
+		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+		return
+	} else if !f {
+		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+		return
+	}
+
+	p, err := policy.Get(org, policyName)
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+	pr, err := p.GetPolicyRevision(revisionId)
+	if err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		; // we cool
+	case http.MethodDelete:
+		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "policies", "delete"); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
+		if derr := pr.Delete(); derr != nil {
+			jsonErrorReport(w, r, derr.Error(), derr.Status())
+			return
+		}
+	default:
+		jsonErrorReport(w, r, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&pr); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+	}
+	return
 }
-*/
 
 /*
 func policyGroupHandler(w http.ResponseWriter, r *http.Request) {

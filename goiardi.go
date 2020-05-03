@@ -323,6 +323,8 @@ func main() {
 	s.HandleFunc("/organizations/_acl/{perm}", orgACLEditHandler)
 	s.HandleFunc("/policies", policyHandler)
 	s.HandleFunc("/policies/{name}", policyHandler)
+	s.HandleFunc("/policies/{name}/revisions", policyRevisionCreationHandler)
+	s.HandleFunc("/policies/{name}/revisions/{revision_id}", policyRevisionHandler)
 	s.HandleFunc("/principals/{name}", principalHandler)
 	s.HandleFunc("/reports/", reportHandler)
 	s.HandleFunc("/reports/{foo}", reportHandler)
