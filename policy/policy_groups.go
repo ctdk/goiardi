@@ -47,18 +47,9 @@ type PolicyGroup struct {
 }
 
 func NewPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, util.Gerror) {
-	var found bool
-	if config.UsingDB() {
-		var err error
-		found, err = checkForPolicyGroupSQL(datastore.Dbh, org, name)
-		if err != nil {
-			gerr := util.CastErr(err)
-			gerr.SetStatus(http.StatusInternalServerError)
-			return nil, gerr
-		}
-	} else {
-		ds := datastore.New()
-		_, found = ds.Get(org.DataKey("policy_group"), name)
+	found, gerr := DoesPolicyGroupExist(org, name)
+	if gerr != nil {
+		return nil, gerr
 	}
 
 	if found {
@@ -258,4 +249,22 @@ func GetAllPolicyGroups(org *organization.Organization) ([]*PolicyGroup, util.Ge
 	}
 
 	return nil, nil
+}
+
+func DoesPolicyGroupExist(org *organization.Organization, name string) (bool, util.Gerror) {
+	var found bool
+	if config.UsingDB() {
+		var err error
+		found, err = checkForPolicyGroupSQL(datastore.Dbh, org, name)
+		if err != nil {
+			gerr := util.CastErr(err)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return false, gerr
+		}
+	} else {
+		ds := datastore.New()
+		_, found = ds.Get(org.DataKey("policy_group"), name)
+	}
+
+	return found, nil
 }

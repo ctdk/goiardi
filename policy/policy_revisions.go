@@ -23,6 +23,7 @@ package policy
 import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
 	"sort"
@@ -64,17 +65,9 @@ func (pr ByRevId) Less(i, j int) bool { return pr[i].RevisionId < pr[j].Revision
 // These methods are attached to Policy, not standalone functions.
 
 func (p *Policy) NewPolicyRevision(revisionId string) (*PolicyRevision, util.Gerror) {
-	var found bool
-	if config.UsingDB() {
-		var err error
-		found, err = p.checkForRevisionSQL(datastore.Dbh, revisionId)
-		if err != nil {
-			gerr := util.CastErr(err)
-			gerr.SetStatus(http.StatusInternalServerError)
-			return nil, gerr
-		}
-	} else {
-		_, found = p.findRevisionId(revisionId)
+	found, gerr := p.DoesRevisionExist(nil, revisionId)
+	if gerr != nil {
+		return nil, gerr
 	}
 
 	if found {
@@ -167,6 +160,28 @@ func (p *Policy) MostRecentRevision() (*PolicyRevision, util.Gerror) {
 	sort.Sort(sort.Reverse(ByRevTime(p.Revisions)))
 
 	return p.Revisions[0], nil
+}
+
+func (p *Policy) DoesRevisionExist(org *organization.Organization, revisionId string) (bool, util.Gerror) {
+	// may not strictly be necessary, but this comment and assignment is
+	// here to make it explicitly clear that the 'org' argument is only here
+	// to satisfy the DoesExist interface used in HEAD responses.
+	_ = org
+
+	var found bool
+	if config.UsingDB() {
+		var err error
+		found, err = p.checkForRevisionSQL(datastore.Dbh, revisionId)
+		if err != nil {
+			gerr := util.CastErr(err)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return false, gerr
+		}
+	} else {
+		_, found = p.findRevisionId(revisionId)
+	}
+
+	return found, nil
 }
 
 func (pr *PolicyRevision) Save() util.Gerror {
