@@ -1,7 +1,7 @@
 /* Role functions */
 
 /*
- * Copyright (c) 2013-2019, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2020, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -235,7 +235,7 @@ func roleListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		if opUser.IsValidator() {
 			jsonErrorReport(w, r, "You are not allowed to take this action.", http.StatusForbidden)
 			return
@@ -245,7 +245,7 @@ func roleListHandler(w http.ResponseWriter, r *http.Request) {
 			itemURL := util.JoinStr("/organizations/", org.Name, "/roles/", k)
 			roleResponse[k] = util.CustomURL(itemURL)
 		}
-	case "POST":
+	case http.MethodPost:
 		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "roles", "create"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
 			return
