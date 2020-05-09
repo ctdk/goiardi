@@ -325,6 +325,7 @@ func main() {
 	s.HandleFunc("/policies/{name}", policyHandler)
 	s.HandleFunc("/policies/{name}/revisions", policyRevisionCreationHandler)
 	s.HandleFunc("/policies/{name}/revisions/{revision_id}", policyRevisionHandler)
+	s.HandleFunc("/policy_groups", policyGroupHandler)
 	s.HandleFunc("/principals/{name}", principalHandler)
 	s.HandleFunc("/reports/", reportHandler)
 	s.HandleFunc("/reports/{foo}", reportHandler)

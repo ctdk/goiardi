@@ -464,7 +464,7 @@ func JSONErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, st
 	SpewCallers()
 	logger.Infof(errorStr)
 	jsonError := map[string][]string{"error": []string{errorStr}}
-	sendErrorReport(w, jsonError, status)
+	sendErrorReport(w, r, jsonError, status)
 	return
 }
 
@@ -472,19 +472,28 @@ func JSONErrorNonArrayReport(w http.ResponseWriter, r *http.Request, errorStr st
 	SpewCallers()
 	logger.Infof(errorStr)
 	jsonError := map[string]string{"error": errorStr}
-	sendErrorReport(w, jsonError, status)
+	sendErrorReport(w, r, jsonError, status)
 	return
 }
 
 func JSONErrorMapReport(w http.ResponseWriter, r *http.Request, errMap map[string]interface{}, status int) {
 	SpewCallers()
 	logger.Infof("%+v", errMap)
-	sendErrorReport(w, errMap, status)
+	sendErrorReport(w, r, errMap, status)
 	return
 }
 
-func sendErrorReport(w http.ResponseWriter, jsonError interface{}, status int) {
+func sendErrorReport(w http.ResponseWriter, r *http.Request, jsonError interface{}, status int) {
 	w.WriteHeader(status)
+
+	// if it's a head request and there's some kind of error, we can
+	// simplify the handlers a little bit and send a HEAD response from
+	// here.
+	if r.Method == http.MethodHead {
+		logger.Debugf("Issuing HEAD response for error")
+		return
+	}
+
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&jsonError); err != nil {
 		logger.Errorf(err.Error())

@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
-	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/policy"
 	"github.com/ctdk/goiardi/reqctx"
@@ -33,9 +32,6 @@ const (
 	policyDetailLen = 2
 	revisionCreateLen = 3
 	revisionDetailLen = 4
-	groupListLen = 1
-	groupDetailLen = 2
-	groupPolicyDetailLen = 4
 )
 
 func policyHandler(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +71,13 @@ func policyHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return nil
 		}
-		headChecking(w, r, opUser, org, policyName, policy.DoesPolicyExist, permCheck)
+
+		if len(pathArray) == policyDetailLen {
+			headChecking(w, r, opUser, org, policyName, policy.DoesPolicyExist, permCheck)
+		} else {
+			headResponse(w, r, http.StatusOK)
+		}
+
 		return
 	}
 
@@ -257,6 +259,7 @@ func policyRevisionHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		; // we cool
+	case http.MethodHead:
 	case http.MethodDelete:
 		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "policies", "delete"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
@@ -279,76 +282,4 @@ func policyRevisionHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 	return
-}
-
-func policyGroupHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	vars := mux.Vars(r)
-	org, orgerr := orgloader.Get(vars["org"])
-	if orgerr != nil {
-		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
-		return
-	}
-
-	opUser, oerr := reqctx.CtxReqUser(r.Context())
-	if oerr != nil {
-		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
-		return
-	}
-
-	pathArray := splitPath(r.URL.Path)[2:]
-	//pgName := vars["name"]
-	//policyName := vars["policy"]
-
-	// cause I would rather switch.......
-	var err util.Gerror
-
-	switch len(pathArray) {
-	case groupListLen:
-		err = policyGroupList(w, r, org, opUser)
-	case groupDetailLen:
-
-	case groupPolicyDetailLen:
-
-	default:
-		jsonErrorReport(w, r, "Not sure how we got here, but this URL has an improper number of elements.", http.StatusBadRequest)
-		return
-	}
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-	}
-	return
-}
-
-func policyGroupList(w http.ResponseWriter, r *http.Request, org *organization.Organization, opUser actor.Actor) util.Gerror {
-	if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "policies", "read"); ferr != nil {
-		return ferr
-	} else if !f {
-		err := util.Errorf("You do not have permission to do that")
-		err.SetStatus(http.StatusForbidden)
-		return err
-	}
-
-	groupList := make(map[string]map[string]interface{})
-	allPg, err := policy.GetAllPolicyGroups(org)
-	if err != nil {
-		return err
-	}
-
-	for _, pg := range allPg {
-		pgr := make(map[string]interface{})
-		pgr["uri"] = pg.URI()
-		pgr["policies"] = pg.GetPolicyMap()
-		groupList[pg.Name] = pgr
-	}
-
-	enc := json.NewEncoder(w)
-	if encErr := enc.Encode(&groupList); encErr != nil {
-		cErr := util.CastErr(encErr)
-		cErr.SetStatus(http.StatusInternalServerError)
-		return cErr
-	}
-
-	return nil
 }
