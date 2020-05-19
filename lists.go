@@ -313,7 +313,10 @@ func userHandling(w http.ResponseWriter, r *http.Request) map[string]string {
 					jsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
 					return nil
 				}
-				chefUser.SetPublicKey(publicKey)
+				pubErr := chefUser.SetPublicKey(publicKey)
+				if pubErr != nil {
+					jsonErrorReport(w, r, pubErr.Error(), http.StatusInternalServerError)
+				}
 			case nil:
 
 				var perr error
