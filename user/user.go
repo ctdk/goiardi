@@ -499,7 +499,10 @@ func (u *User) SetPublicKey(pk interface{}) error {
 			return err
 		}
 		if config.UsingExternalSecrets() {
-			secret.SetPublicKey(u, pk)
+			pubErr := secret.SetPublicKey(u, pk)
+			if pubErr != nil {
+				return pubErr
+			}
 		} else {
 			u.pubKey = pk
 		}
