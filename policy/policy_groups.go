@@ -268,3 +268,17 @@ func DoesPolicyGroupExist(org *organization.Organization, name string) (bool, ut
 
 	return found, nil
 }
+
+func (pg *PolicyGroup) DoesContainPolicy(org *organization.Organization, policyName string) (bool, util.Gerror) {
+	_, ok := pg.PolicyInfo[policyName]
+	return ok, nil
+}
+
+func (pg *PolicyGroup) CheckPolicyAndRevision(policyName string, revisionId string) bool {
+	pi, ok := pg.PolicyInfo[policyName]
+	if !ok {
+		return false
+	}
+
+	return pi.RevisionId == revisionId
+}

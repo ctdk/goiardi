@@ -260,6 +260,17 @@ func policyRevisionHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		; // we cool
 	case http.MethodHead:
+		permCheck := func(r *http.Request, policyName string, opUser actor.Actor) util.Gerror {
+			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "policies", "read"); ferr != nil {
+				return ferr
+			} else if !f {
+				return headForbidden()
+			}
+			return nil
+		}
+
+		headChecking(w, r, opUser, org, revisionId, p.DoesRevisionExist, permCheck)
+		return
 	case http.MethodDelete:
 		if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "policies", "delete"); ferr != nil {
 			jsonErrorReport(w, r, ferr.Error(), ferr.Status())

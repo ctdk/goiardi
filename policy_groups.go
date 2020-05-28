@@ -140,6 +140,8 @@ func policyGroupDetail(w http.ResponseWriter, r *http.Request, org *organization
 		return err
 	}
 
+	var pgr map[string]interface{}
+
 	switch r.Method {
 	case http.MethodHead:
 		permCheck := func(r *http.Request, policyName string, opUser actor.Actor) util.Gerror {
@@ -159,7 +161,7 @@ func policyGroupDetail(w http.ResponseWriter, r *http.Request, org *organization
 			return err
 		}
 		
-		pgr := make(map[string]interface{})
+		pgr = make(map[string]interface{})
 		pgr["uri"] = pg.URI()
 		pgr["policies"] = pg.GetPolicyMap()
 		if r.Method == http.MethodDelete {
@@ -190,6 +192,88 @@ func policyGroupPolicyDetail(w http.ResponseWriter, r *http.Request, org *organi
 		err := util.Errorf("You do not have permission to do that")
 		err.SetStatus(http.StatusForbidden)
 		return err
+	}
+
+	pg, err := policy.GetPolicyGroup(org, pgName)
+	if err != nil {
+		return err
+	}
+
+	var pr *policy.PolicyRevision
+
+	switch r.Method {
+	case http.MethodHead:
+		permCheck := func(r *http.Request, policyName string, opUser actor.Actor) util.Gerror {
+			if f, ferr := org.PermCheck.CheckContainerPerm(opUser, "policies", "read"); ferr != nil {
+				return ferr
+			} else if !f {
+				return headForbidden()
+			}
+			return nil
+		}
+
+		headChecking(w, r, opUser, org, policyName, pg.DoesContainPolicy, permCheck)
+		return nil
+	case http.MethodGet, http.MethodDelete:
+		pr, err = pg.GetPolicy(policyName)
+		if err != nil {
+			return nil
+		}
+		if r.Method == http.MethodDelete {
+			if err = pg.RemovePolicy(policyName); err != nil {
+				return err
+			}
+		}
+	case http.MethodPut:
+		// if this policy revision is already associated, it's super
+		// easy - just get it.
+		revData, jerr := parseObjJSON(r.Body)
+		if jerr != nil {
+			return util.CastErr(jerr)
+		}
+		revId, ok := revData["revision_id"].(string)
+		if !ok {
+			return util.Errorf("revision_id not found, or could not be parsed")
+		}
+		if pg.CheckPolicyAndRevision(policyName, revId) {
+			if pr, err = pg.GetPolicy(policyName); err != nil {
+				return err
+			}
+		} else {
+			p, err := policy.GetOrCreatePolicy(org, policyName)
+			if err != nil {
+				return err
+			}
+
+			found, err := p.DoesRevisionExist(org, revId)
+			if err != nil {
+				return err
+			}
+
+			if found {
+				pr, err = p.NewPolicyRevisionFromJSON(revData)
+			} else {
+				pr, err = p.GetPolicyRevision(revId)
+			}
+
+			if err != nil {
+				return err
+			}
+			if err = pg.AddPolicy(pr); err != nil {
+				return nil
+			}
+		}
+	default:
+		err := util.Errorf("Method not allowed")
+		err.SetStatus(http.StatusMethodNotAllowed)
+		return err
+	}
+
+	enc := json.NewEncoder(w)
+	if encErr := enc.Encode(&pr); encErr != nil {
+		cErr := util.CastErr(encErr)
+		cErr.SetStatus(http.StatusInternalServerError)
+		return cErr
 	}
 
 	return nil
