@@ -41,7 +41,10 @@ var s3cli *s3client
 
 // InitS3 sets up the session and whatnot for using goiardi with S3.
 func InitS3(conf *config.Conf) error {
-	sess := session.New(&aws.Config{Region: aws.String(conf.AWSRegion), DisableSSL: aws.Bool(conf.AWSDisableSSL), Endpoint: aws.String(conf.S3Endpoint), S3ForcePathStyle: aws.Bool(false)})
+	sess, err := session.NewSession(&aws.Config{Region: aws.String(conf.AWSRegion), DisableSSL: aws.Bool(conf.AWSDisableSSL), Endpoint: aws.String(conf.S3Endpoint), S3ForcePathStyle: aws.Bool(false)})
+	if err != nil {
+		return err
+	}
 
 	s3cli = new(s3client)
 	s3cli.bucket = conf.S3Bucket

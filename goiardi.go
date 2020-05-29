@@ -134,7 +134,12 @@ func main() {
 		logger.Fatalf(merr.Error())
 		os.Exit(1)
 	}
-	util.InitS3(config.Config)
+	if config.Config.UseS3Upload {
+		err := util.InitS3(config.Config)
+		if err != nil {
+			logger.Criticalf("cannot init s3")
+		}
+	}
 	initGeneralStatsd(metricsBackend)
 	report.InitializeMetrics(metricsBackend)
 	search.InitializeMetrics(metricsBackend)
