@@ -85,7 +85,9 @@ func New(checksumHash map[string]interface{}) (*Sandbox, error) {
 		if s, _ := Get(sandboxID); s != nil {
 			logger.Infof("Collision! Somehow %s already existed as a sandbox id on attempt %d. Trying again.", sandboxID, i)
 			sandboxID = ""
+			continue
 		}
+		break
 	}
 
 	if sandboxID == "" {
