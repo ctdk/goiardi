@@ -23,6 +23,12 @@ package cookbook
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/depgraph"
@@ -30,11 +36,6 @@ import (
 	"github.com/ctdk/goiardi/util"
 	gversion "github.com/hashicorp/go-version"
 	"github.com/tideland/golib/logger"
-	"net/http"
-	"regexp"
-	"sort"
-	"strconv"
-	"strings"
 )
 
 // cookbook divisions, when resolving cookbook dependencies, that must be filled
@@ -1121,7 +1122,7 @@ func methodize(method string, cbThing []map[string]interface{}) []map[string]int
 			str, _ := j.(string)
 			if k == "url" && (r.MatchString(str) || str == "") {
 				// s3uploads - generate new signed url
-				if config.Config.UseS3Upload {
+				if config.Config.UseS3Upload && !config.Config.UseS3Proxy {
 					var err error
 					retHash[i][k], err = util.S3GetURL("default", chkSum)
 					if err != nil {

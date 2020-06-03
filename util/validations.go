@@ -18,13 +18,14 @@ package util
 
 import (
 	"fmt"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/filestore"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/filestore"
+	"github.com/tideland/golib/logger"
 )
 
 /* Validations for different types and input. */
@@ -163,17 +164,15 @@ func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]inter
 						if ferr != nil {
 							uploaded = false
 							logger.Errorf(ferr.Error())
-						} else if uploaded {
-							itemURL, _ = S3GetURL("default", chksum)
 						}
 					} else {
 						if _, ferr = filestore.Get(chksum); ferr == nil {
 							uploaded = true
-							itemURL = CustomURL(fmt.Sprintf("/file_store/%s", chksum))
 						}
 					}
-					var merr Gerror
+					//if file has not been uploaded return an error
 					if !uploaded {
+						var merr Gerror
 						/* This is nuts. */
 						if dname == "recipes" {
 							merr = Errorf("Manifest has a checksum that hasn't been uploaded.")
@@ -181,6 +180,13 @@ func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]inter
 							merr = Errorf("Manifest has checksum %s but it hasn't yet been uploaded", chksum)
 						}
 						return nil, merr
+					}
+
+					//
+					if config.Config.UseS3Upload && !config.Config.UseS3Proxy {
+						itemURL, _ = S3GetURL("default", chksum)
+					} else {
+						itemURL = CustomURL(fmt.Sprintf("/file_store/%s", chksum))
 					}
 
 					v["url"] = itemURL
