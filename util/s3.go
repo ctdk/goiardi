@@ -19,19 +19,23 @@ package util
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/ctdk/goiardi/config"
-	"github.com/tideland/golib/logger"
+	"io"
 	"net"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/ctdk/goiardi/config"
+	"github.com/tideland/golib/logger"
 )
 
 type s3client struct {
+	awsSession *session.Session
 	bucket     string
 	filePeriod time.Duration
 	s3         *s3.S3
@@ -50,6 +54,7 @@ func InitS3(conf *config.Conf) error {
 	s3cli.bucket = conf.S3Bucket
 	s3cli.filePeriod = time.Duration(conf.S3FilePeriod) * time.Minute
 	s3cli.s3 = s3.New(sess)
+	s3cli.awsSession = sess
 	return nil
 }
 
@@ -64,13 +69,22 @@ func S3GetURL(orgname string, checksum string) (string, error) {
 	return urlStr, err
 }
 
-func S3PutURL(orgname string, checksum string) (string, error) {
+// S3FileDownload downloads file from s3 and returns a readcloser object.
+func S3FileDownload(orgname, checksum string) (io.ReadCloser, error) {
 	key := makeBukkitKey(orgname, checksum)
-	req, _ := s3cli.s3.PutObjectRequest(&s3.PutObjectInput{
+	res, err := s3cli.s3.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(s3cli.bucket),
 		Key:    aws.String(key),
 	})
+	if err != nil {
+		return nil, err
+	}
+	logger.Debugf("downloading %s file from s3", checksum)
+	return res.Body, nil
+}
 
+// GenerateBase64MD5 converts hex signature provided by chef to a base64 version
+func GenerateBase64MD5(checksum string) (string, error) {
 	// there may be an easier way
 	re := regexp.MustCompile(`[0-9A-Fa-f]{2}`)
 	chopped := re.FindAllString(checksum, -1)
@@ -82,12 +96,25 @@ func S3PutURL(orgname string, checksum string) (string, error) {
 		}
 		b[i] = byte(m)
 	}
-	contentmd5 := base64.StdEncoding.EncodeToString(b)
-	req.HTTPRequest.Header.Set("Content-MD5", contentmd5)
+	return base64.StdEncoding.EncodeToString(b), nil
+}
+func S3PutURL(orgname string, checksum string) (string, error) {
+	key := makeBukkitKey(orgname, checksum)
+	req, _ := s3cli.s3.PutObjectRequest(&s3.PutObjectInput{
+		Bucket: aws.String(s3cli.bucket),
+		Key:    aws.String(key),
+	})
+
+	//amend request
+	contentMD5, err := GenerateBase64MD5(checksum)
+	if err != nil {
+		return "", err
+	}
+	req.HTTPRequest.Header.Set("Content-MD5", contentMD5)
 	req.HTTPRequest.URL.Host = s3cli.makeHostPort(req.HTTPRequest.URL.Host)
 
 	urlStr, err := req.Presign(s3cli.filePeriod)
-	logger.Debugf("presign: %s %s", urlStr, contentmd5)
+	logger.Debugf("presign: %s %s %s", urlStr, contentMD5, checksum)
 	return urlStr, err
 }
 
@@ -134,17 +161,35 @@ func S3DeleteHashes(fileHashes []string) {
 	}
 }
 
-func S3CheckFile(orgname, checksum string) bool {
+// S3FileUpload uploads file to s3 fileSystem.
+func S3FileUpload(orgName string, chksum string, body io.ReadCloser) error {
+	md5, err := GenerateBase64MD5(chksum)
+	if err != nil {
+		return err
+	}
+	uploader := s3manager.NewUploader(s3cli.awsSession)
+	upParams := &s3manager.UploadInput{
+		Bucket:     aws.String(s3cli.bucket),
+		Key:        aws.String(makeBukkitKey(orgName, chksum)),
+		Body:       body,
+		ContentMD5: aws.String(md5),
+	}
+	result, err := uploader.Upload(upParams)
+	if err != nil {
+		return err
+	}
+	logger.Debugf("s3 upload result for file %s %+v", chksum, result)
+	return nil
+}
+
+// S3FileExists checks if such file exists on s3, returns true if it is.
+func S3FileExists(orgname, checksum string) bool {
 	params := &s3.HeadObjectInput{
 		Bucket: aws.String(s3cli.bucket),
 		Key:    aws.String(makeBukkitKey(orgname, checksum)),
 	}
 	_, err := s3cli.s3.HeadObject(params)
-	var ret bool
-	if err == nil {
-		ret = true
-	}
-	return ret
+	return err == nil
 }
 
 func makeBukkitKey(orgname, checksum string) string {

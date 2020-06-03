@@ -96,6 +96,7 @@ type Conf struct {
 	StatsdType           string   `toml:"statsd-type"`
 	StatsdInstance       string   `toml:"statsd-instance"`
 	UseS3Upload          bool     `toml:"use-s3-upload"`
+	UseS3Proxy           bool     `toml:"use-s3-proxy"`
 	AWSRegion            string   `toml:"aws-region"`
 	S3Bucket             string   `toml:"s3-bucket"`
 	AWSDisableSSL        bool     `toml:"aws-disable-ssl"`
@@ -212,6 +213,7 @@ type Options struct {
 	StatsdType           string       `long:"statsd-type" description:"statsd format, can be either 'standard' or 'datadog' (default 'standard')" env:"GOIARDI_STATSD_TYPE"`
 	StatsdInstance       string       `long:"statsd-instance" description:"Statsd instance name to use for this server. Defaults to the server's hostname, with '.' replaced by '_'." env:"GOIARDI_STATSD_INSTANCE"`
 	UseS3Upload          bool         `long:"use-s3-upload" description:"Store cookbook files in S3 rather than locally in memory or on disk. This or --local-filestore-dir must be set in SQL mode. Cannot be used with in-memory mode." env:"GOIARDI_USE_S3_UPLOAD"`
+	UseS3Proxy           bool         `long:"use-s3-proxy" description:"When enabled, instead of uploading file directly from client to AWS through the pre-signed url, upload it through goiardi server" env:"GOIARDI_USE_S3_PROXY"`
 	AWSRegion            string       `long:"aws-region" description:"AWS region to use S3 uploads." env:"GOIARDI_AWS_REGION"`
 	S3Bucket             string       `long:"s3-bucket" description:"The name of the S3 bucket storing the files." env:"GOIARDI_S3_BUCKET"`
 	AWSDisableSSL        bool         `long:"aws-disable-ssl" description:"Set to disable SSL for the endpoint. Mostly useful just for testing." env:"GOIARDI_AWS_DISABLE_SSL"`
@@ -517,6 +519,10 @@ func ParseConfigOptions() error {
 			logger.Fatalf("S3 uploads must be used in SQL mode, not in-memory mode.")
 			os.Exit(1)
 		}
+
+		// our legacy behaviour is to always put links for aws s3 upload
+		Config.UseS3Proxy = opts.UseS3Proxy
+
 		if opts.AWSRegion != "" {
 			Config.AWSRegion = opts.AWSRegion
 		}
