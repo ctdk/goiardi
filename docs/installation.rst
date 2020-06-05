@@ -23,7 +23,7 @@ To install goiardi from source:
 
     goiardi <options>
 
-   Or, you can look at the goiardi releases page on github at https://github.com/ctdk/goiardi/releases and see if there are precompiled binaries available for your platform, or check out the packages at https://packagecloud.io/ct/goiardi and see if there's one for your platform there. 
+   Or, you can look at the goiardi releases page on github at https://github.com/ctdk/goiardi/releases and see if there are precompiled binaries available for your platform, or check out the packages at https://packagecloud.io/ct/goiardi and see if there's one for your platform there.
 
 Another option is running goiardi in Docker. There's a Dockerfile in the root of the goiardi git repository that's suitable for running the local version of goiardi, but a goiardi repository on Docker Hub at https://hub.docker.com/r/ctdk/goiardi/ is also under development (the source repository for those docker images is at https://github.com/ctdk/goiardi-docker). Running goiardi under docker has always worked fine, but now that configuration options can be set with environment variables it's certainly easier to do so than before.
 
@@ -128,6 +128,8 @@ Currently available command line and config file options::
     -m, --import=               Import data from the given file, exiting
                                 afterwards. Cannot be used at the same time as
                                 -x/--export.
+        --bootstrap             Initialize server clients and admin user.
+                                Exits with status code 0 if everything went ok.
     -Q, --obj-max-size=         Maximum object size in bytes for the file store.
                                 Default 10485760 bytes (10MB).
                                 [$GOIARDI_OBJ_MAX_SIZE]

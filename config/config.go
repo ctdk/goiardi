@@ -76,6 +76,7 @@ type Conf struct {
 	SkipLogExtended      bool         `toml:"skip-log-extended"`
 	DoExport             bool
 	DoImport             bool
+	DoBootstrap          bool
 	ImpExFile            string
 	ObjMaxSize           int64    `toml:"obj-max-size"`
 	JSONReqMaxSize       int64    `toml:"json-req-max-size"`
@@ -192,6 +193,7 @@ type Options struct {
 	SkipLogExtended      bool         `long:"skip-log-extended" description:"If set, do not save a JSON encoded blob of the object being logged when logging an event." env:"GOIARDI_SKIP_LOG_EXTENDED"`
 	Export               string       `short:"x" long:"export" description:"Export all server data to the given file, exiting afterwards. Should be used with caution. Cannot be used at the same time as -m/--import."`
 	Import               string       `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Cannot be used at the same time as -x/--export."`
+	Bootstrap            bool         `long:"bootstrap" description:"Bootstrap the server creating default actors, their pem certificates. Exits afterwards"`
 	ObjMaxSize           int64        `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)." env:"GOIARDI_OBJ_MAX_SIZE"`
 	JSONReqMaxSize       int64        `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000." env:"GOIARDI_JSON_REQ_MAX_SIZE"`
 	UseUnsafeMemStore    bool         `long:"use-unsafe-mem-store" description:"Use the faster, but less safe, old method of storing data in the in-memory data store with pointers, rather than encoding the data with gob and giving a new copy of the object to each requestor. If this is enabled goiardi will run faster in in-memory mode, but one goroutine could change an object while it's being used by another. Has no effect when using an SQL backend. (DEPRECATED - will be removed in a future release.)"`
@@ -307,6 +309,8 @@ func ParseConfigOptions() error {
 		Config.ConfFile = opts.ConfFile
 		Config.FreezeData = false
 	}
+
+	Config.DoBootstrap = opts.Bootstrap
 
 	if opts.Export != "" && opts.Import != "" {
 		log.Println("Cannot use -x/--export and -m/--import flags together.")
