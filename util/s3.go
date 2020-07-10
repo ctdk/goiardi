@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -56,6 +58,25 @@ func InitS3(conf *config.Conf) error {
 	s3cli.s3 = s3.New(sess)
 	s3cli.awsSession = sess
 	return nil
+}
+
+// S3HealthCheck
+func S3HealthCheck() (outcome bool, err error) {
+	_, err = s3cli.s3.HeadBucket(&s3.HeadBucketInput{
+		Bucket: aws.String(s3cli.bucket),
+	})
+	if err == nil {
+		return true, nil
+	}
+
+	//is this an aws error?
+	if aerr, ok := err.(awserr.Error); ok {
+		logger.Debugf("healthcheck aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+	} else {
+		//generic unknown error
+		logger.Debugf("healthcheck error: %s", err)
+	}
+	return false, err
 }
 
 func S3GetURL(orgname string, checksum string) (string, error) {

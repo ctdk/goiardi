@@ -63,6 +63,8 @@ Currently available command line and config file options::
                                 [$GOIARDI_INDEX_FILE]
     -D, --data-file=            File to save data store data to.
                                 [$GOIARDI_DATA_FILE]
+    --health-endpoint           Health endpoint to monitor goiardi status. Defaults to /healthz
+                                [$GOIARDI_HEALTH_ENDPOINT]
     -F, --freeze-interval=      Interval in seconds to freeze in-memory data
                                 structures to disk if there have been any changes
                                 (requires -i/--index-file and -D/--data-file

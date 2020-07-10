@@ -24,14 +24,15 @@ package util
 
 import (
 	"fmt"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/gerror"
 	"net/http"
 	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/gerror"
 )
 
 // hopefully a reasonable starting map allocation for DeepMerge if the type

@@ -115,6 +115,7 @@ type Conf struct {
 	PurgeReportsDur      time.Duration
 	PurgeSandboxesDur    time.Duration
 	SearchQueryDebug     bool
+	HealthEndPoint       string
 }
 
 // SigningKeys are the public and private keys for signing shovey requests.
@@ -183,6 +184,7 @@ type Options struct {
 	SSLCert              string       `long:"ssl-cert" description:"SSL certificate file. If a relative path, will be set relative to --conf-root." env:"GOIARDI_SSL_CERT"`
 	SSLKey               string       `long:"ssl-key" description:"SSL key file. If a relative path, will be set relative to --conf-root." env:"GOIARDI_SSL_KEY"`
 	HTTPSUrls            bool         `long:"https-urls" description:"Use 'https://' in URLs to server resources if goiardi is not using SSL for its connections. Useful when goiardi is sitting behind a reverse proxy that uses SSL, but is communicating with the proxy over HTTP." env:"GOIARDI_HTTPS_URLS"`
+	HealthEndPoint       string       `long:"health-endpoint" description:"Health endpoint to monitor goiardi status. Defaults to /healthz" env:"GOIARDI_HEALTH_ENDPOINT"`
 	DisableWebUI         bool         `long:"disable-webui" description:"If enabled, disables connections and logins to goiardi over the webui interface." env:"GOIARDI_DISABLE_WEBUI"`
 	UseMySQL             bool         `long:"use-mysql" description:"Use a MySQL database for data storage. Configure database options in the config file." env:"GOIARDI_USE_MYSQL"`
 	MySQL                MySQLdb      `group:"MySQL connection options (requires --use-mysql)" namespace:"mysql"`
@@ -267,7 +269,7 @@ var Config = initConfig()
 // ParseConfigOptions reads and applies arguments from the command line and the
 // configuration file, merging them together as needed, with command line options
 // taking precedence over options in the config file.
-func ParseConfigOptions() error {
+func ParseConfigOptions() {
 	var opts = &Options{}
 	parser := flags.NewParser(opts, flags.Default)
 	parser.ShortDescription = fmt.Sprintf("A Chef server, in Go - version %s", Version)
@@ -608,6 +610,12 @@ func ParseConfigOptions() error {
 		Config.ProxyPort = Config.Port
 	}
 
+	//health endpoint
+	Config.HealthEndPoint = `/healthz`
+	if opts.HealthEndPoint != "" {
+		Config.HealthEndPoint = opts.HealthEndPoint
+	}
+
 	// secret storage config
 	if opts.UseExtSecrets {
 		Config.UseExtSecrets = opts.UseExtSecrets
@@ -916,8 +924,6 @@ func ParseConfigOptions() error {
 		}
 		Config.PurgeSandboxesDur = d
 	}
-
-	return nil
 }
 
 // ListenAddr builds the address and port goiardi is configured to listen on.

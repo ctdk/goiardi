@@ -87,6 +87,8 @@ var apiChan chan *apiTimerInfo
 
 func main() {
 	config.ParseConfigOptions()
+	//since health endpoint is dynamic we need to add it to noOpUserReq after parsing of config
+	noOpUserReqs = append(noOpUserReqs, config.Config.HealthEndPoint)
 
 	/* Here goes nothing, db... */
 	if config.UsingDB() {
@@ -256,6 +258,7 @@ func main() {
 	http.HandleFunc("/universe", universeHandler)
 	http.HandleFunc("/shovey/", shoveyHandler)
 	http.HandleFunc("/status/", statusHandler)
+	http.HandleFunc(config.Config.HealthEndPoint, healthHandler)
 
 	/* TODO: figure out how to handle the root & not found pages */
 	http.HandleFunc("/", rootHandler)
@@ -414,7 +417,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* Only perform the authorization check if that's configured. Bomb with
 	 * an error if the check of the headers, timestamps, etc. fails. */
 	/* No clue why /principals doesn't require authorization. Hrmph. */
-	if config.Config.UseAuth && !strings.HasPrefix(r.URL.Path, "/file_store") && !strings.HasPrefix(r.URL.Path, "/debug") && !(strings.HasPrefix(r.URL.Path, "/principals") && r.Method == "GET") {
+	if config.Config.UseAuth && !strings.HasPrefix(r.URL.Path, "/file_store") && !strings.HasPrefix(r.URL.Path, "/debug") && !strings.HasPrefix(r.URL.Path, config.Config.HealthEndPoint) && !(strings.HasPrefix(r.URL.Path, "/principals") && r.Method == "GET") {
 		herr := authentication.CheckHeader(userID, r)
 		if herr != nil {
 			w.Header().Set("Content-Type", "application/json")
