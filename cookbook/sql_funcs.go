@@ -21,14 +21,15 @@ package cookbook
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
-	"github.com/ctdk/goiardi/util"
 	"log"
 	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/util"
 )
 
 func (c *Cookbook) numVersionsSQL() *int {
@@ -713,4 +714,13 @@ func cookbookRecipesSQL() ([]string, util.Gerror) {
 	}
 	sort.Strings(rlist)
 	return rlist, nil
+}
+
+// Count returns a count of all cookbooks on this server.
+func Count() int64 {
+	if config.UsingDB() {
+		c, _ := util.CountSQL("cookbooks")
+		return c
+	}
+	return int64(len(GetList()))
 }

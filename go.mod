@@ -25,6 +25,7 @@ require (
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/tideland/golib v4.2.1-0.20160624201112-2938f1706f66+incompatible
 	github.com/tinylib/msgp v0.0.0-20150805042339-cd4fb1548c31
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	gopkg.in/alexcesaro/statsd.v1 v1.0.0-20160306065229-c289775e46fd // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 	gopkg.in/ini.v1 v1.55.0 // indirect

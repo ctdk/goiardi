@@ -24,13 +24,14 @@ package environment
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
+	"sort"
+
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
-	"net/http"
-	"sort"
 )
 
 // ChefEnvironment is a collection of attributes and cookbook versions for

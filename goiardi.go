@@ -62,6 +62,7 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	serfclient "github.com/hashicorp/serf/client"
+	"github.com/patrickmn/go-cache"
 	"github.com/raintank/met"
 	"github.com/raintank/met/helper"
 	"github.com/tideland/golib/logger"
@@ -70,9 +71,10 @@ import (
 type interceptHandler struct{} // Doesn't need to do anything, just sit there.
 
 type apiTimerInfo struct {
-	elapsed time.Duration
-	path    string
-	method  string
+	elapsed    time.Duration
+	path       string
+	method     string
+	statusCode int
 }
 
 var noOpUserReqs = []string{
@@ -83,7 +85,7 @@ var noOpUserReqs = []string{
 	"/debug",
 }
 
-var apiChan chan *apiTimerInfo
+var apiTimingChan chan *apiTimerInfo
 
 func main() {
 	config.ParseConfigOptions()
@@ -145,10 +147,10 @@ func main() {
 	initGeneralStatsd(metricsBackend)
 	report.InitializeMetrics(metricsBackend)
 	search.InitializeMetrics(metricsBackend)
-	apiChan = make(chan *apiTimerInfo, 10) // unbuffered shouldn't block
+	apiTimingChan = make(chan *apiTimerInfo, 10) // unbuffered shouldn't block
 	// anything, but a little buffer
 	// shouldn't hurt
-	go apiTimerMaster(apiChan, metricsBackend)
+	go apiTimerMaster(apiTimingChan, metricsBackend)
 
 	setSaveTicker()
 	setLogEventPurgeTicker()
@@ -283,20 +285,27 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func trackApiTiming(start time.Time, r *http.Request) {
+func trackApiTiming(start time.Time, w *loggingResponseWriter, r *http.Request) {
 	if !config.Config.UseStatsd {
 		return
 	}
 	elapsed := time.Since(start)
-	apiChan <- &apiTimerInfo{elapsed: elapsed, path: r.URL.Path, method: r.Method}
+	timerInfo := &apiTimerInfo{
+		elapsed:    elapsed,
+		path:       r.URL.Path,
+		method:     r.Method,
+		statusCode: w.statusCode,
+	}
+	apiTimingChan <- timerInfo
 }
 
-func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
+func apiTimerMaster(apiTimingChan chan *apiTimerInfo, metricsBackend met.Backend) {
 	if !config.Config.UseStatsd {
 		return
 	}
-	metrics := make(map[string]met.Timer)
-	for timeInfo := range apiChan {
+	timings := make(map[string]met.Timer)
+	requests := make(map[string]met.Count)
+	for timeInfo := range apiTimingChan {
 		p := path.Clean(timeInfo.path)
 		pathTmp := strings.Split(p, "/")
 		if len(pathTmp) > 1 {
@@ -304,14 +313,31 @@ func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
 		} else {
 			p = "root"
 		}
-		metricStr := fmt.Sprintf("api.timing.%s.%s", p, strings.ToLower(timeInfo.method))
-		if _, ok := metrics[metricStr]; !ok {
-			metrics[metricStr] = metricsBackend.NewTimer(metricStr, 0)
+		reqDurStr := fmt.Sprintf("api.request.duration.%s.%s", p, strings.ToLower(timeInfo.method))
+		if _, ok := timings[reqDurStr]; !ok {
+			timings[reqDurStr] = metricsBackend.NewTimer(reqDurStr, 0)
 		}
-		metrics[metricStr].Value(timeInfo.elapsed)
+		timings[reqDurStr].Value(timeInfo.elapsed)
+		logger.Debugf("in apiTimingChan %s: %d microseconds %s %s", reqDurStr, timeInfo.elapsed/time.Microsecond, timeInfo.path, timeInfo.method)
 
-		logger.Debugf("in apiChan %s: %d microseconds %s %s", metricStr, timeInfo.elapsed/time.Microsecond, timeInfo.path, timeInfo.method)
+		reqStr := fmt.Sprintf("api.request.%s.%s.%d", p, strings.ToLower(timeInfo.method), timeInfo.statusCode)
+		if _, ok := requests[reqStr]; !ok {
+			requests[reqStr] = metricsBackend.NewCount(reqStr)
+			requests[reqStr].Inc(1)
+		} else {
+			requests[reqStr].Inc(1)
+		}
 	}
+}
+
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (lrw *loggingResponseWriter) WriteHeader(code int) {
+	lrw.statusCode = code
+	lrw.ResponseWriter.WriteHeader(code)
 }
 
 func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -319,8 +345,10 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	 * worked for GETs, but since it was breaking POSTs and screwing with
 	 * GETs with query params, we just clean up the path and move on. */
 
+	lwr := &loggingResponseWriter{w, http.StatusOK}
+
 	// experimental - track time of api requests
-	defer trackApiTiming(time.Now(), r)
+	defer trackApiTiming(time.Now(), lwr, r)
 
 	/* log the URL */
 	// TODO: set this to verbosity level 4 or so
@@ -347,7 +375,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			block = true
 		}
 		if block {
-			http.Error(w, "Forbidden!", http.StatusForbidden)
+			http.Error(lwr, "Forbidden!", http.StatusForbidden)
 			return
 		}
 	}
@@ -361,7 +389,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* Make configurable, I guess, but Chef wants it to be 1000000 */
 	if !strings.HasPrefix(r.URL.Path, "/file_store") && r.ContentLength > config.Config.JSONReqMaxSize {
 		logger.Debugf("Content length was too long for %s", r.URL.Path)
-		http.Error(w, "Content-length too long!", http.StatusRequestEntityTooLarge)
+		http.Error(lwr, "Content-length too long!", http.StatusRequestEntityTooLarge)
 		// hmm, with 1.5 it gets a broken pipe now if we don't do
 		// anything with the body they're trying to send. Try copying it
 		// to /dev/null. This seems crazy, but merely closing the body
@@ -370,19 +398,19 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Body.Close()
 		return
 	} else if r.ContentLength > config.Config.ObjMaxSize {
-		http.Error(w, "Content-length waaaaaay too long!", http.StatusRequestEntityTooLarge)
+		http.Error(lwr, "Content-length waaaaaay too long!", http.StatusRequestEntityTooLarge)
 		return
 	}
 
-	w.Header().Set("X-Goiardi", "yes")
-	w.Header().Set("X-Goiardi-Version", config.Version)
-	w.Header().Set("X-Chef-Version", config.ChefVersion)
+	lwr.Header().Set("X-Goiardi", "yes")
+	lwr.Header().Set("X-Goiardi-Version", config.Version)
+	lwr.Header().Set("X-Chef-Version", config.ChefVersion)
 	apiInfo := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
-	w.Header().Set("X-Ops-API-Info", apiInfo)
+	lwr.Header().Set("X-Ops-API-Info", apiInfo)
 
 	apiver := r.Header.Get("X-Ops-Server-API-Version")
 	if matchSupportedVersion(apiver) {
-		w.Header().Set(
+		lwr.Header().Set(
 			"X-Ops-Server-API-Version",
 			fmt.Sprintf(
 				`{"min_version": "%s", "max_version": "%s", "request_version": "%s", "response_version": "%s"}`,
@@ -398,18 +426,18 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		/* If use-auth is on and disable-webui is on, and this is a
 		 * webui connection, it needs to fail. */
 		if config.Config.DisableWebUI {
-			w.Header().Set("Content-Type", "application/json")
+			lwr.Header().Set("Content-Type", "application/json")
 			logger.Warningf("Attempting to log in through webui, but webui is disabled")
-			jsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
+			jsonErrorReport(lwr, r, "invalid action", http.StatusUnauthorized)
 			return
 		}
 
 		/* Check that the user in question with the web request exists.
 		 * If not, fail. */
 		if _, uherr := actor.GetReqUser(userID); uherr != nil {
-			w.Header().Set("Content-Type", "application/json")
+			lwr.Header().Set("Content-Type", "application/json")
 			logger.Warningf("Attempting to use invalid user %s through X-Ops-Request-Source = web", userID)
-			jsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
+			jsonErrorReport(lwr, r, "invalid action", http.StatusUnauthorized)
 			return
 		}
 		userID = "chef-webui"
@@ -420,10 +448,10 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if config.Config.UseAuth && !strings.HasPrefix(r.URL.Path, "/file_store") && !strings.HasPrefix(r.URL.Path, "/debug") && !strings.HasPrefix(r.URL.Path, config.Config.HealthEndPoint) && !(strings.HasPrefix(r.URL.Path, "/principals") && r.Method == "GET") {
 		herr := authentication.CheckHeader(userID, r)
 		if herr != nil {
-			w.Header().Set("Content-Type", "application/json")
+			lwr.Header().Set("Content-Type", "application/json")
 			logger.Errorf("Authorization failure: %s\n", herr.Error())
-			w.Header().Set("Www-Authenticate", `X-Ops-Sign version="1.0" version="1.1" version="1.2" version="1.3"`)
-			jsonErrorReport(w, r, herr.Error(), herr.Status())
+			lwr.Header().Set("Www-Authenticate", `X-Ops-Sign version="1.0" version="1.1" version="1.2" version="1.3"`)
+			jsonErrorReport(lwr, r, herr.Error(), herr.Status())
 			return
 		}
 	}
@@ -432,9 +460,9 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Encoding") == "gzip" {
 		reader, err := gzip.NewReader(r.Body)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
+			lwr.Header().Set("Content-Type", "application/json")
 			logger.Errorf("Failure decompressing gzipped request body: %s\n", err.Error())
-			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			jsonErrorReport(lwr, r, err.Error(), http.StatusBadRequest)
 			return
 		}
 		r.Body = reader
@@ -455,14 +483,14 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !skip {
 		opUser, oerr := actor.GetReqUser(r.Header.Get("X-OPS-USERID"))
 		if oerr != nil {
-			w.Header().Set("Content-Type", "application/json")
-			jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+			lwr.Header().Set("Content-Type", "application/json")
+			jsonErrorReport(lwr, r, oerr.Error(), oerr.Status())
 			return
 		}
 		ctx = context.WithValue(ctx, reqctx.OpUserKey, opUser)
 	}
 
-	http.DefaultServeMux.ServeHTTP(w, r.WithContext(ctx))
+	http.DefaultServeMux.ServeHTTP(lwr, r.WithContext(ctx))
 }
 
 func cleanPath(p string) string {
@@ -886,9 +914,45 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 	if !config.Config.UseStatsd {
 		return
 	}
-	// a count of the nodes on this server. Add other gauges later, but
-	// start with this one.
-	nodeCountGauge := metricsBackend.NewGauge("node.count", node.Count())
+	// Initialise resource metrics cache
+	// Create a cache with a default expiration time of 5 minutes, and which
+	// purges expired items every 5 minutes to lower the number of db queries
+	// and to push metrics quicker
+	cacheExpiration := config.Config.StatsdResourcesCacheExpiration
+	resourcesMetricsCache := cache.New(cacheExpiration*time.Minute, cacheExpiration*time.Minute)
+	nodeCount := node.Count()
+	clientCount := client.Count()
+	cookbookCount := cookbook.Count()
+	databagCount := databag.Count()
+	environmentCount := environment.Count()
+	roleCount := role.Count()
+	userCount := user.Count()
+
+	resourcesMetricsCache.Set("nodeCount", nodeCount, cache.DefaultExpiration)
+	resourcesMetricsCache.Set("clientCount", clientCount, cache.DefaultExpiration)
+	resourcesMetricsCache.Set("cookbookCount", cookbookCount, cache.DefaultExpiration)
+	resourcesMetricsCache.Set("databagCount", databagCount, cache.DefaultExpiration)
+	resourcesMetricsCache.Set("environmentCount", environmentCount, cache.DefaultExpiration)
+	resourcesMetricsCache.Set("roleCount", roleCount, cache.DefaultExpiration)
+	resourcesMetricsCache.Set("userCount", userCount, cache.DefaultExpiration)
+
+	// Counters of all chef resources
+	nodeCountGauge := metricsBackend.NewGauge("node.count", nodeCount)
+	clientCountGauge := metricsBackend.NewGauge("client.count", clientCount)
+	cookbookCountGauge := metricsBackend.NewGauge("cookbook.count", cookbookCount)
+	dataBagCountGauge := metricsBackend.NewGauge("databag.count", databagCount)
+	environmentCountGauge := metricsBackend.NewGauge("environment.count", environmentCount)
+	roleCountGauge := metricsBackend.NewGauge("role.count", roleCount)
+	userCountGauge := metricsBackend.NewGauge("user.count", userCount)
+
+	// Set counters initial value
+	nodeCountGauge.Value(nodeCount)
+	clientCountGauge.Value(clientCount)
+	cookbookCountGauge.Value(cookbookCount)
+	dataBagCountGauge.Value(databagCount)
+	environmentCountGauge.Value(environmentCount)
+	roleCountGauge.Value(roleCount)
+	userCountGauge.Value(userCount)
 
 	// Taking some inspiration from this page I found:
 	// http://zqpythonic.qiniucdn.com/data/20131112090955/index.html
@@ -916,16 +980,56 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 	lastPause := memStats.PauseTotalNs
 	lastGC := memStats.NumGC
 
-	statsdTickInt := 10
-
-	// update the gauges every 10 seconds. Make this configurable later?
+	statsdTickInt := config.Config.StatsdTickInterval
 	go func() {
 		ticker := time.NewTicker(time.Duration(statsdTickInt) * time.Second)
 		for _ = range ticker.C {
 			runtime.ReadMemStats(memStats)
 			now := time.Now()
 
-			nodeCountGauge.Value(node.Count())
+			// Check resources metrics cache and update the value when they expire
+			if value, found := resourcesMetricsCache.Get("nodeCount"); !found {
+				resourcesMetricsCache.Set("nodeCount", node.Count(), cache.DefaultExpiration)
+			} else {
+				nodeCountGauge.Value(value.(int64))
+			}
+
+			if value, found := resourcesMetricsCache.Get("clientCount"); !found {
+				resourcesMetricsCache.Set("clientCount", client.Count(), cache.DefaultExpiration)
+			} else {
+				clientCountGauge.Value(value.(int64))
+			}
+
+			if value, found := resourcesMetricsCache.Get("cookbookCount"); !found {
+				resourcesMetricsCache.Set("cookbookCount", cookbook.Count(), cache.DefaultExpiration)
+			} else {
+				cookbookCountGauge.Value(value.(int64))
+			}
+
+			if value, found := resourcesMetricsCache.Get("databagCount"); !found {
+				resourcesMetricsCache.Set("databagCount", databag.Count(), cache.DefaultExpiration)
+			} else {
+				dataBagCountGauge.Value(value.(int64))
+			}
+
+			if value, found := resourcesMetricsCache.Get("environmentCount"); !found {
+				resourcesMetricsCache.Set("environmentCount", environment.Count(), cache.DefaultExpiration)
+			} else {
+				environmentCountGauge.Value(value.(int64))
+			}
+
+			if value, found := resourcesMetricsCache.Get("roleCount"); !found {
+				resourcesMetricsCache.Set("roleCount", role.Count(), cache.DefaultExpiration)
+			} else {
+				roleCountGauge.Value(value.(int64))
+			}
+
+			if value, found := resourcesMetricsCache.Get("userCount"); !found {
+				resourcesMetricsCache.Set("userCount", user.Count(), cache.DefaultExpiration)
+			} else {
+				userCountGauge.Value(value.(int64))
+			}
+
 			numGoroutine.Value(int64(runtime.NumGoroutine()))
 			allocated.Value(int64(memStats.Alloc))
 			mallocs.Value(int64(memStats.Mallocs))

@@ -21,10 +21,12 @@ package role
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
 	"log"
 	"strings"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/util"
 )
 
 func checkForRoleSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -226,4 +228,13 @@ func allRolesSQL() []*Role {
 		log.Fatal(err)
 	}
 	return roles
+}
+
+// Count returns a count of all roles on this server.
+func Count() int64 {
+	if config.UsingDB() {
+		c, _ := util.CountSQL("roles")
+		return c
+	}
+	return int64(len(GetList()))
 }

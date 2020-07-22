@@ -31,6 +31,8 @@ import (
 	"database/sql"
 	"encoding/gob"
 	"fmt"
+	"net/http"
+
 	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
@@ -38,7 +40,6 @@ import (
 	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
-	"net/http"
 )
 
 // A Client and a user are very similar, with some small differences - users

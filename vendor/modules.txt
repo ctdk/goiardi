@@ -137,6 +137,9 @@ github.com/miekg/dns
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/mapstructure v1.1.2
 github.com/mitchellh/mapstructure
+# github.com/patrickmn/go-cache v2.1.0+incompatible
+## explicit
+github.com/patrickmn/go-cache
 # github.com/pborman/uuid v0.0.0-20160216163710-c55201b03606
 ## explicit
 github.com/pborman/uuid
