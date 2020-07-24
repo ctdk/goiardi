@@ -151,16 +151,19 @@ func main() {
 		logger.Fatalf(merr.Error())
 		os.Exit(1)
 	}
+
+	initGeneralStatsd(metricsBackend)
+	report.InitializeMetrics(metricsBackend)
+	search.InitializeMetrics(metricsBackend)
+
 	if config.Config.UseS3Upload {
 		err := util.InitS3(config.Config)
 		if err != nil {
 			logger.Criticalf("cannot init s3")
 		}
+		util.InitializeS3Metrics(metricsBackend)
 	}
-	initGeneralStatsd(metricsBackend)
-	report.InitializeMetrics(metricsBackend)
-	search.InitializeMetrics(metricsBackend)
-	util.InitializeS3Metrics(metricsBackend)
+
 	apiTimingChan = make(chan *apiTimerInfo, 10) // unbuffered shouldn't block
 	// anything, but a little buffer
 	// shouldn't hurt
