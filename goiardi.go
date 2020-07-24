@@ -147,6 +147,7 @@ func main() {
 	initGeneralStatsd(metricsBackend)
 	report.InitializeMetrics(metricsBackend)
 	search.InitializeMetrics(metricsBackend)
+	util.InitializeS3Metrics(metricsBackend)
 	apiTimingChan = make(chan *apiTimerInfo, 10) // unbuffered shouldn't block
 	// anything, but a little buffer
 	// shouldn't hurt
