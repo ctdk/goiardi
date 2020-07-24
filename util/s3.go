@@ -80,12 +80,12 @@ func S3HealthCheck() (outcome bool, err error) {
 	if aerr, ok := err.(awserr.Error); ok {
 		s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "headbucket", strings.ToLower(aerr.Code())))
 		s3error.Inc(1)
-		logger.Debugf("healthcheck aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+		logger.Errorf("healthcheck aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 	} else {
 		//generic unknown error
 		s3error := metricsBackend.NewCount("s3.error.headbucket.unknown")
 		s3error.Inc(1)
-		logger.Debugf("healthcheck error: %s", err)
+		logger.Errorf("healthcheck error: %s", err)
 	}
 	return false, err
 }
@@ -102,12 +102,12 @@ func S3GetURL(orgname string, checksum string) (string, error) {
 	if aerr, ok := err.(awserr.Error); ok {
 		s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "presign", strings.ToLower(aerr.Code())))
 		s3error.Inc(1)
-		logger.Debugf("presign aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+		logger.Errorf("presign aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 	} else {
 		//generic unknown error
 		s3error := metricsBackend.NewCount("s3.error.presign.unknown")
 		s3error.Inc(1)
-		logger.Debugf("presign error: %s", err)
+		logger.Errorf("presign error: %s", err)
 	}
 	return urlStr, err
 }
@@ -127,12 +127,12 @@ func S3FileDownload(orgname, checksum string) (io.ReadCloser, error) {
 	if aerr, ok := err.(awserr.Error); ok {
 		s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "getobject", strings.ToLower(aerr.Code())))
 		s3error.Inc(1)
-		logger.Debugf("getobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+		logger.Errorf("getobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 	} else {
 		//generic unknown error
 		s3error := metricsBackend.NewCount("s3.error.getobject.unknown")
 		s3error.Inc(1)
-		logger.Debugf("getobject error: %s", err)
+		logger.Errorf("getobject error: %s", err)
 	}
 	return nil, err
 }
@@ -172,12 +172,12 @@ func S3PutURL(orgname string, checksum string) (string, error) {
 	if aerr, ok := err.(awserr.Error); ok {
 		s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "presign", strings.ToLower(aerr.Code())))
 		s3error.Inc(1)
-		logger.Debugf("presign aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+		logger.Errorf("presign aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 	} else {
 		//generic unknown error
 		s3error := metricsBackend.NewCount("s3.error.presign.unknown")
 		s3error.Inc(1)
-		logger.Debugf("presign error: %s", err)
+		logger.Errorf("presign error: %s", err)
 	}
 	logger.Debugf("presign: %s %s %s", urlStr, contentMD5, checksum)
 	return urlStr, err
@@ -195,12 +195,12 @@ func CheckForObject(orgname string, checksum string) (bool, error) {
 		if aerr, ok := err.(awserr.Error); ok {
 			s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "headobject", strings.ToLower(aerr.Code())))
 			s3error.Inc(1)
-			logger.Debugf("headobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+			logger.Errorf("headobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 		} else {
 			//generic unknown error
 			s3error := metricsBackend.NewCount("s3.error.headobject.unknown")
 			s3error.Inc(1)
-			logger.Debugf("headobject error: %s", err)
+			logger.Errorf("headobject error: %s", err)
 		}
 		return false, err
 	}
@@ -235,12 +235,12 @@ func S3DeleteHashes(fileHashes []string) {
 		if aerr, ok := err.(awserr.Error); ok {
 			s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "deleteobject", strings.ToLower(aerr.Code())))
 			s3error.Inc(1)
-			logger.Debugf("deleteobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+			logger.Errorf("deleteobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 		} else {
 			//generic unknown error
 			s3error := metricsBackend.NewCount("s3.error.deleteobject.unknown")
 			s3error.Inc(1)
-			logger.Debugf("deleteobject error: %s", err)
+			logger.Errorf("deleteobject error: %s", err)
 		}
 		logger.Errorf(err.Error())
 	} else {
@@ -267,12 +267,12 @@ func S3FileUpload(orgName string, chksum string, body io.ReadCloser) error {
 		if aerr, ok := err.(awserr.Error); ok {
 			s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "upload", strings.ToLower(aerr.Code())))
 			s3error.Inc(1)
-			logger.Debugf("upload aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+			logger.Errorf("upload aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 		} else {
 			//generic unknown error
 			s3error := metricsBackend.NewCount("s3.error.upload.unknown")
 			s3error.Inc(1)
-			logger.Debugf("upload error: %s", err)
+			logger.Errorf("upload error: %s", err)
 		}
 		return err
 	}
@@ -292,12 +292,12 @@ func S3FileExists(orgname, checksum string) bool {
 		if aerr, ok := err.(awserr.Error); ok {
 			s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "headobject", strings.ToLower(aerr.Code())))
 			s3error.Inc(1)
-			logger.Debugf("headobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+			logger.Errorf("headobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 		} else {
 			//generic unknown error
 			s3error := metricsBackend.NewCount("s3.error.headobject.unknown")
 			s3error.Inc(1)
-			logger.Debugf("headobject error: %s", err)
+			logger.Errorf("headobject error: %s", err)
 		}
 	}
 	return err == nil
