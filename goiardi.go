@@ -77,6 +77,19 @@ type apiTimerInfo struct {
 	statusCode int
 }
 
+// loggingResponseWriter wraps http.ResponseWriter and adds missing status code
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+// WriteHeader function for loggingResponseWriter sets the status code
+// and satisfies the interface
+func (lrw *loggingResponseWriter) WriteHeader(code int) {
+	lrw.statusCode = code
+	lrw.ResponseWriter.WriteHeader(code)
+}
+
 var noOpUserReqs = []string{
 	"/authenticate_user",
 	"/file_store",
@@ -306,6 +319,11 @@ func apiTimerMaster(apiTimingChan chan *apiTimerInfo, metricsBackend met.Backend
 	}
 	timings := make(map[string]met.Timer)
 	requests := make(map[string]met.Count)
+	/*
+		Iterate over all apiTimingChan channel elements and create:
+			- API request duration metrics: api.request.duration.%s.%s
+			- API request count metrics: api.request.%s.%s.%d
+	*/
 	for timeInfo := range apiTimingChan {
 		p := path.Clean(timeInfo.path)
 		pathTmp := strings.Split(p, "/")
@@ -331,21 +349,16 @@ func apiTimerMaster(apiTimingChan chan *apiTimerInfo, metricsBackend met.Backend
 	}
 }
 
-type loggingResponseWriter struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func (lrw *loggingResponseWriter) WriteHeader(code int) {
-	lrw.statusCode = code
-	lrw.ResponseWriter.WriteHeader(code)
-}
-
 func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* knife sometimes sends URL paths that start with //. Redirecting
 	 * worked for GETs, but since it was breaking POSTs and screwing with
 	 * GETs with query params, we just clean up the path and move on. */
 
+	/*
+		loggingResponseWriter is required as by the end of ServeHTTP execution
+		w http.ResponseWriter does not expose the HTTP statuscode which is needed
+		to export counter API metrics by status code.
+	*/
 	lwr := &loggingResponseWriter{w, http.StatusOK}
 
 	// experimental - track time of api requests
@@ -937,7 +950,7 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 	resourcesMetricsCache.Set("roleCount", roleCount, cache.DefaultExpiration)
 	resourcesMetricsCache.Set("userCount", userCount, cache.DefaultExpiration)
 
-	// Counters of all chef resources
+	// Gauges of all chef resources
 	nodeCountGauge := metricsBackend.NewGauge("node.count", nodeCount)
 	clientCountGauge := metricsBackend.NewGauge("client.count", clientCount)
 	cookbookCountGauge := metricsBackend.NewGauge("cookbook.count", cookbookCount)
@@ -946,7 +959,7 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 	roleCountGauge := metricsBackend.NewGauge("role.count", roleCount)
 	userCountGauge := metricsBackend.NewGauge("user.count", userCount)
 
-	// Set counters initial value
+	// Set gauges initial value
 	nodeCountGauge.Value(nodeCount)
 	clientCountGauge.Value(clientCount)
 	cookbookCountGauge.Value(cookbookCount)
