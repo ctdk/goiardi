@@ -349,6 +349,14 @@ func apiTimerMaster(apiTimingChan chan *apiTimerInfo, metricsBackend met.Backend
 		} else {
 			requests[reqStr].Inc(1)
 		}
+
+		totalStr := "api.request.total"
+		if _, ok := requests[totalStr]; !ok {
+			requests[totalStr] = metricsBackend.NewCount(totalStr)
+			requests[totalStr].Inc(1)
+		} else {
+			requests[totalStr].Inc(1)
+		}
 	}
 }
 

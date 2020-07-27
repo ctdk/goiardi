@@ -31,6 +31,7 @@ The available metrics via statsd currently are:
 * ``runtime.gc.pause`` - timing of how long each gc pause lasts
 * ``api.request.duration.%s.%s``, where "``%s.%s``" is the first part of the api endpoint path and the HTTP method (so, for example, a PUT to cookbooks would be ``api.request.duration.cookbooks.put``) - timing of API endpoint requests
 * ``api.request.%s.%s.%d``, where "``%s.%s.%d``" is the first part of the api endpoint path and the HTTP method (so, for example, a PUT to cookbooks would be ``api.request.cookbooks.put.201``) - number of API endpoint requests by status code
+* ``api.request.total``, total number of API HTTP requests
 * ``client.run.started`` - Count of started chef-client runs
 * ``client.run.success`` - Count of successful chef-client runs
 * ``client.run.failure`` - Count of failed chef-client runs
