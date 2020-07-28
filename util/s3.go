@@ -47,6 +47,8 @@ type s3client struct {
 var s3cli *s3client
 var metricsBackend met.Backend
 
+var s3MetricName string = "s3.http.request.%s.%s"
+
 // Initialise metrics backend in util module
 func InitializeS3Metrics(mb met.Backend) {
 	metricsBackend = mb
@@ -69,28 +71,32 @@ func InitS3(conf *config.Conf) error {
 
 // S3HealthCheck
 func S3HealthCheck() (outcome bool, err error) {
+	action := "headbucket"
 	_, err = s3cli.s3.HeadBucket(&s3.HeadBucketInput{
 		Bucket: aws.String(s3cli.bucket),
 	})
 	if err == nil {
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "ok"))
+		s3metric.Inc(1)
 		return true, nil
 	}
 
 	//is this an aws error?
 	if aerr, ok := err.(awserr.Error); ok {
-		s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "headbucket", strings.ToLower(aerr.Code())))
-		s3error.Inc(1)
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, strings.ToLower(aerr.Code())))
+		s3metric.Inc(1)
 		logger.Errorf("healthcheck aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 	} else {
 		//generic unknown error
-		s3error := metricsBackend.NewCount("s3.error.headbucket.unknown")
-		s3error.Inc(1)
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "unknown"))
+		s3metric.Inc(1)
 		logger.Errorf("healthcheck error: %s", err)
 	}
 	return false, err
 }
 
 func S3GetURL(orgname string, checksum string) (string, error) {
+	action := "presign"
 	key := makeBukkitKey(orgname, checksum)
 	req, _ := s3cli.s3.GetObjectRequest(&s3.GetObjectInput{
 		Bucket: aws.String(s3cli.bucket),
@@ -98,40 +104,51 @@ func S3GetURL(orgname string, checksum string) (string, error) {
 	})
 	req.HTTPRequest.URL.Host = s3cli.makeHostPort(req.HTTPRequest.URL.Host)
 	urlStr, err := req.Presign(s3cli.filePeriod)
-	//is this an aws error?
-	if aerr, ok := err.(awserr.Error); ok {
-		s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "presign", strings.ToLower(aerr.Code())))
-		s3error.Inc(1)
-		logger.Errorf("presign aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+
+	if err == nil {
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "ok"))
+		s3metric.Inc(1)
 	} else {
-		//generic unknown error
-		s3error := metricsBackend.NewCount("s3.error.presign.unknown")
-		s3error.Inc(1)
-		logger.Errorf("presign error: %s", err)
+		//is this an aws error?
+		if aerr, ok := err.(awserr.Error); ok {
+			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, strings.ToLower(aerr.Code())))
+			s3metric.Inc(1)
+			logger.Errorf("presign aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+		} else {
+			//generic unknown error
+			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "unknown"))
+			s3metric.Inc(1)
+			logger.Errorf("presign error: %s", err)
+		}
 	}
+
 	return urlStr, err
 }
 
 // S3FileDownload downloads file from s3 and returns a readcloser object.
 func S3FileDownload(orgname, checksum string) (io.ReadCloser, error) {
+	action := "getobject"
 	key := makeBukkitKey(orgname, checksum)
 	res, err := s3cli.s3.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(s3cli.bucket),
 		Key:    aws.String(key),
 	})
 	if err == nil {
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "ok"))
+		s3metric.Inc(1)
 		logger.Debugf("downloading %s file from s3", checksum)
+
 		return res.Body, nil
 	}
 	//is this an aws error?
 	if aerr, ok := err.(awserr.Error); ok {
-		s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "getobject", strings.ToLower(aerr.Code())))
-		s3error.Inc(1)
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, strings.ToLower(aerr.Code())))
+		s3metric.Inc(1)
 		logger.Errorf("getobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 	} else {
 		//generic unknown error
-		s3error := metricsBackend.NewCount("s3.error.getobject.unknown")
-		s3error.Inc(1)
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "unknown"))
+		s3metric.Inc(1)
 		logger.Errorf("getobject error: %s", err)
 	}
 	return nil, err
@@ -152,7 +169,9 @@ func GenerateBase64MD5(checksum string) (string, error) {
 	}
 	return base64.StdEncoding.EncodeToString(b), nil
 }
+
 func S3PutURL(orgname string, checksum string) (string, error) {
+	action := "presign"
 	key := makeBukkitKey(orgname, checksum)
 	req, _ := s3cli.s3.PutObjectRequest(&s3.PutObjectInput{
 		Bucket: aws.String(s3cli.bucket),
@@ -168,38 +187,47 @@ func S3PutURL(orgname string, checksum string) (string, error) {
 	req.HTTPRequest.URL.Host = s3cli.makeHostPort(req.HTTPRequest.URL.Host)
 
 	urlStr, err := req.Presign(s3cli.filePeriod)
-	//is this an aws error?
-	if aerr, ok := err.(awserr.Error); ok {
-		s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "presign", strings.ToLower(aerr.Code())))
-		s3error.Inc(1)
-		logger.Errorf("presign aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+	if err == nil {
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "ok"))
+		s3metric.Inc(1)
 	} else {
-		//generic unknown error
-		s3error := metricsBackend.NewCount("s3.error.presign.unknown")
-		s3error.Inc(1)
-		logger.Errorf("presign error: %s", err)
+		//is this an aws error?
+		if aerr, ok := err.(awserr.Error); ok {
+			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, strings.ToLower(aerr.Code())))
+			s3metric.Inc(1)
+			logger.Errorf("presign aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+		} else {
+			//generic unknown error
+			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "unknown"))
+			s3metric.Inc(1)
+			logger.Errorf("presign error: %s", err)
+		}
 	}
 	logger.Debugf("presign: %s %s %s", urlStr, contentMD5, checksum)
 	return urlStr, err
 }
 
 func CheckForObject(orgname string, checksum string) (bool, error) {
+	action := "headobject"
 	key := makeBukkitKey(orgname, checksum)
 	output, err := s3cli.s3.HeadObject(&s3.HeadObjectInput{
 		Bucket: aws.String(s3cli.bucket),
 		Key:    aws.String(key),
 	})
-	if err != nil {
+	if err == nil {
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "ok"))
+		s3metric.Inc(1)
+	} else {
 		// hmm?
 		//is this an aws error?
 		if aerr, ok := err.(awserr.Error); ok {
-			s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "headobject", strings.ToLower(aerr.Code())))
-			s3error.Inc(1)
+			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, strings.ToLower(aerr.Code())))
+			s3metric.Inc(1)
 			logger.Errorf("headobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 		} else {
 			//generic unknown error
-			s3error := metricsBackend.NewCount("s3.error.headobject.unknown")
-			s3error.Inc(1)
+			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "unknown"))
+			s3metric.Inc(1)
 			logger.Errorf("headobject error: %s", err)
 		}
 		return false, err
@@ -211,6 +239,7 @@ func CheckForObject(orgname string, checksum string) (bool, error) {
 }
 
 func S3DeleteHashes(fileHashes []string) {
+	action := "deleteobject"
 	// only do this if there are actually file hashes to delete.
 	if len(fileHashes) == 0 {
 		return
@@ -230,26 +259,29 @@ func S3DeleteHashes(fileHashes []string) {
 	logger.Debugf("delete hash s3 params: %v", params)
 
 	r, err := s3cli.s3.DeleteObjects(params)
-	if err != nil {
+	if err == nil {
+		logger.Debugf("%v", r)
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "ok"))
+		s3metric.Inc(1)
+	} else {
 		//is this an aws error?
 		if aerr, ok := err.(awserr.Error); ok {
-			s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "deleteobject", strings.ToLower(aerr.Code())))
-			s3error.Inc(1)
+			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, strings.ToLower(aerr.Code())))
+			s3metric.Inc(1)
 			logger.Errorf("deleteobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 		} else {
 			//generic unknown error
-			s3error := metricsBackend.NewCount("s3.error.deleteobject.unknown")
-			s3error.Inc(1)
+			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "unknown"))
+			s3metric.Inc(1)
 			logger.Errorf("deleteobject error: %s", err)
 		}
 		logger.Errorf(err.Error())
-	} else {
-		logger.Debugf("%v", r)
 	}
 }
 
 // S3FileUpload uploads file to s3 fileSystem.
 func S3FileUpload(orgName string, chksum string, body io.ReadCloser) error {
+	action := "upload"
 	md5, err := GenerateBase64MD5(chksum)
 	if err != nil {
 		return err
@@ -262,16 +294,19 @@ func S3FileUpload(orgName string, chksum string, body io.ReadCloser) error {
 		ContentMD5: aws.String(md5),
 	}
 	result, err := uploader.Upload(upParams)
-	if err != nil {
+	if err == nil {
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "ok"))
+		s3metric.Inc(1)
+	} else {
 		//is this an aws error?
 		if aerr, ok := err.(awserr.Error); ok {
-			s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "upload", strings.ToLower(aerr.Code())))
-			s3error.Inc(1)
+			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, strings.ToLower(aerr.Code())))
+			s3metric.Inc(1)
 			logger.Errorf("upload aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 		} else {
 			//generic unknown error
-			s3error := metricsBackend.NewCount("s3.error.upload.unknown")
-			s3error.Inc(1)
+			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "unknown"))
+			s3metric.Inc(1)
 			logger.Errorf("upload error: %s", err)
 		}
 		return err
@@ -282,21 +317,25 @@ func S3FileUpload(orgName string, chksum string, body io.ReadCloser) error {
 
 // S3FileExists checks if such file exists on s3, returns true if it is.
 func S3FileExists(orgname, checksum string) bool {
+	action := "headobject"
 	params := &s3.HeadObjectInput{
 		Bucket: aws.String(s3cli.bucket),
 		Key:    aws.String(makeBukkitKey(orgname, checksum)),
 	}
 	_, err := s3cli.s3.HeadObject(params)
-	if err != nil {
+	if err == nil {
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "ok"))
+		s3metric.Inc(1)
+	} else {
 		//is this an aws error?
 		if aerr, ok := err.(awserr.Error); ok {
-			s3error := metricsBackend.NewCount(fmt.Sprintf("s3.error.%s.%s", "headobject", strings.ToLower(aerr.Code())))
-			s3error.Inc(1)
+			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, strings.ToLower(aerr.Code())))
+			s3metric.Inc(1)
 			logger.Errorf("headobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
 		} else {
 			//generic unknown error
-			s3error := metricsBackend.NewCount("s3.error.headobject.unknown")
-			s3error.Inc(1)
+			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "unknown"))
+			s3metric.Inc(1)
 			logger.Errorf("headobject error: %s", err)
 		}
 	}

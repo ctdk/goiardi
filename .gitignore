@@ -7,3 +7,4 @@ docs/_build
 goiardi-*
 packaging/**/share/goiardi/*
 /.idea
+index.bin

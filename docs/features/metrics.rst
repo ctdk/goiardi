@@ -40,10 +40,10 @@ The available metrics via statsd currently are:
 * ``client.run.updated_resources`` - Total updated resources in a run
 * ``search.in_mem`` - timing of in-memory searches
 * ``search.pg`` - timing of Postgres-based searches
-* ``s3.error.headbucket.%s``, where "``%s``" is the type of AWS sdk error - Number of errors by type for S3 headbucket operation
-* ``s3.error.presign.%s``, where "``%s``" is the type of AWS sdk error - Number of errors by type for S3 presign operation
-* ``s3.error.getobject.%s``, where "``%s``" is the type of AWS sdk error - Number of errors by type for S3 getobject operation
-* ``s3.error.headobject.%s``, where "``%s``" is the type of AWS sdk error - Number of errors by type for S3 headobject operation
-* ``s3.error.deleteobject.%s``, where "``%s``" is the type of AWS sdk error - Number of errors by type for S3 deleteobject operation
-* ``s3.error.upload.%s``, where "``%s``" is the type of AWS sdk error - Number of errors by type for S3 upload operation
+* ``s3.http.request.headbucket.%s``, where "``%s``" is the type of AWS sdk response code - Number of requests by response code for S3 headbucket operation
+* ``s3.http.request.presign.%s``, where "``%s``" is the type of AWS sdk response code - Number of requests by response code for S3 presign operation
+* ``s3.http.request.getobject.%s``, where "``%s``" is the type of AWS sdk response code - Number of requests by response code for S3 getobject operation
+* ``s3.http.request.headobject.%s``, where "``%s``" is the type of AWS sdk response code - Number of requests by response code for S3 headobject operation
+* ``s3.http.request.deleteobject.%s``, where "``%s``" is the type of AWS sdk response code - Number of requests by response code for S3 deleteobject operation
+* ``s3.http.request.upload.%s``, where "``%s``" is the type of AWS sdk response code - Number of requests by response code for S3 upload operation
 
