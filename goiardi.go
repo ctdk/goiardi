@@ -937,8 +937,9 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 			pausePerTick.Value(int64(p))
 
 			countGC := int64(memStats.NumGC - lastGC)
-			diffTime := int64(now.Sub(lastSampleTime).Seconds())
-			gcPerSec.Value(countGC / diffTime)
+			if diffTime := int64(now.Sub(lastSampleTime).Seconds()); diffTime != 0 {
+				gcPerSec.Value(countGC / diffTime)
+			}
 			gcPerTick.Value(countGC)
 
 			if countGC > 0 {
