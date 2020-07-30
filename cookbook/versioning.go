@@ -18,11 +18,14 @@ package cookbook
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/tideland/golib/logger"
+
 	"github.com/ctdk/goiardi/depgraph"
 	"github.com/ctdk/goiardi/util"
 	gversion "github.com/hashicorp/go-version"
-	"strconv"
-	"strings"
 )
 
 // Types, functions, and methods for dealing with cookbook versioning that
@@ -61,7 +64,10 @@ func (v versionConstraint) Satisfied(head, tail *depgraph.Noun) (bool, error) {
 	if tMeta.version == "" {
 		verr.ViolationType = CookbookNoVersion
 		// but what constraint isn't met?
-		cb, _ := Get(tail.Name)
+		cb, _, err := Get(tail.Name)
+		if err != nil {
+			logger.Errorf("error while getting cookbook %s", tail.Name)
+		}
 		if cb != nil {
 			badver := cb.badConstraints(v)
 			verr.Constraint = strings.Join(badver, ",")
