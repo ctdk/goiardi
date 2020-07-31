@@ -21,11 +21,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
-	"net/http"
+	"github.com/tideland/golib/logger"
 )
 
 func cookbookHandler(w http.ResponseWriter, r *http.Request) {
@@ -122,9 +124,14 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		} else {
-			cb, err := cookbook.Get(cookbookName)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			cb, found, err := cookbook.Get(cookbookName)
+			switch {
+			case !found:
+				jsonErrorReport(w, r, fmt.Sprintf("Cannot find a cookbook named %s", cookbookName), http.StatusNotFound)
+				return
+			case err != nil:
+				logger.Errorf(err.Error())
+				jsonErrorReport(w, r, fmt.Sprintf("Cannot get a cookbook named %s", cookbookName), err.Status())
 				return
 			}
 			/* Strange thing here. The API docs say if num_versions
@@ -166,8 +173,13 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				headResponse(w, r, http.StatusForbidden)
 				return
 			}
-			cb, err := cookbook.Get(cookbookName)
-			if err != nil {
+			cb, found, err := cookbook.Get(cookbookName)
+			switch {
+			case !found:
+				headResponse(w, r, http.StatusNotFound)
+				return
+			case err != nil:
+				logger.Errorf(err.Error())
 				headResponse(w, r, err.Status())
 				return
 			}
@@ -178,16 +190,19 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
-			cb, err := cookbook.Get(cookbookName)
-			if err != nil {
-				if err.Status() == http.StatusNotFound {
-					msg := fmt.Sprintf("Cannot find a cookbook named %s with version %s", cookbookName, cookbookVersion)
-					jsonErrorReport(w, r, msg, err.Status())
-				} else {
-					jsonErrorReport(w, r, err.Error(), err.Status())
-				}
+			//get the cookbook
+			cb, found, err := cookbook.Get(cookbookName)
+			switch {
+			case !found:
+				jsonErrorReport(w, r, fmt.Sprintf("Cannot find a cookbook named %s", cookbookName), http.StatusNotFound)
+				return
+			case err != nil:
+				logger.Errorf(err.Error())
+				jsonErrorReport(w, r, fmt.Sprintf("Cannot get a cookbook named %s", cookbookName), err.Status())
 				return
 			}
+
+			//get the specific version of it
 			cbv, err := cb.GetVersion(cookbookVersion)
 			if err != nil {
 				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
@@ -257,8 +272,16 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			 * specific version of the cookbook exists. If
 			 * so, update it, otherwise, create it and set
 			 * the latest version as needed. */
-			cb, err := cookbook.Get(cookbookName)
+			cb, found, err := cookbook.Get(cookbookName)
 			if err != nil {
+				//there was some kind of unexpected error. report it and quit early
+				logger.Errorf(err.Error())
+				jsonErrorReport(w, r, fmt.Sprintf("Cannot get a cookbook named %s", cookbookName), err.Status())
+				return
+			}
+
+			// if we dont find the cookbook, create it
+			if !found {
 				cb, err = cookbook.New(cookbookName)
 				if err != nil {
 					jsonErrorReport(w, r, err.Error(), err.Status())

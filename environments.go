@@ -397,9 +397,14 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			envResponse["run_list"] = runList
 		} else if op == "cookbooks" {
-			cb, err := cookbook.Get(opName)
-			if err != nil {
-				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+			cb, found, err := cookbook.Get(opName)
+			switch {
+			case !found:
+				jsonErrorReport(w, r, fmt.Sprintf("Cannot find a cookbook named %s", opName), http.StatusNotFound)
+				return
+			case err != nil:
+				logger.Errorf(err.Error())
+				jsonErrorReport(w, r, fmt.Sprintf("Cannot get a cookbook named %s", opName), err.Status())
 				return
 			}
 			/* Here and, I think, here only, if num_versions isn't

@@ -147,58 +147,64 @@ func AllCookbooks() (cookbooks []*Cookbook) {
 			// populate the versions hash
 			c.sortedVersions()
 		}
-	} else {
-		cookbookList := GetList()
-		for _, c := range cookbookList {
-			cb, err := Get(c)
-			if err != nil {
-				logger.Debugf("Curious. Cookbook %s was in the cookbook list, but wasn't found when fetched. Continuing.", c)
-				continue
-			}
-			cookbooks = append(cookbooks, cb)
+		return cookbooks
+	}
+	cookbookList := GetList()
+	for _, c := range cookbookList {
+		cb, found, err := Get(c)
+		switch {
+		case !found:
+			logger.Debugf("Curious. Cookbook %s was in the cookbook list, but wasn't found when fetched. Continuing.", c)
+			continue
+		case err != nil:
+			// todo: this needs to be handled in a much better way. AllCookbooks() should return an err which should be checked above
+			// leaving this for another day
+			logger.Errorf(err.Error())
+			continue
 		}
+		cookbooks = append(cookbooks, cb)
 	}
 	return cookbooks
 }
 
 // Get a cookbook.
-func Get(name string) (*Cookbook, util.Gerror) {
-	var cookbook *Cookbook
-	var found bool
+func Get(name string) (cookbook *Cookbook, found bool, gerror util.Gerror) {
+	//if enabled, fetch cookbooks from database
 	if config.UsingDB() {
-		var err error
-		cookbook, err = getCookbookSQL(name)
+		cookbook, err := getCookbookSQL(name)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				found = false
-			} else {
-				gerr := util.CastErr(err)
-				gerr.SetStatus(http.StatusInternalServerError)
-				return nil, gerr
+				return nil, false, nil
 			}
-		} else {
-			found = true
+			gerr := util.CastErr(err)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return nil, false, gerr
 		}
-	} else {
-		ds := datastore.New()
-		var c interface{}
-		c, found = ds.Get("cookbook", name)
-		if c != nil {
-			cookbook = c.(*Cookbook)
-		}
-		/* hrm. */
-		if cookbook != nil && config.Config.UseUnsafeMemStore {
-			for _, v := range cookbook.Versions {
-				datastore.ChkNilArray(v)
-			}
-		}
+		return cookbook, true, nil
 	}
+
+	//get the cookbook from internal datastore
+	ds := datastore.New()
+	var c interface{}
+	c, found = ds.Get("cookbook", name)
 	if !found {
-		err := util.Errorf("Cannot find a cookbook named %s", name)
-		err.SetStatus(http.StatusNotFound)
-		return nil, err
+		return nil, false, nil
 	}
-	return cookbook, nil
+	// this should never happen, but still lets put a check in place
+	if c == nil {
+		err := util.Errorf("a cookbook has been reported as found but it is null", name)
+		err.SetStatus(http.StatusNotFound)
+		return nil, false, err
+	}
+
+	cookbook = c.(*Cookbook)
+	/* hrm. */
+	if config.Config.UseUnsafeMemStore {
+		for _, v := range cookbook.Versions {
+			datastore.ChkNilArray(v)
+		}
+	}
+	return cookbook, true, nil
 }
 
 // DoesExist checks if the cookbook in question exists or not
@@ -418,10 +424,14 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 		if _, found := cbShelf[cbName]; found || nodes[cbName].Meta.(*depMeta).notFound {
 			continue
 		}
-		cb, err := Get(cbName)
-		if err != nil {
+		cb, found, err := Get(cbName)
+		switch {
+		case !found:
 			nodes[cbName].Meta.(*depMeta).notFound = true
 			continue
+		case err != nil:
+			//todo: not ideal return since the return code would be precondition failed, but still better than nothing for now
+			return nil, err
 		}
 		cbShelf[cbName] = cb
 		cbv := cb.latestMultiConstraint(nodes[cbName].Meta.(*depMeta).constraint)
@@ -531,8 +541,16 @@ func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]
 		}
 
 		if depCb, found = cbShelf[r]; !found {
-			depCb, err = Get(r)
-			if err != nil {
+			depCb, found, err = Get(r)
+			switch {
+			case !found:
+				nodes[r].Meta.(*depMeta).notFound = true
+				appendConstraint(&nodes[r].Meta.(*depMeta).constraint, c)
+				continue
+			case err != nil:
+				//todo: we should really return an error from here, for now I am going to act as if cookbook was not
+				//found and report an error additionaly
+				logger.Errorf("Cannot get a cookbook %s", err)
 				nodes[r].Meta.(*depMeta).notFound = true
 				appendConstraint(&nodes[r].Meta.(*depMeta).constraint, c)
 				continue
@@ -987,10 +1005,17 @@ ValidElem:
 
 	/* Clean cookbook hashes */
 	if len(fhashes) > 0 {
-		// Get our parent. Bravely assuming that if it exists we exist.
-		cbook, _ := Get(cbv.CookbookName)
-		cbook.Versions[cbv.Version] = cbv
-		cbook.deleteHashes(fhashes)
+		cookbook, found, err := Get(cbv.CookbookName)
+		switch {
+		case !found:
+			gerr := util.Errorf("cannot get a cookbook with name %s", cbv.CookbookName)
+			gerr.SetStatus(http.StatusInternalServerError)
+			return gerr
+		case err != nil:
+			return err
+		}
+		cookbook.Versions[cbv.Version] = cbv
+		cookbook.deleteHashes(fhashes)
 	}
 
 	return nil
