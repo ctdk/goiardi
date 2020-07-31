@@ -31,13 +31,14 @@ import (
 	"database/sql"
 	"encoding/gob"
 	"fmt"
+	"net/http"
+
 	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/util"
 	"github.com/tideland/golib/logger"
-	"net/http"
 )
 
 // User is, uh, a user. It's very similar to a Client, but subtly different, as
@@ -307,7 +308,8 @@ func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
 
 	/* Validations. */
 	/* Invalid top level elements */
-	validElements := []string{"username", "name", "org_name", "public_key", "private_key", "admin", "password", "email", "salt"}
+	validElements := []string{"username", "name", "org_name", "public_key", "private_key", "admin", "password",
+		"email", "salt", "chef_type", "display_name", "json_class", "openid"}
 ValidElem:
 	for k := range jsonUser {
 		for _, i := range validElements {
@@ -323,14 +325,16 @@ ValidElem:
 	// Check the password first. If it's bad, bail before touching anything
 	// else.
 	if passwd, ok := jsonUser["password"]; ok {
-		passwd, verr = util.ValidateAsString(passwd)
-		if verr != nil {
-			return verr
-		}
-		if passwd != "" {
-			verr = u.SetPasswd(passwd.(string))
+		if passwd != nil {
+			passwd, verr = util.ValidateAsString(passwd)
 			if verr != nil {
 				return verr
+			}
+			if passwd != "" {
+				verr = u.SetPasswd(passwd.(string))
+				if verr != nil {
+					return verr
+				}
 			}
 		}
 	}
