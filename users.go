@@ -313,8 +313,15 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 						jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 						return
 					}
-					// make sure the json
-					// client gets the new
+					// and the private_key needs to be set
+					// in ["chef_key"]["private_key"] it
+					// seems. This might only be if the
+					// requested api is >= 1?
+					ckey := make(map[string]interface{})
+					ckey["private_key"] = jsonUser["private_key"]
+					jsonUser["chef_key"] = ckey
+					
+					// make sure the json user gets the new
 					// public key
 					jsonUser["public_key"] = chefUser.PublicKey()
 					privChange = true
@@ -490,6 +497,9 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 				return
 			}
+			ckey := make(map[string]interface{})
+			ckey["private_key"] = userResponse["private_key"]
+			userResponse["chef_key"] = ckey
 		} else {
 			switch publicKey := publicKey.(type) {
 			case string:
@@ -505,6 +515,9 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 					return
 				}
+				ckey := make(map[string]interface{})
+				ckey["private_key"] = userResponse["private_key"]
+				userResponse["chef_key"] = ckey
 			default:
 				jsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
 				return
