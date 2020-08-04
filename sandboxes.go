@@ -20,10 +20,11 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/util"
-	"net/http"
 )
 
 func sandboxHandler(w http.ResponseWriter, r *http.Request) {

@@ -129,7 +129,7 @@ func importAll(fileName string) error {
 				if cerr != nil {
 					return cerr
 				}
-				_, cbverr := cb.NewVersion(ver, cbvData)
+				_, cbverr := cb.NewVersionFromGenericData(ver, cbvData)
 				if cbverr != nil {
 					return cbverr
 				}

@@ -19,8 +19,9 @@ package sandbox
 /* MySQL functions for sandboxes */
 
 import (
-	"github.com/ctdk/goiardi/datastore"
 	"time"
+
+	"github.com/ctdk/goiardi/datastore"
 )
 
 func (s *Sandbox) fillSandboxFromMySQL(row datastore.ResRow) error {

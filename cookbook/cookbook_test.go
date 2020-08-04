@@ -19,9 +19,10 @@ package cookbook
 import (
 	"encoding/gob"
 	"encoding/json"
-	"github.com/ctdk/goiardi/filestore"
-	"os"
+	"io/ioutil"
 	"testing"
+
+	"github.com/ctdk/goiardi/filestore"
 )
 
 type constraintTest struct {
@@ -104,17 +105,16 @@ func TestLatestConstrained(t *testing.T) {
 	}
 }
 
-func loadCookbookFromJSON(path string) (map[string]interface{}, error) {
-	f, err := os.Open(path)
+// loadCookbookFromJSON parses json and create a cookbook from it.
+func loadCookbookFromJSON(path string) (CookbookVersion, error) {
+	jsonByte, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return CookbookVersion{}, err
 	}
-	defer f.Close()
 
-	dec := json.NewDecoder(f)
-	var mc map[string]interface{}
-	if err = dec.Decode(&mc); err != nil {
-		return nil, err
+	var cookbookVersion CookbookVersion
+	if err = json.Unmarshal(jsonByte, &cookbookVersion); err != nil {
+		return CookbookVersion{}, err
 	}
-	return mc, nil
+	return cookbookVersion, nil
 }

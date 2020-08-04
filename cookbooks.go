@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/ctdk/goiardi/cookbook"
@@ -82,7 +83,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	 * 405, rather than a 403, which also makes sense in areas where
 	 * validators shouldn't be able to do anything. *shrugs*
 	 */
-
+	var err error
 	if pathArrayLen == 1 || (pathArrayLen == 2 && pathArray[1] == "") {
 		if r.Method == http.MethodHead {
 			// not, uh, much else to do here
@@ -90,7 +91,11 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		/* list all cookbooks */
-		cookbookResponse = cookbook.CookbookLister(numResults)
+		cookbookResponse, err = cookbook.CookbookLister(numResults)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	} else if pathArrayLen == 2 {
 		/* info about a cookbook and all its versions */
 		cookbookName := pathArray[1]
@@ -111,8 +116,13 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 		/* Undocumented behavior - a cookbook name of _latest gets a
 		 * list of the latest versions of all the cookbooks, and _recipe
 		 * gets the recipes of the latest cookbooks. */
+		var err error
 		if cookbookName == "_latest" {
-			cookbookResponse = cookbook.CookbookLatest()
+			cookbookResponse, err = cookbook.CookbookLatest()
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		} else if cookbookName == "_recipes" {
 			rlist, nerr := cookbook.CookbookRecipes()
 			if nerr != nil {
@@ -206,7 +216,14 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			//get the specific version of it
 			cbv, err := cb.GetVersion(cookbookVersion)
 			if err != nil {
-				jsonErrorReport(w, r, err.Error(), http.StatusNotFound)
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if cbv == nil {
+				jsonErrorReport(
+					w, r,
+					fmt.Sprintf("Could not find a cookbook named %s with version %s", cookbookName, cookbookVersion),
+					http.StatusNotFound)
 				return
 			}
 			if r.Method == http.MethodDelete {
@@ -263,11 +280,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, "You are not allowed to perform this action", http.StatusForbidden)
 				return
 			}
-			cbvData, jerr := parseObjJSON(r.Body)
-			if jerr != nil {
-				jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
-				return
-			}
+
 			/* First, see if the cookbook already exists, &
 			 * if not create it. Second, see if this
 			 * specific version of the cookbook exists. If
@@ -300,32 +313,31 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-			cbv, err := cb.GetVersion(cookbookVersion)
 
-			/* Does the cookbook_name in the URL and what's
-			 * in the body match? */
-			switch t := cbvData["cookbook_name"].(type) {
-			case string:
-				/* Only send this particular
-				 * error if the cookbook version
-				 * hasn't been created yet.
-				 * Instead we want a slightly
-				 * different version later. */
-				if t != cookbookName && cbv == nil {
-					terr := util.Errorf("Field 'name' invalid")
-					jsonErrorReport(w, r, terr.Error(), terr.Status())
-					return
-				}
-			default:
-				// rather unlikely, I think, to
-				// be able to get here past the
-				// cookbook get. Punk out and
-				// don't do anything
-
+			//get cookbook data from request body and decode it in a proper struct
+			jsonBody, jerr := ioutil.ReadAll(r.Body)
+			if jerr != nil {
+				jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return
 			}
+			var newCB cookbook.CookbookVersion
+			jerr = json.Unmarshal(jsonBody, &newCB)
+			if jerr != nil {
+				logger.Errorf("cannot decode json [%s]", string(jsonBody))
+				jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+				return
+			}
+
+			//fetch cookbook from database.
+			dbCookbookVersion, err := cb.GetVersion(cookbookVersion)
 			if err != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			}
+
+			//if cookbook version doesn't exist, create it
+			if dbCookbookVersion == nil {
 				var nerr util.Gerror
-				cbv, nerr = cb.NewVersion(cookbookVersion, cbvData)
+				dbCookbookVersion, nerr = cb.NewVersion(cookbookVersion, newCB)
 				if nerr != nil {
 					// If the new version failed to
 					// take, and there aren't any
@@ -337,32 +349,38 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, nerr.Error(), nerr.Status())
 					return
 				}
-				if lerr := loginfo.LogEvent(opUser, cbv, "create"); lerr != nil {
+				if lerr := loginfo.LogEvent(opUser, dbCookbookVersion, "create"); lerr != nil {
 					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 					return
 				}
 				w.WriteHeader(http.StatusCreated)
-			} else {
-				err := cbv.UpdateVersion(cbvData, force)
-				if err != nil {
-					jsonErrorReport(w, r, err.Error(), err.Status())
-					return
-				}
-				gerr := cb.Save()
-				if gerr != nil {
-					jsonErrorReport(w, r, gerr.Error(), http.StatusInternalServerError)
-					return
-				}
-				if lerr := loginfo.LogEvent(opUser, cbv, "modify"); lerr != nil {
-					jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
-					return
-				}
+				return
+			}
+			//cookbook version already exist, so we need to update it.
+			//validate name
+			if newCB.Name != dbCookbookVersion.Name {
+				terr := util.Errorf("Field 'name' invalid")
+				jsonErrorReport(w, r, terr.Error(), terr.Status())
+			}
+			err = dbCookbookVersion.UpdateVersion(newCB, force)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), err.Status())
+				return
+			}
+			gerr := cb.Save()
+			if gerr != nil {
+				jsonErrorReport(w, r, gerr.Error(), http.StatusInternalServerError)
+				return
+			}
+			if lerr := loginfo.LogEvent(opUser, dbCookbookVersion, "modify"); lerr != nil {
+				jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
+				return
 			}
 			/* API docs are wrong. The docs claim that this
 			 * should have no response body, but in fact it
 			 * wants some (not all) of the cookbook version
 			 * data. */
-			cookbookResponse = cbv.ToJSON(r.Method)
+			cookbookResponse = dbCookbookVersion.ToJSON(r.Method)
 		default:
 			jsonErrorReport(w, r, "Unrecognized method", http.StatusMethodNotAllowed)
 			return

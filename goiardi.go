@@ -20,6 +20,7 @@
 package main
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"crypto/tls"
@@ -492,6 +493,15 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		r.Body = reader
 	}
+
+	//debug
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		logger.Errorf("cannot read body %s", err)
+		jsonErrorReport(lwr, r, err.Error(), http.StatusBadRequest)
+	}
+	logger.Debugf("Req:%s\nBody:\n---------%s\n---------", r.RequestURI, data)
+	r.Body = ioutil.NopCloser(bytes.NewReader(data))
 
 	// Set up the context for the request. At this time, this means setting
 	// the opUser for this request for most (but not all) types of requests.

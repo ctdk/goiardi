@@ -18,8 +18,9 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/ctdk/goiardi/cookbook"
 	"net/http"
+
+	"github.com/ctdk/goiardi/cookbook"
 )
 
 func universeHandler(w http.ResponseWriter, r *http.Request) {
@@ -27,10 +28,15 @@ func universeHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		universe := cookbook.Universe()
+		universe, err := cookbook.Universe()
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(&universe); err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return
 		}
 	case http.MethodHead:
 		headDefaultResponse(w, r) // Yes, we have a universe.
