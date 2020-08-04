@@ -139,7 +139,8 @@ func (c *Cookbook) NumVersions() int {
 	return len(c.Versions)
 }
 
-// AllCookbooks returns all the cookbooks that have been uploaded to this server.
+// AllCookbooks returns all the cookbooks that have been uploaded to this
+// server.
 func AllCookbooks() (cookbooks []*Cookbook) {
 	if config.UsingDB() {
 		cookbooks = allCookbooksSQL()
@@ -157,8 +158,9 @@ func AllCookbooks() (cookbooks []*Cookbook) {
 			logger.Debugf("Curious. Cookbook %s was in the cookbook list, but wasn't found when fetched. Continuing.", c)
 			continue
 		case err != nil:
-			// todo: this needs to be handled in a much better way. AllCookbooks() should return an err which should be checked above
-			// leaving this for another day
+			// todo: this needs to be handled in a much better way.
+			// AllCookbooks() should return an err which should be
+			// checked above. Leaving this for another day
 			logger.Errorf(err.Error())
 			continue
 		}
