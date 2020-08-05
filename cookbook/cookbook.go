@@ -726,7 +726,7 @@ func (c *Cookbook) NewVersion(cbVersion string, cbvData map[string]interface{}) 
 		IsFrozen:     false,
 		cookbookID:   c.id, // should be ok even with in-mem
 	}
-	err := cbv.UpdateVersion(cbvData, "")
+	err := cbv.UpdateVersion(cbvData, false)
 	if err != nil {
 		return nil, err
 	}
@@ -874,9 +874,9 @@ func (c *Cookbook) DeleteVersion(cbVersion string) util.Gerror {
 }
 
 // UpdateVersion updates a specific version of a cookbook.
-func (cbv *CookbookVersion) UpdateVersion(cbvData map[string]interface{}, force string) util.Gerror {
+func (cbv *CookbookVersion) UpdateVersion(cbvData map[string]interface{}, force bool) util.Gerror {
 	/* Allow force to update a frozen cookbook */
-	if cbv.IsFrozen == true && force != "true" {
+	if cbv.IsFrozen == true && !force {
 		err := util.Errorf("The cookbook %s at version %s is frozen. Use the 'force' option to override.", cbv.CookbookName, cbv.Version)
 		err.SetStatus(http.StatusConflict)
 		return err

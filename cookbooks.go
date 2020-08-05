@@ -55,10 +55,11 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	force := ""
+
+	var force bool
 	if f, fok := r.Form["force"]; fok {
 		if len(f) > 0 {
-			force = f[0]
+			force = true
 		}
 	}
 
