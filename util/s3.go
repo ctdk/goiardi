@@ -210,32 +210,37 @@ func S3PutURL(orgname string, checksum string) (string, error) {
 func CheckForObject(orgname string, checksum string) (bool, error) {
 	action := "headobject"
 	key := makeBukkitKey(orgname, checksum)
-	output, err := s3cli.s3.HeadObject(&s3.HeadObjectInput{
+	_, err := s3cli.s3.HeadObject(&s3.HeadObjectInput{
 		Bucket: aws.String(s3cli.bucket),
 		Key:    aws.String(key),
 	})
 	if err == nil {
 		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "ok"))
 		s3metric.Inc(1)
-	} else {
-		// hmm?
-		//is this an aws error?
-		if aerr, ok := err.(awserr.Error); ok {
-			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, strings.ToLower(aerr.Code())))
-			s3metric.Inc(1)
-			logger.Errorf("headobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
-		} else {
-			//generic unknown error
-			s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "unknown"))
-			s3metric.Inc(1)
-			logger.Errorf("headobject error: %s", err)
-		}
-		return false, err
-	}
-	if output != nil {
 		return true, nil
 	}
-	return false, nil
+
+	//is this an aws error?
+	if aerr, ok := err.(awserr.Error); ok {
+		s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, strings.ToLower(aerr.Code())))
+		s3metric.Inc(1)
+		errMsg := fmt.Sprintf("headobject aws error: Error code: [%s], Error msg: %s", aerr.Code(), aerr.Message())
+		switch aerr.Code() {
+		case s3.ErrCodeNoSuchKey:
+			// When the object is not found we should not return an error, but false instead
+			logger.Debugf(errMsg)
+			return false, nil
+		default:
+			logger.Errorf(errMsg)
+			return false, err
+		}
+	}
+	//generic unknown error
+	s3metric := metricsBackend.NewCount(fmt.Sprintf(s3MetricName, action, "unknown"))
+	s3metric.Inc(1)
+	logger.Errorf("headobject error: %s", err)
+
+	return false, err
 }
 
 func S3DeleteHashes(fileHashes []string) {
