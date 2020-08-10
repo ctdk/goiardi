@@ -515,6 +515,13 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx = context.WithValue(ctx, reqctx.OpUserKey, opUser)
 	}
 
+	// NOTE: This is required as tmp solution to remove /organizations/tmint prefix
+	//       from old chef platform AFTER it has been used for authentication. Chef client
+	//    	 sends x-ops-authorization headers using the path in /etc/chef/client.rb and
+	//       that includes /organizations/tmint which is required to validate the signature.
+	//       It can be deleted once we are able to patch all /etc/chef/client.rb using tmint_app_chef
+	r.URL.Path = cleanPath(strings.ReplaceAll(r.URL.Path, "/organizations/tmint/", ""))
+
 	http.DefaultServeMux.ServeHTTP(lwr, r.WithContext(ctx))
 }
 
