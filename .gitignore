@@ -6,3 +6,5 @@ docs/_build
 *.deb
 goiardi-*
 packaging/**/share/goiardi/*
+/.idea
+index.bin

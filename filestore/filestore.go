@@ -222,13 +222,17 @@ func GetList() []string {
 }
 
 // DeleteHashes deletes all the checksum hashes given from the filestore.
-func DeleteHashes(fileHashes []string) {
+func DeleteHashes(fileHashes map[string]bool) {
+	hashSlice := make([]string, 0, len(fileHashes))
+	for hash := range fileHashes {
+		hashSlice = append(hashSlice, hash)
+	}
 	if config.Config.UseMySQL {
-		deleteHashesMySQL(fileHashes)
+		deleteHashesMySQL(hashSlice)
 	} else if config.Config.UsePostgreSQL {
-		deleteHashesPostgreSQL(fileHashes)
+		deleteHashesPostgreSQL(hashSlice)
 	} else {
-		for _, ff := range fileHashes {
+		for _, ff := range hashSlice {
 			delFile, err := Get(ff)
 			if err != nil {
 				logger.Debugf("Strange, we got an error trying to get %s to delete it.\n", ff)
@@ -244,7 +248,7 @@ func DeleteHashes(fileHashes []string) {
 		}
 	}
 	if config.Config.LocalFstoreDir != "" {
-		for _, fh := range fileHashes {
+		for _, fh := range hashSlice {
 			err := os.Remove(path.Join(config.Config.LocalFstoreDir, fh))
 			if err != nil {
 				logger.Errorf(err.Error())

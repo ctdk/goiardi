@@ -1,14 +1,16 @@
 module github.com/ctdk/goiardi
 
+go 1.14
+
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/DataDog/datadog-go v0.0.0-20160822161430-909c02b65dd8 // indirect
 	github.com/alexcesaro/statsd v2.0.0+incompatible // indirect
-	github.com/aws/aws-sdk-go v1.4.6
+	github.com/aws/aws-sdk-go v1.31.7
 	github.com/ctdk/chefcrypto v0.2.0
 	github.com/ctdk/go-trie v0.0.0-20161110000926-fe74c509b12e
 	github.com/go-ini/ini v1.55.0 // indirect
-	github.com/go-sql-driver/mysql v1.2.1-0.20160802113842-0b58b37b664c
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/hashicorp/go-version v1.1.0
 	github.com/hashicorp/memberlist v0.2.0 // indirect
 	github.com/hashicorp/serf v0.8.5
@@ -23,6 +25,7 @@ require (
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/tideland/golib v4.2.1-0.20160624201112-2938f1706f66+incompatible
 	github.com/tinylib/msgp v0.0.0-20150805042339-cd4fb1548c31
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	gopkg.in/alexcesaro/statsd.v1 v1.0.0-20160306065229-c289775e46fd // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 	gopkg.in/ini.v1 v1.55.0 // indirect

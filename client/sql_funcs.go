@@ -19,10 +19,12 @@ package client
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
 	"log"
 	"strings"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/util"
 )
 
 func checkForClientSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -215,4 +217,13 @@ func allClientsSQL() []*Client {
 		log.Fatal(err)
 	}
 	return clients
+}
+
+// Count returns a count of all clients on this server.
+func Count() int64 {
+	if config.UsingDB() {
+		c, _ := util.CountSQL("clients")
+		return c
+	}
+	return int64(len(GetList()))
 }

@@ -19,10 +19,12 @@ package databag
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
 	"log"
 	"strings"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/util"
 )
 
 // Functions for finding, saving, etc. data bags with an SQL database.
@@ -417,4 +419,13 @@ func allDataBagsSQL() []*DataBag {
 		log.Fatal(err)
 	}
 	return dbags
+}
+
+// Count returns a count of all databags on this server.
+func Count() int64 {
+	if config.UsingDB() {
+		c, _ := util.CountSQL("data_bags")
+		return c
+	}
+	return int64(len(GetList()))
 }

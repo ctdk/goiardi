@@ -24,13 +24,14 @@ package environment
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
+	"sort"
+
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
-	"net/http"
-	"sort"
 )
 
 // ChefEnvironment is a collection of attributes and cookbook versions for
@@ -388,7 +389,7 @@ func (e *ChefEnvironment) URLType() string {
 	return "environments"
 }
 
-func (e *ChefEnvironment) cookbookList() []*cookbook.Cookbook {
+func (e *ChefEnvironment) cookbookList() ([]*cookbook.Cookbook, error) {
 	return cookbook.AllCookbooks()
 }
 
@@ -396,7 +397,7 @@ func (e *ChefEnvironment) cookbookList() []*cookbook.Cookbook {
 // to this environment.
 func (e *ChefEnvironment) AllCookbookHash(numVersions interface{}) map[string]interface{} {
 	cbHash := make(map[string]interface{})
-	cbList := e.cookbookList()
+	cbList, _ := e.cookbookList()
 	for _, cb := range cbList {
 		if cb == nil {
 			continue
@@ -409,7 +410,7 @@ func (e *ChefEnvironment) AllCookbookHash(numVersions interface{}) map[string]in
 // RecipeList gets a list of recipes available to this environment.
 func (e *ChefEnvironment) RecipeList() []string {
 	recipeList := make(map[string]string)
-	cbList := e.cookbookList()
+	cbList, _ := e.cookbookList()
 	for _, cb := range cbList {
 		if cb == nil {
 			continue

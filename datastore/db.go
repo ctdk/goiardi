@@ -22,15 +22,19 @@ package datastore
 import (
 	"bytes"
 	"database/sql"
+
 	//"encoding/gob"
 	"encoding/json"
 	"fmt"
+
 	"github.com/ctdk/goiardi/config"
+
 	// just want the side effects
 	_ "github.com/go-sql-driver/mysql"
 	// just want the side effects
-	_ "github.com/lib/pq"
 	"strings"
+
+	_ "github.com/lib/pq"
 )
 
 // Dbh is the database handle, shared around.

@@ -18,13 +18,16 @@ package util
 
 import (
 	"fmt"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/filestore"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/ctdk/goiardi/types"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/filestore"
+	"github.com/tideland/golib/logger"
 )
 
 /* Validations for different types and input. */
@@ -163,17 +166,15 @@ func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]inter
 						if ferr != nil {
 							uploaded = false
 							logger.Errorf(ferr.Error())
-						} else if uploaded {
-							itemURL, _ = S3GetURL("default", chksum)
 						}
 					} else {
 						if _, ferr = filestore.Get(chksum); ferr == nil {
 							uploaded = true
-							itemURL = CustomURL(fmt.Sprintf("/file_store/%s", chksum))
 						}
 					}
-					var merr Gerror
+					//if file has not been uploaded return an error
 					if !uploaded {
+						var merr Gerror
 						/* This is nuts. */
 						if dname == "recipes" {
 							merr = Errorf("Manifest has a checksum that hasn't been uploaded.")
@@ -181,6 +182,13 @@ func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]inter
 							merr = Errorf("Manifest has checksum %s but it hasn't yet been uploaded", chksum)
 						}
 						return nil, merr
+					}
+
+					//
+					if config.Config.UseS3Upload && !config.Config.UseS3Proxy {
+						itemURL, _ = S3GetURL("default", chksum)
+					} else {
+						itemURL = CustomURL(fmt.Sprintf("/file_store/%s", chksum))
 					}
 
 					v["url"] = itemURL
@@ -227,110 +235,39 @@ func ValidateNumVersions(nr string) Gerror {
 	return nil
 }
 
-func ValidateCookbookMetadata(mdata interface{}) (map[string]interface{}, Gerror) {
-	switch mdata := mdata.(type) {
-	case map[string]interface{}:
-		if len(mdata) == 0 {
-			/* This error message would make more sense as
-			 * "Metadata empty" if the metadata is, you
-			 * know, totally empty, but the spec wants
-			 * "Field 'metadata.version' missing." Since
-			 * it's easier to just check the length before
-			 * doing a for loop, check the length first
-			 * before inspecting each map key. We have to
-			 * give it the error message it wants first
-			 * however. */
-
-			err := Errorf("Field 'metadata.version' missing")
-
-			return nil, err
-		}
-		/* If metadata does have a length, loop through and
-		 * check the various elements. Some metadata fields are
-		 * supposed to be strings, some are supposed to be
-		 * hashes. Versions is it's own special thing, of
-		 * course, and needs checked seperately. Do that first.
-		 */
-		if mv, mvok := mdata["version"]; mvok {
-			switch mv := mv.(type) {
-			case string:
-				if _, merr := ValidateAsVersion(mv); merr != nil {
-					merr := Errorf("Field 'metadata.version' invalid")
-					return nil, merr
-				}
-			case nil:
-
-			default:
-				err := Errorf("Field 'metadata.version' invalid")
-				return nil, err
-			}
-		} else {
-			err := Errorf("Field 'metadata.version' missing")
-			return nil, err
-		}
-
-		/* String checks. Check equality of name and version
-		 * elsewhere. */
-		strchk := []string{"maintainer", "name", "description", "maintainer_email", "long_description", "license"}
-		for _, v := range strchk {
-			err := Errorf("Field 'metadata.%s' invalid", v)
-			switch sv := mdata[v].(type) {
-			case string:
-				if v == "name" && !ValidateName(sv) {
-					return nil, err
-				}
-				_ = sv // no-op
-			case nil:
-				if v == "long_description" {
-					mdata[v] = ""
-				}
-			default:
-				return nil, err
-			}
-		}
-		/* hash checks */
-		hashchk := []string{"platforms", "dependencies", "recommendations", "suggestions", "conflicting", "replacing", "groupings"}
-		for _, v := range hashchk {
-			err := Errorf("Field 'metadata.%s' invalid", v)
-			switch hv := mdata[v].(type) {
-			case map[string]interface{}:
-				for _, j := range hv {
-					switch s := j.(type) {
-					case string:
-						if _, serr := ValidateAsConstraint(s); serr != nil {
-							if _, serr = ValidateAsVersion(s); serr != nil {
-								cerr := Errorf("Invalid value '%s' for metadata.%s", s, v)
-								return nil, cerr
-							}
-						}
-					case map[string]interface{}:
-						if v != "groupings" {
-							err := Errorf("Invalid value '{[]}' for metadata.%s", v)
-							return nil, err
-						}
-					default:
-						fakeout := fmt.Sprintf("%v", s)
-						if fakeout == "map[]" {
-							fakeout = "{[]}"
-						}
-						err := Errorf("Invalid value '%s' for metadata.%s", fakeout, v)
-						return nil, err
-					}
-				}
-			case nil:
-				if v == "dependencies" {
-					mdata[v] = make(map[string]interface{})
-				}
-			default:
-				return nil, err
-			}
-		}
-
-		return mdata, nil
-	default:
-		err := Errorf("bad metadata: chng msg")
-		return nil, err
+func ValidateCookbookMetadata(mdata types.Metadata) Gerror {
+	if mdata.Version == "" {
+		err := Errorf("Field 'metadata.version' missing")
+		return err
 	}
+	if _, err := ValidateAsVersion(mdata.Version); err != nil {
+		merr := Errorf("Field 'metadata.version' invalid")
+		return merr
+	}
+
+	//validate name
+	if !ValidateName(mdata.Name) {
+		return Errorf("Field 'metadata.name' invalid")
+	}
+
+	// hash check
+	for k, hashMap := range map[string]map[string]string{
+		"platforms":       mdata.Platforms,
+		"dependencies":    mdata.Dependencies,
+		"recommendations": mdata.Recommendations,
+		"suggestions":     mdata.Suggestions,
+		"conflicting":     mdata.Conflicting,
+		"replacing":       mdata.Replacing,
+		"groupings":       mdata.Groupings,
+	} {
+		for _, j := range hashMap {
+			if _, serr := ValidateAsConstraint(j); serr != nil {
+				cerr := Errorf("Invalid value '%s' for metadata.%s", j, k)
+				return cerr
+			}
+		}
+	}
+	return nil
 }
 
 func ValidateAsConstraint(t interface{}) (bool, Gerror) {

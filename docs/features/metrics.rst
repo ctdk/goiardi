@@ -10,6 +10,12 @@ At this time, goiardi exports via statsd metrics covering the runtime (memory us
 The available metrics via statsd currently are:
 
 * ``node.count`` - number of nodes currently in the system
+* ``client.count`` - number of clients currently in the system
+* ``cookbook.count`` - number of cookbooks currently in the system
+* ``databag.count`` - number of databags currently in the system
+* ``environment.count`` - number of environments currently in the system
+* ``role.count`` - number of roles currently in the system
+* ``user.count`` - number of users currently in the system
 * ``runtime.goroutines`` - number of goroutines running
 * ``runtime.memory.allocated`` - allocated memory in bytes
 * ``runtime.memory.mallocs`` - number of mallocs
@@ -23,7 +29,9 @@ The available metrics via statsd currently are:
 * ``runtime.gc.gc_per_sec`` - gc per second
 * ``runtime.gc.gc_per_tick`` - gc per statsd tick (as above, every 10 secodns)
 * ``runtime.gc.pause`` - timing of how long each gc pause lasts
-* ``api.timing.%s.%s``, where "``%s.%s``" is the first part of the api endpoint path and the HTTP method (so, for example, a PUT to cookbooks would be ``api.timing.cookbooks.put``) - timing of API endpoint requests
+* ``api.request.duration.%s.%s``, where "``%s.%s``" is the first part of the api endpoint path and the HTTP method (so, for example, a PUT to cookbooks would be ``api.request.duration.cookbooks.put``) - timing of API endpoint requests
+* ``api.request.%s.%s.%d``, where "``%s.%s.%d``" is the first part of the api endpoint path and the HTTP method (so, for example, a PUT to cookbooks would be ``api.request.cookbooks.put.201``) - number of API endpoint requests by status code
+* ``api.request.total``, total number of API HTTP requests
 * ``client.run.started`` - Count of started chef-client runs
 * ``client.run.success`` - Count of successful chef-client runs
 * ``client.run.failure`` - Count of failed chef-client runs
@@ -32,3 +40,10 @@ The available metrics via statsd currently are:
 * ``client.run.updated_resources`` - Total updated resources in a run
 * ``search.in_mem`` - timing of in-memory searches
 * ``search.pg`` - timing of Postgres-based searches
+* ``s3.http.request.headbucket.%s``, where "``%s``" is the type of AWS sdk response code - Number of requests by response code for S3 headbucket operation
+* ``s3.http.request.presign.%s``, where "``%s``" is the type of AWS sdk response code - Number of requests by response code for S3 presign operation
+* ``s3.http.request.getobject.%s``, where "``%s``" is the type of AWS sdk response code - Number of requests by response code for S3 getobject operation
+* ``s3.http.request.headobject.%s``, where "``%s``" is the type of AWS sdk response code - Number of requests by response code for S3 headobject operation
+* ``s3.http.request.deleteobject.%s``, where "``%s``" is the type of AWS sdk response code - Number of requests by response code for S3 deleteobject operation
+* ``s3.http.request.upload.%s``, where "``%s``" is the type of AWS sdk response code - Number of requests by response code for S3 upload operation
+

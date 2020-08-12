@@ -18,9 +18,11 @@ package user
 
 import (
 	"database/sql"
+	"log"
+
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
-	"log"
+	"github.com/ctdk/goiardi/util"
 )
 
 func checkForUserSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -173,4 +175,13 @@ func allUsersSQL() []*User {
 		log.Fatal(err)
 	}
 	return users
+}
+
+// Count returns a count of all users on this server.
+func Count() int64 {
+	if config.UsingDB() {
+		c, _ := util.CountSQL("users")
+		return c
+	}
+	return int64(len(GetList()))
 }

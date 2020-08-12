@@ -19,6 +19,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/databag"
@@ -31,8 +34,6 @@ import (
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
-	"os"
-	"time"
 )
 
 // ExportData is a struct describing the container holding the exported data (or
@@ -62,7 +63,11 @@ func exportAll(fileName string) error {
 	exportedData.Data = make(map[string][]interface{})
 	// ... and march through everything.
 	exportedData.Data["client"] = client.ExportAllClients()
-	exportedData.Data["cookbook"] = exportTransformSlice(cookbook.AllCookbooks())
+	cbs, err := cookbook.AllCookbooks()
+	if err != nil {
+		return err
+	}
+	exportedData.Data["cookbook"] = exportTransformSlice(cbs)
 	exportedData.Data["databag"] = exportTransformSlice(databag.AllDataBags())
 	exportedData.Data["environment"] = exportTransformSlice(environment.AllEnvironments())
 	exportedData.Data["filestore"] = exportTransformSlice(filestore.AllFilestores())

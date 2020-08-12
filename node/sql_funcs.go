@@ -21,11 +21,13 @@ package node
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/util"
 )
 
 func checkForNodeSQL(dbhandle datastore.Dbhandle, name string) (bool, error) {
@@ -485,21 +487,11 @@ func getNodesByStatusSQL(nodeNames []string, status string) ([]*Node, error) {
 	return nil, err
 }
 
-func countSQL() (int64, error) {
-	var c int64
-	var sqlStmt string
-	if config.Config.UseMySQL {
-		sqlStmt = "SELECT COUNT(*) FROM nodes"
-	} else if config.Config.UsePostgreSQL {
-		sqlStmt = "SELECT COUNT(*) FROM goiardi.nodes"
+// Count returns a count of all nodes on this server.
+func Count() int64 {
+	if config.UsingDB() {
+		c, _ := util.CountSQL("nodes")
+		return c
 	}
-	stmt, err := datastore.Dbh.Prepare(sqlStmt)
-	if err != nil {
-		return 0, err
-	}
-	err = stmt.QueryRow().Scan(&c)
-	if err != nil {
-		return 0, err
-	}
-	return c, nil
+	return int64(len(GetList()))
 }

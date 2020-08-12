@@ -21,11 +21,12 @@ package node
 
 import (
 	"database/sql"
+	"net/http"
+
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
-	"net/http"
 )
 
 // Node is a basic Chef node, holding the run list and attributes of the node.
@@ -379,14 +380,4 @@ func AllNodes() []*Node {
 		}
 	}
 	return nodes
-}
-
-// Count returns a count of all nodes on this server.
-func Count() int64 {
-	if config.UsingDB() {
-		c, _ := countSQL()
-		return c
-	}
-	nl := GetList()
-	return int64(len(nl))
 }

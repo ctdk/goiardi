@@ -205,21 +205,21 @@ func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 	chksumStats := make(map[string]map[string]interface{})
 	for _, chk := range s.Checksums {
 		chksumStats[chk] = make(map[string]interface{})
-		var n bool
+		var fileExists bool
 		if config.Config.UseS3Upload {
-			n = util.S3CheckFile("default", chk)
+			fileExists = util.S3FileExists("default", chk)
 		} else {
 			k, _ := filestore.Get(chk)
 			if k != nil {
-				n = true
+				fileExists = true
 			}
 		}
 
-		if n {
+		if fileExists {
 			chksumStats[chk]["needs_upload"] = false
 		} else {
 			// set signed s3 thingamajig here
-			if config.Config.UseS3Upload {
+			if config.Config.UseS3Upload && !config.Config.UseS3Proxy {
 				var err error
 				chksumStats[chk]["url"], err = util.S3PutURL("default", chk)
 				if err != nil {

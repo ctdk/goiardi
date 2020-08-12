@@ -19,10 +19,12 @@ package environment
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
 	"log"
 	"strings"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/util"
 )
 
 /* General SQL functions for environments */
@@ -234,4 +236,13 @@ func allEnvironmentsSQL() []*ChefEnvironment {
 		log.Fatal(err)
 	}
 	return environments
+}
+
+// Count returns a count of all environments on this server.
+func Count() int64 {
+	if config.UsingDB() {
+		c, _ := util.CountSQL("environments")
+		return c
+	}
+	return int64(len(GetList()))
 }
