@@ -22,9 +22,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+
+	"github.com/tideland/golib/logger"
+
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/filestore"
-	"net/http"
+	"github.com/ctdk/goiardi/util"
 )
 
 func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
@@ -37,6 +42,22 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 	 * supported. */
 	switch r.Method {
 	case http.MethodGet, http.MethodHead:
+		if config.Config.UseS3Upload {
+			body, err := util.S3FileDownload("default", chksum)
+			if err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/x-binary")
+			_, err = io.Copy(w, body)
+			if err != nil {
+				logger.Debugf("error while writing response to http handler %+v", err)
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			return
+		}
 		w.Header().Set("Content-Type", "application/x-binary")
 		fileStore, err := filestore.Get(chksum)
 		if err != nil {
@@ -47,13 +68,23 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 			headResponse(w, r, http.StatusOK)
 			return
 		}
-		w.Write(*fileStore.Data)
+		_, err = w.Write(*fileStore.Data)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		}
 	case http.MethodPut, http.MethodPost: /* Seems like for file uploads we ought to
 		 * support POST too. */
 		w.Header().Set("Content-Type", "application/json")
+
 		/* Need to distinguish file already existing and some
 		 * sort of error with uploading the file. */
-		if fileStore, _ := filestore.Get(chksum); fileStore != nil {
+		fileExists := false
+		if config.Config.UseS3Upload {
+			fileExists = util.S3FileExists("default", chksum)
+		} else if fileStore, _ := filestore.Get(chksum); fileStore != nil {
+			fileExists = true
+		}
+		if fileExists {
 			fileErr := fmt.Errorf("File with checksum %s already exists.", chksum)
 			/* Send status OK. It seems chef-pedant at least
 			 * tries to upload files twice for some reason.
@@ -61,19 +92,28 @@ func fileStoreHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, fileErr.Error(), http.StatusOK)
 			return
 		}
+		var err error
 		r.Body = http.MaxBytesReader(w, r.Body, config.Config.ObjMaxSize)
-		fileStore, err := filestore.New(chksum, r.Body, r.ContentLength)
+		if config.Config.UseS3Upload {
+			//upload file through the s3
+			err = util.S3FileUpload("default", chksum, r.Body)
+		} else {
+			//persist on file system
+			var fileStore *filestore.FileStore
+			fileStore, err = filestore.New(chksum, r.Body, r.ContentLength)
+			if err != nil {
+				jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			err = fileStore.Save()
+		}
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		err = fileStore.Save()
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
-			return
-		}
+
 		fileResponse := make(map[string]string)
-		fileResponse[fileStore.Chksum] = fmt.Sprintf("File with checksum %s uploaded.", fileStore.Chksum)
+		fileResponse[chksum] = fmt.Sprintf("File with checksum %s uploaded.", chksum)
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(&fileResponse); err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
