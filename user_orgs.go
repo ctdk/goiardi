@@ -98,7 +98,7 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		userName, ok := userData["username"]
+		userName, ok := userData["username"].(string)
 		if !ok {
 			jsonErrorReport(w, r, "Field 'username' missing", http.StatusBadRequest)
 			return
