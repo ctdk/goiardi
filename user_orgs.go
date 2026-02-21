@@ -92,9 +92,9 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		userData, err := parseObjJSON(r.Body)
-		if err != nil {
-			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+		userData, jerr := parseObjJSON(r.Body)
+		if jerr != nil {
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
 		}
 
