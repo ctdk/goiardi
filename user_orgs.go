@@ -30,7 +30,6 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
-	"log"
 	"net/http"
 	"regexp"
 )
@@ -38,7 +37,6 @@ import (
 func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
-	log.Printf("vars: '%v'\n", vars);
 
 	orgName := vars["org"]
 	org, orgerr := orgloader.Get(orgName)
@@ -94,7 +92,17 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		userName := vars["username"]
+		userData, err := parseObjJSON(r.Body)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		userName, ok := userData["username"]
+		if !ok {
+			jsonErrorReport(w, r, "Field 'username' missing", http.StatusBadRequest)
+			return
+		}
 		user, err := user.Get(userName)
 		if err != nil {
 			jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
