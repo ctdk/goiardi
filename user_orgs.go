@@ -38,7 +38,7 @@ import (
 func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
-	log.Printf("vars: '%v'\n");
+	log.Printf("vars: '%v'\n", vars);
 
 	orgName := vars["org"]
 	org, orgerr := orgloader.Get(orgName)
