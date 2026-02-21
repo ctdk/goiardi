@@ -51,31 +51,68 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if f, ferr := org.PermCheck.RootCheckPerm(opUser, "read"); ferr != nil {
-		jsonErrorReport(w, r, ferr.Error(), ferr.Status())
-		return
-	} else if !f {
-		jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
-		return
-	}
-	if r.Method != http.MethodGet {
+	// Might need a method check here before the switch, depending on what
+	// pedant expects.
+
+	switch r.Method {
+	case http.MethodGet:
+		if f, ferr := org.PermCheck.RootCheckPerm(opUser, "read"); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
+		userList, err := association.UserAssociations(org)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		response := make([]map[string]map[string]string, len(userList))
+		for i, u := range userList {
+			ur := make(map[string]map[string]string)
+			ur["user"] = map[string]string{"username": u.Username}
+			response[i] = ur
+		}
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(&response); err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		}
+	case http.MethodPost:
+		// Erchef allows associating a user directly by POSTing to
+		// /organizations/ORG/users. Goiardi had only implemented the
+		// old ruby way of inviting and accepting a user to the org.
+
+		// Make sure we have update perms on the org.
+		if f, ferr := org.PermCheck.RootCheckPerm(opUser, "update"); ferr != nil {
+			jsonErrorReport(w, r, ferr.Error(), ferr.Status())
+			return
+		} else if !f {
+			jsonErrorReport(w, r, "You do not have permission to do that", http.StatusForbidden)
+			return
+		}
+
+		userName := vars["username"]
+		user, err := user.Get(userName)
+		if err != nil {
+			jsonErrorNonArrayReport(w, r, err.Error(), err.Status())
+			return
+		}
+		
+		// Create the association and accept it. This seems to be the
+		// most straightforward way, since then the association request
+		// is in the db and all that.
+		assoc, err := association.SetReq(user, org, opUser)
+		if err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		if err = assoc.Accept(); err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+	default:
 		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	userList, err := association.UserAssociations(org)
-	if err != nil {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
-	}
-	response := make([]map[string]map[string]string, len(userList))
-	for i, u := range userList {
-		ur := make(map[string]map[string]string)
-		ur["user"] = map[string]string{"username": u.Username}
-		response[i] = ur
-	}
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(&response); err != nil {
-		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }
 
