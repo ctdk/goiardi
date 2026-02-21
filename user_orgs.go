@@ -121,6 +121,7 @@ func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
+		w.WriteHeader(http.StatusCreated)
 	default:
 		jsonErrorReport(w, r, "Method not allowed", http.StatusMethodNotAllowed)
 	}
