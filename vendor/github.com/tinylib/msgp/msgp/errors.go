@@ -1,8 +1,8 @@
 package msgp
 
 import (
-	"fmt"
 	"reflect"
+	"strconv"
 )
 
 const resumableDefault = false
@@ -12,6 +12,14 @@ var (
 	// slice being decoded is too short to
 	// contain the contents of the message
 	ErrShortBytes error = errShort{}
+
+	// ErrRecursion is returned when the maximum recursion limit is reached for an operation.
+	// This should only realistically be seen on adversarial data trying to exhaust the stack.
+	ErrRecursion error = errRecursion{}
+
+	// ErrLimitExceeded is returned when a set limit is exceeded.
+	// Limits can be set on the Reader to prevent excessive memory usage by adversarial data.
+	ErrLimitExceeded error = errLimitExceeded{}
 
 	// this error is only returned
 	// if we reach code that should
@@ -69,8 +77,7 @@ func Resumable(e error) bool {
 //
 // ErrShortBytes is not wrapped with any context due to backward compatibility
 // issues with the public API.
-//
-func WrapError(err error, ctx ...interface{}) error {
+func WrapError(err error, ctx ...any) error {
 	switch e := err.(type) {
 	case errShort:
 		return e
@@ -79,18 +86,6 @@ func WrapError(err error, ctx ...interface{}) error {
 	default:
 		return errWrapped{cause: err, ctx: ctxString(ctx)}
 	}
-}
-
-// ctxString converts the incoming interface{} slice into a single string.
-func ctxString(ctx []interface{}) string {
-	out := ""
-	for idx, cv := range ctx {
-		if idx > 0 {
-			out += "/"
-		}
-		out += fmt.Sprintf("%v", cv)
-	}
-	return out
 }
 
 func addCtx(ctx, add string) string {
@@ -110,7 +105,7 @@ type errWrapped struct {
 
 func (e errWrapped) Error() string {
 	if e.ctx != "" {
-		return fmt.Sprintf("%s at %s", e.cause, e.ctx)
+		return e.cause.Error() + " at " + e.ctx
 	} else {
 		return e.cause.Error()
 	}
@@ -122,6 +117,9 @@ func (e errWrapped) Resumable() bool {
 	}
 	return resumableDefault
 }
+
+// Unwrap returns the cause.
+func (e errWrapped) Unwrap() error { return e.cause }
 
 type errShort struct{}
 
@@ -144,6 +142,16 @@ func (f errFatal) Resumable() bool { return false }
 
 func (f errFatal) withContext(ctx string) error { f.ctx = addCtx(f.ctx, ctx); return f }
 
+type errRecursion struct{}
+
+func (e errRecursion) Error() string   { return "msgp: recursion limit reached" }
+func (e errRecursion) Resumable() bool { return false }
+
+type errLimitExceeded struct{}
+
+func (e errLimitExceeded) Error() string   { return "msgp: configured reader limit exceeded" }
+func (e errLimitExceeded) Resumable() bool { return false }
+
 // ArrayError is an error returned
 // when decoding a fix-sized array
 // of the wrong size
@@ -155,7 +163,7 @@ type ArrayError struct {
 
 // Error implements the error interface
 func (a ArrayError) Error() string {
-	out := fmt.Sprintf("msgp: wanted array of size %d; got %d", a.Wanted, a.Got)
+	out := "msgp: wanted array of size " + strconv.Itoa(int(a.Wanted)) + "; got " + strconv.Itoa(int(a.Got))
 	if a.ctx != "" {
 		out += " at " + a.ctx
 	}
@@ -178,7 +186,7 @@ type IntOverflow struct {
 
 // Error implements the error interface
 func (i IntOverflow) Error() string {
-	str := fmt.Sprintf("msgp: %d overflows int%d", i.Value, i.FailedBitsize)
+	str := "msgp: " + strconv.FormatInt(i.Value, 10) + " overflows int" + strconv.Itoa(i.FailedBitsize)
 	if i.ctx != "" {
 		str += " at " + i.ctx
 	}
@@ -201,7 +209,7 @@ type UintOverflow struct {
 
 // Error implements the error interface
 func (u UintOverflow) Error() string {
-	str := fmt.Sprintf("msgp: %d overflows uint%d", u.Value, u.FailedBitsize)
+	str := "msgp: " + strconv.FormatUint(u.Value, 10) + " overflows uint" + strconv.Itoa(u.FailedBitsize)
 	if u.ctx != "" {
 		str += " at " + u.ctx
 	}
@@ -213,6 +221,31 @@ func (u UintOverflow) Resumable() bool { return true }
 
 func (u UintOverflow) withContext(ctx string) error { u.ctx = addCtx(u.ctx, ctx); return u }
 
+// InvalidTimestamp is returned when an invalid timestamp is encountered
+type InvalidTimestamp struct {
+	Nanos       int64 // value of the nano, if invalid
+	FieldLength int   // Unexpected field length.
+	ctx         string
+}
+
+// Error implements the error interface
+func (u InvalidTimestamp) Error() (str string) {
+	if u.Nanos > 0 {
+		str = "msgp: timestamp nanosecond field value " + strconv.FormatInt(u.Nanos, 10) + " exceeds maximum allows of 999999999"
+	} else if u.FieldLength >= 0 {
+		str = "msgp: invalid timestamp field length " + strconv.FormatInt(int64(u.FieldLength), 10) + " - must be 4, 8 or 12"
+	}
+	if u.ctx != "" {
+		str += " at " + u.ctx
+	}
+	return str
+}
+
+// Resumable is always 'true' for overflows
+func (u InvalidTimestamp) Resumable() bool { return true }
+
+func (u InvalidTimestamp) withContext(ctx string) error { u.ctx = addCtx(u.ctx, ctx); return u }
+
 // UintBelowZero is returned when a call
 // would cast a signed integer below zero
 // to an unsigned integer.
@@ -223,7 +256,7 @@ type UintBelowZero struct {
 
 // Error implements the error interface
 func (u UintBelowZero) Error() string {
-	str := fmt.Sprintf("msgp: attempted to cast int %d to unsigned", u.Value)
+	str := "msgp: attempted to cast int " + strconv.FormatInt(u.Value, 10) + " to unsigned"
 	if u.ctx != "" {
 		str += " at " + u.ctx
 	}
@@ -250,7 +283,7 @@ type TypeError struct {
 
 // Error implements the error interface
 func (t TypeError) Error() string {
-	out := fmt.Sprintf("msgp: attempted to decode type %q with method for %q", t.Encoded, t.Method)
+	out := "msgp: attempted to decode type " + quoteStr(t.Encoded.String()) + " with method for " + quoteStr(t.Method.String())
 	if t.ctx != "" {
 		out += " at " + t.ctx
 	}
@@ -266,7 +299,7 @@ func (t TypeError) withContext(ctx string) error { t.ctx = addCtx(t.ctx, ctx); r
 // TypeError depending on whether or not
 // the prefix is recognized
 func badPrefix(want Type, lead byte) error {
-	t := sizes[lead].typ
+	t := getType(lead)
 	if t == InvalidType {
 		return InvalidPrefixError(lead)
 	}
@@ -280,7 +313,7 @@ type InvalidPrefixError byte
 
 // Error implements the error interface
 func (i InvalidPrefixError) Error() string {
-	return fmt.Sprintf("msgp: unrecognized type prefix 0x%x", byte(i))
+	return "msgp: unrecognized type prefix 0x" + strconv.FormatInt(int64(i), 16)
 }
 
 // Resumable returns 'false' for InvalidPrefixErrors
@@ -297,7 +330,7 @@ type ErrUnsupportedType struct {
 
 // Error implements error
 func (e *ErrUnsupportedType) Error() string {
-	out := fmt.Sprintf("msgp: type %q not supported", e.T)
+	out := "msgp: type " + quoteStr(e.T.String()) + " not supported"
 	if e.ctx != "" {
 		out += " at " + e.ctx
 	}
@@ -311,4 +344,59 @@ func (e *ErrUnsupportedType) withContext(ctx string) error {
 	o := *e
 	o.ctx = addCtx(o.ctx, ctx)
 	return &o
+}
+
+// simpleQuoteStr is a simplified version of strconv.Quote for TinyGo,
+// which takes up a lot less code space by escaping all non-ASCII
+// (UTF-8) bytes with \x.  Saves about 4k of code size
+// (unicode tables, needed for IsPrint(), are big).
+// It lives in errors.go just so we can test it in errors_test.go
+func simpleQuoteStr(s string) string {
+	const (
+		lowerhex = "0123456789abcdef"
+	)
+
+	sb := make([]byte, 0, len(s)+2)
+
+	sb = append(sb, `"`...)
+
+l: // loop through string bytes (not UTF-8 characters)
+	for i := 0; i < len(s); i++ {
+		b := s[i]
+		// specific escape chars
+		switch b {
+		case '\\':
+			sb = append(sb, `\\`...)
+		case '"':
+			sb = append(sb, `\"`...)
+		case '\a':
+			sb = append(sb, `\a`...)
+		case '\b':
+			sb = append(sb, `\b`...)
+		case '\f':
+			sb = append(sb, `\f`...)
+		case '\n':
+			sb = append(sb, `\n`...)
+		case '\r':
+			sb = append(sb, `\r`...)
+		case '\t':
+			sb = append(sb, `\t`...)
+		case '\v':
+			sb = append(sb, `\v`...)
+		default:
+			// no escaping needed (printable ASCII)
+			if b >= 0x20 && b <= 0x7E {
+				sb = append(sb, b)
+				continue l
+			}
+			// anything else is \x
+			sb = append(sb, `\x`...)
+			sb = append(sb, lowerhex[b>>4])
+			sb = append(sb, lowerhex[b&0xF])
+			continue l
+		}
+	}
+
+	sb = append(sb, `"`...)
+	return string(sb)
 }

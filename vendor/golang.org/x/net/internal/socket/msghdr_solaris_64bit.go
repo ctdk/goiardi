@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build amd64
-// +build solaris
+//go:build amd64 && solaris
 
 package socket
 
-import "unsafe"
+import (
+	"encoding/binary"
+	"unsafe"
+)
 
 func (h *msghdr) pack(vs []iovec, bs [][]byte, oob []byte, sa []byte) {
 	for i := range vs {
@@ -32,5 +34,5 @@ func (h *msghdr) controllen() int {
 }
 
 func (h *msghdr) flags() int {
-	return int(NativeEndian.Uint32(h.Pad_cgo_2[:]))
+	return int(binary.NativeEndian.Uint32(h.Pad_cgo_2[:]))
 }

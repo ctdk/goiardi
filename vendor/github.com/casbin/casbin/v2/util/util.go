@@ -15,20 +15,35 @@
 package util
 
 import (
+	"encoding/json"
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 )
+
+var evalReg = regexp.MustCompile(`\beval\((?P<rule>[^)]*)\)`)
+
+var escapeAssertionRegex = regexp.MustCompile(`([()\s|&,=!><+\-*/]|^)((r|p)[0-9]*)\.`)
+
+func JsonToMap(jsonStr string) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	err := json.Unmarshal([]byte(jsonStr), &result)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
 
 // EscapeAssertion escapes the dots in the assertion, because the expression evaluation doesn't support such variable names.
 func EscapeAssertion(s string) string {
-	//Replace the first dot, because it can't be recognized by the regexp.
-	if (strings.HasPrefix(s, "r") || strings.HasPrefix(s, "p")) {
-		s = strings.Replace(s, ".", "_",1)
-	}
-	var regex = regexp.MustCompile(`(\|| |=|\)|\(|&|<|>|,|\+|-|!|\*|\/)(r|p)\.`)
-	s = regex.ReplaceAllStringFunc(s, func(m string) string {
-		return strings.Replace(m, ".", "_", 1)
+	s = escapeAssertionRegex.ReplaceAllStringFunc(s, func(m string) string {
+		// Replace only the last dot with underscore (preserve the prefix character)
+		lastDotIdx := strings.LastIndex(m, ".")
+		if lastDotIdx > 0 {
+			return m[:lastDotIdx] + "_"
+		}
+		return m
 	})
 	return s
 }
@@ -64,6 +79,46 @@ func Array2DEquals(a [][]string, b [][]string) bool {
 
 	for i, v := range a {
 		if !ArrayEquals(v, b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// SortArray2D  Sorts the two-dimensional string array.
+func SortArray2D(arr [][]string) {
+	if len(arr) == 0 {
+		return
+	}
+	sort.Slice(arr, func(i, j int) bool {
+		minArrLen := len(arr[i])
+		if len(arr[j]) < minArrLen {
+			minArrLen = len(arr[j])
+		}
+		for k := 0; k < minArrLen; k++ {
+			if arr[i][k] != arr[j][k] {
+				return arr[i][k] < arr[j][k]
+			}
+		}
+		return len(arr[i]) < len(arr[j])
+	})
+}
+
+// SortedArray2DEquals determines whether two 2-dimensional string arrays are identical.
+func SortedArray2DEquals(a [][]string, b [][]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	copyA := make([][]string, len(a))
+	copy(copyA, a)
+	copyB := make([][]string, len(b))
+	copy(copyB, b)
+
+	SortArray2D(copyA)
+	SortArray2D(copyB)
+
+	for i, v := range copyA {
+		if !ArrayEquals(v, copyB[i]) {
 			return false
 		}
 	}
@@ -111,14 +166,49 @@ func SetEquals(a []string, b []string) bool {
 	return true
 }
 
+// SetEquals determines whether two int sets are identical.
+func SetEqualsInt(a []int, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	sort.Ints(a)
+	sort.Ints(b)
+
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// Set2DEquals determines whether two string slice sets are identical.
+func Set2DEquals(a [][]string, b [][]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	var aa []string
+	for _, v := range a {
+		sort.Strings(v)
+		aa = append(aa, strings.Join(v, ", "))
+	}
+	var bb []string
+	for _, v := range b {
+		sort.Strings(v)
+		bb = append(bb, strings.Join(v, ", "))
+	}
+
+	return SetEquals(aa, bb)
+}
+
 // JoinSlice joins a string and a slice into a new slice.
 func JoinSlice(a string, b ...string) []string {
 	res := make([]string, 0, len(b)+1)
 
 	res = append(res, a)
-	for _, s := range b {
-		res = append(res, s)
-	}
+	res = append(res, b...)
 
 	return res
 }
@@ -148,4 +238,188 @@ func SetSubtract(a []string, b []string) []string {
 		}
 	}
 	return diff
+}
+
+// HasEval determine whether matcher contains function eval.
+func HasEval(s string) bool {
+	return evalReg.MatchString(s)
+}
+
+// ReplaceEval replace function eval with the value of its parameters.
+func ReplaceEval(s string, rule string) string {
+	return evalReg.ReplaceAllString(s, "("+rule+")")
+}
+
+// ReplaceEvalWithMap replace function eval with the value of its parameters via given sets.
+func ReplaceEvalWithMap(src string, sets map[string]string) string {
+	return evalReg.ReplaceAllStringFunc(src, func(s string) string {
+		subs := evalReg.FindStringSubmatch(s)
+		if subs == nil {
+			return s
+		}
+		key := subs[1]
+		value, found := sets[key]
+		if !found {
+			return s
+		}
+		return evalReg.ReplaceAllString(s, value)
+	})
+}
+
+// GetEvalValue returns the parameters of function eval.
+func GetEvalValue(s string) []string {
+	subMatch := evalReg.FindAllStringSubmatch(s, -1)
+	var rules []string
+	for _, rule := range subMatch {
+		rules = append(rules, rule[1])
+	}
+	return rules
+}
+
+// EscapeStringLiterals escapes backslashes in string literals within an expression
+// to ensure consistent handling between govaluate (which interprets escape sequences)
+// and CSV parsing (which treats backslashes as literal characters).
+// This function doubles all backslashes within single-quoted and double-quoted strings.
+func EscapeStringLiterals(expr string) string {
+	var result strings.Builder
+	inString := false
+	var quote rune
+
+	for i := 0; i < len(expr); i++ {
+		ch := rune(expr[i])
+
+		if inString {
+			result.WriteRune(ch)
+			if ch == '\\' {
+				// Found a backslash inside a string - double it
+				result.WriteRune('\\')
+			} else if ch == quote {
+				// End of string literal
+				inString = false
+			}
+			continue
+		}
+
+		// Not inside a string literal
+		if ch == '\'' || ch == '"' {
+			inString = true
+			quote = ch
+		}
+		result.WriteRune(ch)
+	}
+
+	return result.String()
+}
+
+func RemoveDuplicateElement(s []string) []string {
+	result := make([]string, 0, len(s))
+	temp := map[string]struct{}{}
+	for _, item := range s {
+		if _, ok := temp[item]; !ok {
+			temp[item] = struct{}{}
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+type node struct {
+	key   interface{}
+	value interface{}
+	prev  *node
+	next  *node
+}
+
+type LRUCache struct {
+	capacity int
+	m        map[interface{}]*node
+	head     *node
+	tail     *node
+}
+
+func NewLRUCache(capacity int) *LRUCache {
+	cache := &LRUCache{}
+	cache.capacity = capacity
+	cache.m = map[interface{}]*node{}
+
+	head := &node{}
+	tail := &node{}
+
+	head.next = tail
+	tail.prev = head
+
+	cache.head = head
+	cache.tail = tail
+
+	return cache
+}
+
+func (cache *LRUCache) remove(n *node, listOnly bool) {
+	if !listOnly {
+		delete(cache.m, n.key)
+	}
+	n.prev.next = n.next
+	n.next.prev = n.prev
+}
+
+func (cache *LRUCache) add(n *node, listOnly bool) {
+	if !listOnly {
+		cache.m[n.key] = n
+	}
+	headNext := cache.head.next
+	cache.head.next = n
+	headNext.prev = n
+	n.next = headNext
+	n.prev = cache.head
+}
+
+func (cache *LRUCache) moveToHead(n *node) {
+	cache.remove(n, true)
+	cache.add(n, true)
+}
+
+func (cache *LRUCache) Get(key interface{}) (value interface{}, ok bool) {
+	n, ok := cache.m[key]
+	if ok {
+		cache.moveToHead(n)
+		return n.value, ok
+	} else {
+		return nil, ok
+	}
+}
+
+func (cache *LRUCache) Put(key interface{}, value interface{}) {
+	n, ok := cache.m[key]
+	if ok {
+		cache.remove(n, false)
+	} else {
+		n = &node{key, value, nil, nil}
+		if len(cache.m) >= cache.capacity {
+			cache.remove(cache.tail.prev, false)
+		}
+	}
+	cache.add(n, false)
+}
+
+type SyncLRUCache struct {
+	rwm sync.RWMutex
+	*LRUCache
+}
+
+func NewSyncLRUCache(capacity int) *SyncLRUCache {
+	cache := &SyncLRUCache{}
+	cache.LRUCache = NewLRUCache(capacity)
+	return cache
+}
+
+func (cache *SyncLRUCache) Get(key interface{}) (value interface{}, ok bool) {
+	cache.rwm.Lock()
+	defer cache.rwm.Unlock()
+	return cache.LRUCache.Get(key)
+}
+
+func (cache *SyncLRUCache) Put(key interface{}, value interface{}) {
+	cache.rwm.Lock()
+	defer cache.rwm.Unlock()
+	cache.LRUCache.Put(key, value)
 }

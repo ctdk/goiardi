@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package serf
 
 import (
@@ -179,6 +182,22 @@ func (r *QueryResponse) sendResponse(nr NodeResponse) error {
 	select {
 	case r.respCh <- nr:
 		r.responses[nr.From] = struct{}{}
+	default:
+		return errors.New("serf: Failed to deliver query response, dropping")
+	}
+	return nil
+}
+
+// sendResponse sends a response on the response channel ensuring the channel is not closed.
+func (r *QueryResponse) sendAck(nr *messageQueryResponse) error {
+	r.closeLock.Lock()
+	defer r.closeLock.Unlock()
+	if r.closed {
+		return nil
+	}
+	select {
+	case r.ackCh <- nr.From:
+		r.acks[nr.From] = struct{}{}
 	default:
 		return errors.New("serf: Failed to deliver query response, dropping")
 	}

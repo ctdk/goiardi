@@ -1,3 +1,6 @@
+// Copyright IBM Corp. 2013, 2025
+// SPDX-License-Identifier: MPL-2.0
+
 package memberlist
 
 // EventDelegate is a simpler delegate that is used only to receive
@@ -49,13 +52,16 @@ type NodeEvent struct {
 }
 
 func (c *ChannelEventDelegate) NotifyJoin(n *Node) {
-	c.Ch <- NodeEvent{NodeJoin, n}
+	node := *n
+	c.Ch <- NodeEvent{NodeJoin, &node}
 }
 
 func (c *ChannelEventDelegate) NotifyLeave(n *Node) {
-	c.Ch <- NodeEvent{NodeLeave, n}
+	node := *n
+	c.Ch <- NodeEvent{NodeLeave, &node}
 }
 
 func (c *ChannelEventDelegate) NotifyUpdate(n *Node) {
-	c.Ch <- NodeEvent{NodeUpdate, n}
+	node := *n
+	c.Ch <- NodeEvent{NodeUpdate, &node}
 }

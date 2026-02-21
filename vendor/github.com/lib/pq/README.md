@@ -1,23 +1,18 @@
-# pq - A pure Go postgres driver for Go's database/sql package
+pq is a Go PostgreSQL driver for database/sql.
 
-[![GoDoc](https://godoc.org/github.com/lib/pq?status.svg)](https://godoc.org/github.com/lib/pq)
-[![Build Status](https://travis-ci.org/lib/pq.svg?branch=master)](https://travis-ci.org/lib/pq)
+All [maintained versions of PostgreSQL] are supported. Older versions may work,
+but this is not tested.
 
-## Install
+API docs: https://pkg.go.dev/github.com/lib/pq
 
-	go get github.com/lib/pq
+Install with:
 
-## Docs
+    go get github.com/lib/pq@latest
 
-For detailed documentation and basic usage examples, please see the package
-documentation at <https://godoc.org/github.com/lib/pq>.
+[maintained versions of PostgreSQL]: https://www.postgresql.org/support/versioning
 
-## Tests
-
-`go test` is used for testing.  See [TESTS.md](TESTS.md) for more details.
-
-## Features
-
+Features
+--------
 * SSL
 * Handles bad connections for `database/sql`
 * Scan `time.Time` correctly (i.e. `timestamp[tz]`, `time[tz]`, `date`)
@@ -29,67 +24,69 @@ documentation at <https://godoc.org/github.com/lib/pq>.
 * Unix socket support
 * Notifications: `LISTEN`/`NOTIFY`
 * pgpass support
+* GSS (Kerberos) auth
 
-## Future / Things you can help with
+Running Tests
+-------------
+Tests need to be run against a PostgreSQL database; you can use Docker compose
+to start one:
 
-* Better COPY FROM / COPY TO (see discussion in #181)
+    docker compose up -d
 
-## Thank you (alphabetical)
+This starts the latest PostgreSQL; use `docker compose up -d pg«v»` to start a
+different version.
 
-Some of these contributors are from the original library `bmizerany/pq.go` whose
-code still exists in here.
+In addition, your `/etc/hosts` currently needs an entry:
 
-* Andy Balholm (andybalholm)
-* Ben Berkert (benburkert)
-* Benjamin Heatwole (bheatwole)
-* Bill Mill (llimllib)
-* Bjørn Madsen (aeons)
-* Blake Gentry (bgentry)
-* Brad Fitzpatrick (bradfitz)
-* Charlie Melbye (cmelbye)
-* Chris Bandy (cbandy)
-* Chris Gilling (cgilling)
-* Chris Walsh (cwds)
-* Dan Sosedoff (sosedoff)
-* Daniel Farina (fdr)
-* Eric Chlebek (echlebek)
-* Eric Garrido (minusnine)
-* Eric Urban (hydrogen18)
-* Everyone at The Go Team
-* Evan Shaw (edsrzf)
-* Ewan Chou (coocood)
-* Fazal Majid (fazalmajid)
-* Federico Romero (federomero)
-* Fumin (fumin)
-* Gary Burd (garyburd)
-* Heroku (heroku)
-* James Pozdena (jpoz)
-* Jason McVetta (jmcvetta)
-* Jeremy Jay (pbnjay)
-* Joakim Sernbrant (serbaut)
-* John Gallagher (jgallagher)
-* Jonathan Rudenberg (titanous)
-* Joël Stemmer (jstemmer)
-* Kamil Kisiel (kisielk)
-* Kelly Dunn (kellydunn)
-* Keith Rarick (kr)
-* Kir Shatrov (kirs)
-* Lann Martin (lann)
-* Maciek Sakrejda (uhoh-itsmaciek)
-* Marc Brinkmann (mbr)
-* Marko Tiikkaja (johto)
-* Matt Newberry (MattNewberry)
-* Matt Robenolt (mattrobenolt)
-* Martin Olsen (martinolsen)
-* Mike Lewis (mikelikespie)
-* Nicolas Patry (Narsil)
-* Oliver Tonnhofer (olt)
-* Patrick Hayes (phayes)
-* Paul Hammond (paulhammond)
-* Ryan Smith (ryandotsmith)
-* Samuel Stauffer (samuel)
-* Timothée Peignier (cyberdelia)
-* Travis Cline (tmc)
-* TruongSinh Tran-Nguyen (truongsinh)
-* Yaismel Miranda (ympons)
-* notedit (notedit)
+    127.0.0.1 postgres postgres-invalid
+
+Or you can use any other PostgreSQL instance; see
+`testdata/init/docker-entrypoint-initdb.d` for the required setup. You can use
+the standard `PG*` environment variables to control the connection details; it
+uses the following defaults:
+
+    PGHOST=localhost
+    PGDATABASE=pqgo
+    PGUSER=pqgo
+    PGSSLMODE=disable
+    PGCONNECT_TIMEOUT=20
+
+`PQTEST_BINARY_PARAMETERS` can be used to add `binary_parameters=yes` to all
+connection strings:
+
+    PQTEST_BINARY_PARAMETERS=1 go test
+
+Tests can be run against pgbouncer with:
+
+    docker compose up -d pgbouncer pg18
+    PGPORT=6432 go test ./...
+
+and pgpool with:
+
+    docker compose up -d pgpool pg18
+    PGPORT=7432 go test ./...
+
+You can use PQGO_DEBUG=1 to make the driver print the communication with
+PostgreSQL to stderr; this works anywhere (test or applications) and can be
+useful to debug protocol problems.
+
+For example:
+
+    % PQGO_DEBUG=1 go test -run TestSimpleQuery
+    CLIENT → Startup                 69  "\x00\x03\x00\x00database\x00pqgo\x00user [..]"
+    SERVER ← (R) AuthRequest          4  "\x00\x00\x00\x00"
+    SERVER ← (S) ParamStatus         19  "in_hot_standby\x00off\x00"
+    [..]
+    SERVER ← (Z) ReadyForQuery        1  "I"
+             START conn.query
+             START conn.simpleQuery
+    CLIENT → (Q) Query                9  "select 1\x00"
+    SERVER ← (T) RowDescription      29  "\x00\x01?column?\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x17\x00\x04\xff\xff\xff\xff\x00\x00"
+    SERVER ← (D) DataRow              7  "\x00\x01\x00\x00\x00\x011"
+             END conn.simpleQuery
+             END conn.query
+    SERVER ← (C) CommandComplete      9  "SELECT 1\x00"
+    SERVER ← (Z) ReadyForQuery        1  "I"
+    CLIENT → (X) Terminate            0  ""
+    PASS
+    ok      github.com/lib/pq       0.010s

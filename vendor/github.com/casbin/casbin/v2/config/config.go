@@ -23,21 +23,20 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 var (
-	// DEFAULT_SECTION specifies the name of a section if no name provided
+	// DEFAULT_SECTION specifies the name of a section if no name provided.
 	DEFAULT_SECTION = "default"
-	// DEFAULT_COMMENT defines what character(s) indicate a comment `#`
+	// DEFAULT_COMMENT defines what character(s) indicate a comment `#`.
 	DEFAULT_COMMENT = []byte{'#'}
-	// DEFAULT_COMMENT_SEM defines what alternate character(s) indicate a comment `;`
+	// DEFAULT_COMMENT_SEM defines what alternate character(s) indicate a comment `;`.
 	DEFAULT_COMMENT_SEM = []byte{';'}
-	// DEFAULT_MULTI_LINE_SEPARATOR defines what character indicates a multi-line content
+	// DEFAULT_MULTI_LINE_SEPARATOR defines what character indicates a multi-line content.
 	DEFAULT_MULTI_LINE_SEPARATOR = []byte{'\\'}
 )
 
-// ConfigInterface defines the behavior of a Config implementation
+// ConfigInterface defines the behavior of a Config implementation.
 type ConfigInterface interface {
 	String(key string) string
 	Strings(key string) []string
@@ -48,10 +47,8 @@ type ConfigInterface interface {
 	Set(key string, value string) error
 }
 
-// Config represents an implementation of the ConfigInterface
+// Config represents an implementation of the ConfigInterface.
 type Config struct {
-	// map is not safe.
-	sync.RWMutex
 	// Section:key=value
 	data map[string]map[string]string
 }
@@ -91,12 +88,10 @@ func (c *Config) AddConfig(section string, option string, value string) bool {
 }
 
 func (c *Config) parse(fname string) (err error) {
-	c.Lock()
 	f, err := os.Open(fname)
 	if err != nil {
 		return err
 	}
-	defer c.Unlock()
 	defer f.Close()
 
 	buf := bufio.NewReader(f)
@@ -121,7 +116,7 @@ func (c *Config) parseBuffer(buf *bufio.Reader) error {
 		if err == io.EOF {
 			// force write when buffer is not flushed yet
 			if buffer.Len() > 0 {
-				if err := c.write(section, lineNum, &buffer); err != nil {
+				if err = c.write(section, lineNum, &buffer); err != nil {
 					return err
 				}
 			}
@@ -155,7 +150,14 @@ func (c *Config) parseBuffer(buf *bufio.Reader) error {
 				canWrite = true
 			}
 
-			if _, err := buffer.Write(p); err != nil {
+			end := len(p)
+			for i, value := range p {
+				if value == DEFAULT_COMMENT[0] || value == DEFAULT_COMMENT_SEM[0] {
+					end = i
+					break
+				}
+			}
+			if _, err := buffer.Write(p[:end]); err != nil {
 				return err
 			}
 		}
@@ -183,33 +185,33 @@ func (c *Config) write(section string, lineNum int, b *bytes.Buffer) error {
 	return nil
 }
 
-// Bool lookups up the value using the provided key and converts the value to a bool
+// Bool lookups up the value using the provided key and converts the value to a bool.
 func (c *Config) Bool(key string) (bool, error) {
 	return strconv.ParseBool(c.get(key))
 }
 
-// Int lookups up the value using the provided key and converts the value to a int
+// Int lookups up the value using the provided key and converts the value to a int.
 func (c *Config) Int(key string) (int, error) {
 	return strconv.Atoi(c.get(key))
 }
 
-// Int64 lookups up the value using the provided key and converts the value to a int64
+// Int64 lookups up the value using the provided key and converts the value to a int64.
 func (c *Config) Int64(key string) (int64, error) {
 	return strconv.ParseInt(c.get(key), 10, 64)
 }
 
-// Float64 lookups up the value using the provided key and converts the value to a float64
+// Float64 lookups up the value using the provided key and converts the value to a float64.
 func (c *Config) Float64(key string) (float64, error) {
 	return strconv.ParseFloat(c.get(key), 64)
 }
 
-// String lookups up the value using the provided key and converts the value to a string
+// String lookups up the value using the provided key and converts the value to a string.
 func (c *Config) String(key string) string {
 	return c.get(key)
 }
 
 // Strings lookups up the value using the provided key and converts the value to an array of string
-// by splitting the string by comma
+// by splitting the string by comma.
 func (c *Config) Strings(key string) []string {
 	v := c.get(key)
 	if v == "" {
@@ -218,10 +220,8 @@ func (c *Config) Strings(key string) []string {
 	return strings.Split(v, ",")
 }
 
-// Set sets the value for the specific key in the Config
+// Set sets the value for the specific key in the Config.
 func (c *Config) Set(key string, value string) error {
-	c.Lock()
-	defer c.Unlock()
 	if len(key) == 0 {
 		return errors.New("key is empty")
 	}
@@ -243,7 +243,7 @@ func (c *Config) Set(key string, value string) error {
 	return nil
 }
 
-// section.key or key
+// section.key or key.
 func (c *Config) get(key string) string {
 	var (
 		section string

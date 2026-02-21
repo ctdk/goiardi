@@ -1,7 +1,7 @@
 go-flags: a go library for parsing command line arguments
 =========================================================
 
-[![GoDoc](https://godoc.org/github.com/jessevdk/go-flags?status.png)](https://godoc.org/github.com/jessevdk/go-flags) [![Build Status](https://travis-ci.org/jessevdk/go-flags.svg?branch=master)](https://travis-ci.org/jessevdk/go-flags) [![Coverage Status](https://img.shields.io/coveralls/jessevdk/go-flags.svg)](https://coveralls.io/r/jessevdk/go-flags?branch=master)
+[![GoDoc](https://godoc.org/github.com/jessevdk/go-flags?status.png)](https://godoc.org/github.com/jessevdk/go-flags)
 
 This library provides similar functionality to the builtin flag library of
 go, but provides much more functionality and nicer formatting. From the
@@ -61,6 +61,9 @@ var opts struct {
 	// Example of a required flag
 	Name string `short:"n" long:"name" description:"A name" required:"true"`
 
+	// Example of a flag restricted to a pre-defined set of strings
+	Animal string `long:"animal" choice:"cat" choice:"dog"`
+
 	// Example of a value name
 	File string `short:"f" long:"file" description:"A file" value-name:"FILE"`
 
@@ -75,6 +78,9 @@ var opts struct {
 
 	// Example of a map
 	IntMap map[string]int `long:"intmap" description:"A map from string to int"`
+
+	// Example of env variable
+	Thresholds  []int     `long:"thresholds" default:"1" default:"2" env:"THRESHOLD_VALUES"  env-delim:","`
 }
 
 // Callback which will invoke callto:<argument> to call a number.
@@ -91,6 +97,7 @@ args := []string{
 	"-vv",
 	"--offset=5",
 	"-n", "Me",
+	"--animal", "dog", // anything other than "cat" or "dog" will raise an error
 	"-p", "3",
 	"-s", "hello",
 	"-s", "world",
@@ -115,6 +122,7 @@ if err != nil {
 fmt.Printf("Verbosity: %v\n", opts.Verbose)
 fmt.Printf("Offset: %d\n", opts.Offset)
 fmt.Printf("Name: %s\n", opts.Name)
+fmt.Printf("Animal: %s\n", opts.Animal)
 fmt.Printf("Ptr: %d\n", *opts.Ptr)
 fmt.Printf("StringSlice: %v\n", opts.StringSlice)
 fmt.Printf("PtrSlice: [%v %v]\n", *opts.PtrSlice[0], *opts.PtrSlice[1])

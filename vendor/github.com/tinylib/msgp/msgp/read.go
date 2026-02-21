@@ -1,8 +1,13 @@
 package msgp
 
 import (
+	"encoding"
+	"encoding/binary"
+	"encoding/json"
+	"fmt"
 	"io"
 	"math"
+	"strconv"
 	"sync"
 	"time"
 
@@ -10,7 +15,7 @@ import (
 )
 
 // where we keep old *Readers
-var readerPool = sync.Pool{New: func() interface{} { return &Reader{} }}
+var readerPool = sync.Pool{New: func() any { return &Reader{} }}
 
 // Type is a MessagePack wire type,
 // including this package's built-in
@@ -36,6 +41,7 @@ const (
 	IntType
 	UintType
 	NilType
+	DurationType
 	ExtensionType
 
 	// pseudo-types provided
@@ -44,6 +50,7 @@ const (
 	Complex64Type
 	Complex128Type
 	TimeType
+	NumberType
 
 	_maxtype
 )
@@ -73,6 +80,8 @@ func (t Type) String() string {
 		return "ext"
 	case NilType:
 		return "nil"
+	case NumberType:
+		return "number"
 	default:
 		return "<invalid>"
 	}
@@ -126,6 +135,11 @@ func NewReaderSize(r io.Reader, sz int) *Reader {
 	return &Reader{R: fwd.NewReaderSize(r, sz)}
 }
 
+// NewReaderBuf returns a *Reader with a provided buffer.
+func NewReaderBuf(r io.Reader, buf []byte) *Reader {
+	return &Reader{R: fwd.NewReaderBuf(r, buf)}
+}
+
 // Reader wraps an io.Reader and provides
 // methods to read MessagePack-encoded values
 // from it. Readers are buffered.
@@ -137,8 +151,13 @@ type Reader struct {
 	// is stateless; all the
 	// buffering is done
 	// within R.
-	R       *fwd.Reader
-	scratch []byte
+	R              *fwd.Reader
+	scratch        []byte
+	recursionDepth int
+
+	maxRecursionDepth int    // maximum recursion depth
+	maxElements       uint32 // maximum number of elements in arrays and maps
+	maxStrLen         uint64 // maximum number of bytes in any string
 }
 
 // Read implements `io.Reader`
@@ -158,7 +177,7 @@ func (m *Reader) CopyNext(w io.Writer) (int64, error) {
 	// Opportunistic optimization: if we can fit the whole thing in the m.R
 	// buffer, then just get a pointer to that, and pass it to w.Write,
 	// avoiding an allocation.
-	if int(sz) <= m.R.BufferSize() {
+	if int(sz) >= 0 && int(sz) <= m.R.BufferSize() {
 		var nn int
 		var buf []byte
 		buf, err = m.R.Next(int(sz))
@@ -184,8 +203,13 @@ func (m *Reader) CopyNext(w io.Writer) (int64, error) {
 		return n, io.ErrShortWrite
 	}
 
+	if done, err := m.recursiveCall(); err != nil {
+		return n, err
+	} else {
+		defer done()
+	}
 	// for maps and slices, read elements
-	for x := uintptr(0); x < o; x++ {
+	for range o {
 		var n2 int64
 		n2, err = m.CopyNext(w)
 		if err != nil {
@@ -194,6 +218,61 @@ func (m *Reader) CopyNext(w io.Writer) (int64, error) {
 		n += n2
 	}
 	return n, nil
+}
+
+// SetMaxRecursionDepth sets the maximum recursion depth.
+func (m *Reader) SetMaxRecursionDepth(d int) {
+	m.maxRecursionDepth = d
+}
+
+// GetMaxRecursionDepth returns the maximum recursion depth.
+// Set to 0 to use the default value of 100000.
+func (m *Reader) GetMaxRecursionDepth() int {
+	if m.maxRecursionDepth <= 0 {
+		return recursionLimit
+	}
+	return m.maxRecursionDepth
+}
+
+// SetMaxElements sets the maximum number of elements to allow in map, bin, array or extension payload.
+// Setting this to 0 will allow any number of elements - math.MaxUint32.
+// This does currently apply to generated code.
+func (m *Reader) SetMaxElements(d uint32) {
+	m.maxElements = d
+}
+
+// GetMaxElements will return the maximum number of elements in a map, bin, array or extension payload.
+func (m *Reader) GetMaxElements() uint32 {
+	if m.maxElements <= 0 {
+		return math.MaxUint32
+	}
+	return m.maxElements
+}
+
+// SetMaxStringLength sets the maximum number of bytes to allow in strings.
+// Setting this == 0 will allow any number of elements - math.MaxUint64.
+func (m *Reader) SetMaxStringLength(d uint64) {
+	m.maxStrLen = d
+}
+
+// GetMaxStringLength will return the current string length limit.
+func (m *Reader) GetMaxStringLength() uint64 {
+	if m.maxStrLen <= 0 {
+		return math.MaxUint64
+	}
+	return min(m.maxStrLen, math.MaxUint64)
+}
+
+// recursiveCall will increment the recursion depth and return an error if it is exceeded.
+// If a nil error is returned, done must be called to decrement the counter.
+func (m *Reader) recursiveCall() (done func(), err error) {
+	if m.recursionDepth >= m.GetMaxRecursionDepth() {
+		return func() {}, ErrRecursion
+	}
+	m.recursionDepth++
+	return func() {
+		m.recursionDepth--
+	}, nil
 }
 
 // ReadFull implements `io.ReadFull`
@@ -212,13 +291,13 @@ func (m *Reader) BufferSize() int { return m.R.BufferSize() }
 
 // NextType returns the next object type to be decoded.
 func (m *Reader) NextType() (Type, error) {
-	p, err := m.R.Peek(1)
+	next, err := m.R.PeekByte()
 	if err != nil {
 		return InvalidType, err
 	}
-	t := getType(p[0])
+	t := getType(next)
 	if t == InvalidType {
-		return t, InvalidPrefixError(p[0])
+		return t, InvalidPrefixError(next)
 	}
 	if t == ExtensionType {
 		v, err := m.peekExtensionType()
@@ -230,7 +309,7 @@ func (m *Reader) NextType() (Type, error) {
 			return Complex64Type, nil
 		case Complex128Extension:
 			return Complex128Type, nil
-		case TimeExtension:
+		case TimeExtension, MsgTimeExtension:
 			return TimeType, nil
 		}
 	}
@@ -240,8 +319,8 @@ func (m *Reader) NextType() (Type, error) {
 // IsNil returns whether or not
 // the next byte is a null messagepack byte
 func (m *Reader) IsNil() bool {
-	p, err := m.R.Peek(1)
-	return err == nil && p[0] == mnil
+	p, err := m.R.PeekByte()
+	return err == nil && p == mnil
 }
 
 // getNextSize returns the size of the next object on the wire.
@@ -252,12 +331,11 @@ func (m *Reader) IsNil() bool {
 // use uintptr b/c it's guaranteed to be large enough
 // to hold whatever we can fit in memory.
 func getNextSize(r *fwd.Reader) (uintptr, uintptr, error) {
-	b, err := r.Peek(1)
+	lead, err := r.PeekByte()
 	if err != nil {
 		return 0, 0, err
 	}
-	lead := b[0]
-	spec := &sizes[lead]
+	spec := getBytespec(lead)
 	size, mode := spec.size, spec.extra
 	if size == 0 {
 		return 0, 0, InvalidPrefixError(lead)
@@ -265,7 +343,7 @@ func getNextSize(r *fwd.Reader) (uintptr, uintptr, error) {
 	if mode >= 0 {
 		return uintptr(size), uintptr(mode), nil
 	}
-	b, err = r.Peek(int(size))
+	b, err := r.Peek(int(size))
 	if err != nil {
 		return 0, 0, err
 	}
@@ -326,7 +404,12 @@ func (m *Reader) Skip() error {
 		return err
 	}
 
-	// for maps and slices, skip elements
+	// for maps and slices, skip elements with recursive call
+	if done, err := m.recursiveCall(); err != nil {
+		return err
+	} else {
+		defer done()
+	}
 	for x := uintptr(0); x < o; x++ {
 		err = m.Skip()
 		if err != nil {
@@ -344,11 +427,10 @@ func (m *Reader) Skip() error {
 func (m *Reader) ReadMapHeader() (sz uint32, err error) {
 	var p []byte
 	var lead byte
-	p, err = m.R.Peek(1)
+	lead, err = m.R.PeekByte()
 	if err != nil {
 		return
 	}
-	lead = p[0]
 	if isfixmap(lead) {
 		sz = uint32(rfixmap(lead))
 		_, err = m.R.Skip(1)
@@ -382,14 +464,18 @@ func (m *Reader) ReadMapKey(scratch []byte) ([]byte, error) {
 	out, err := m.ReadStringAsBytes(scratch)
 	if err != nil {
 		if tperr, ok := err.(TypeError); ok && tperr.Encoded == BinType {
-			return m.ReadBytes(scratch)
+			key, err := m.ReadBytes(scratch)
+			if uint64(len(key)) > m.GetMaxStringLength() {
+				return nil, ErrLimitExceeded
+			}
+			return key, err
 		}
 		return nil, err
 	}
 	return out, nil
 }
 
-// MapKeyPtr returns a []byte pointing to the contents
+// ReadMapKeyPtr returns a []byte pointing to the contents
 // of a valid map key. The key cannot be empty, and it
 // must be shorter than the total buffer size of the
 // *Reader. Additionally, the returned slice is only
@@ -398,12 +484,12 @@ func (m *Reader) ReadMapKey(scratch []byte) ([]byte, error) {
 // method; writing into the returned slice may
 // corrupt future reads.
 func (m *Reader) ReadMapKeyPtr() ([]byte, error) {
-	p, err := m.R.Peek(1)
+	lead, err := m.R.PeekByte()
 	if err != nil {
 		return nil, err
 	}
-	lead := p[0]
 	var read int
+	var p []byte
 	if isfixstr(lead) {
 		read = int(rfixstr(lead))
 		m.R.Skip(1)
@@ -435,6 +521,9 @@ fill:
 	if read == 0 {
 		return nil, ErrShortBytes
 	}
+	if uint64(read) > m.GetMaxStringLength() {
+		return nil, ErrLimitExceeded
+	}
 	return m.R.Next(read)
 }
 
@@ -442,18 +531,16 @@ fill:
 // array header and returns the size of the array
 // and the number of bytes read.
 func (m *Reader) ReadArrayHeader() (sz uint32, err error) {
-	var lead byte
-	var p []byte
-	p, err = m.R.Peek(1)
+	lead, err := m.R.PeekByte()
 	if err != nil {
 		return
 	}
-	lead = p[0]
 	if isfixarray(lead) {
 		sz = uint32(rfixarray(lead))
 		_, err = m.R.Skip(1)
 		return
 	}
+	var p []byte
 	switch lead {
 	case marray16:
 		p, err = m.R.Next(3)
@@ -479,12 +566,12 @@ func (m *Reader) ReadArrayHeader() (sz uint32, err error) {
 
 // ReadNil reads a 'nil' MessagePack byte from the reader
 func (m *Reader) ReadNil() error {
-	p, err := m.R.Peek(1)
+	p, err := m.R.PeekByte()
 	if err != nil {
 		return err
 	}
-	if p[0] != mnil {
-		return badPrefix(NilType, p[0])
+	if p != mnil {
+		return badPrefix(NilType, p)
 	}
 	_, err = m.R.Skip(1)
 	return err
@@ -497,7 +584,7 @@ func (m *Reader) ReadFloat64() (f float64, err error) {
 	var p []byte
 	p, err = m.R.Peek(9)
 	if err != nil {
-		// we'll allow a coversion from float32 to float64,
+		// we'll allow a conversion from float32 to float64,
 		// since we don't lose any precision
 		if err == io.EOF && len(p) > 0 && p[0] == mfloat32 {
 			ef, err := m.ReadFloat32()
@@ -537,32 +624,36 @@ func (m *Reader) ReadFloat32() (f float32, err error) {
 
 // ReadBool reads a bool from the reader
 func (m *Reader) ReadBool() (b bool, err error) {
-	var p []byte
-	p, err = m.R.Peek(1)
+	var p byte
+	p, err = m.R.PeekByte()
 	if err != nil {
 		return
 	}
-	switch p[0] {
+	switch p {
 	case mtrue:
 		b = true
 	case mfalse:
 	default:
-		err = badPrefix(BoolType, p[0])
+		err = badPrefix(BoolType, p)
 		return
 	}
 	_, err = m.R.Skip(1)
 	return
 }
 
+// ReadDuration reads a time.Duration from the reader
+func (m *Reader) ReadDuration() (d time.Duration, err error) {
+	i, err := m.ReadInt64()
+	return time.Duration(i), err
+}
+
 // ReadInt64 reads an int64 from the reader
 func (m *Reader) ReadInt64() (i int64, err error) {
 	var p []byte
-	var lead byte
-	p, err = m.R.Peek(1)
+	lead, err := m.R.PeekByte()
 	if err != nil {
 		return
 	}
-	lead = p[0]
 
 	if isfixint(lead) {
 		i = int64(rfixint(lead))
@@ -703,12 +794,10 @@ func (m *Reader) ReadInt() (i int, err error) {
 // ReadUint64 reads a uint64 from the reader
 func (m *Reader) ReadUint64() (u uint64, err error) {
 	var p []byte
-	var lead byte
-	p, err = m.R.Peek(1)
+	lead, err := m.R.PeekByte()
 	if err != nil {
 		return
 	}
-	lead = p[0]
 	if isfixint(lead) {
 		u = uint64(rfixint(lead))
 		_, err = m.R.Skip(1)
@@ -783,7 +872,7 @@ func (m *Reader) ReadUint64() (u uint64, err error) {
 		if err != nil {
 			return
 		}
-		v := int64(getMint64(p))
+		v := getMint64(p)
 		if v < 0 {
 			err = UintBelowZero{Value: v}
 			return
@@ -908,7 +997,67 @@ func (m *Reader) ReadBytes(scratch []byte) (b []byte, err error) {
 		return
 	}
 	if int64(cap(scratch)) < read {
+		if read > int64(m.GetMaxElements()) {
+			err = ErrLimitExceeded
+			return
+		}
 		b = make([]byte, read)
+	} else {
+		b = scratch[0:read]
+	}
+	_, err = m.R.ReadFull(b)
+	return
+}
+
+// ReadBytesLimit reads a MessagePack 'bin' object
+// from the reader and returns its value. It may
+// use 'scratch' for storage if it is non-nil.
+// If n >= 0 this will be the maximum bytes read.
+// If n < 0, the cap(scratch) will be the limit.
+// If SetMaxElements has been used on the Reader,
+// that will only be checked if the scratch is too small.
+func (m *Reader) ReadBytesLimit(scratch []byte, n int64) (b []byte, err error) {
+	var p []byte
+	var lead byte
+	p, err = m.R.Peek(2)
+	if err != nil {
+		return
+	}
+	lead = p[0]
+	var read int64
+	switch lead {
+	case mbin8:
+		read = int64(p[1])
+		m.R.Skip(2)
+	case mbin16:
+		p, err = m.R.Next(3)
+		if err != nil {
+			return
+		}
+		read = int64(big.Uint16(p[1:]))
+	case mbin32:
+		p, err = m.R.Next(5)
+		if err != nil {
+			return
+		}
+		read = int64(big.Uint32(p[1:]))
+	default:
+		err = badPrefix(BinType, lead)
+		return
+	}
+	if n < 0 {
+		n = int64(cap(scratch))
+	}
+	if read > n {
+		err = ErrLimitExceeded
+		return
+	}
+	if int64(cap(scratch)) < read {
+		b = make([]byte, read)
+		if read > int64(m.GetMaxElements()) {
+			err = ErrLimitExceeded
+			return
+		}
 	} else {
 		b = scratch[0:read]
 	}
@@ -923,11 +1072,11 @@ func (m *Reader) ReadBytes(scratch []byte) (b []byte, err error) {
 // way.
 func (m *Reader) ReadBytesHeader() (sz uint32, err error) {
 	var p []byte
-	p, err = m.R.Peek(1)
+	lead, err := m.R.PeekByte()
 	if err != nil {
 		return
 	}
-	switch p[0] {
+	switch lead {
 	case mbin8:
 		p, err = m.R.Next(2)
 		if err != nil {
@@ -947,10 +1096,10 @@ func (m *Reader) ReadBytesHeader() (sz uint32, err error) {
 		if err != nil {
 			return
 		}
-		sz = uint32(big.Uint32(p[1:]))
+		sz = big.Uint32(p[1:])
 		return
 	default:
-		err = badPrefix(BinType, p[0])
+		err = badPrefix(BinType, lead)
 		return
 	}
 }
@@ -1001,12 +1150,10 @@ func (m *Reader) ReadExactBytes(into []byte) error {
 // if it is non-nil.
 func (m *Reader) ReadStringAsBytes(scratch []byte) (b []byte, err error) {
 	var p []byte
-	var lead byte
-	p, err = m.R.Peek(1)
+	lead, err := m.R.PeekByte()
 	if err != nil {
 		return
 	}
-	lead = p[0]
 	var read int64
 
 	if isfixstr(lead) {
@@ -1021,7 +1168,7 @@ func (m *Reader) ReadStringAsBytes(scratch []byte) (b []byte, err error) {
 		if err != nil {
 			return
 		}
-		read = int64(uint8(p[1]))
+		read = int64(p[1])
 	case mstr16:
 		p, err = m.R.Next(3)
 		if err != nil {
@@ -1039,6 +1186,10 @@ func (m *Reader) ReadStringAsBytes(scratch []byte) (b []byte, err error) {
 		return
 	}
 fill:
+	if uint64(read) > m.GetMaxStringLength() {
+		err = ErrLimitExceeded
+		return
+	}
 	if int64(cap(scratch)) < read {
 		b = make([]byte, read)
 	} else {
@@ -1053,17 +1204,16 @@ fill:
 // for dealing with the next 'sz' bytes from
 // the reader in an application-specific manner.
 func (m *Reader) ReadStringHeader() (sz uint32, err error) {
-	var p []byte
-	p, err = m.R.Peek(1)
+	lead, err := m.R.PeekByte()
 	if err != nil {
 		return
 	}
-	lead := p[0]
 	if isfixstr(lead) {
 		sz = uint32(rfixstr(lead))
 		m.R.Skip(1)
 		return
 	}
+	var p []byte
 	switch lead {
 	case mstr8:
 		p, err = m.R.Next(2)
@@ -1094,15 +1244,13 @@ func (m *Reader) ReadStringHeader() (sz uint32, err error) {
 
 // ReadString reads a utf-8 string from the reader
 func (m *Reader) ReadString() (s string, err error) {
-	var p []byte
-	var lead byte
 	var read int64
-	p, err = m.R.Peek(1)
+	lead, err := m.R.PeekByte()
 	if err != nil {
 		return
 	}
-	lead = p[0]
 
+	var p []byte
 	if isfixstr(lead) {
 		read = int64(rfixstr(lead))
 		m.R.Skip(1)
@@ -1115,7 +1263,7 @@ func (m *Reader) ReadString() (s string, err error) {
 		if err != nil {
 			return
 		}
-		read = int64(uint8(p[1]))
+		read = int64(p[1])
 	case mstr16:
 		p, err = m.R.Next(3)
 		if err != nil {
@@ -1137,6 +1285,11 @@ fill:
 		s, err = "", nil
 		return
 	}
+	if uint64(read) > m.GetMaxStringLength() {
+		err = ErrLimitExceeded
+		return
+	}
+
 	// reading into the memory
 	// that will become the string
 	// itself has vastly superior
@@ -1207,7 +1360,7 @@ func (m *Reader) ReadComplex128() (f complex128, err error) {
 
 // ReadMapStrIntf reads a MessagePack map into a map[string]interface{}.
 // (You must pass a non-nil map into the function.)
-func (m *Reader) ReadMapStrIntf(mp map[string]interface{}) (err error) {
+func (m *Reader) ReadMapStrIntf(mp map[string]any) (err error) {
 	var sz uint32
 	sz, err = m.ReadMapHeader()
 	if err != nil {
@@ -1216,9 +1369,13 @@ func (m *Reader) ReadMapStrIntf(mp map[string]interface{}) (err error) {
 	for key := range mp {
 		delete(mp, key)
 	}
+	if sz > m.GetMaxElements() {
+		err = ErrLimitExceeded
+		return
+	}
 	for i := uint32(0); i < sz; i++ {
 		var key string
-		var val interface{}
+		var val any
 		key, err = m.ReadString()
 		if err != nil {
 			return
@@ -1232,33 +1389,123 @@ func (m *Reader) ReadMapStrIntf(mp map[string]interface{}) (err error) {
 	return
 }
 
+// ReadTimeUTC reads a time.Time object from the reader.
+// The returned time's location will be set to UTC.
+func (m *Reader) ReadTimeUTC() (t time.Time, err error) {
+	t, err = m.ReadTime()
+	return t.UTC(), err
+}
+
 // ReadTime reads a time.Time object from the reader.
 // The returned time's location will be set to time.Local.
 func (m *Reader) ReadTime() (t time.Time, err error) {
-	var p []byte
-	p, err = m.R.Peek(15)
+	offset, length, extType, err := m.peekExtensionHeader()
 	if err != nil {
-		return
+		return t, err
 	}
-	if p[0] != mext8 || p[1] != 12 {
-		err = badPrefix(TimeType, p[0])
+
+	switch extType {
+	case TimeExtension:
+		var p []byte
+		p, err = m.R.Peek(15)
+		if err != nil {
+			return
+		}
+		if p[0] != mext8 || p[1] != 12 {
+			err = badPrefix(TimeType, p[0])
+			return
+		}
+		if int8(p[2]) != TimeExtension {
+			err = errExt(int8(p[2]), TimeExtension)
+			return
+		}
+		sec, nsec := getUnix(p[3:])
+		t = time.Unix(sec, int64(nsec)).Local()
+		_, err = m.R.Skip(15)
 		return
+	case MsgTimeExtension:
+		switch length {
+		case 4, 8, 12:
+			var tmp [12]byte
+			_, err = m.R.Skip(offset)
+			if err != nil {
+				return
+			}
+			var n int
+			n, err = m.R.Read(tmp[:length])
+			if err != nil {
+				return
+			}
+			if n != length {
+				err = ErrShortBytes
+				return
+			}
+			b := tmp[:length]
+			switch length {
+			case 4:
+				t = time.Unix(int64(binary.BigEndian.Uint32(b)), 0).Local()
+			case 8:
+				v := binary.BigEndian.Uint64(b)
+				nanos := int64(v >> 34)
+				if nanos > 999999999 {
+					// In timestamp 64 and timestamp 96 formats, nanoseconds must not be larger than 999999999.
+					err = InvalidTimestamp{Nanos: nanos}
+					return
+				}
+				t = time.Unix(int64(v&(1<<34-1)), nanos).Local()
+			case 12:
+				nanos := int64(binary.BigEndian.Uint32(b))
+				if nanos > 999999999 {
+					// In timestamp 64 and timestamp 96 formats, nanoseconds must not be larger than 999999999.
+					err = InvalidTimestamp{Nanos: nanos}
+					return
+				}
+				ux := int64(binary.BigEndian.Uint64(b[4:]))
+				t = time.Unix(ux, nanos).Local()
+			}
+		default:
+			err = InvalidTimestamp{FieldLength: length}
+		}
+	default:
+		err = errExt(extType, TimeExtension)
 	}
-	if int8(p[2]) != TimeExtension {
-		err = errExt(int8(p[2]), TimeExtension)
-		return
-	}
-	sec, nsec := getUnix(p[3:])
-	t = time.Unix(sec, int64(nsec)).Local()
-	_, err = m.R.Skip(15)
 	return
 }
 
-// ReadIntf reads out the next object as a raw interface{}.
+// ReadJSONNumber reads an integer or a float value and return as json.Number
+func (m *Reader) ReadJSONNumber() (n json.Number, err error) {
+	t, err := m.NextType()
+	if err != nil {
+		return
+	}
+	switch t {
+	case IntType:
+		v, err := m.ReadInt64()
+		if err == nil {
+			return json.Number(strconv.FormatInt(v, 10)), nil
+		}
+		return "", err
+	case UintType:
+		v, err := m.ReadUint64()
+		if err == nil {
+			return json.Number(strconv.FormatUint(v, 10)), nil
+		}
+		return "", err
+	case Float32Type, Float64Type:
+		v, err := m.ReadFloat64()
+		if err == nil {
+			return json.Number(strconv.FormatFloat(v, 'f', -1, 64)), nil
+		}
+		return "", err
+	}
+	return "", TypeError{Method: NumberType, Encoded: t}
+}
+
+// ReadIntf reads out the next object as a raw interface{}/any.
 // Arrays are decoded as []interface{}, and maps are decoded
 // as map[string]interface{}. Integers are decoded as int64
 // and unsigned integers are decoded as uint64.
-func (m *Reader) ReadIntf() (i interface{}, err error) {
+func (m *Reader) ReadIntf() (i any, err error) {
 	var t Type
 	t, err = m.NextType()
 	if err != nil {
@@ -1297,6 +1544,10 @@ func (m *Reader) ReadIntf() (i interface{}, err error) {
 		i, err = m.ReadTime()
 		return
 
+	case DurationType:
+		i, err = m.ReadDuration()
+		return
+
 	case ExtensionType:
 		var t int8
 		t, err = m.peekExtensionType()
@@ -1317,7 +1568,14 @@ func (m *Reader) ReadIntf() (i interface{}, err error) {
 		return
 
 	case MapType:
-		mp := make(map[string]interface{})
+		// This can call back here, so treat as recursive call.
+		if done, err := m.recursiveCall(); err != nil {
+			return nil, err
+		} else {
+			defer done()
+		}
+
+		mp := make(map[string]any)
 		err = m.ReadMapStrIntf(mp)
 		i = mp
 		return
@@ -1342,7 +1600,18 @@ func (m *Reader) ReadIntf() (i interface{}, err error) {
 		if err != nil {
 			return
 		}
-		out := make([]interface{}, int(sz))
+
+		if done, err := m.recursiveCall(); err != nil {
+			return nil, err
+		} else {
+			defer done()
+		}
+		if sz > m.GetMaxElements() {
+			err = ErrLimitExceeded
+			return
+		}
+
+		out := make([]any, int(sz))
 		for j := range out {
 			out[j], err = m.ReadIntf()
 			if err != nil {
@@ -1355,4 +1624,52 @@ func (m *Reader) ReadIntf() (i interface{}, err error) {
 	default:
 		return nil, fatal // unreachable
 	}
+}
+
+// ReadBinaryUnmarshal reads a binary-encoded object from the reader and unmarshals it into dst.
+func (m *Reader) ReadBinaryUnmarshal(dst encoding.BinaryUnmarshaler) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("msgp: panic during UnmarshalBinary: %v", r)
+		}
+	}()
+	tmp := bytesPool.Get().([]byte)
+	defer bytesPool.Put(tmp) //nolint:staticcheck
+	tmp, err = m.ReadBytes(tmp[:0])
+	if err != nil {
+		return
+	}
+	return dst.UnmarshalBinary(tmp)
+}
+
+// ReadTextUnmarshal reads a text-encoded bin array from the reader and unmarshals it into dst.
+func (m *Reader) ReadTextUnmarshal(dst encoding.TextUnmarshaler) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("msgp: panic during UnmarshalText: %v", r)
+		}
+	}()
+	tmp := bytesPool.Get().([]byte)
+	defer bytesPool.Put(tmp) //nolint:staticcheck
+	tmp, err = m.ReadBytes(tmp[:0])
+	if err != nil {
+		return
+	}
+	return dst.UnmarshalText(tmp)
+}
+
+// ReadTextUnmarshalString reads a text-encoded string from the reader and unmarshals it into dst.
+func (m *Reader) ReadTextUnmarshalString(dst encoding.TextUnmarshaler) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("msgp: panic during UnmarshalText: %v", r)
+		}
+	}()
+	tmp := bytesPool.Get().([]byte)
+	defer bytesPool.Put(tmp) //nolint:staticcheck
+	tmp, err = m.ReadStringAsBytes(tmp[:0])
+	if err != nil {
+		return
+	}
+	return dst.UnmarshalText(tmp)
 }

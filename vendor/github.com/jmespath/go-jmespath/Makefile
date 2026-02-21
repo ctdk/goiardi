@@ -1,6 +1,8 @@
 
 CMD = jpgo
 
+SRC_PKGS=./ ./cmd/... ./fuzz/...
+
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
 	@echo "  test                    to run all the tests"
@@ -9,24 +11,21 @@ help:
 
 
 generate:
-	go generate ./...
+	go generate ${SRC_PKGS}
 
 build:
 	rm -f $(CMD)
-	go build ./...
+	go build ${SRC_PKGS}
 	rm -f cmd/$(CMD)/$(CMD) && cd cmd/$(CMD)/ && go build ./...
 	mv cmd/$(CMD)/$(CMD) .
 
-test:
-	go test -v ./...
+test: build
+	go test -v ${SRC_PKGS}
 
 check:
-	go vet ./...
-	@echo "golint ./..."
-	@lint=`golint ./...`; \
-	lint=`echo "$$lint" | grep -v "astnodetype_string.go" | grep -v "toktype_string.go"`; \
-	echo "$$lint"; \
-	if [ "$$lint" != "" ]; then exit 1; fi
+	go vet ${SRC_PKGS}
+	golint ${SRC_PKGS}
+	golangci-lint run
 
 htmlc:
 	go test -coverprofile="/tmp/jpcov"  && go tool cover -html="/tmp/jpcov" && unlink /tmp/jpcov
@@ -42,3 +41,8 @@ bench:
 
 pprof-cpu:
 	go tool pprof ./go-jmespath.test ./cpu.out
+
+install-dev-cmds:
+	go install golang.org/x/lint/golint@latest
+	go install golang.org/x/tools/cmd/stringer@latest
+	command -v golangci-lint || { curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.46.2; }

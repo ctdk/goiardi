@@ -9,13 +9,12 @@ import (
 	"time"
 )
 
-var unfuns [_maxtype]func(jsWriter, []byte, []byte) ([]byte, []byte, error)
+var unfuns [_maxtype]func(jsWriter, []byte, []byte, int) ([]byte, []byte, error)
 
 func init() {
-
 	// NOTE(pmh): this is best expressed as a jump table,
 	// but gc doesn't do that yet. revisit post-go1.5.
-	unfuns = [_maxtype]func(jsWriter, []byte, []byte) ([]byte, []byte, error){
+	unfuns = [_maxtype]func(jsWriter, []byte, []byte, int) ([]byte, []byte, error){
 		StrType:        rwStringBytes,
 		BinType:        rwBytesBytes,
 		MapType:        rwMapBytes,
@@ -52,7 +51,7 @@ func UnmarshalAsJSON(w io.Writer, msg []byte) ([]byte, error) {
 		dst = bufio.NewWriterSize(w, 512)
 	}
 	for len(msg) > 0 && err == nil {
-		msg, scratch, err = writeNext(dst, msg, scratch)
+		msg, scratch, err = writeNext(dst, msg, scratch, 0)
 	}
 	if !cast && err == nil {
 		err = dst.(*bufio.Writer).Flush()
@@ -60,7 +59,7 @@ func UnmarshalAsJSON(w io.Writer, msg []byte) ([]byte, error) {
 	return msg, err
 }
 
-func writeNext(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func writeNext(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
 	if len(msg) < 1 {
 		return msg, scratch, ErrShortBytes
 	}
@@ -73,14 +72,17 @@ func writeNext(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
 		if err != nil {
 			return nil, scratch, err
 		}
-		if et == TimeExtension {
+		if et == TimeExtension || et == MsgTimeExtension {
 			t = TimeType
 		}
 	}
-	return unfuns[t](w, msg, scratch)
+	return unfuns[t](w, msg, scratch, depth)
 }
 
-func rwArrayBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func rwArrayBytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
+	if depth >= recursionLimit {
+		return msg, scratch, ErrRecursion
+	}
 	sz, msg, err := ReadArrayHeaderBytes(msg)
 	if err != nil {
 		return msg, scratch, err
@@ -89,14 +91,14 @@ func rwArrayBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error
 	if err != nil {
 		return msg, scratch, err
 	}
-	for i := uint32(0); i < sz; i++ {
+	for i := range sz {
 		if i != 0 {
 			err = w.WriteByte(',')
 			if err != nil {
 				return msg, scratch, err
 			}
 		}
-		msg, scratch, err = writeNext(w, msg, scratch)
+		msg, scratch, err = writeNext(w, msg, scratch, depth+1)
 		if err != nil {
 			return msg, scratch, err
 		}
@@ -105,7 +107,10 @@ func rwArrayBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error
 	return msg, scratch, err
 }
 
-func rwMapBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func rwMapBytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
+	if depth >= recursionLimit {
+		return msg, scratch, ErrRecursion
+	}
 	sz, msg, err := ReadMapHeaderBytes(msg)
 	if err != nil {
 		return msg, scratch, err
@@ -114,14 +119,14 @@ func rwMapBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) 
 	if err != nil {
 		return msg, scratch, err
 	}
-	for i := uint32(0); i < sz; i++ {
+	for i := range sz {
 		if i != 0 {
 			err = w.WriteByte(',')
 			if err != nil {
 				return msg, scratch, err
 			}
 		}
-		msg, scratch, err = rwMapKeyBytes(w, msg, scratch)
+		msg, scratch, err = rwMapKeyBytes(w, msg, scratch, depth)
 		if err != nil {
 			return msg, scratch, err
 		}
@@ -129,7 +134,7 @@ func rwMapBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) 
 		if err != nil {
 			return msg, scratch, err
 		}
-		msg, scratch, err = writeNext(w, msg, scratch)
+		msg, scratch, err = writeNext(w, msg, scratch, depth+1)
 		if err != nil {
 			return msg, scratch, err
 		}
@@ -138,17 +143,17 @@ func rwMapBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) 
 	return msg, scratch, err
 }
 
-func rwMapKeyBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
-	msg, scratch, err := rwStringBytes(w, msg, scratch)
+func rwMapKeyBytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
+	msg, scratch, err := rwStringBytes(w, msg, scratch, depth)
 	if err != nil {
 		if tperr, ok := err.(TypeError); ok && tperr.Encoded == BinType {
-			return rwBytesBytes(w, msg, scratch)
+			return rwBytesBytes(w, msg, scratch, depth)
 		}
 	}
 	return msg, scratch, err
 }
 
-func rwStringBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func rwStringBytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
 	str, msg, err := ReadStringZC(msg)
 	if err != nil {
 		return msg, scratch, err
@@ -157,7 +162,7 @@ func rwStringBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, erro
 	return msg, scratch, err
 }
 
-func rwBytesBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func rwBytesBytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
 	bts, msg, err := ReadBytesZC(msg)
 	if err != nil {
 		return msg, scratch, err
@@ -181,7 +186,7 @@ func rwBytesBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error
 	return msg, scratch, err
 }
 
-func rwNullBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func rwNullBytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
 	msg, err := ReadNilBytes(msg)
 	if err != nil {
 		return msg, scratch, err
@@ -190,7 +195,7 @@ func rwNullBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error)
 	return msg, scratch, err
 }
 
-func rwBoolBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func rwBoolBytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
 	b, msg, err := ReadBoolBytes(msg)
 	if err != nil {
 		return msg, scratch, err
@@ -203,7 +208,7 @@ func rwBoolBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error)
 	return msg, scratch, err
 }
 
-func rwIntBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func rwIntBytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
 	i, msg, err := ReadInt64Bytes(msg)
 	if err != nil {
 		return msg, scratch, err
@@ -213,7 +218,7 @@ func rwIntBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) 
 	return msg, scratch, err
 }
 
-func rwUintBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func rwUintBytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
 	u, msg, err := ReadUint64Bytes(msg)
 	if err != nil {
 		return msg, scratch, err
@@ -223,28 +228,7 @@ func rwUintBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error)
 	return msg, scratch, err
 }
 
-func rwFloatBytes(w jsWriter, msg []byte, f64 bool, scratch []byte) ([]byte, []byte, error) {
-	var f float64
-	var err error
-	var sz int
-	if f64 {
-		sz = 64
-		f, msg, err = ReadFloat64Bytes(msg)
-	} else {
-		sz = 32
-		var v float32
-		v, msg, err = ReadFloat32Bytes(msg)
-		f = float64(v)
-	}
-	if err != nil {
-		return msg, scratch, err
-	}
-	scratch = strconv.AppendFloat(scratch, f, 'f', -1, sz)
-	_, err = w.Write(scratch)
-	return msg, scratch, err
-}
-
-func rwFloat32Bytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func rwFloat32Bytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
 	var f float32
 	var err error
 	f, msg, err = ReadFloat32Bytes(msg)
@@ -256,7 +240,7 @@ func rwFloat32Bytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, err
 	return msg, scratch, err
 }
 
-func rwFloat64Bytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func rwFloat64Bytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
 	var f float64
 	var err error
 	f, msg, err = ReadFloat64Bytes(msg)
@@ -268,7 +252,7 @@ func rwFloat64Bytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, err
 	return msg, scratch, err
 }
 
-func rwTimeBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func rwTimeBytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
 	var t time.Time
 	var err error
 	t, msg, err = ReadTimeBytes(msg)
@@ -283,7 +267,7 @@ func rwTimeBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error)
 	return msg, scratch, err
 }
 
-func rwExtensionBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, error) {
+func rwExtensionBytes(w jsWriter, msg []byte, scratch []byte, depth int) ([]byte, []byte, error) {
 	var err error
 	var et int8
 	et, err = peekExtension(msg)
@@ -292,7 +276,7 @@ func rwExtensionBytes(w jsWriter, msg []byte, scratch []byte) ([]byte, []byte, e
 	}
 
 	// if it's time.Time
-	if et == TimeExtension {
+	if et == TimeExtension || et == MsgTimeExtension {
 		var tm time.Time
 		tm, msg, err = ReadTimeBytes(msg)
 		if err != nil {

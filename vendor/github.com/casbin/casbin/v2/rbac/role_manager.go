@@ -14,6 +14,12 @@
 
 package rbac
 
+import "github.com/casbin/casbin/v2/log"
+
+type MatchingFunc func(arg1 string, arg2 string) bool
+
+type LinkConditionFunc = func(args ...string) (bool, error)
+
 // RoleManager provides interface to define the operations for managing roles.
 type RoleManager interface {
 	// Clear clears all stored data and resets the role manager to the initial state.
@@ -21,6 +27,8 @@ type RoleManager interface {
 	// AddLink adds the inheritance link between two roles. role: name1 and role: name2.
 	// domain is a prefix to the roles (can be used for other purposes).
 	AddLink(name1 string, name2 string, domain ...string) error
+	// Deprecated: BuildRelationship is no longer required
+	BuildRelationship(name1 string, name2 string, domain ...string) error
 	// DeleteLink deletes the inheritance link between two roles. role: name1 and role: name2.
 	// domain is a prefix to the roles (can be used for other purposes).
 	DeleteLink(name1 string, name2 string, domain ...string) error
@@ -33,6 +41,44 @@ type RoleManager interface {
 	// GetUsers gets the users that inherits a role.
 	// domain is a prefix to the users (can be used for other purposes).
 	GetUsers(name string, domain ...string) ([]string, error)
+	// GetImplicitRoles gets the implicit roles that a user inherits, respecting maxHierarchyLevel.
+	// domain is a prefix to the roles (can be used for other purposes).
+	GetImplicitRoles(name string, domain ...string) ([]string, error)
+	// GetImplicitUsers gets the implicit users that inherits a role, respecting maxHierarchyLevel.
+	// domain is a prefix to the users (can be used for other purposes).
+	GetImplicitUsers(name string, domain ...string) ([]string, error)
+	// GetDomains gets domains that a user has
+	GetDomains(name string) ([]string, error)
+	// GetAllDomains gets all domains
+	GetAllDomains() ([]string, error)
 	// PrintRoles prints all the roles to log.
 	PrintRoles() error
+	// SetLogger sets role manager's logger.
+	SetLogger(logger log.Logger)
+	// Match matches the domain with the pattern
+	Match(str string, pattern string) bool
+	// AddMatchingFunc adds the matching function
+	AddMatchingFunc(name string, fn MatchingFunc)
+	// AddDomainMatchingFunc adds the domain matching function
+	AddDomainMatchingFunc(name string, fn MatchingFunc)
+	// DeleteDomain deletes all data of a domain in the role manager.
+	DeleteDomain(domain string) error
+}
+
+// ConditionalRoleManager provides interface to define the operations for managing roles.
+// Link with conditions is supported.
+type ConditionalRoleManager interface {
+	RoleManager
+
+	// AddLinkConditionFunc Add condition function fn for Link userName->roleName,
+	// when fn returns true, Link is valid, otherwise invalid
+	AddLinkConditionFunc(userName, roleName string, fn LinkConditionFunc)
+	// SetLinkConditionFuncParams Sets the parameters of the condition function fn for Link userName->roleName
+	SetLinkConditionFuncParams(userName, roleName string, params ...string)
+	// AddDomainLinkConditionFunc Add condition function fn for Link userName-> {roleName, domain},
+	// when fn returns true, Link is valid, otherwise invalid
+	AddDomainLinkConditionFunc(user string, role string, domain string, fn LinkConditionFunc)
+	// SetDomainLinkConditionFuncParams Sets the parameters of the condition function fn
+	// for Link userName->{roleName, domain}
+	SetDomainLinkConditionFuncParams(user string, role string, domain string, params ...string)
 }

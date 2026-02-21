@@ -16,9 +16,15 @@ package errors
 
 import "errors"
 
-// Global errors for rbac defined here
+// Global errors for rbac defined here.
 var (
-	ERR_NAME_NOT_FOUND    = errors.New("error: name does not exist")
-	ERR_DOMAIN_PARAMETER  = errors.New("error: domain should be 1 parameter")
-	ERR_NAMES12_NOT_FOUND = errors.New("error: name1 or name2 does not exist")
+	ErrNameNotFound                = errors.New("error: name does not exist")
+	ErrDomainParameter             = errors.New("error: domain should be 1 parameter")
+	ErrLinkNotFound                = errors.New("error: link between name1 and name2 does not exist")
+	ErrUseDomainParameter          = errors.New("error: useDomain should be 1 parameter")
+	ErrInvalidFieldValuesParameter = errors.New("fieldValues requires at least one parameter")
+
+	// GetAllowedObjectConditions errors.
+	ErrObjCondition   = errors.New("need to meet the prefix required by the object condition")
+	ErrEmptyCondition = errors.New("GetAllowedObjectConditions have an empty condition")
 )

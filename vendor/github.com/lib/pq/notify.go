@@ -1,14 +1,16 @@
 package pq
 
-// Package pq is a pure Go Postgres driver for the database/sql package.
-// This module contains support for Postgres LISTEN/NOTIFY.
-
 import (
+	"context"
+	"database/sql/driver"
 	"errors"
 	"fmt"
+	"net"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/lib/pq/internal/proto"
 )
 
 // Notification represents a single notification from the database.
@@ -29,6 +31,61 @@ func recvNotification(r *readBuf) *Notification {
 	return &Notification{bePid, channel, extra}
 }
 
+// SetNotificationHandler sets the given notification handler on the given
+// connection. A runtime panic occurs if c is not a pq connection. A nil handler
+// may be used to unset it.
+//
+// Note: Notification handlers are executed synchronously by pq meaning commands
+// won't continue to be processed until the handler returns.
+func SetNotificationHandler(c driver.Conn, handler func(*Notification)) {
+	c.(*conn).notificationHandler = handler
+}
+
+// NotificationHandlerConnector wraps a regular connector and sets a notification handler
+// on it.
+type NotificationHandlerConnector struct {
+	driver.Connector
+	notificationHandler func(*Notification)
+}
+
+// Connect calls the underlying connector's connect method and then sets the
+// notification handler.
+func (n *NotificationHandlerConnector) Connect(ctx context.Context) (driver.Conn, error) {
+	c, err := n.Connector.Connect(ctx)
+	if err == nil {
+		SetNotificationHandler(c, n.notificationHandler)
+	}
+	return c, err
+}
+
+// ConnectorNotificationHandler returns the currently set notification handler, if any. If
+// the given connector is not a result of ConnectorWithNotificationHandler, nil is
+// returned.
+func ConnectorNotificationHandler(c driver.Connector) func(*Notification) {
+	if c, ok := c.(*NotificationHandlerConnector); ok {
+		return c.notificationHandler
+	}
+	return nil
+}
+
+// ConnectorWithNotificationHandler creates or sets the given handler for the given
+// connector. If the given connector is a result of calling this function
+// previously, it is simply set on the given connector and returned. Otherwise,
+// this returns a new connector wrapping the given one and setting the notification
+// handler. A nil notification handler may be used to unset it.
+//
+// The returned connector is intended to be used with database/sql.OpenDB.
+//
+// Note: Notification handlers are executed synchronously by pq meaning commands
+// won't continue to be processed until the handler returns.
+func ConnectorWithNotificationHandler(c driver.Connector, handler func(*Notification)) *NotificationHandlerConnector {
+	if c, ok := c.(*NotificationHandlerConnector); ok {
+		c.notificationHandler = handler
+		return c
+	}
+	return &NotificationHandlerConnector{Connector: c, notificationHandler: handler}
+}
+
 const (
 	connStateIdle int32 = iota
 	connStateExpectResponse
@@ -36,7 +93,7 @@ const (
 )
 
 type message struct {
-	typ byte
+	typ proto.ResponseCode
 	err error
 }
 
@@ -45,19 +102,13 @@ var errListenerConnClosed = errors.New("pq: ListenerConn has been closed")
 // ListenerConn is a low-level interface for waiting for notifications.  You
 // should use Listener instead.
 type ListenerConn struct {
-	// guards cn and err
-	connectionLock sync.Mutex
-	cn             *conn
-	err            error
-
-	connState int32
-
-	// the sending goroutine will be holding this lock
-	senderLock sync.Mutex
-
+	connectionLock   sync.Mutex // guards cn and err
+	senderLock       sync.Mutex // the sending goroutine will be holding this lock
+	cn               *conn
+	err              error
+	connState        int32
 	notificationChan chan<- *Notification
-
-	replyChan chan message
+	replyChan        chan message
 }
 
 // NewListenerConn creates a new ListenerConn. Use NewListener instead.
@@ -132,8 +183,6 @@ func (l *ListenerConn) setState(newState int32) bool {
 // away or should be discarded because we couldn't agree on the state with the
 // server backend.
 func (l *ListenerConn) listenerConnLoop() (err error) {
-	defer errRecoverNoErrBadConn(&err)
-
 	r := &readBuf{}
 	for {
 		t, err := l.cn.recvMessage(r)
@@ -142,40 +191,44 @@ func (l *ListenerConn) listenerConnLoop() (err error) {
 		}
 
 		switch t {
-		case 'A':
+		case proto.NotificationResponse:
 			// recvNotification copies all the data so we don't need to worry
 			// about the scratch buffer being overwritten.
 			l.notificationChan <- recvNotification(r)
 
-		case 'T', 'D':
+		case proto.RowDescription, proto.DataRow:
 			// only used by tests; ignore
 
-		case 'E':
+		case proto.ErrorResponse:
 			// We might receive an ErrorResponse even when not in a query; it
 			// is expected that the server will close the connection after
 			// that, but we should make sure that the error we display is the
 			// one from the stray ErrorResponse, not io.ErrUnexpectedEOF.
 			if !l.setState(connStateExpectReadyForQuery) {
-				return parseError(r)
+				return parseError(r, "")
 			}
-			l.replyChan <- message{t, parseError(r)}
+			l.replyChan <- message{t, parseError(r, "")}
 
-		case 'C', 'I':
+		case proto.CommandComplete, proto.EmptyQueryResponse:
 			if !l.setState(connStateExpectReadyForQuery) {
 				// protocol out of sync
 				return fmt.Errorf("unexpected CommandComplete")
 			}
 			// ExecSimpleQuery doesn't need to know about this message
 
-		case 'Z':
+		case proto.ReadyForQuery:
 			if !l.setState(connStateIdle) {
 				// protocol out of sync
 				return fmt.Errorf("unexpected ReadyForQuery")
 			}
 			l.replyChan <- message{t, nil}
 
-		case 'N', 'S':
+		case proto.ParameterStatus:
 			// ignore
+		case proto.NoticeResponse:
+			if n := l.cn.noticeHandler; n != nil {
+				n(parseError(r, ""))
+			}
 		default:
 			return fmt.Errorf("unexpected message %q from server in listenerConnLoop", t)
 		}
@@ -201,7 +254,7 @@ func (l *ListenerConn) listenerConnMain() {
 	if l.err == nil {
 		l.err = err
 	}
-	l.cn.Close()
+	_ = l.cn.Close()
 	l.connectionLock.Unlock()
 
 	// There might be a query in-flight; make sure nobody's waiting for a
@@ -229,15 +282,14 @@ func (l *ListenerConn) UnlistenAll() (bool, error) {
 	return l.ExecSimpleQuery("UNLISTEN *")
 }
 
-// Ping the remote server to make sure it's alive.  Non-nil error means the
+// Ping the remote server to make sure it's alive. Non-nil error means the
 // connection has failed and should be abandoned.
 func (l *ListenerConn) Ping() error {
 	sent, err := l.ExecSimpleQuery("")
 	if !sent {
 		return err
 	}
-	if err != nil {
-		// shouldn't happen
+	if err != nil { // shouldn't happen
 		panic(err)
 	}
 	return nil
@@ -248,11 +300,9 @@ func (l *ListenerConn) Ping() error {
 // The caller must be holding senderLock (see acquireSenderLock and
 // releaseSenderLock).
 func (l *ListenerConn) sendSimpleQuery(q string) (err error) {
-	defer errRecoverNoErrBadConn(&err)
-
-	// must set connection state before sending the query
+	// Must set connection state before sending the query
 	if !l.setState(connStateExpectResponse) {
-		panic("two queries running at the same time")
+		return errors.New("pq: two queries running at the same time")
 	}
 
 	// Can't use l.cn.writeBuf here because it uses the scratch buffer which
@@ -262,18 +312,16 @@ func (l *ListenerConn) sendSimpleQuery(q string) (err error) {
 		pos: 1,
 	}
 	b.string(q)
-	l.cn.send(b)
-
-	return nil
+	return l.cn.send(b)
 }
 
 // ExecSimpleQuery executes a "simple query" (i.e. one with no bindable
 // parameters) on the connection. The possible return values are:
-//   1) "executed" is true; the query was executed to completion on the
-//      database server.  If the query failed, err will be set to the error
-//      returned by the database, otherwise err will be nil.
-//   2) If "executed" is false, the query could not be executed on the remote
-//      server.  err will be non-nil.
+//  1. "executed" is true; the query was executed to completion on the
+//     database server.  If the query failed, err will be set to the error
+//     returned by the database, otherwise err will be nil.
+//  2. If "executed" is false, the query could not be executed on the remote
+//     server.  err will be non-nil.
 //
 // After a call to ExecSimpleQuery has returned an executed=false value, the
 // connection has either been closed or will be closed shortly thereafter, and
@@ -295,7 +343,7 @@ func (l *ListenerConn) ExecSimpleQuery(q string) (executed bool, err error) {
 			l.err = err
 		}
 		l.connectionLock.Unlock()
-		l.cn.c.Close()
+		_ = l.cn.c.Close()
 		return false, err
 	}
 
@@ -311,7 +359,7 @@ func (l *ListenerConn) ExecSimpleQuery(q string) (executed bool, err error) {
 			return false, err
 		}
 		switch m.typ {
-		case 'Z':
+		case proto.ReadyForQuery:
 			// sanity check
 			if m.err != nil {
 				panic("m.err != nil")
@@ -319,7 +367,7 @@ func (l *ListenerConn) ExecSimpleQuery(q string) (executed bool, err error) {
 			// done; err might or might not be set
 			return true, err
 
-		case 'E':
+		case proto.ErrorResponse:
 			// sanity check
 			if m.err == nil {
 				panic("m.err == nil")
@@ -352,8 +400,6 @@ func (l *ListenerConn) Close() error {
 func (l *ListenerConn) Err() error {
 	return l.err
 }
-
-var errListenerClosed = errors.New("pq: Listener has been closed")
 
 // ErrChannelAlreadyOpen is returned from Listen when a channel is already
 // open.
@@ -480,12 +526,12 @@ func (l *Listener) NotificationChannel() <-chan *Notification {
 // connection can not be re-established.
 //
 // Listen will only fail in three conditions:
-//   1) The channel is already open.  The returned error will be
-//      ErrChannelAlreadyOpen.
-//   2) The query was executed on the remote server, but PostgreSQL returned an
-//      error message in response to the query.  The returned error will be a
-//      pq.Error containing the information the server supplied.
-//   3) Close is called on the Listener before the request could be completed.
+//  1. The channel is already open.  The returned error will be
+//     ErrChannelAlreadyOpen.
+//  2. The query was executed on the remote server, but PostgreSQL returned an
+//     error message in response to the query.  The returned error will be a
+//     pq.Error containing the information the server supplied.
+//  3. Close is called on the Listener before the request could be completed.
 //
 // The channel name is case-sensitive.
 func (l *Listener) Listen(channel string) error {
@@ -493,7 +539,7 @@ func (l *Listener) Listen(channel string) error {
 	defer l.lock.Unlock()
 
 	if l.isClosed {
-		return errListenerClosed
+		return net.ErrClosed
 	}
 
 	// The server allows you to issue a LISTEN on a channel which is already
@@ -524,7 +570,7 @@ func (l *Listener) Listen(channel string) error {
 		l.reconnectCond.Wait()
 		// we let go of the mutex for a while
 		if l.isClosed {
-			return errListenerClosed
+			return net.ErrClosed
 		}
 	}
 
@@ -543,7 +589,7 @@ func (l *Listener) Unlisten(channel string) error {
 	defer l.lock.Unlock()
 
 	if l.isClosed {
-		return errListenerClosed
+		return net.ErrClosed
 	}
 
 	// Similarly to LISTEN, this is not an error in Postgres, but it seems
@@ -577,7 +623,7 @@ func (l *Listener) UnlistenAll() error {
 	defer l.lock.Unlock()
 
 	if l.isClosed {
-		return errListenerClosed
+		return net.ErrClosed
 	}
 
 	if l.cn != nil {
@@ -602,7 +648,7 @@ func (l *Listener) Ping() error {
 	defer l.lock.Unlock()
 
 	if l.isClosed {
-		return errListenerClosed
+		return net.ErrClosed
 	}
 	if l.cn == nil {
 		return errors.New("no connection")
@@ -628,7 +674,7 @@ func (l *Listener) disconnectCleanup() error {
 	}
 
 	err := l.cn.Err()
-	l.cn.Close()
+	_ = l.cn.Close()
 	l.cn = nil
 	return err
 }
@@ -687,25 +733,28 @@ func (l *Listener) closed() bool {
 }
 
 func (l *Listener) connect() error {
-	notificationChan := make(chan *Notification, 32)
-	cn, err := newDialListenerConn(l.dialer, l.name, notificationChan)
-	if err != nil {
-		return err
-	}
-
 	l.lock.Lock()
 	defer l.lock.Unlock()
+	if l.isClosed {
+		return net.ErrClosed
+	}
 
-	err = l.resync(cn, notificationChan)
+	notificationChan := make(chan *Notification, 32)
+
+	var err error
+	l.cn, err = newDialListenerConn(l.dialer, l.name, notificationChan)
 	if err != nil {
-		cn.Close()
 		return err
 	}
 
-	l.cn = cn
+	err = l.resync(l.cn, notificationChan)
+	if err != nil {
+		_ = l.cn.Close()
+		return err
+	}
+
 	l.connNotificationChan = notificationChan
 	l.reconnectCond.Broadcast()
-
 	return nil
 }
 
@@ -717,11 +766,11 @@ func (l *Listener) Close() error {
 	defer l.lock.Unlock()
 
 	if l.isClosed {
-		return errListenerClosed
+		return net.ErrClosed
 	}
 
 	if l.cn != nil {
-		l.cn.Close()
+		_ = l.cn.Close()
 	}
 	l.isClosed = true
 

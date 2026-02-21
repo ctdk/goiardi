@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package serf
 
 import (
@@ -121,6 +124,11 @@ func (q *Query) String() string {
 	return fmt.Sprintf("query: %s", q.Name)
 }
 
+// SourceNode returns the name of the node initiating the query
+func (q *Query) SourceNode() string {
+	return q.sourceNode
+}
+
 // Deadline returns the time by which a response must be sent
 func (q *Query) Deadline() time.Time {
 	return q.deadline
@@ -191,7 +199,7 @@ func (q *Query) Respond(buf []byte) error {
 	resp := q.createResponse(buf)
 
 	// Encode response
-	raw, err := encodeMessage(messageQueryResponseType, resp)
+	raw, err := encodeMessage(messageQueryResponseType, resp, q.serf.msgpackUseNewTimeFormat)
 	if err != nil {
 		return fmt.Errorf("failed to format response: %v", err)
 	}

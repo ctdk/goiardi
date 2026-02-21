@@ -210,7 +210,10 @@ func (c *Checker) releaseChanLock() {
 func (c *Checker) testForMemberObjPolicy(item aclhelper.Item, doer aclhelper.Member, perm string) (bool, error) {
 	// Try getting this *user's* filtered policies, and make the test below
 	// more specific.
-	fi := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
+	fi, ferr := c.e.GetFilteredPolicy(condGroupPos, doer.ACLName())
+	if ferr != nil {
+		return false, util.CastErr(ferr)
+	}
 
 	if fi != nil && len(fi) != 0 {
 		for _, p := range fi {
@@ -291,8 +294,6 @@ func (c *Checker) checkItemPerm(testFunc func(aclhelper.Item, aclhelper.Member, 
 			logger.Debugf("Got an error loading the filtered policy: %v", err)
 			return false, util.CastErr(err)
 		}
-
-		logger.Debugf("the filtered policy: %v", fe.GetPolicy())
 
 		chkSucceeded, chkErr = fe.Enforce(specific...)
 		if chkErr != nil {
@@ -448,7 +449,11 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 				return util.CastErr(polErr)
 			}
 
-			filteredItem := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+			filteredItem, ferr := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+			if ferr != nil {
+				return util.CastErr(ferr)
+			}
+
 			newActRaw, ok := aclEdit["actors"].([]interface{})
 			if !ok {
 				return util.Errorf("invalid type for actor in acl")
@@ -598,7 +603,7 @@ func (e enforceCondition) general() enforceCondition {
 
 func (c *Checker) isPermValid(item aclhelper.Item, perm string) bool {
 	// pare down the list to check a little
-	fPass := c.e.GetFilteredPolicy(condSubkindPos, item.ContainerType())
+	fPass, _ := c.e.GetFilteredPolicy(condSubkindPos, item.ContainerType())
 	validPerms := make(map[string]bool)
 	for _, p := range fPass {
 		if p[condKindPos] == item.ContainerKind() {
@@ -714,16 +719,22 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 	}
 	// Hrmph, it'd be nice if this was a little easier. At least here we
 	// can get it by name and do the kind/subkind checks afterwards.
-	filteredItem := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+	filteredItem, ferr := c.e.GetFilteredPolicy(condNamePos, item.GetName())
+	if ferr != nil {
+		return nil, util.CastErr(ferr)
+	}
 
 	// Buh. The filtered type is different if it's a group we're dealing
 	// with.
 	var filteredType [][]string
 
 	if item.ContainerKind() == "groups" {
-		filteredType = c.e.GetFilteredPolicy(condNamePos, "$$default$$")
+		filteredType, ferr = c.e.GetFilteredPolicy(condNamePos, "$$default$$")
 	} else {
-		filteredType = c.e.GetFilteredPolicy(condSubkindPos, item.ContainerType())
+		filteredType, ferr = c.e.GetFilteredPolicy(condSubkindPos, item.ContainerType())
+	}
+	if ferr != nil {
+		return nil, util.CastErr(ferr)
 	}
 
 	if (filteredItem == nil || len(filteredItem) == 0) && (filteredType == nil || len(filteredType) == 0) {
@@ -780,8 +791,8 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 
 func (c *Checker) GetItemPolicies(itemName string, itemKind string, itemType string) [][]interface{} {
 	c.e.LoadPolicy() // maybe handle errs later
-	filteredItem := c.e.GetFilteredPolicy(condNamePos, itemName)
-	if filteredItem == nil || len(filteredItem) == 0 {
+	filteredItem, ferr := c.e.GetFilteredPolicy(condNamePos, itemName)
+	if filteredItem == nil || len(filteredItem) == 0 || ferr != nil {
 		return nil
 	}
 	policies := make([][]interface{}, 0)
@@ -835,7 +846,11 @@ func (c *Checker) RenameMember(member aclhelper.Member, oldName string) error {
 	if polErr := c.e.LoadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
-	oldPol := c.e.GetPermissionsForUser(oldName)
+	oldPol, perr := c.e.GetPermissionsForUser(oldName)
+	if perr != nil {
+		return util.CastErr(perr)
+	}
+
 	if oldPol == nil || len(oldPol) == 0 {
 		return nil
 	}

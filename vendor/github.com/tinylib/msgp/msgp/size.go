@@ -25,9 +25,11 @@ const (
 	Complex64Size  = 10
 	Complex128Size = 18
 
-	TimeSize = 15
-	BoolSize = 1
-	NilSize  = 1
+	DurationSize   = Int64Size
+	TimeSize       = 15
+	BoolSize       = 1
+	NilSize        = 1
+	JSONNumberSize = Int64Size // Same as Float64Size
 
 	MapHeaderSize   = 5
 	ArrayHeaderSize = 5
@@ -35,4 +37,13 @@ const (
 	BytesPrefixSize     = 5
 	StringPrefixSize    = 5
 	ExtensionPrefixSize = 6
+
+	// We cannot determine the exact size of the marshalled bytes,
+	// so we assume 32 bytes
+	BinaryMarshalerSize = BytesPrefixSize + 32
+	BinaryAppenderSize
+	TextMarshalerBinSize
+	TextAppenderBinSize
+	TextMarshalerStringSize = StringPrefixSize + 32
+	TextAppenderStringSize
 )

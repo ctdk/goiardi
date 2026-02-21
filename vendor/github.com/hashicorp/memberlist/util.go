@@ -1,3 +1,6 @@
+// Copyright IBM Corp. 2013, 2025
+// SPDX-License-Identifier: MPL-2.0
+
 package memberlist
 
 import (
@@ -13,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-msgpack/codec"
+	"github.com/hashicorp/go-msgpack/v2/codec"
 	"github.com/sean-/seed"
 )
 
@@ -30,7 +33,7 @@ const (
 )
 
 func init() {
-	seed.Init()
+	_, _ = seed.Init()
 }
 
 // Decode reverses the encode operation on a byte slice input
@@ -42,10 +45,12 @@ func decode(buf []byte, out interface{}) error {
 }
 
 // Encode writes an encoded object to a new bytes buffer
-func encode(msgType messageType, in interface{}) (*bytes.Buffer, error) {
+func encode(msgType messageType, in interface{}, msgpackUseNewTimeFormat bool) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	buf.WriteByte(uint8(msgType))
 	hd := codec.MsgpackHandle{}
+	hd.TimeNotBuiltin = !msgpackUseNewTimeFormat
+
 	enc := codec.NewEncoder(buf, &hd)
 	err := enc.Encode(in)
 	return buf, err
@@ -96,13 +101,13 @@ func pushPullScale(interval time.Duration, n int) time.Duration {
 	return time.Duration(multiplier) * interval
 }
 
-// moveDeadNodes moves nodes that are dead and beyond the gossip to the dead interval
+// moveDeadNodes moves dead and left nodes that that have not changed during the gossipToTheDeadTime interval
 // to the end of the slice and returns the index of the first moved node.
 func moveDeadNodes(nodes []*nodeState, gossipToTheDeadTime time.Duration) int {
 	numDead := 0
 	n := len(nodes)
 	for i := 0; i < n-numDead; i++ {
-		if nodes[i].State != stateDead {
+		if !nodes[i].DeadOrLeft() {
 			continue
 		}
 
@@ -119,37 +124,54 @@ func moveDeadNodes(nodes []*nodeState, gossipToTheDeadTime time.Duration) int {
 	return n - numDead
 }
 
-// kRandomNodes is used to select up to k random nodes, excluding any nodes where
-// the filter function returns true. It is possible that less than k nodes are
+// kRandomNodes is used to select up to k random Nodes, excluding any nodes where
+// the exclude function returns true. It is possible that less than k nodes are
 // returned.
-func kRandomNodes(k int, nodes []*nodeState, filterFn func(*nodeState) bool) []*nodeState {
+func kRandomNodes(k int, nodes []*nodeState, exclude func(*nodeState) bool) []Node {
 	n := len(nodes)
-	kNodes := make([]*nodeState, 0, k)
+	kNodes := make([]Node, 0, k)
 OUTER:
 	// Probe up to 3*n times, with large n this is not necessary
 	// since k << n, but with small n we want search to be
 	// exhaustive
 	for i := 0; i < 3*n && len(kNodes) < k; i++ {
-		// Get random node
+		// Get random nodeState
 		idx := randomOffset(n)
-		node := nodes[idx]
+		state := nodes[idx]
 
 		// Give the filter a shot at it.
-		if filterFn != nil && filterFn(node) {
+		if exclude != nil && exclude(state) {
 			continue OUTER
 		}
 
 		// Check if we have this node already
 		for j := 0; j < len(kNodes); j++ {
-			if node == kNodes[j] {
+			if state.Name == kNodes[j].Name {
 				continue OUTER
 			}
 		}
 
 		// Append the node
-		kNodes = append(kNodes, node)
+		kNodes = append(kNodes, state.Node)
 	}
 	return kNodes
+}
+
+// makeCompoundMessages takes a list of messages and packs
+// them into one or multiple messages based on the limitations
+// of compound messages (255 messages each).
+func makeCompoundMessages(msgs [][]byte) []*bytes.Buffer {
+	const maxMsgs = 255
+	bufs := make([]*bytes.Buffer, 0, (len(msgs)+(maxMsgs-1))/maxMsgs)
+
+	for ; len(msgs) > maxMsgs; msgs = msgs[maxMsgs:] {
+		bufs = append(bufs, makeCompoundMessage(msgs[:maxMsgs]))
+	}
+	if len(msgs) > 0 {
+		bufs = append(bufs, makeCompoundMessage(msgs))
+	}
+
+	return bufs
 }
 
 // makeCompoundMessage takes a list of messages and generates
@@ -166,7 +188,7 @@ func makeCompoundMessage(msgs [][]byte) *bytes.Buffer {
 
 	// Add the message lengths
 	for _, m := range msgs {
-		binary.Write(buf, binary.BigEndian, uint16(len(m)))
+		_ = binary.Write(buf, binary.BigEndian, uint16(len(m)))
 	}
 
 	// Append the messages
@@ -185,18 +207,18 @@ func decodeCompoundMessage(buf []byte) (trunc int, parts [][]byte, err error) {
 		err = fmt.Errorf("missing compound length byte")
 		return
 	}
-	numParts := uint8(buf[0])
+	numParts := int(buf[0])
 	buf = buf[1:]
 
 	// Check we have enough bytes
-	if len(buf) < int(numParts*2) {
+	if len(buf) < numParts*2 {
 		err = fmt.Errorf("truncated len slice")
 		return
 	}
 
 	// Decode the lengths
 	lengths := make([]uint16, numParts)
-	for i := 0; i < int(numParts); i++ {
+	for i := 0; i < numParts; i++ {
 		lengths[i] = binary.BigEndian.Uint16(buf[i*2 : i*2+2])
 	}
 	buf = buf[numParts*2:]
@@ -204,7 +226,7 @@ func decodeCompoundMessage(buf []byte) (trunc int, parts [][]byte, err error) {
 	// Split each message
 	for idx, msgLen := range lengths {
 		if len(buf) < int(msgLen) {
-			trunc = int(numParts) - idx
+			trunc = numParts - idx
 			return
 		}
 
@@ -218,7 +240,7 @@ func decodeCompoundMessage(buf []byte) (trunc int, parts [][]byte, err error) {
 
 // compressPayload takes an opaque input buffer, compresses it
 // and wraps it in a compress{} message that is encoded.
-func compressPayload(inp []byte) (*bytes.Buffer, error) {
+func compressPayload(inp []byte, msgpackUseNewTimeFormat bool) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 	compressor := lzw.NewWriter(&buf, lzw.LSB, lzwLitWidth)
 
@@ -237,7 +259,7 @@ func compressPayload(inp []byte) (*bytes.Buffer, error) {
 		Algo: lzwAlgo,
 		Buf:  buf.Bytes(),
 	}
-	return encode(compressMsg, &c)
+	return encode(compressMsg, &c, msgpackUseNewTimeFormat)
 }
 
 // decompressPayload is used to unpack an encoded compress{}
@@ -256,12 +278,14 @@ func decompressPayload(msg []byte) ([]byte, error) {
 func decompressBuffer(c *compress) ([]byte, error) {
 	// Verify the algorithm
 	if c.Algo != lzwAlgo {
-		return nil, fmt.Errorf("Cannot decompress unknown algorithm %d", c.Algo)
+		return nil, fmt.Errorf("cannot decompress unknown algorithm %d", c.Algo)
 	}
 
 	// Create a uncompressor
 	uncomp := lzw.NewReader(bytes.NewReader(c.Buf), lzw.LSB, lzwLitWidth)
-	defer uncomp.Close()
+	defer func() {
+		_ = uncomp.Close()
+	}()
 
 	// Read all the data
 	var b bytes.Buffer

@@ -1,14 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-
-	"github.com/hashicorp/vault/sdk/helper/consts"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 )
@@ -18,6 +18,7 @@ import (
 type Request struct {
 	Method        string
 	URL           *url.URL
+	Host          string
 	Params        url.Values
 	Headers       http.Header
 	ClientToken   string
@@ -37,6 +38,9 @@ type Request struct {
 	// EGPs). If set, the override flag will take effect for all policies
 	// evaluated during the request.
 	PolicyOverride bool
+
+	// HCPCookie is used to set a http cookie when client is connected to HCP
+	HCPCookie *http.Cookie
 }
 
 // SetJSONBody is used to set a request body that is a JSON-encoded value.
@@ -72,13 +76,13 @@ func (r *Request) ToHTTP() (*http.Request, error) {
 		// No body
 
 	case r.BodyBytes != nil:
-		req.Request.Body = ioutil.NopCloser(bytes.NewReader(r.BodyBytes))
+		req.Request.Body = io.NopCloser(bytes.NewReader(r.BodyBytes))
 
 	default:
 		if c, ok := r.Body.(io.ReadCloser); ok {
 			req.Request.Body = c
 		} else {
-			req.Request.Body = ioutil.NopCloser(r.Body)
+			req.Request.Body = io.NopCloser(r.Body)
 		}
 	}
 
@@ -115,7 +119,7 @@ func (r *Request) toRetryableHTTP() (*retryablehttp.Request, error) {
 	req.URL.User = r.URL.User
 	req.URL.Scheme = r.URL.Scheme
 	req.URL.Host = r.URL.Host
-	req.Host = r.URL.Host
+	req.Host = r.Host
 
 	if r.Headers != nil {
 		for header, vals := range r.Headers {
@@ -126,7 +130,7 @@ func (r *Request) toRetryableHTTP() (*retryablehttp.Request, error) {
 	}
 
 	if len(r.ClientToken) != 0 {
-		req.Header.Set(consts.AuthHeaderName, r.ClientToken)
+		req.Header.Set(AuthHeaderName, r.ClientToken)
 	}
 
 	if len(r.WrapTTL) != 0 {
@@ -141,6 +145,10 @@ func (r *Request) toRetryableHTTP() (*retryablehttp.Request, error) {
 
 	if r.PolicyOverride {
 		req.Header.Set("X-Vault-Policy-Override", "true")
+	}
+
+	if r.HCPCookie != nil {
+		req.AddCookie(r.HCPCookie)
 	}
 
 	return req, nil

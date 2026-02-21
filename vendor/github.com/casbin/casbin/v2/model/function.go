@@ -15,29 +15,52 @@
 package model
 
 import (
-	"github.com/Knetic/govaluate"
+	"sync"
+
 	"github.com/casbin/casbin/v2/util"
+	"github.com/casbin/govaluate"
 )
 
 // FunctionMap represents the collection of Function.
-type FunctionMap map[string]govaluate.ExpressionFunction
+type FunctionMap struct {
+	fns *sync.Map
+}
+
+// [string]govaluate.ExpressionFunction
 
 // AddFunction adds an expression function.
-func (fm FunctionMap) AddFunction(name string, function govaluate.ExpressionFunction) {
-	fm[name] = function
+func (fm *FunctionMap) AddFunction(name string, function govaluate.ExpressionFunction) {
+	fm.fns.LoadOrStore(name, function)
 }
 
 // LoadFunctionMap loads an initial function map.
 func LoadFunctionMap() FunctionMap {
-	fm := make(FunctionMap)
+	fm := &FunctionMap{}
+	fm.fns = &sync.Map{}
 
 	fm.AddFunction("keyMatch", util.KeyMatchFunc)
+	fm.AddFunction("keyGet", util.KeyGetFunc)
 	fm.AddFunction("keyMatch2", util.KeyMatch2Func)
+	fm.AddFunction("keyGet2", util.KeyGet2Func)
 	fm.AddFunction("keyMatch3", util.KeyMatch3Func)
+	fm.AddFunction("keyGet3", util.KeyGet3Func)
 	fm.AddFunction("keyMatch4", util.KeyMatch4Func)
+	fm.AddFunction("keyMatch5", util.KeyMatch5Func)
 	fm.AddFunction("regexMatch", util.RegexMatchFunc)
 	fm.AddFunction("ipMatch", util.IPMatchFunc)
 	fm.AddFunction("globMatch", util.GlobMatchFunc)
 
-	return fm
+	return *fm
+}
+
+// GetFunctions return a map with all the functions.
+func (fm *FunctionMap) GetFunctions() map[string]govaluate.ExpressionFunction {
+	ret := make(map[string]govaluate.ExpressionFunction)
+
+	fm.fns.Range(func(k interface{}, v interface{}) bool {
+		ret[k.(string)] = v.(govaluate.ExpressionFunction)
+		return true
+	})
+
+	return ret
 }

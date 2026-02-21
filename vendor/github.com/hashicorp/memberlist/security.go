@@ -1,3 +1,6 @@
+// Copyright IBM Corp. 2013, 2025
+// SPDX-License-Identifier: MPL-2.0
+
 package memberlist
 
 import (
@@ -10,14 +13,12 @@ import (
 )
 
 /*
-
 Encrypted messages are prefixed with an encryptionVersion byte
 that is used for us to be able to properly encode/decode. We
 currently support the following versions:
 
- 0 - AES-GCM 128, using PKCS7 padding
- 1 - AES-GCM 128, no padding. Padding not needed, caused bloat.
-
+	0 - AES-GCM 128, using PKCS7 padding
+	1 - AES-GCM 128, no padding. Padding not needed, caused bloat.
 */
 type encryptionVersion uint8
 
@@ -106,12 +107,15 @@ func encryptPayload(vsn encryptionVersion, key []byte, msg []byte, data []byte, 
 	dst.WriteByte(byte(vsn))
 
 	// Add a random nonce
-	io.CopyN(dst, rand.Reader, nonceSize)
+	_, err = io.CopyN(dst, rand.Reader, nonceSize)
+	if err != nil {
+		return err
+	}
 	afterNonce := dst.Len()
 
 	// Ensure we are correctly padded (only version 0)
 	if vsn == 0 {
-		io.Copy(dst, bytes.NewReader(msg))
+		_, _ = io.Copy(dst, bytes.NewReader(msg))
 		pkcs7encode(dst, offset+versionSize+nonceSize, aes.BlockSize)
 	}
 
@@ -168,18 +172,18 @@ func decryptMessage(key, msg []byte, data []byte) ([]byte, error) {
 func decryptPayload(keys [][]byte, msg []byte, data []byte) ([]byte, error) {
 	// Ensure we have at least one byte
 	if len(msg) == 0 {
-		return nil, fmt.Errorf("Cannot decrypt empty payload")
+		return nil, fmt.Errorf("cannot decrypt empty payload")
 	}
 
 	// Verify the version
 	vsn := encryptionVersion(msg[0])
 	if vsn > maxEncryptionVersion {
-		return nil, fmt.Errorf("Unsupported encryption version %d", msg[0])
+		return nil, fmt.Errorf("unsupported encryption version %d", msg[0])
 	}
 
 	// Ensure the length is sane
 	if len(msg) < encryptedLength(vsn, 0) {
-		return nil, fmt.Errorf("Payload is too small to decrypt: %d", len(msg))
+		return nil, fmt.Errorf("payload is too small to decrypt: %d", len(msg))
 	}
 
 	for _, key := range keys {
@@ -194,5 +198,24 @@ func decryptPayload(keys [][]byte, msg []byte, data []byte) ([]byte, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("No installed keys could decrypt the message")
+	return nil, fmt.Errorf("no installed keys could decrypt the message")
+}
+
+func appendBytes(first []byte, second []byte) []byte {
+	hasFirst := len(first) > 0
+	hasSecond := len(second) > 0
+
+	switch {
+	case hasFirst && hasSecond:
+		out := make([]byte, 0, len(first)+len(second))
+		out = append(out, first...)
+		out = append(out, second...)
+		return out
+	case hasFirst:
+		return first
+	case hasSecond:
+		return second
+	default:
+		return nil
+	}
 }

@@ -14,24 +14,24 @@
 
 package casbin
 
-// GetUsersForRoleInDomain gets the users that has a role inside a domain. Add by Gordon
+// GetUsersForRoleInDomain gets the users that has a role inside a domain. Add by Gordon.
 func (e *SyncedEnforcer) GetUsersForRoleInDomain(name string, domain string) []string {
-	e.m.Lock()
-	defer e.m.Unlock()
+	e.m.RLock()
+	defer e.m.RUnlock()
 	return e.Enforcer.GetUsersForRoleInDomain(name, domain)
 }
 
 // GetRolesForUserInDomain gets the roles that a user has inside a domain.
 func (e *SyncedEnforcer) GetRolesForUserInDomain(name string, domain string) []string {
-	e.m.Lock()
-	defer e.m.Unlock()
+	e.m.RLock()
+	defer e.m.RUnlock()
 	return e.Enforcer.GetRolesForUserInDomain(name, domain)
 }
 
 // GetPermissionsForUserInDomain gets permissions for a user or role inside a domain.
 func (e *SyncedEnforcer) GetPermissionsForUserInDomain(user string, domain string) [][]string {
-	e.m.Lock()
-	defer e.m.Unlock()
+	e.m.RLock()
+	defer e.m.RUnlock()
 	return e.Enforcer.GetPermissionsForUserInDomain(user, domain)
 }
 
@@ -49,4 +49,20 @@ func (e *SyncedEnforcer) DeleteRoleForUserInDomain(user string, role string, dom
 	e.m.Lock()
 	defer e.m.Unlock()
 	return e.Enforcer.DeleteRoleForUserInDomain(user, role, domain)
+}
+
+// DeleteRolesForUserInDomain deletes all roles for a user inside a domain.
+// Returns false if the user does not have any roles (aka not affected).
+func (e *SyncedEnforcer) DeleteRolesForUserInDomain(user string, domain string) (bool, error) {
+	e.m.Lock()
+	defer e.m.Unlock()
+	return e.Enforcer.DeleteRolesForUserInDomain(user, domain)
+}
+
+// DeleteDomains deletes domains from the model.
+// Returns false if the domain does not exist (aka not affected).
+func (e *SyncedEnforcer) DeleteDomains(domains ...string) (bool, error) {
+	e.m.Lock()
+	defer e.m.Unlock()
+	return e.Enforcer.DeleteDomains(domains...)
 }
