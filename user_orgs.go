@@ -30,6 +30,7 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
+	"log"
 	"net/http"
 	"regexp"
 )
@@ -37,6 +38,7 @@ import (
 func userOrgListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
+	log.Printf("vars: '%v'\n");
 
 	orgName := vars["org"]
 	org, orgerr := orgloader.Get(orgName)
