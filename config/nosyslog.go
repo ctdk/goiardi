@@ -1,4 +1,4 @@
-// +build windows
+// +build windows plan9
 
 /*
  * Copyright (c) 2013-2019, Jeremy Bingham (<jeremy@goiardi.gl>)
