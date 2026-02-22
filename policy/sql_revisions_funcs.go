@@ -18,9 +18,10 @@ package policy
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/lib/pq"
-	"golang.org/x/xerrors"
 )
 
 func (p *Policy) checkForRevisionSQL(dbhandle datastore.Dbhandle, revisionId string) (bool, error) {
@@ -36,7 +37,7 @@ func (p *Policy) checkForRevisionSQL(dbhandle datastore.Dbhandle, revisionId str
 
 	var cn int
 	err = stmt.QueryRow(p.id, revisionId, p.org.GetId()).Scan(&cn)
-	if err != nil && !xerrors.Is(err, sql.ErrNoRows) {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return false, err
 	}
 	if cn != 0 {
@@ -194,10 +195,10 @@ func (pr *PolicyRevision) deleteRevisionSQL() error {
 
 	_, err = tx.Exec(sqlStmt, pr.pol.org.GetId(), pr.pol.id, pr.RevisionId)
 	if err != nil {
-		werr := xerrors.Errorf("deleting policy revision %s/%s had an error: %w", pr.PolicyName(), pr.RevisionId, err)
+		werr := fmt.Errorf("deleting policy revision %s/%s had an error: %w", pr.PolicyName(), pr.RevisionId, err)
 		terr := tx.Rollback()
 		if terr != nil {
-			werr = xerrors.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
+			werr = fmt.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
 		}
 		return werr
 	}

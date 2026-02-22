@@ -18,9 +18,10 @@ package policy
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
-	"golang.org/x/xerrors"
 )
 
 func checkForPolicySQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
@@ -29,7 +30,7 @@ func checkForPolicySQL(dbhandle datastore.Dbhandle, org *organization.Organizati
 		return true, nil
 	}
 
-	if !xerrors.Is(err, sql.ErrNoRows) {
+	if !errors.Is(err, sql.ErrNoRows) {
 		return false, err
 	}
 	return false, nil
@@ -93,10 +94,10 @@ func (p *Policy) deletePolicySQL() error {
 
 	_, err = tx.Exec("DELETE FROM goiardi.policies WHERE id = $1", p.id)
 	if err != nil {
-		werr := xerrors.Errorf("deleting policy %s had an error: %w", p.Name, err)
+		werr := fmt.Errorf("deleting policy %s had an error: %w", p.Name, err)
 		terr := tx.Rollback()
 		if terr != nil {
-			werr = xerrors.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
+			werr = fmt.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
 		}
 		return werr
 	}

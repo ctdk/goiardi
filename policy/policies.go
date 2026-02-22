@@ -22,11 +22,11 @@ package policy
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
-	"golang.org/x/xerrors"
 	"net/http"
 )
 
@@ -72,7 +72,7 @@ func Get(org *organization.Organization, name string) (*Policy, util.Gerror) {
 		var err error
 		pol, err = getPolicySQL(org, name)
 		if err != nil {
-			if xerrors.Is(err, sql.ErrNoRows) {
+			if errors.Is(err, sql.ErrNoRows) {
 				found = false
 			} else {
 				gerr := util.CastErr(err)
@@ -162,7 +162,7 @@ func GetList(org *organization.Organization) ([]string, util.Gerror) {
 	if config.UsingDB() {
 		var err error
 		polList, err = getPolicyListSQL(org)
-		if err != nil && !xerrors.Is(err, sql.ErrNoRows) {
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			gerr := util.CastErr(err)
 			return nil, gerr
 		}
@@ -203,7 +203,7 @@ func AllPolicies(org *organization.Organization) ([]*Policy, util.Gerror) {
 	if config.UsingDB() {
 		var err error
 		policies, err = allPoliciesSQL(org)
-		if err != nil && !xerrors.Is(err, sql.ErrNoRows) {
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			gerr := util.CastErr(err)
 			return nil, gerr
 		}

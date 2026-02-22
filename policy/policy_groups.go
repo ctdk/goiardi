@@ -22,11 +22,11 @@ package policy
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
-	"golang.org/x/xerrors"
 	"net/http"
 )
 
@@ -71,7 +71,7 @@ func GetPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, 
 		var err error
 		pg, err = getPolicyGroupSQL(org, name)
 		if err != nil {
-			if xerrors.Is(err, sql.ErrNoRows) {
+			if errors.Is(err, sql.ErrNoRows) {
 				found = false
 			} else {
 				gerr := util.CastErr(err)
@@ -143,7 +143,7 @@ func (pg *PolicyGroup) AddPolicy(pr *PolicyRevision) util.Gerror {
 
 func (pg *PolicyGroup) RemovePolicy(policyName string) util.Gerror {
 	if config.UsingDB() {
-		if err := pg.removePolicySQL(policyName); err != nil && !xerrors.Is(err, sql.ErrNoRows) {
+		if err := pg.removePolicySQL(policyName); err != nil && !errors.Is(err, sql.ErrNoRows) {
 			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusInternalServerError)
 			return gerr
@@ -236,7 +236,7 @@ func GetAllPolicyGroups(org *organization.Organization) ([]*PolicyGroup, util.Ge
 		allPgs, err := getAllPolicyGroupsSQL(org)
 		if err != nil {
 			var s int
-			if xerrors.Is(err, sql.ErrNoRows) {
+			if errors.Is(err, sql.ErrNoRows) {
 				s = http.StatusNotFound
 			} else {
 				s = http.StatusInternalServerError

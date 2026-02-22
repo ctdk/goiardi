@@ -18,9 +18,9 @@ package policy
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/organization"
-	"golang.org/x/xerrors"
 )
 
 func checkForPolicyGroupSQL(dbhandle datastore.Dbhandle, org *organization.Organization, name string) (bool, error) {
@@ -29,7 +29,7 @@ func checkForPolicyGroupSQL(dbhandle datastore.Dbhandle, org *organization.Organ
 		return true, nil
 	}
 
-	if !xerrors.Is(err, sql.ErrNoRows) {
+	if !errors.Is(err, sql.ErrNoRows) {
 		return false, err
 	}
 	return false, nil
@@ -116,10 +116,10 @@ func (pg *PolicyGroup) deletePolicyGroupSQL() error {
 
 	_, err = tx.Exec("DELETE FROM goiardi.policy_groups WHERE id = $1", pg.id)
 	if err != nil {
-		werr := xerrors.Errorf("deleting policy group %s had an error: %w", pg.Name, err)
+		werr := fmt.Errorf("deleting policy group %s had an error: %w", pg.Name, err)
 		terr := tx.Rollback()
 		if terr != nil {
-			werr = xerrors.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
+			werr = fmt.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
 		}
 		return werr
 	}
@@ -153,10 +153,10 @@ func (pg *PolicyGroup) removePolicySQL(policyName string) error {
 	sqlStatement := "DELETE FROM goiardi.policy_groups_to_policies pgp JOIN goiardi.policies p ON pgp.policy_id = p.id WHERE pg_id = $1 AND p.name = $2"
 	_, err = tx.Exec(sqlStatement, pg.id, policyName)
 	if err != nil {
-		werr := xerrors.Errorf("deleting policy %s from policy group %s had an error: %w", policyName, pg.Name, err)
+		werr := fmt.Errorf("deleting policy %s from policy group %s had an error: %w", policyName, pg.Name, err)
 		terr := tx.Rollback()
 		if terr != nil {
-			werr = xerrors.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
+			werr = fmt.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
 		}
 		return werr
 	}
@@ -189,7 +189,7 @@ func getAllPolicyGroupsSQL(org *organization.Organization) ([]*PolicyGroup, erro
 
 	rows, err := stmt.Query(org.GetId())
 	if err != nil {
-		if !xerrors.Is(err, sql.ErrNoRows) {
+		if !errors.Is(err, sql.ErrNoRows) {
 			return allPg, nil
 		}
 		return nil, err
