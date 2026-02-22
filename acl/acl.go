@@ -298,7 +298,7 @@ func (c *Checker) checkItemPerm(testFunc func(aclhelper.Item, aclhelper.Member, 
 		// Probably don't want to keep this statement forever. Checking
 		// the debug level to keep from evaluating the call to GetPolicy
 		// unless we need it.
-		if config.DebugLevel == 0 { // ugly magic number
+		if config.Config.DebugLevel == 0 { // ugly magic number
 			zz, zzerr := fe.GetPolicy()
 			logger.Debugf("the filtered policy: %v", zz)
 			if zzerr != nil {
