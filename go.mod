@@ -19,7 +19,6 @@ require (
 	github.com/raintank/met v0.0.0-20190828160749-80f9c6e35175
 	github.com/tideland/golib v4.24.2+incompatible
 	github.com/tinylib/msgp v1.6.3
-	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
 )
 
 require (
