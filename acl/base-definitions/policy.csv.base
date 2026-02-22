@@ -34,6 +34,17 @@ p, role##admins, groups, containers, $$default$$, grant, allow
 p, role##users, groups, containers, $$default$$, read, allow
 p, role##users, groups, containers, clients, read, deny
 
+p, role##admins, cookbook_artifacts, containers, $$default$$, create, allow
+p, role##admins, cookbook_artifacts, containers, $$default$$, read, allow
+p, role##admins, cookbook_artifacts, containers, $$default$$, update, allow
+p, role##admins, cookbook_artifacts, containers, $$default$$, delete, allow
+p, role##admins, cookbook_artifacts, containers, $$default$$, grant, allow
+p, role##users, cookbook_artifacts, containers, $$default$$, create, allow
+p, role##users, cookbook_artifacts, containers, $$default$$, read, allow
+p, role##users, cookbook_artifacts, containers, $$default$$, update, allow
+p, role##users, cookbook_artifacts, containers, $$default$$, delete, allow
+p, role##clients, cookbook_artifacts, containers, $$default$$, read, allow
+
 p, role##admins, cookbooks, containers, $$default$$, create, allow
 p, role##admins, cookbooks, containers, $$default$$, read, allow
 p, role##admins, cookbooks, containers, $$default$$, update, allow
@@ -145,6 +156,17 @@ p, role##users, policies, containers, $$default$$, read, allow
 p, role##users, policies, containers, $$default$$, update, allow
 p, role##users, policies, containers, $$default$$, delete, allow
 p, role##clients, policies, containers, $$default$$, read, allow
+
+p, role##admins, policy_groups, containers, $$default$$, create, allow
+p, role##admins, policy_groups, containers, $$default$$, read, allow
+p, role##admins, policy_groups, containers, $$default$$, update, allow
+p, role##admins, policy_groups, containers, $$default$$, delete, allow
+p, role##admins, policy_groups, containers, $$default$$, grant, allow
+p, role##users, policy_groups, containers, $$default$$, create, allow
+p, role##users, policy_groups, containers, $$default$$, read, allow
+p, role##users, policy_groups, containers, $$default$$, update, allow
+p, role##users, policy_groups, containers, $$default$$, delete, allow
+p, role##clients, policy_groups, containers, $$default$$, read, allow
 
 p, role##billing-admins, $$default$$, groups, billing-admins, read, allow
 p, role##billing-admins, $$default$$, groups, billing-admins, update, allow

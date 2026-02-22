@@ -20,15 +20,18 @@ package container
 
 import ()
 
-var DefaultContainers = [13]string{
+var DefaultContainers = [16]string{
 	"clients",
 	"containers",
+	"cookbook_artifacts",
 	"cookbooks",
 	"data",
 	"environments",
 	"groups",
 	"log-infos",
 	"nodes",
+	"policies",
+	"policy_groups",
 	"reports",
 	"roles",
 	"sandboxes",
