@@ -18,7 +18,7 @@ package gerror
 
 import (
 	"fmt"
-	"golang.org/x/xerrors"
+	"errors"
 	"net/http"
 	"testing"
 )
@@ -45,9 +45,9 @@ func TestUnwrap(t *testing.T) {
 		t.Error("Unwrap() method failed")
 	}
 
-	zerr := xerrors.Errorf("moar: %w", gwrapper)
+	zerr := fmt.Errorf("moar: %w", gwrapper)
 
-	if !xerrors.Is(zerr, gwrapper) {
+	if !errors.Is(zerr, gwrapper) {
 		t.Error("Somehow zerr was not grwapper")
 	}
 }
@@ -56,7 +56,7 @@ func TestCastErr(t *testing.T) {
 	err := fmt.Errorf("an heroic error")
 	cerr := CastErr(err)
 	var v *gerror
-	if !xerrors.As(cerr, &v) {
+	if !errors.As(cerr, &v) {
 		t.Error("CastErr did not work properly")
 	}
 

@@ -22,7 +22,8 @@
 package gerror
 
 import (
-	"golang.org/x/xerrors"
+	"fmt"
+	"errors"
 	"net/http"
 )
 
@@ -44,14 +45,14 @@ type Error interface {
 
 // New makes a new Error. Usually you want Errorf.
 func New(text string) Error {
-	return &gerror{err: xerrors.New(text),
+	return &gerror{err: errors.New(text),
 		status: http.StatusBadRequest,
 	}
 }
 
 // Errorf creates a new Error, with a formatted error string.
 func Errorf(format string, a ...interface{}) Error {
-	x := xerrors.Errorf(format, a...)
+	x := fmt.Errorf(format, a...)
 	return &gerror{err: x, status: http.StatusBadRequest}
 }
 
@@ -60,7 +61,7 @@ func CastErr(err error) Error {
 	var e *gerror
 
 	// if the immediate error is a gerror, just return itself
-	if !xerrors.As(err, &e) {
+	if !errors.As(err, &e) {
 		e = &gerror{err: err, status: http.StatusBadRequest}
 	}
 
@@ -90,7 +91,7 @@ func (e *gerror) Status() int {
 
 // StatusError makes an error with a string and a HTTP status code.
 func StatusError(msg string, status int) Error {
-	e := &gerror{err: xerrors.New(msg), status: status}
+	e := &gerror{err: errors.New(msg), status: status}
 	return e
 }
 
