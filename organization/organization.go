@@ -28,10 +28,10 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	_ "github.com/ctdk/goiardi/filestore"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
 	"github.com/pborman/uuid"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"os"
 	"path"
@@ -113,7 +113,7 @@ func New(name, fullName string) (*Organization, util.Gerror) {
 		return nil, err
 	}
 	if ierr := indexer.CreateOrgDex(o); ierr != nil {
-		logger.Debugf(ierr.Error())
+		logger.Debug(ierr.Error())
 		return nil, util.CastErr(ierr)
 	}
 

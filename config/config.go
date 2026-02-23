@@ -33,8 +33,8 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/jessevdk/go-flags"
-	"github.com/tideland/golib/logger"
 )
 
 // Conf is the master struct for holding configuration options.
@@ -53,6 +53,7 @@ type Conf struct {
 	FreezeData     bool   `toml:"freeze-data"`
 	LogFile        string `toml:"log-file"`
 	SysLog         bool   `toml:"syslog"`
+	LogUseJSONOutput bool `toml:"log-use-json-output"`
 	UseAuth        bool   `toml:"use-auth"`
 	TimeSlew       string `toml:"time-slew"`
 	TimeSlewDur    time.Duration
@@ -176,7 +177,8 @@ type Options struct {
 	FreezeInterval int    `short:"F" long:"freeze-interval" description:"Interval in seconds to freeze in-memory data structures to disk if there have been any changes (requires -i/--index-file and -D/--data-file options to be set). (Default 10 seconds.)" env:"GOIARDI_FREEZE_INTERVAL"`
 	LogFile        string `short:"L" long:"log-file" description:"Log to file X" env:"GOIARDI_LOG_FILE"`
 	SysLog         bool   `short:"s" long:"syslog" description:"Log to syslog rather than a log file. Incompatible with -L/--log-file." env:"GOIARDI_SYSLOG"`
-	LogLevel       string `short:"g" long:"log-level" description:"Specify logging verbosity. Performs the same function as -V, but works like the 'log-level' option in the configuration file. Acceptable values are 'debug', 'info', 'warning', 'error', 'critical', and 'fatal'." env:"GOIARDI_LOG_LEVEL"`
+	LogLevel       string `short:"g" long:"log-level" description:"Specify logging verbosity. Performs the same function as -V, but works like the 'log-level' option in the configuration file. Acceptable values are 'debug', 'info', 'notice', 'warning', 'error', 'critical', and 'fatal'." env:"GOIARDI_LOG_LEVEL"`
+	LogUseJSONOutput bool `short:"J" long:"log-use-json-output" description: "Format log statements as JSON.", env:"GOIARDI_LOG_USE_JSON_OUTPUT"`
 	TimeSlew       string `long:"time-slew" description:"Time difference allowed between the server's clock and the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m." env:"GOIARDI_TIME_SLEW"`
 	ConfRoot       string `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set." env:"GOIARDI_CONF_ROOT"`
 	UseAuth        bool   `short:"A" long:"use-auth" description:"Use authentication. Default: false. (NB: At a future time, the default behavior will change to authentication being enabled.)" env:"GOIARDI_USE_AUTH"`
@@ -431,45 +433,32 @@ func ParseConfigOptions() error {
 	if opts.SysLog {
 		Config.SysLog = opts.SysLog
 	}
-	if Config.LogFile != "" {
-		lfp, lerr := os.OpenFile(Config.LogFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModeAppend|0666)
-		if lerr != nil {
-			log.Println(err)
-			os.Exit(1)
-		}
-		log.SetOutput(lfp)
-	}
+
 	if dlev := len(opts.Verbose); dlev != 0 {
 		Config.DebugLevel = dlev
 	}
 	if opts.LogLevel != "" {
 		Config.LogLevel = opts.LogLevel
 	}
-	if Config.LogLevel != "" {
-		if lev, ok := LogLevelNames[strings.ToLower(Config.LogLevel)]; ok && Config.DebugLevel == 0 {
-			Config.DebugLevel = lev
-		}
-	}
-	if Config.DebugLevel > 5 {
-		Config.DebugLevel = 5
+
+	// convert DebugLevel to a LogLevel
+	if Config.DebugLevel != 0 {
+		Config.LogLevel = string(logger.VerboseFlagToLevel(Config.DebugLevel))
 	}
 
-	Config.DebugLevel = int(logger.LevelFatal) - Config.DebugLevel
-	logger.SetLevel(logger.LogLevel(Config.DebugLevel))
-	debugLevel := map[int]string{0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical", 5: "fatal"}
-	log.Printf("Logging at %s level", debugLevel[Config.DebugLevel])
-	// Tired of battling with syslog junk with the logger library. Deal
-	// with it ourselves.
-	lerr := setLogger(Config.SysLog)
-	if lerr != nil {
-		log.Println(lerr.Error())
-		os.Exit(1)
+	if opts.LogUseJSONOutput {
+		Config.LogUseJSONOutput = opts.LogUseJSONOutput
 	}
+
+	// configure the logger
+	logger.InitializeLogger(logger.LogLevelName(Config.LogLevel), Config.LogFile, Config.LogUseJSONOutput, false, "")
+
+	log.Printf("Logging at %s level", Config.LogLevel)
 
 	// This used to cause an error, but now will just cause a warning. Also
 	// moved it down so we can use the configured logger.
 	if Config.DataStoreFile != "" && Config.UsePostgreSQL {
-		logger.Errorf("The Postgres and file data store options should not be specified together. Overriding the file data store.")
+		logger.Error("The Postgres and file data store options should not be specified together. Overriding the file data store.")
 	}
 
 	/* Database options */
@@ -491,8 +480,7 @@ func ParseConfigOptions() error {
 	}
 	if Config.UseS3Upload {
 		if !Config.UsePostgreSQL {
-			logger.Fatalf("S3 uploads must be used in SQL mode, not in-memory mode.")
-			os.Exit(1)
+			logger.Fatal("S3 uploads must be used in SQL mode, not in-memory mode.")
 		}
 		if opts.AWSRegion != "" {
 			Config.AWSRegion = opts.AWSRegion
@@ -516,23 +504,20 @@ func ParseConfigOptions() error {
 	}
 
 	if Config.LocalFstoreDir == "" && (Config.UsePostgreSQL && !Config.UseS3Upload) {
-		logger.Fatalf("local-filestore-dir or use-s3-upload must be set and configured when running goiardi in SQL mode")
-		os.Exit(1)
+		logger.Fatal("local-filestore-dir or use-s3-upload must be set and configured when running goiardi in SQL mode")
 	}
 	if Config.LocalFstoreDir != "" {
 		finfo, ferr := os.Stat(Config.LocalFstoreDir)
 		if ferr != nil {
 			logger.Fatalf("Error checking local filestore dir: %s", ferr.Error())
-			os.Exit(1)
 		}
 		if !finfo.IsDir() {
 			logger.Fatalf("Local filestore dir %s is not a directory", Config.LocalFstoreDir)
-			os.Exit(1)
 		}
 	}
 
 	if !Config.FreezeData && (opts.FreezeInterval != 0 || Config.FreezeInterval != 0) {
-		logger.Warningf("FYI, setting the freeze data interval's not especially useful without setting the index and data files.")
+		logger.Notice("FYI, setting the freeze data interval's not especially useful without setting the index and data files.")
 	}
 	if opts.FreezeInterval != 0 {
 		Config.FreezeInterval = opts.FreezeInterval
@@ -561,7 +546,6 @@ func ParseConfigOptions() error {
 		ip := net.ParseIP(Config.Ipaddress)
 		if ip == nil {
 			logger.Fatalf("IP address '%s' is not valid", Config.Ipaddress)
-			os.Exit(1)
 		}
 	}
 
@@ -607,8 +591,7 @@ func ParseConfigOptions() error {
 	}
 	if Config.UseSSL {
 		if Config.SSLCert == "" || Config.SSLKey == "" {
-			logger.Fatalf("SSL mode requires specifying both a certificate and a key file.")
-			os.Exit(1)
+			logger.Fatal("SSL mode requires specifying both a certificate and a key file.")
 		}
 		/* If the SSL cert and key are not absolute files, join them
 		 * with the conf root */
@@ -627,7 +610,6 @@ func ParseConfigOptions() error {
 		d, derr := time.ParseDuration(Config.TimeSlew)
 		if derr != nil {
 			logger.Fatalf("Error parsing time-slew: %s", derr.Error())
-			os.Exit(1)
 		}
 		Config.TimeSlewDur = d
 	} else {
@@ -669,7 +651,7 @@ func ParseConfigOptions() error {
 	}
 
 	if opts.UseUnsafeMemStore {
-		logger.Fatalf("--use-unsafe-mem-store has been removed and no longer works. Please restart goiardi without this option.")
+		logger.Fatal("--use-unsafe-mem-store has been removed and no longer works. Please restart goiardi without this option.")
 	}
 
 	if opts.DbPoolSize != 0 {
@@ -701,14 +683,12 @@ func ParseConfigOptions() error {
 		Config.SerfEventAnnounce = opts.SerfEventAnnounce
 	}
 	if Config.SerfEventAnnounce && !Config.UseSerf {
-		logger.Fatalf("--serf-event-announce requires --use-serf")
-		os.Exit(1)
+		logger.Fatal("--serf-event-announce requires --use-serf")
 	}
 
 	if opts.UseShovey {
 		if !Config.UseSerf {
-			logger.Fatalf("--use-shovey requires --use-serf to be enabled")
-			os.Exit(1)
+			logger.Fatal("--use-shovey requires --use-serf to be enabled")
 		}
 		Config.UseShovey = opts.UseShovey
 	}
@@ -718,12 +698,12 @@ func ParseConfigOptions() error {
 	// are given.
 	var shoveyDie bool
 	if Config.SignPrivKey != "" || opts.SignPrivKey != "" {
-		logger.Fatalf("--sign-priv-key is no longer a useful option. Shovey signing keys are now stored on a per-org basis in the db or an external secrets store; see the docs for details.")
+		logger.Critical("--sign-priv-key is no longer a useful option. Shovey signing keys are now stored on a per-org basis in the db or an external secrets store; see the docs for details.")
 		shoveyDie = true
 	}
 
 	if Config.VaultShoveyKey != "" || opts.VaultShoveyKey != "" {
-		logger.Fatalf("--vault-shovey-key is no longer a valid option. Use --vault-shovey-key-base (or the toml equivalent in the config file) instead; see the docs for details.")
+		logger.Critical("--vault-shovey-key is no longer a valid option. Use --vault-shovey-key-base (or the toml equivalent in the config file) instead; see the docs for details.")
 		shoveyDie = true
 	}
 	if shoveyDie {
@@ -758,7 +738,7 @@ func ParseConfigOptions() error {
 		}
 	}
 	if Config.IndexFile != "" && Config.PgSearch {
-		logger.Infof("Specifying an index file for search while using the postgres search isn't useful.")
+		logger.Info("Specifying an index file for search while using the postgres search isn't useful.")
 	}
 
 	// statsd configuration
@@ -787,7 +767,7 @@ func ParseConfigOptions() error {
 		Config.IndexValTrim = opts.IndexValTrim
 	}
 	if Config.IndexValTrim < 0 {
-		logger.Infof("Trimming values in search index disabled")
+		logger.Notice("Trimming values in search index disabled")
 	} else {
 		if Config.IndexValTrim == 0 {
 			Config.IndexValTrim = defaultIndexValTrim
@@ -816,11 +796,9 @@ func ParseConfigOptions() error {
 			env := strings.SplitN(v, "=", 2)
 			if len(env) != 2 {
 				logger.Fatalf("Error setting environment variable %s - seems to be malformed.", v)
-				os.Exit(1)
 			}
 			if verr := os.Setenv(env[0], env[1]); verr != nil {
-				logger.Fatalf(verr.Error())
-				os.Exit(1)
+				logger.Fatal(verr.Error())
 			}
 		}
 	}
@@ -831,10 +809,10 @@ func ParseConfigOptions() error {
 	}
 	if Config.SearchQueryDebug {
 		if logger.LogLevel(Config.DebugLevel) != logger.LevelDebug {
-			logger.Warningf("postgres search query debugging enabled -- overriding log level and setting it to 'debug'.")
-			logger.SetLevel(logger.LevelDebug)
+			logger.Warning("postgres search query debugging enabled -- overriding log level and setting it to 'debug'.")
+			logger.SetLevel(logger.DebugLevel)
 		}
-		logger.Debugf("Logging search query debug statements")
+		logger.Debug("Logging search query debug statements")
 	}
 
 	if opts.PurgeNodeStatusAfter != "" {
@@ -844,7 +822,6 @@ func ParseConfigOptions() error {
 		d, derr := time.ParseDuration(Config.PurgeNodeStatusAfter)
 		if derr != nil {
 			logger.Fatalf("Error parsing purge-status-after: %s", derr.Error())
-			os.Exit(1)
 		}
 		Config.PurgeNodeStatusDur = d
 	}
@@ -856,7 +833,6 @@ func ParseConfigOptions() error {
 		d, derr := time.ParseDuration(Config.PurgeReportsAfter)
 		if derr != nil {
 			logger.Fatalf("Error parsing purge-reports-after: %s", derr.Error())
-			os.Exit(1)
 		}
 		Config.PurgeReportsDur = d
 	}
@@ -870,7 +846,6 @@ func ParseConfigOptions() error {
 		d, derr := time.ParseDuration(Config.PurgeSandboxesAfter)
 		if derr != nil {
 			logger.Fatalf("Error parsing purge-sandboxes-after: %s", derr.Error())
-			os.Exit(1)
 		}
 		Config.PurgeSandboxesDur = d
 	}

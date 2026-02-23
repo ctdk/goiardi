@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/gerror"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/pborman/uuid"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"net/url"
 	"path"
@@ -462,7 +462,7 @@ func JoinStr(str ...string) string {
 // JSON for the client's benefit before completing the errored out request.
 func JSONErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
 	SpewCallers()
-	logger.Infof(errorStr)
+	logger.Info(errorStr)
 	jsonError := map[string][]string{"error": []string{errorStr}}
 	sendErrorReport(w, r, jsonError, status)
 	return
@@ -470,7 +470,7 @@ func JSONErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, st
 
 func JSONErrorNonArrayReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
 	SpewCallers()
-	logger.Infof(errorStr)
+	logger.Info(errorStr)
 	jsonError := map[string]string{"error": errorStr}
 	sendErrorReport(w, r, jsonError, status)
 	return
@@ -490,13 +490,13 @@ func sendErrorReport(w http.ResponseWriter, r *http.Request, jsonError interface
 	// simplify the handlers a little bit and send a HEAD response from
 	// here.
 	if r.Method == http.MethodHead {
-		logger.Debugf("Issuing HEAD response for error")
+		logger.Debug("Issuing HEAD response for error")
 		return
 	}
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&jsonError); err != nil {
-		logger.Errorf(err.Error())
+		logger.Error(err.Error())
 	}
 	return
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/group"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/organization"
@@ -32,7 +33,6 @@ import (
 	"github.com/ctdk/goiardi/user"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"strconv"
 	"strings"
@@ -284,7 +284,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 						jsonErrorReport(w, r, "invalid public key (is a certificate)", http.StatusBadRequest)
 						return
 					}
-					logger.Infof("going to recreate private key")
+					logger.Info("going to recreate private key")
 				} else {
 					if pkok, pkerr := user.ValidatePublicKey(pk); !pkok {
 						jsonErrorReport(w, r, pkerr.Error(), http.StatusBadRequest)

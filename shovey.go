@@ -20,12 +20,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"strconv"
 )

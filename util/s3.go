@@ -23,7 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/ctdk/goiardi/config"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 	"net"
 	"regexp"
 	"strconv"
@@ -125,7 +125,7 @@ func S3DeleteHashes(orgName string, fileHashes []string) {
 
 	r, err := s3cli.s3.DeleteObjects(params)
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Error(err.Error())
 	} else {
 		logger.Debugf("%v", r)
 	}

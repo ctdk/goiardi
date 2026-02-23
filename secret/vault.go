@@ -27,9 +27,9 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/util"
 	vault "github.com/hashicorp/vault/api"
-	"github.com/tideland/golib/logger"
 	"strings"
 	"sync"
 	"time"
@@ -255,7 +255,7 @@ func (v *vaultSecretStore) secretValue(s *secretVal) (interface{}, error) {
 				logger.Debugf("error trying to renew the secret for %s: %s -- will renew again in %d seconds", s.path, err.Error(), StaleTryAgainSeconds)
 				s.staleTryAgain = time.Now().Add(StaleTryAgainSeconds)
 			} else {
-				logger.Debugf("successfully renewed secret after being stale")
+				logger.Debug("successfully renewed secret after being stale")
 				s = s2
 			}
 		}

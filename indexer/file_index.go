@@ -30,8 +30,8 @@ import (
 	"sync"
 
 	"github.com/ctdk/go-trie/gtrie"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 	"github.com/tinylib/msgp/msgp"
 )
 
@@ -426,7 +426,7 @@ func (ic *IdxCollection) searchTextCollection(term string, notop bool) (map[stri
 	for i := 0; i < l; i++ {
 		r := <-resCh
 		if r != nil {
-			logger.Debugf("adding result")
+			logger.Debug("adding result")
 			results[r.key] = Document(r.doc)
 		}
 	}
@@ -468,7 +468,7 @@ func (ic *IdxCollection) searchRange(field string, start string, end string, inc
 	for i := 0; i < l; i++ {
 		r := <-resCh
 		if r != nil {
-			logger.Debugf("adding result")
+			logger.Debug("adding result")
 			results[r.key] = Document(r.doc)
 		}
 	}
@@ -511,7 +511,7 @@ func (idoc *IdxDoc) update(object Indexable) {
 	}()
 	trie, err := gtrie.Create(flattened)
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Error(err.Error())
 	} else {
 		var err error
 		idoc.trie, err = compressTrie(trie)
@@ -773,7 +773,7 @@ func (i *FileIndex) Save() error {
 	if !i.updated {
 		return nil
 	}
-	logger.Debugf("Index has changed, saving to disk")
+	logger.Debug("Index has changed, saving to disk")
 	fp, err := ioutil.TempFile(path.Dir(idxFile), "idx-build")
 	if err != nil {
 		return err

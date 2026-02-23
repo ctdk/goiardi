@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2026, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,9 +33,9 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/group"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"os"
 	"path"
@@ -176,7 +176,7 @@ func policyExists(org *organization.Organization, policyRoot string) bool {
 }
 
 func initializePolicy(org *organization.Organization, policyRoot string) error {
-	logger.Debugf("initializing policy!")
+	logger.Debug("initializing policy!")
 	if policyExists(org, policyRoot) {
 		perr := fmt.Errorf("ACL policy for organization %s already exists, cannot initialize!", org.Name)
 		return perr
@@ -219,7 +219,7 @@ func (c *Checker) testForMemberObjPolicy(item aclhelper.Item, doer aclhelper.Mem
 		for _, p := range fi {
 			// DON'T include perm!
 			if item.ContainerKind() == p[condKindPos] && item.ContainerType() == p[condSubkindPos] && item.GetName() == p[condNamePos] {
-				logger.Debugf("testForMemberObjPolicy: all those things were true.")
+				logger.Debug("testForMemberObjPolicy: all those things were true.")
 				return true, nil
 			}
 		}
@@ -276,7 +276,7 @@ func (c *Checker) checkItemPerm(testFunc func(aclhelper.Item, aclhelper.Member, 
 	if memChk, err := testFunc(item, doer, perm); err != nil {
 		return false, util.CastErr(err)
 	} else if memChk {
-		logger.Debugf("checking filtered policy")
+		logger.Debug("checking filtered policy")
 		// TODO: may need a wrapper or cast later to get the right kind
 		// of filter once goiardi gets policies stored in postgres.
 		fp := &fileadapter.Filter{P: []string{doer.ACLName(), item.ContainerType(), item.ContainerKind()}, G: []string{}}
@@ -298,7 +298,7 @@ func (c *Checker) checkItemPerm(testFunc func(aclhelper.Item, aclhelper.Member, 
 		// Probably don't want to keep this statement forever. Checking
 		// the debug level to keep from evaluating the call to GetPolicy
 		// unless we need it.
-		if config.Config.DebugLevel == 0 { // ugly magic number
+		if strings.ToLower(config.Config.LogLevel) == "debug" {
 			zz, zzerr := fe.GetPolicy()
 			logger.Debugf("the filtered policy: %v", zz)
 			if zzerr != nil {

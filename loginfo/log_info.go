@@ -31,10 +31,10 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 )
 
 // LogInfo holds log information about events.
@@ -59,13 +59,13 @@ const debugLogEvent = false
 func LogEvent(org *organization.Organization, doer actor.Actor, obj util.GoiardiObj, action string) error {
 	if !config.Config.LogEvents {
 		if debugLogEvent {
-			logger.Debugf("Not logging this event")
+			logger.Debug("Not logging this event")
 		}
 		return nil
 	}
 
 	if debugLogEvent {
-		logger.Debugf("Logging event")
+		logger.Debug("Logging event")
 	}
 
 	var actorType string

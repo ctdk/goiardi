@@ -20,11 +20,10 @@ package serfin
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/logger"
 	serfclient "github.com/hashicorp/serf/client"
-	"github.com/tideland/golib/logger"
 	"sync"
 	"time"
 )
@@ -76,15 +75,13 @@ func StartSerfin() error {
 	var err error
 	Serfer, err = NewRPCClient(config.Config.SerfAddr)
 	if err != nil {
-		logger.Criticalf(err.Error())
-		os.Exit(1)
+		logger.Fatal(err.Error())
 	}
 
 	if config.Config.SerfEventAnnounce {
 		err = Serfer.UserEvent("goiardi-join", []byte(config.Config.Hostname), true)
 		if err != nil {
-			logger.Criticalf(err.Error())
-			os.Exit(1)
+			logger.Fatal(err.Error())
 		}
 	}
 
@@ -109,7 +106,7 @@ func Query(q *serfclient.QueryParam, errch chan<- error) {
 			ns, err = NewRPCClient(config.Config.SerfAddr)
 			if err == nil {
 				Serfer = ns
-				logger.Debugf("reconnected to serf!")
+				logger.Debug("reconnected to serf!")
 				break
 			}
 			logger.Debugf("Failed to reconnect to serf on try #%d, waiting %d seconds", i+1, retryDelay)
@@ -152,12 +149,12 @@ func CloseSerfClient(serfAddr string) {
 func SendEvent(eventName string, payload interface{}) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Error(err.Error())
 		return
 	}
 	err = Serfer.UserEvent(eventName, jsonPayload, true)
 	if err != nil {
-		logger.Debugf(err.Error())
+		logger.Debug(err.Error())
 	}
 	return
 }
@@ -166,13 +163,13 @@ func SendEvent(eventName string, payload interface{}) {
 func SendQuery(queryName string, payload interface{}) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Error(err.Error())
 		return
 	}
 	q := &serfclient.QueryParam{Name: queryName, Payload: jsonPayload}
 	err = Serfer.Query(q)
 	if err != nil {
-		logger.Debugf(err.Error())
+		logger.Debug(err.Error())
 	}
 	return
 }

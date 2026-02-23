@@ -27,10 +27,10 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/depgraph"
 	"github.com/ctdk/goiardi/filestore"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
 	gversion "github.com/hashicorp/go-version"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"regexp"
 	"sort"
@@ -1134,7 +1134,7 @@ func methodize(org *organization.Organization, method string, cbThing []map[stri
 					var err error
 					retHash[i][k], err = util.S3GetURL(org.Name, chkSum)
 					if err != nil {
-						logger.Errorf(err.Error())
+						logger.Error(err.Error())
 					}
 				} else {
 					retHash[i][k] = util.JoinStr(baseURL, "/organizations/", org.Name, "/file_store/", chkSum)

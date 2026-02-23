@@ -23,13 +23,12 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
-	"os"
 	"sort"
 	"time"
 
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 // NodeStatus records a node's status at a particular time.
@@ -130,8 +129,7 @@ func AllNodeStatuses(org *organization.Organization) []*NodeStatus {
 	for _, n := range nodes {
 		ns, err := n.AllStatuses()
 		if err != nil {
-			logger.Criticalf(err.Error())
-			os.Exit(1)
+			logger.Fatal(err.Error())
 		}
 		allStatus = append(allStatus, ns...)
 	}

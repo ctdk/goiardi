@@ -29,11 +29,11 @@ import (
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 )
 
 // Searcher is an interface that any search backend needs to implement. It's

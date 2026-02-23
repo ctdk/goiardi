@@ -33,10 +33,10 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/filestore"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 )
 
 /* The structure of the sandbox responses is... inconsistent. */
@@ -222,7 +222,7 @@ func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 				var err error
 				chksumStats[chk]["url"], err = util.S3PutURL(s.org.Name, chk)
 				if err != nil {
-					logger.Errorf(err.Error())
+					logger.Error(err.Error())
 				}
 			} else {
 				itemURL := util.JoinStr("/organizations/", s.org.Name, "/file_store/", chk)

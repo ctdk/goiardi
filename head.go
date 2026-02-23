@@ -19,9 +19,9 @@ package main
 import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/gerror"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 	"net/http"
 )
 

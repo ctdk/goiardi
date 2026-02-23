@@ -36,6 +36,7 @@ import (
 	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/secret"
@@ -43,7 +44,6 @@ import (
 	"github.com/ctdk/goiardi/util"
 	serfclient "github.com/hashicorp/serf/client"
 	"github.com/pborman/uuid"
-	"github.com/tideland/golib/logger"
 )
 
 // Shovey holds all the overall information for a shovey run common to all nodes
@@ -393,10 +393,10 @@ func (s *Shovey) CancelRuns(nodeNames []string) util.Gerror {
 	}()
 	select {
 	case <-doneCh:
-		logger.Infof("All nodes acknowledged cancellation")
+		logger.Info("All nodes acknowledged cancellation")
 		// probably do a report here?
 	case <-time.After(time.Duration(60) * time.Second):
-		logger.Errorf("Didn't get all acknowledgements within 60 seconds")
+		logger.Error("Didn't get all acknowledgements within 60 seconds")
 	}
 
 	return nil
@@ -507,13 +507,13 @@ func (s *Shovey) startJobs() Qerror {
 				logger.Debugf("got a response: %v", r)
 				break
 			case <-time.After(s.Timeout * time.Second):
-				logger.Debugf("timed out, might not be appropriate")
+				logger.Debug("timed out, might not be appropriate")
 				break
 			}
 		}
 		close(srCh)
 
-		logger.Debugf("out of for/select loop for shovey responses")
+		logger.Debug("out of for/select loop for shovey responses")
 	}()
 	grerr := <-errch
 	if grerr != nil {
@@ -597,8 +597,7 @@ func AllShoveys(org *organization.Organization) []*Shovey {
 	for _, s := range shoveList {
 		sh, err := Get(org, s)
 		if err != nil {
-			logger.Criticalf(err.Error())
-			os.Exit(1)
+			logger.Fatal(err.Error())
 		}
 		shoveys = append(shoveys, sh)
 	}
@@ -615,8 +614,7 @@ func AllShoveyRuns(org *organization.Organization) []*ShoveyRun {
 		copy(s, shoveyRuns)
 		shoveyRuns = s
 		if err != nil {
-			logger.Criticalf(err.Error())
-			os.Exit(1)
+			logger.Fatal(err.Error())
 		}
 		shoveyRuns = append(shoveyRuns, runs...)
 	}
@@ -634,7 +632,7 @@ func AllShoveyRunStreams(org *organization.Organization) []*ShoveyRunStream {
 			copy(s, streams)
 			streams = s
 			if err != nil {
-				logger.Criticalf(err.Error())
+				logger.Fatal(err.Error())
 				os.Exit(1)
 			}
 			streams = append(streams, srs...)

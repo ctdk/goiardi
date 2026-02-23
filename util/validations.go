@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/filestore"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 	"net/http"
 	"net/mail"
 	"regexp"
@@ -163,7 +163,7 @@ func ValidateCookbookDivision(org filestore.FstoreOrg, dname string, div interfa
 						uploaded, ferr = CheckForObject("default", chksum)
 						if ferr != nil {
 							uploaded = false
-							logger.Errorf(ferr.Error())
+							logger.Error(ferr.Error())
 						} else if uploaded {
 							itemURL, _ = S3GetURL(org.GetName(), chksum)
 						}

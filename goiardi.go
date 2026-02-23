@@ -53,6 +53,7 @@ import (
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/node"
@@ -73,7 +74,6 @@ import (
 	serfclient "github.com/hashicorp/serf/client"
 	"github.com/raintank/met"
 	"github.com/raintank/met/helper"
-	"github.com/tideland/golib/logger"
 	"regexp"
 )
 
@@ -113,8 +113,7 @@ func main() {
 		var derr error
 		datastore.Dbh, derr = datastore.ConnectDB("postgres", config.Config.PostgreSQL)
 		if derr != nil {
-			logger.Fatalf(derr.Error())
-			os.Exit(1)
+			logger.Fatal(derr.Error())
 		}
 	}
 
@@ -122,8 +121,7 @@ func main() {
 	if config.UsingExternalSecrets() {
 		secerr := secret.ConfigureSecretStore()
 		if secerr != nil {
-			logger.Fatalf(secerr.Error())
-			os.Exit(1)
+			logger.Fatal(secerr.Error())
 		}
 	}
 
@@ -154,21 +152,18 @@ func main() {
 		if config.Config.DataStoreFile != "" {
 			uerr := ds.Load(config.Config.DataStoreFile)
 			if uerr != nil {
-				logger.Fatalf(uerr.Error())
-				os.Exit(1)
+				logger.Fatal(uerr.Error())
 			}
 		}
 		ierr := indexer.LoadIndex()
 		if ierr != nil {
-			logger.Fatalf(ierr.Error())
-			os.Exit(1)
+			logger.Fatal(ierr.Error())
 		}
 	}
 
 	metricsBackend, merr := helper.New(config.Config.UseStatsd, config.Config.StatsdAddr, config.Config.StatsdType, "goiardi", config.Config.StatsdInstance)
 	if merr != nil {
-		logger.Fatalf(merr.Error())
-		os.Exit(1)
+		logger.Fatal(merr.Error())
 	}
 	util.InitS3(config.Config)
 	initGeneralStatsd(metricsBackend)
@@ -187,8 +182,7 @@ func main() {
 		fmt.Printf("Exporting data to %s....\n", config.Config.ImpExFile)
 		err := exportAll(config.Config.ImpExFile)
 		if err != nil {
-			logger.Criticalf("Something went wrong during the export: %s", err.Error())
-			os.Exit(1)
+			logger.Fatalf("Something went wrong during the export: %s", err.Error())
 		}
 		fmt.Println("All done!")
 		os.Exit(0)
@@ -196,18 +190,17 @@ func main() {
 		fmt.Printf("Importing data from %s....\n", config.Config.ImpExFile)
 		err := importAll(config.Config.ImpExFile)
 		if err != nil {
-			logger.Criticalf("Something went wrong during the import: %s", err.Error())
-			os.Exit(1)
+			logger.Fatalf("Something went wrong during the import: %s", err.Error())
 		}
 		if config.Config.FreezeData {
 			if config.Config.DataStoreFile != "" {
 				ds := datastore.New()
 				if err := ds.Save(config.Config.DataStoreFile); err != nil {
-					logger.Errorf(err.Error())
+					logger.Error(err.Error())
 				}
 			}
 			if err := indexer.SaveIndex(); err != nil {
-				logger.Errorf(err.Error())
+				logger.Error(err.Error())
 			}
 		}
 		if config.UsingDB() {
@@ -221,15 +214,13 @@ func main() {
 	if config.Config.UseSerf {
 		serferr := serfin.StartSerfin()
 		if serferr != nil {
-			logger.Fatalf(serferr.Error())
-			os.Exit(1)
+			logger.Fatal(serferr.Error())
 		}
 		errch := make(chan error)
 		go startEventMonitor(config.Config.SerfAddr, errch)
 		err := <-errch
 		if err != nil {
-			logger.Criticalf(err.Error())
-			os.Exit(1)
+			logger.Fatalf(err.Error())
 		}
 		startNodeMonitor()
 	}
@@ -378,7 +369,6 @@ func main() {
 	}
 	if err != nil {
 		logger.Fatalf("ListenAndServe: %s", err.Error())
-		os.Exit(1)
 	}
 }
 
@@ -590,7 +580,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		 * webui connection, it needs to fail. */
 		if config.Config.DisableWebUI {
 			w.Header().Set("Content-Type", "application/json")
-			logger.Warningf("Attempting to log in through webui, but webui is disabled")
+			logger.Warning("Attempting to log in through webui, but webui is disabled")
 			jsonErrorReport(w, r, "invalid action", http.StatusUnauthorized)
 			return
 		}
@@ -705,14 +695,12 @@ func createDefaultActors(cworg *organization.Organization) {
 	// the admin user is called 'pivotal' now with chef12 for some reason.
 	if uadmin, _ := user.Get(config.SuperuserName); uadmin == nil {
 		if admin, aerr := user.New(config.SuperuserName); aerr != nil {
-			logger.Criticalf(aerr.Error())
-			os.Exit(1)
+			logger.Fatal(aerr.Error())
 		} else {
 			admin.Admin = true
 			pem, err := admin.GenerateKeys()
 			if err != nil {
-				logger.Criticalf(err.Error())
-				os.Exit(1)
+				logger.Fatal(err.Error())
 			}
 			if config.Config.UseAuth {
 				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, admin.Username)); ferr == nil {
@@ -720,13 +708,11 @@ func createDefaultActors(cworg *organization.Organization) {
 					fp.WriteString(pem)
 					fp.Close()
 				} else {
-					logger.Criticalf(ferr.Error())
-					os.Exit(1)
+					logger.Fatal(ferr.Error())
 				}
 			}
 			if aerr := admin.Save(); aerr != nil {
-				logger.Criticalf(aerr.Error())
-				os.Exit(1)
+				logger.Fatal(aerr.Error())
 			}
 		}
 	}
@@ -734,22 +720,19 @@ func createDefaultActors(cworg *organization.Organization) {
 	if gl := group.GetList(cworg); len(gl) == 0 {
 		logger.Debugf("creating default groups")
 		if gerr := group.MakeDefaultGroups(cworg); gerr != nil {
-			logger.Criticalf(gerr.Error())
-			os.Exit(3)
+			logger.Fatal(gerr.Error())
 		}
 	}
 
 	if cwebui, _ := user.Get(config.DefaultWebui); cwebui == nil {
 		logger.Debugf("creating webui client (as unpriviledged user) (ugh)")
 		if webui, nerr := user.New(config.DefaultWebui); nerr != nil {
-			logger.Criticalf(nerr.Error())
-			os.Exit(1)
+			logger.Fatal(nerr.Error())
 		} else {
 			// webui.Admin = true
 			pem, err := webui.GenerateKeys()
 			if err != nil {
-				logger.Criticalf(err.Error())
-				os.Exit(1)
+				logger.Fatal(err.Error())
 			}
 			if config.Config.UseAuth {
 				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, webui.Username)); ferr == nil {
@@ -757,8 +740,7 @@ func createDefaultActors(cworg *organization.Organization) {
 					fp.WriteString(pem)
 					fp.Close()
 				} else {
-					logger.Criticalf(ferr.Error())
-					os.Exit(1)
+					logger.Fatal(ferr.Error())
 				}
 			}
 
@@ -767,16 +749,14 @@ func createDefaultActors(cworg *organization.Organization) {
 	}
 
 	if cvalid, _ := client.Get(cworg, config.DefaultValidator); cvalid == nil {
-		logger.Debugf("creating validator")
+		logger.Debug("creating validator")
 		if validator, verr := client.New(cworg, config.DefaultValidator); verr != nil {
-			logger.Criticalf(verr.Error())
-			os.Exit(1)
+			logger.Fatal(verr.Error())
 		} else {
 			validator.Validator = true
 			pem, err := validator.GenerateKeys()
 			if err != nil {
-				logger.Criticalf(err.Error())
-				os.Exit(1)
+				logger.Fatal(err.Error())
 			}
 			if config.Config.UseAuth {
 				if fp, ferr := os.Create(fmt.Sprintf("%s/%s.pem", config.Config.ConfRoot, validator.Name)); ferr == nil {
@@ -784,8 +764,7 @@ func createDefaultActors(cworg *organization.Organization) {
 					fp.WriteString(pem)
 					fp.Close()
 				} else {
-					logger.Criticalf(ferr.Error())
-					os.Exit(1)
+					logger.Fatal(ferr.Error())
 				}
 			}
 			validator.Save()
@@ -799,7 +778,7 @@ func createDefaultActors(cworg *organization.Organization) {
 		}
 	}
 
-	logger.Debugf("finished with any default actor creation work")
+	logger.Debug("finished with any default actor creation work")
 
 	return
 }
@@ -815,16 +794,16 @@ func handleSignals() {
 	go func() {
 		for sig := range c {
 			if sig == os.Interrupt || sig == syscall.SIGTERM {
-				logger.Infof("cleaning up...")
+				logger.Info("cleaning up...")
 				if config.Config.FreezeData {
 					if config.Config.DataStoreFile != "" {
 						ds := datastore.New()
 						if err := ds.Save(config.Config.DataStoreFile); err != nil {
-							logger.Errorf(err.Error())
+							logger.Error(err.Error())
 						}
 					}
 					if err := indexer.SaveIndex(); err != nil {
-						logger.Errorf(err.Error())
+						logger.Error(err.Error())
 					}
 				}
 				if config.UsingDB() {
@@ -835,7 +814,7 @@ func handleSignals() {
 				}
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
-				logger.Infof("Reloading configuration...")
+				logger.Info("Reloading configuration...")
 				config.ParseConfigOptions()
 			}
 		}
@@ -914,12 +893,12 @@ func setSaveTicker() {
 				if config.Config.DataStoreFile != "" {
 					uerr := ds.Save(config.Config.DataStoreFile)
 					if uerr != nil {
-						logger.Errorf(uerr.Error())
+						logger.Error(uerr.Error())
 					}
 				}
 				ierr := indexer.SaveIndex()
 				if ierr != nil {
-					logger.Errorf(ierr.Error())
+					logger.Error(ierr.Error())
 				}
 			}
 		}()
@@ -938,7 +917,7 @@ func setLogEventPurgeTicker() {
 					if len(les) != 0 {
 						p, err := loginfo.PurgeLogInfos(org, les[0].ID-config.Config.LogEventKeep)
 						if err != nil {
-							logger.Errorf(err.Error())
+							logger.Error(err.Error())
 						}
 						purged += p
 					}
@@ -977,7 +956,7 @@ func startEventMonitor(serfAddr string, errch chan<- error) {
 				time.Sleep(recreateSerfWait * time.Second)
 				continue
 			} else {
-				logger.Errorf("reconnected to serf after being disconnected")
+				logger.Error("reconnected to serf after being disconnected")
 			}
 		}
 		go runEventMonitor(sc, ech)
@@ -1007,7 +986,7 @@ func runEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 			logger.Debugf("Got an event: %v nil? %v", e, eNil)
 			if eNil {
 				if sc.IsClosed() {
-					logger.Debugf("Serf client has been closed, returning from runEventMonitor in hopes of being able to reconnect")
+					logger.Debug("Serf client has been closed, returning from runEventMonitor in hopes of being able to reconnect")
 					err := fmt.Errorf("serf client closed")
 					errch <- err
 					return
@@ -1020,12 +999,12 @@ func runEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 				jsonPayload := make(map[string]string)
 				err = json.Unmarshal(e["Payload"].([]byte), &jsonPayload)
 				if err != nil {
-					logger.Errorf(err.Error())
+					logger.Error(err.Error())
 					continue
 				}
 				org, err := orgloader.Get(jsonPayload["organization"])
 				if err != nil {
-					logger.Errorf(err.Error())
+					logger.Error(err.Error())
 					continue
 				}
 				n, _ := node.Get(org, jsonPayload["node"])
@@ -1035,7 +1014,7 @@ func runEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 				}
 				nerr := n.UpdateStatus(jsonPayload["status"])
 				if nerr != nil {
-					logger.Errorf(nerr.Error())
+					logger.Error(nerr.Error())
 					continue
 				}
 				r := map[string]string{"response": "ok"}
@@ -1074,14 +1053,14 @@ func startNodeMonitor() {
 		for _ = range ticker.C {
 			unseen, err := node.UnseenNodes()
 			if err != nil {
-				logger.Errorf(err.Error())
+				logger.Error(err.Error())
 				continue
 			}
 			for _, n := range unseen {
 				logger.Infof("Haven't seen %s for a while, marking as down", n.Name)
 				err = n.UpdateStatus("down")
 				if err != nil {
-					logger.Errorf(err.Error())
+					logger.Error(err.Error())
 					continue
 				}
 			}
@@ -1209,7 +1188,7 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 
 			if countGC > 0 {
 				if countGC > 256 {
-					logger.Warningf("lost some gc pause times")
+					logger.Warning("lost some gc pause times")
 					countGC = 256
 				}
 				var i int64
@@ -1241,13 +1220,11 @@ func createDefaultOrg() *organization.Organization {
 	if cworg == nil {
 		var oerr util.Gerror
 		if cworg, oerr = orgloader.New("default", "default org"); oerr != nil {
-			logger.Criticalf(oerr.Error())
-			os.Exit(1)
+			logger.Fatal(oerr.Error())
 		} else {
 			err := cworg.Save()
 			if err != nil {
-				logger.Criticalf(err.Error())
-				os.Exit(1)
+				logger.Fatal(err.Error())
 			}
 		}
 	}
@@ -1255,7 +1232,7 @@ func createDefaultOrg() *organization.Organization {
 	// Just assume (hopefully not wrongly) that if GetList is nil that we
 	// need to create the containers and groups.
 	if cl := container.GetList(cworg); len(cl) == 0 {
-		logger.Debugf("creating default containers")
+		logger.Debug("creating default containers")
 		if cerr := container.MakeDefaultContainers(cworg); cerr != nil {
 			logger.Criticalf(cerr.Error())
 			os.Exit(3)

@@ -21,9 +21,9 @@ package search
 import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/raintank/met"
-	"github.com/tideland/golib/logger"
 	"strings"
 	"sync"
 	"time"

@@ -25,8 +25,8 @@ import (
 	"github.com/casbin/casbin/v2/persist"
 	"github.com/casbin/casbin/v2/persist/file-adapter"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"os"
 	"path"
@@ -134,7 +134,7 @@ func loadMasterPolicyAdapter() (persist.Adapter, error) {
 }
 
 func initializeMasterPolicy() error {
-	logger.Debugf("initializing master policy")
+	logger.Debug("initializing master policy")
 	if masterPolicyExists() {
 		err := errors.New("master policy file already exists, cannot initialize!")
 		return err

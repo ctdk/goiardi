@@ -28,9 +28,9 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 )
 
 type PostgresSearch struct {
@@ -192,7 +192,7 @@ func (p *PostgresSearch) GetEndpoints(org *organization.Organization) []string {
 	// TODO: deal with possible errors
 	endpoints, err := indexer.Endpoints(org)
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Error(err.Error())
 	}
 	return endpoints
 }

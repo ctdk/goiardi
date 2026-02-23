@@ -38,7 +38,7 @@ import (
 
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 // An interface to wrap around organizations. Somehow, somewhere, there's an
@@ -236,15 +236,15 @@ func DeleteHashes(org FstoreOrg, fileHashes []string) {
 		for _, ff := range fileHashes {
 			delFile, err := Get(org, ff)
 			if err != nil {
-				logger.Debugf("Strange, we got an error trying to get %s to delete it.\n", ff)
-				logger.Debugf(err.Error())
+				logger.Debugf("Strange, we got an error trying to get %s to delete it.", ff)
+				logger.Debug(err.Error())
 			} else {
 				_ = delFile.Delete()
 			}
 			// May be able to remove this. Check that it actually deleted
 			d, _ := Get(org, ff)
 			if d != nil {
-				logger.Debugf("Stranger and stranger, %s is still in the file store.\n", ff)
+				logger.Debugf("Stranger and stranger, %s is still in the file store.", ff)
 			}
 		}
 	}
@@ -255,7 +255,7 @@ func DeleteHashes(org FstoreOrg, fileHashes []string) {
 		for _, fh := range fileHashes {
 			err := os.Remove(path.Join(config.Config.LocalFstoreDir, org.GetName(), fh))
 			if err != nil {
-				logger.Errorf(err.Error())
+				logger.Error(err.Error())
 			}
 		}
 	}

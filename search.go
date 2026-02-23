@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/databag"
 	"github.com/ctdk/goiardi/environment"
 	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
@@ -34,7 +35,6 @@ import (
 	"github.com/ctdk/goiardi/search"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"net/url"
 	"os"
@@ -376,7 +376,7 @@ func reindexOrgWorker(org *organization.Organization, rCh chan struct{}) {
 		i := 0
 		allDBItems, derr := dbag.AllDBItems()
 		if derr != nil {
-			logger.Errorf(derr.Error())
+			logger.Error(derr.Error())
 			continue
 		}
 		for _, k := range allDBItems {
@@ -411,7 +411,7 @@ func reindexAll() {
 	defer func() {
 		for u := 0; u < rTypeNum; u++ {
 			<-rCh
-			logger.Debugf("a reindexing goroutine finished")
+			logger.Debug("a reindexing goroutine finished")
 		}
 		logger.Infof("all reindexing goroutines finished, release reindexing mutex for all org  %d ($$ %d)", rdex, pid)
 		riM.Unlock()
@@ -422,7 +422,7 @@ func reindexAll() {
 	// something comes in between the time we fetch the
 	// objects to reindex and when it gets done, they'll
 	// just be added naturally
-	logger.Infof("Beginning all org search schema reindexing now")
+	logger.Info("Beginning all org search schema reindexing now")
 
 	for _, org := range orgs {
 		reindexOrgWorker(org, rCh)

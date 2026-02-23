@@ -25,8 +25,8 @@ import (
 	"sync"
 
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 )
 
 var riM *sync.Mutex
@@ -209,7 +209,7 @@ func ReIndex(org IndexerOrg, objects []Indexable, rCh chan struct{}) error {
 			t = fmt.Sprintf("%T", objects[0])
 			logger.Debugf("starting to reindex %d objects of %s type", z, t)
 		} else {
-			logger.Debugf("No objects actually in this round of reindexing")
+			logger.Debug("No objects actually in this round of reindexing")
 		}
 		// take the mutex
 		logger.Debugf("attempting to take indexer.ReIndex mutex (%d %s)", z, t)

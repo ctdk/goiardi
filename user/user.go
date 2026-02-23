@@ -34,10 +34,10 @@ import (
 	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 	"net/http"
 )
 
@@ -561,7 +561,7 @@ func (u *User) PublicKey() string {
 		if err != nil {
 			// pubKey's not goign to work very well if we can't get
 			// it....
-			logger.Errorf(err.Error())
+			logger.Error(err.Error())
 			return ""
 		}
 		return pk
@@ -650,7 +650,7 @@ func (u *User) Passwd() string {
 	if config.UsingExternalSecrets() {
 		pw, err := secret.GetPasswdHash(u)
 		if err != nil {
-			logger.Errorf(err.Error())
+			logger.Error(err.Error())
 		}
 		return pw
 	}

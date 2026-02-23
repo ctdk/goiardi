@@ -40,8 +40,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/ctdk/goiardi/logger"
 	"github.com/pmylund/go-cache"
-	"github.com/tideland/golib/logger"
 )
 
 // ErrorNodeStatus is for errors specific to the absence of node statuses in the
@@ -500,7 +500,7 @@ func (ds *DataStore) Save(dsFile string) error {
 	if !ds.updated {
 		return nil
 	}
-	logger.Debugf("Data has changed, saving data store to disk")
+	logger.Debug("Data has changed, saving data store to disk")
 	if dsFile == "" {
 		err := fmt.Errorf("Yikes! Cannot save data store to disk because no file was specified.")
 		return err

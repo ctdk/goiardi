@@ -24,13 +24,13 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/cookbook"
 	"github.com/ctdk/goiardi/environment"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
 	"github.com/gorilla/mux"
-	"github.com/tideland/golib/logger"
 	"net/http"
 	"strings"
 )
@@ -367,7 +367,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 					logger.Infof("Cookbook Depends Errors in %s: %+v", env.Name, derr.ErrMap())
 					enc := json.NewEncoder(w)
 					if jerr := enc.Encode(&errMap); jerr != nil {
-						logger.Errorf(jerr.Error())
+						logger.Error(jerr.Error())
 					}
 				default:
 					jsonErrorReport(w, r, derr.Error(), http.StatusPreconditionFailed)

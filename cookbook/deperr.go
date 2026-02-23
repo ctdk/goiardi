@@ -19,9 +19,9 @@ package cookbook
 import (
 	"fmt"
 	"github.com/ctdk/goiardi/depgraph"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
 	"sort"
 	"strings"
 )
