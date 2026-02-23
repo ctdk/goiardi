@@ -74,6 +74,10 @@ const (
 	FatalLevel = "FATAL"
 )
 
+// DefaultLevel, shockingly, is the default logging level if nothing's been
+// specified.
+const DefaultLevel = FatalLevel
+
 var (
 	slogDebug = slog.StringValue(string(DebugLevel))
 	slogInfo = slog.StringValue(string(InfoLevel))
@@ -96,7 +100,7 @@ const LogModePerm = 0644
 func InitializeLogger(logLevel LogLevelName, logFile string, useJsonOutput bool, useSyslog bool, syslogAddr string) error {
 	logLevel = LogLevelName(strings.ToUpper(string(logLevel)))
 	if logLevel == "" {
-		logLevel = FatalLevel
+		logLevel = DefaultLevel
 	}
 
 	// will probably need to deal with syslog around here when the time
@@ -339,4 +343,17 @@ func SetFatalExiter(f FatalExiterFunc) FatalExiterFunc {
 	c := logFatalExiter
 	logFatalExiter = f
 	return c
+}
+
+// SetLevel sets the logging level and returns the former log level.
+func SetLevel(level LogLevelName) LogLevelName {
+	lvl, _ := LogLevelNames[level]
+	oldLevel := LogLevel(slog.SetLogLoggerLevel(slog.Level(lvl)))
+	// reverse LogLevelNames
+	l := make(map[LogLevel]LogLevelName)
+	for k, v := range LogLevelNames {
+		l[v] = k
+	}
+
+	return l[oldLevel]
 }
