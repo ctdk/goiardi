@@ -90,12 +90,15 @@ func TestReportListing(t *testing.T) {
 	n, _ := node.New(org, "node2")
 	for i := 4; i < 6; i++ {
 		u := fmt.Sprintf(uuid, i)
-		r, _ := New(org, u, n.Name)
+		r, err := New(org, u, n.Name)
+		if err != nil {
+			t.Error(err.Error())
+		}
 		r.StartTime = time.Now()
 		r.Save()
 	}
 	from := time.Now().Add(-(time.Duration(24*90) * time.Hour))
-	until := time.Now()
+	until := time.Now().Add(time.Minute)
 	ns, nerr := GetNodeList(org, n.Name, from, until, 100, "")
 	if nerr != nil {
 		t.Error(nerr.Error())
@@ -110,7 +113,7 @@ func TestReportListing(t *testing.T) {
 	}
 	rs = GetList(org)
 	if len(zs) != len(rs) {
-		t.Errorf("Searching on 'started' status here should have returned everything but it didn't")
+		t.Errorf("Searching on 'started' status here should have returned everything but it didn't. zs %d rs %d %v", len(zs), len(rs), rs)
 	}
 	zs, rerr = GetReportList(org, from, until, 100, "success")
 	if rerr != nil {
