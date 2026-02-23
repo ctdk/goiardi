@@ -42,21 +42,21 @@ func TestGroupCreation(t *testing.T) {
 
 	g, err := New(org, "us0rs")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if g == nil {
-		t.Errorf("group us0rs was unexpectedly nil")
+		t.Error("group us0rs was unexpectedly nil")
 	}
 	err = g.Save()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	g2, err := Get(org, "us0rs")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if g2 == nil {
-		t.Errorf("refetching group didn't work")
+		t.Error("refetching group didn't work")
 	}
 	if g2.Name != g.Name {
 		t.Errorf("group names didn't match, expected %s, got %s", g.Name, g2.Name)
@@ -72,15 +72,15 @@ func TestDefaultGroups(t *testing.T) {
 	u.Save()
 	err := MakeDefaultGroups(org)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 
 	g, err := Get(org, "users")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if g == nil {
-		t.Errorf("failed to get created default group users")
+		t.Error("failed to get created default group users")
 	}
 	if f, _ := g.checkForActor(DefaultUser); !f {
 		t.Errorf("failed to find pivotal user in %s", g.Name)
@@ -88,10 +88,10 @@ func TestDefaultGroups(t *testing.T) {
 
 	g, err = Get(org, "admins")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if g == nil {
-		t.Errorf("failed to get created default group admins")
+		t.Error("failed to get created default group admins")
 	}
 	if f, _ := g.checkForActor(DefaultUser); !f {
 		t.Errorf("failed to find pivotal user in %s", g.Name)
@@ -99,17 +99,17 @@ func TestDefaultGroups(t *testing.T) {
 
 	g, err = Get(org, "billing-admins")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if g == nil {
-		t.Errorf("failed to get created default group billing-admins")
+		t.Error("failed to get created default group billing-admins")
 	}
 	g, err = Get(org, "clients")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if g == nil {
-		t.Errorf("failed to get created default group clients")
+		t.Error("failed to get created default group clients")
 	}
 
 }
@@ -125,14 +125,14 @@ func TestAddDelActors(t *testing.T) {
 	a, _ := user.New("flerkin")
 	err := g.AddActor(a)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if f, _ := g.checkForActor(a.GetName()); !f {
 		t.Errorf("actor %s not found in group after being added", a.GetName())
 	}
 	err = g.DelActor(a)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if f, _ := g.checkForActor(a.GetName()); f {
 		t.Errorf("actor %s was found in group after being removed", a.GetName())
@@ -149,14 +149,14 @@ func TestAddDelGroups(t *testing.T) {
 	a, _ := New(org, "mlerkle")
 	err := g.AddGroup(a)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if f, _ := g.checkForGroup(a.Name); !f {
 		t.Errorf("group %s not found in group after being added", a.Name)
 	}
 	err = g.DelGroup(a)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if f, _ := g.checkForActor(a.Name); f {
 		t.Errorf("group %s was found in group after being removed", a.Name)

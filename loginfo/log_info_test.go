@@ -48,7 +48,7 @@ func TestLogEvent(t *testing.T) {
 	obj, _ := client.New(org, "obj")
 	err := LogEvent(org, doer, obj, "create")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	ds := datastore.New()
 	arr := ds.GetLogInfoList(org.Name)
@@ -114,7 +114,7 @@ func TestLogEvent(t *testing.T) {
 	searchParams["doer"] = doer2.Name
 	searching, err := GetLogInfos(org, searchParams, 0)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if len(searching) != 10 {
 		t.Errorf("len(searching) for log events by doer2 should have returned 10 items, but returned %d instead", len(searching))

@@ -97,7 +97,7 @@ func (p *Policy) deletePolicySQL() error {
 		werr := fmt.Errorf("deleting policy %s had an error: %w", p.Name, err)
 		terr := tx.Rollback()
 		if terr != nil {
-			werr = fmt.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
+			werr = fmt.Errorf("%s and then rolling back the transaction gave another error: %w", werr.Error(), terr)
 		}
 		return werr
 	}

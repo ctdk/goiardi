@@ -220,7 +220,7 @@ func main() {
 		go startEventMonitor(config.Config.SerfAddr, errch)
 		err := <-errch
 		if err != nil {
-			logger.Fatalf(err.Error())
+			logger.Fatal(err.Error())
 		}
 		startNodeMonitor()
 	}
@@ -1234,8 +1234,7 @@ func createDefaultOrg() *organization.Organization {
 	if cl := container.GetList(cworg); len(cl) == 0 {
 		logger.Debug("creating default containers")
 		if cerr := container.MakeDefaultContainers(cworg); cerr != nil {
-			logger.Criticalf(cerr.Error())
-			os.Exit(3)
+			logger.Fatal(cerr.Error())
 		}
 	}
 

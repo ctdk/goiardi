@@ -52,7 +52,7 @@ func New(org *organization.Organization, name string) (*Role, util.Gerror) {
 		var err error
 		found, err = checkForRoleSQL(datastore.Dbh, org, name)
 		if err != nil {
-			gerr := util.Errorf(err.Error())
+			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusInternalServerError)
 			return nil, gerr
 		}
@@ -226,7 +226,7 @@ func DoesExist(org *organization.Organization, roleName string) (bool, util.Gerr
 		var cerr error
 		found, cerr = checkForRoleSQL(datastore.Dbh, org, roleName)
 		if cerr != nil {
-			err := util.Errorf(cerr.Error())
+			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
 			return false, err
 		}

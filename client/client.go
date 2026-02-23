@@ -99,7 +99,7 @@ func New(org *organization.Organization, clientname string) (*Client, util.Gerro
 		var cerr error
 		found, cerr = checkForClientSQL(datastore.Dbh, org, clientname)
 		if cerr != nil {
-			err = util.Errorf(cerr.Error())
+			err = util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
 			return nil, err
 		}
@@ -141,7 +141,7 @@ func Get(org *organization.Organization, clientname string) (*Client, util.Gerro
 		if err != nil {
 			var gerr util.Gerror
 			if err != sql.ErrNoRows {
-				gerr = util.Errorf(err.Error())
+				gerr = util.CastErr(err)
 				gerr.SetStatus(http.StatusInternalServerError)
 			} else {
 				gerr = util.Errorf("Client %s not found", clientname)
@@ -320,7 +320,7 @@ func (c *Client) Rename(newName string) util.Gerror {
 		}
 	} else {
 		if err := chkInMemUser(newName); err != nil {
-			gerr := util.Errorf(err.Error())
+			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusConflict)
 			return gerr
 		}

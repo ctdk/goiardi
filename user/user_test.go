@@ -28,7 +28,7 @@ import (
 func TestNewUser(t *testing.T) {
 	u, err := New("foo")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if u.Username != "foo" {
 		t.Errorf("Somehow the username was %s instead of 'foo'", u.Username)
@@ -69,13 +69,13 @@ func TestGobEncodeDecode(t *testing.T) {
 	}()
 	err = enc.Encode(c)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	dec := gob.NewDecoder(saved)
 	c2 := new(User)
 	err = dec.Decode(&c2)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if c2.Username != c.Username {
 		t.Errorf("saved user doesn't seem to be equal to original: %v vs %v", c2, c)

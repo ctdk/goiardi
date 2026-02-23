@@ -42,7 +42,7 @@ func (c *Cookbook) saveCookbookPostgreSQL() error {
 func (cbv *CookbookVersion) updateCookbookVersionPostgreSQL(defb, libb, attb, recb, prob, resb, temb, roob, filb, metb []byte, maj, min, patch int64) util.Gerror {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		gerr := util.Errorf(err.Error())
+		gerr := util.CastErr(err)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}

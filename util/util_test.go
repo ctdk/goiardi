@@ -17,6 +17,7 @@
 package util
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 )
@@ -76,19 +77,20 @@ func TestCustomURL(t *testing.T) {
 }
 
 func TestGerror(t *testing.T) {
-	errmsg := "foo bar"
-	err := Errorf(errmsg)
-	if err.Error() != errmsg {
-		t.Errorf("expected %s to match %s", err.Error(), errmsg)
+	errmsg := "foo bar %d"
+	expected := fmt.Sprintf(errmsg, 6)
+	err := Errorf(errmsg, 6)
+	if err.Error() != expected {
+		t.Errorf("expected %s to match %s", err.Error(), expected)
 	}
 
 	if err.Status() != http.StatusBadRequest {
-		t.Errorf("err.Status() did not return expected default")
+		t.Error("err.Status() did not return expected default")
 	}
 
 	err.SetStatus(http.StatusNotFound)
 	if err.Status() != http.StatusNotFound {
-		t.Errorf("SetStatus did not set Status correctly")
+		t.Error("SetStatus did not set Status correctly")
 	}
 }
 

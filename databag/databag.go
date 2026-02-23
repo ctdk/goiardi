@@ -72,7 +72,7 @@ func New(org *organization.Organization, name string) (*DataBag, util.Gerror) {
 		var cerr error
 		found, cerr = checkForDataBagSQL(datastore.Dbh, org, name)
 		if cerr != nil {
-			err = util.Errorf(cerr.Error())
+			err = util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
 			return nil, err
 		}
@@ -108,7 +108,7 @@ func Get(org *organization.Organization, dbName string) (*DataBag, util.Gerror) 
 				gerr = util.Errorf("Cannot load data bag %s", dbName)
 				gerr.SetStatus(http.StatusNotFound)
 			} else {
-				gerr = util.Errorf(err.Error())
+				gerr = util.CastErr(err)
 				gerr.SetStatus(http.StatusInternalServerError)
 			}
 			return nil, gerr
@@ -141,7 +141,7 @@ func DoesExist(org *organization.Organization, dbName string) (bool, util.Gerror
 		var cerr error
 		found, cerr = checkForDataBagSQL(datastore.Dbh, org, dbName)
 		if cerr != nil {
-			err := util.Errorf(cerr.Error())
+			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
 			return false, err
 		}
@@ -280,7 +280,7 @@ func (db *DataBag) NewDBItem(rawDbagItem map[string]interface{}) (*DataBagItem, 
 		dbagItem, err = db.newDBItemPostgreSQL(dbiID, rawDbagItem)
 
 		if err != nil {
-			gerr := util.Errorf(err.Error())
+			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusInternalServerError)
 			return nil, gerr
 		}
@@ -304,7 +304,7 @@ func (db *DataBag) NewDBItem(rawDbagItem map[string]interface{}) (*DataBagItem, 
 	}
 	err := db.Save()
 	if err != nil {
-		gerr := util.Errorf(err.Error())
+		gerr := util.CastErr(err)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return nil, gerr
 	}

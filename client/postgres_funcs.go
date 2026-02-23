@@ -45,13 +45,13 @@ func (c *Client) savePostgreSQL() util.Gerror {
 func (c *Client) renamePostgreSQL(newName string) util.Gerror {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		gerr := util.Errorf(err.Error())
+		gerr := util.CastErr(err)
 		return gerr
 	}
 	_, err = tx.Exec("SELECT goiardi.rename_client($1, $2, $3)", c.Name, newName, c.org.GetId())
 	if err != nil {
 		tx.Rollback()
-		gerr := util.Errorf(err.Error())
+		gerr := util.CastErr(err)
 		if strings.HasPrefix(err.Error(), "a user with") || strings.Contains(err.Error(), "already exists, cannot rename") {
 			gerr.SetStatus(http.StatusConflict)
 		} else {

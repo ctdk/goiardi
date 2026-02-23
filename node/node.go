@@ -62,7 +62,7 @@ func New(org *organization.Organization, name string) (*Node, util.Gerror) {
 		var err error
 		found, err = checkForNodeSQL(datastore.Dbh, org, name)
 		if err != nil {
-			gerr := util.Errorf(err.Error())
+			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusInternalServerError)
 			return nil, gerr
 		}
@@ -149,7 +149,7 @@ func DoesExist(org *organization.Organization, nodeName string) (bool, util.Gerr
 		var cerr error
 		found, cerr = checkForNodeSQL(datastore.Dbh, org, nodeName)
 		if cerr != nil {
-			err := util.Errorf(cerr.Error())
+			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
 			return false, err
 		}

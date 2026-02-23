@@ -27,7 +27,7 @@ var gwrapper = New("christmas wrapping")
 
 func TestGerror(t *testing.T) {
 	errmsg := "foo bar"
-	err := Errorf(errmsg)
+	err := New(errmsg)
 	if err.Error() != errmsg {
 		t.Errorf("expected %s to match %s", err.Error(), errmsg)
 	}

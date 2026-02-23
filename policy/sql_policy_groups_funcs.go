@@ -120,7 +120,7 @@ func (pg *PolicyGroup) deletePolicyGroupSQL() error {
 		werr := fmt.Errorf("deleting policy group %s had an error: %w", pg.Name, err)
 		terr := tx.Rollback()
 		if terr != nil {
-			werr = fmt.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
+			werr = fmt.Errorf("%s and then rolling back the transaction gave another error: %w", werr.Error(), terr)
 		}
 		return werr
 	}
@@ -157,7 +157,7 @@ func (pg *PolicyGroup) removePolicySQL(policyName string) error {
 		werr := fmt.Errorf("deleting policy %s from policy group %s had an error: %w", policyName, pg.Name, err)
 		terr := tx.Rollback()
 		if terr != nil {
-			werr = fmt.Errorf("%s and then rolling back the transaction gave another error: %w", terr)
+			werr = fmt.Errorf("%s and then rolling back the transaction gave another error: %w", werr.Error(), terr)
 		}
 		return werr
 	}

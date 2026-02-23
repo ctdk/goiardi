@@ -256,7 +256,7 @@ func DoesExist(org *organization.Organization, environmentName string) (bool, ut
 		var cerr error
 		found, cerr = checkForEnvironmentSQL(datastore.Dbh, org, environmentName)
 		if cerr != nil {
-			err := util.Errorf(cerr.Error())
+			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
 			return false, err
 		}

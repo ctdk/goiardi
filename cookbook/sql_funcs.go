@@ -160,61 +160,61 @@ func (cbv *CookbookVersion) updateCookbookVersionSQL() util.Gerror {
 	// Preparing the complex data structures to be saved
 	defb, deferr := datastore.EncodeBlob(cbv.Definitions)
 	if deferr != nil {
-		gerr := util.Errorf(deferr.Error())
+		gerr := util.CastErr(deferr)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
 	libb, liberr := datastore.EncodeBlob(cbv.Libraries)
 	if liberr != nil {
-		gerr := util.Errorf(liberr.Error())
+		gerr := util.CastErr(liberr)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
 	attb, atterr := datastore.EncodeBlob(cbv.Attributes)
 	if atterr != nil {
-		gerr := util.Errorf(atterr.Error())
+		gerr := util.CastErr(atterr)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
 	recb, recerr := datastore.EncodeBlob(cbv.Recipes)
 	if recerr != nil {
-		gerr := util.Errorf(recerr.Error())
+		gerr := util.CastErr(recerr)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
 	prob, proerr := datastore.EncodeBlob(cbv.Providers)
 	if proerr != nil {
-		gerr := util.Errorf(proerr.Error())
+		gerr := util.CastErr(proerr)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
 	resb, reserr := datastore.EncodeBlob(cbv.Resources)
 	if reserr != nil {
-		gerr := util.Errorf(reserr.Error())
+		gerr := util.CastErr(reserr)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
 	temb, temerr := datastore.EncodeBlob(cbv.Templates)
 	if temerr != nil {
-		gerr := util.Errorf(temerr.Error())
+		gerr := util.CastErr(temerr)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
 	roob, rooerr := datastore.EncodeBlob(cbv.RootFiles)
 	if rooerr != nil {
-		gerr := util.Errorf(rooerr.Error())
+		gerr := util.CastErr(rooerr)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
 	filb, filerr := datastore.EncodeBlob(cbv.Files)
 	if filerr != nil {
-		gerr := util.Errorf(filerr.Error())
+		gerr := util.CastErr(filerr)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
 	metb, meterr := datastore.EncodeBlob(cbv.Metadata)
 	if meterr != nil {
-		gerr := util.Errorf(meterr.Error())
+		gerr := util.CastErr(meterr)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
@@ -455,7 +455,7 @@ func (c *Cookbook) checkCookbookVersionSQL(cbVersion string) (bool, error) {
 func (cbv *CookbookVersion) deleteCookbookVersionSQL() util.Gerror {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		gerr := util.Errorf(err.Error())
+		gerr := util.CastErr(err)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
@@ -467,7 +467,7 @@ func (cbv *CookbookVersion) deleteCookbookVersionSQL() util.Gerror {
 		if terr != nil {
 			err = fmt.Errorf("deleting cookbook %s version %s had an error '%s', and then rolling back the transaction gave another error '%s'", cbv.CookbookName, cbv.Version, err.Error(), terr.Error())
 		}
-		gerr := util.Errorf(err.Error())
+		gerr := util.CastErr(err)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}

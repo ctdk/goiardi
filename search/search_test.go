@@ -272,11 +272,11 @@ func TestSecondOrg(t *testing.T) {
 	sorgName := "boo"
 	sorg, err := orgloader.New(sorgName, "booboo")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	err = sorg.Save()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	snode, _ := node.New(sorg, "snode1")
 	snode.Save()

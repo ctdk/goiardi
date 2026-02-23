@@ -36,7 +36,7 @@ func TestOrgCreation(t *testing.T) {
 	fullName := "Hlumphers, Inc."
 	o, err := New(name, fullName)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if o.Name != name {
 		t.Errorf("org names did not match! %s and %s", o.Name, name)
@@ -49,14 +49,14 @@ func TestOrgCreation(t *testing.T) {
 	}
 	err = o.Save()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 }
 
 func TestOrgDeletion(t *testing.T) {
 	o, err := Get("hlumph")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	fakeacl.LoadFakeACL(o)
 	o.Delete()
@@ -71,13 +71,13 @@ func TestOrgGet(t *testing.T) {
 	fullName := "Hlumphers, Inc."
 	o, err := New(name, fullName)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	fakeacl.LoadFakeACL(o)
 	err = o.Save()
 	o2, err := Get(name)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if o.Name != o2.Name {
 		t.Errorf("names did not match, got %s and %s", o.Name, o2.Name)
@@ -93,12 +93,12 @@ func TestOrgShoveyKey(t *testing.T) {
 	fullName := "Harumph AB"
 	o, err := New(name, fullName)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	fakeacl.LoadFakeACL(o)
 	err = o.Save()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 
 	if o.shoveyKey == nil {
@@ -107,7 +107,7 @@ func TestOrgShoveyKey(t *testing.T) {
 
 	pk, gerr := o.ShoveyPrivKey()
 	if gerr != nil {
-		t.Errorf(gerr.Error())
+		t.Error(gerr.Error())
 	}
 	if pk == nil {
 		t.Error("aiiieeeee, the private key should not have been null")
@@ -115,7 +115,7 @@ func TestOrgShoveyKey(t *testing.T) {
 
 	pub, gerr := o.ShoveyPubKey()
 	if gerr != nil {
-		t.Errorf(gerr.Error())
+		t.Error(gerr.Error())
 	}
 
 	if !strings.HasPrefix(pub, "-----BEGIN PUBLIC KEY-----") {
