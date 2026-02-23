@@ -21,6 +21,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -401,7 +402,7 @@ func ParseConfigOptions() error {
 	if opts.PgSearch {
 		// make sure postgres is enabled
 		if !Config.UsePostgreSQL {
-			err := fmt.Errorf("--pg-search requires --use-postgresql (which makes sense, really).")
+			err := errors.New("--pg-search requires --use-postgresql (which makes sense, really).")
 			log.Println(err)
 			os.Exit(1)
 		}
@@ -409,13 +410,13 @@ func ParseConfigOptions() error {
 	}
 
 	if !((Config.DataStoreFile == "" && Config.IndexFile == "") || ((Config.DataStoreFile != "" || Config.UsePostgreSQL) && Config.IndexFile != "")) {
-		err := fmt.Errorf("-i and -D must either both be specified, or not specified")
+		err := errors.New("-i and -D must either both be specified, or not specified")
 		log.Println(err)
 		os.Exit(1)
 	}
 
 	if Config.UsePostgreSQL && (Config.IndexFile == "" && !Config.PgSearch) {
-		err := fmt.Errorf("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with the PostgreSQL backend (and not using the PostgreSQL search).")
+		err := errors.New("An index file must be specified with -i or --index-file (or the 'index-file' config file option) when running with the PostgreSQL backend (and not using the PostgreSQL search).")
 		log.Println(err)
 		os.Exit(1)
 	}
