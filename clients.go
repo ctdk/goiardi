@@ -20,6 +20,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/apiver"
 	"github.com/ctdk/goiardi/client"
@@ -397,7 +398,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		default:
-			jsonErrorReport(w, r, "Bad public key (T %T) (val '%v')", http.StatusBadRequest, publicKey, publicKey)
+			jsonErrorReport(w, r, fmt.Sprintf("Bad public key (T %T) (val '%v')", publicKey, publicKey), http.StatusBadRequest)
 			return
 		}
 	}
