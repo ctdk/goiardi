@@ -136,7 +136,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		if apiVer > apiver.APIv0 {
 			// hmph
 			jsonClient["clientname"] = jsonClient["name"]
-			delete(jsonUser, "admin")
+			delete(jsonClient, "admin")
 			jsonClient["orgname"] = org.Name
 		}
 
