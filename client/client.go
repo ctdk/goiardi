@@ -453,8 +453,8 @@ ValidElem:
 	return nil
 }
 
-// ValidatePublicKey checks that the provided public key is valid. Wrapper around
-// chefcrypto.ValidatePublicKey(), but with a different error type.
+// ValidatePublicKey checks that the provided public key is valid. Wrapper
+// around chefcrypto.ValidatePublicKey(), but with a different error type.
 func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
 	ok, pkerr := chefcrypto.ValidatePublicKey(publicKey)
 	var err util.Gerror
