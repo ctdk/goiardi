@@ -348,26 +348,10 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
-	apiVer, apiErr := apiver.GetReqAPIVersion(r)
-	if apiErr != nil {
-		jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
+	clientName, sterr := util.ValidateAsString(clientData["name"])
+	if sterr != nil || clientName == "" {
+		jsonErrorReport(w, r, "Field 'name' missing", http.StatusBadRequest)
 		return
-	}
-
-	if apiVer > apiver.APIv0 {
-		clientName, sterr := util.ValidateAsString(clientData["clientname"])
-		if sterr != nil || clientName == "" {
-			jsonErrorReport(w, r, "Field 'clientname' missing", http.StatusBadRequest)
-			return
-		}
-		clientData["name"] = clientData["name"]
-	} else {
-		clientName, sterr := util.ValidateAsString(clientData["name"])
-		if sterr != nil || clientName == "" {
-			jsonErrorReport(w, r, "Field 'name' missing", http.StatusBadRequest)
-			return
-		}
 	}
 
 	chefClient, err := client.NewFromJSON(org, clientData)
@@ -445,6 +429,11 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	// The response is slightly different between API versions and need to
 	// be handled accordingly.
 	fullClientResponse := make(map[string]interface{})
+	apiVer, apiErr := apiver.GetReqAPIVersion(r)
+	if apiErr != nil {
+		jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
+		return
+	}
 
 	if apiVer > apiver.APIv0 {
 		fullClientResponse["chef_key"] = clientResponse
