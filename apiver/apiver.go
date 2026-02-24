@@ -37,6 +37,9 @@ const MinAPIVersion = "0"
 // Maximum supported API version
 const MaxAPIVersion = "1"
 
+// Default API version if no header or API version provided.
+const DefaultAPIVersion = MinAPIVersion
+
 const APIv0 = 0
 const APIv1 = 1
 const APIv2 = 2 // there might be a v2 API, but it's not entirely clear yet
@@ -61,8 +64,8 @@ func GetReqAPIVersion(r *http.Request) (int, gerror.Error) {
 	v := r.Header.Get("X-Ops-Server-API-Version")
 	logger.Debugf("Requested Server API version: '%s'", v)
 	if v == "" {
-		v = "0"
-		logger.Debug("Requested empty Server API version or the header was missing. Setting API to v0.")
+		v = DefaultAPIVersion
+		logger.Debugf("Requested empty Server API version or the header was missing. Setting API to v%s.", v)
 	}
 
 	apiVer, err := strconv.Atoi(v)
