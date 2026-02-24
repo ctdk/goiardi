@@ -199,7 +199,7 @@ type Options struct {
 	Export               string       `short:"x" long:"export" description:"Export all server data to the given file, exiting afterwards. Should be used with caution. Cannot be used at the same time as -m/--import."`
 	Import               string       `short:"m" long:"import" description:"Import data from the given file, exiting afterwards. Cannot be used at the same time as -x/--export."`
 	ObjMaxSize           int64        `short:"Q" long:"obj-max-size" description:"Maximum object size in bytes for the file store. Default 10485760 bytes (10MB)." env:"GOIARDI_OBJ_MAX_SIZE"`
-	JSONReqMaxSize       int64        `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is 1000000." env:"GOIARDI_JSON_REQ_MAX_SIZE"`
+	JSONReqMaxSize       int64        `short:"j" long:"json-req-max-size" description:"Maximum size for a JSON request from the client. Per chef-pedant, default is now 2000000." env:"GOIARDI_JSON_REQ_MAX_SIZE"`
 	UseUnsafeMemStore    bool         `long:"use-unsafe-mem-store" description:"deprecated option you shouldn't be able to see" hidden:"true"`
 	DbPoolSize           int          `long:"db-pool-size" description:"Number of idle db connections to maintain. Only useful when using one of the SQL backends. Default is 0 - no idle connections retained" env:"GOIARDI_DB_POOL_SIZE"`
 	MaxConn              int          `long:"max-connections" description:"Maximum number of connections allowed for the database. Only useful when using one of the SQL backends. Default is 0 - unlimited." env:"GOIARDI_MAX_CONN"`
@@ -647,7 +647,7 @@ func ParseConfigOptions() error {
 		Config.ObjMaxSize = 10485760
 	}
 	if Config.JSONReqMaxSize == 0 {
-		Config.JSONReqMaxSize = 1000000
+		Config.JSONReqMaxSize = 2000000
 	}
 
 	if opts.UseUnsafeMemStore {
