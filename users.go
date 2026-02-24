@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/apiver"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/logger"
@@ -313,13 +314,6 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 						jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 						return
 					}
-					// and the private_key needs to be set
-					// in ["chef_key"]["private_key"] it
-					// seems. This might only be if the
-					// requested api is >= 1?
-					ckey := make(map[string]interface{})
-					ckey["private_key"] = jsonUser["private_key"]
-					jsonUser["chef_key"] = ckey
 					
 					// make sure the json user gets the new
 					// public key
@@ -356,8 +350,27 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
+
+		// The format of the user JSON returned has changed with API v1.
+		// Deal with it accordingly, may need changed elsewhere in here.
+		userResponse := make(map[string]interface{})
+		userResponse["uri"] = util.CustomURL(util.JoinStr("users/", chefUser.Username))
+		apiVer, apiErr := apiver.GetReqAPIVersion(r)
+		if apiErr != nil {
+			jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
+			return
+		}
+
+		if apiVer > apiver.APIv0 {
+			userResponse["chef_key"] = jsonUser
+		} else {
+			for k, v := range jsonUser {
+				userResponse[k] = v
+			}
+		}
+
 		enc := json.NewEncoder(w)
-		if encerr := enc.Encode(&jsonUser); encerr != nil {
+		if encerr := enc.Encode(&userResponse); encerr != nil {
 			jsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -497,9 +510,6 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 				return
 			}
-			ckey := make(map[string]interface{})
-			ckey["private_key"] = userResponse["private_key"]
-			userResponse["chef_key"] = ckey
 		} else {
 			switch publicKey := publicKey.(type) {
 			case string:
@@ -515,9 +525,6 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 					jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 					return
 				}
-				ckey := make(map[string]interface{})
-				ckey["private_key"] = userResponse["private_key"]
-				userResponse["chef_key"] = ckey
 			default:
 				jsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
 				return
@@ -532,6 +539,19 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
+		// Switch things around if Server API is > 0
+		apiVer, apiErr := apiver.GetReqAPIVersion(r)
+		if apiErr != nil {
+			jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
+			return
+		}
+
+		if apiVer > apiver.APIv0 {
+			t := userResponse
+			userResponse = make(map[string]interface{})
+			userResponse["chef_key"] = t
+		}
+
 		userResponse["uri"] = util.CustomURL(util.JoinStr("/users/", chefUser.Username))
 		w.WriteHeader(http.StatusCreated)
 	default:
