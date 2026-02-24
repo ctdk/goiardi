@@ -50,6 +50,11 @@ var SupportedAPIVersions = []string{"0", "1", "2"}
 // MatchSupportedAPIVersion compares an API version requested from the headers
 // to the versions supported by this server.
 func MatchSupportedVersion(ver string) bool {
+	// If the string is empty, say we support it and hope for the best.
+	if ver == "" {
+		return true
+	}
+
 	for _, v := range SupportedAPIVersions {
 		if ver == v {
 			return true
