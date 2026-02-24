@@ -410,11 +410,13 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 		return
 	}
-	clientResponse["uri"] = util.ObjURL(chefClient)
+	fullClientResponse := make(map[string]interface{})
+	fullClientResponse["uri"] = util.ObjURL(chefClient)
+	fullClientResponse["chef_key"] = clientResponse
 	w.WriteHeader(http.StatusCreated)
 
 	enc := json.NewEncoder(w)
-	if err := enc.Encode(&clientResponse); err != nil {
+	if err := enc.Encode(&fullClientResponse); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
 	}
 }
