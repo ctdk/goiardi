@@ -38,7 +38,7 @@ const MinAPIVersion = "0"
 const MaxAPIVersion = "1"
 
 // Default API version if no header or API version provided.
-const DefaultAPIVersion = MinAPIVersion
+const DefaultAPIVersion = MaxAPIVersion
 
 const APIv0 = 0
 const APIv1 = 1
