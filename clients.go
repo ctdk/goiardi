@@ -21,6 +21,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/apiver"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/group"
 	"github.com/ctdk/goiardi/loginfo"
@@ -410,9 +411,25 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// The response is slightly different between API versions and need to
+	// be handled accordingly.
 	fullClientResponse := make(map[string]interface{})
+	apiVer, apiErr := apiver.GetReqAPIVersion(r)
+	if apiErr != nil {
+		jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
+		return
+	}
+
+	if apiVer > apiver.APIv0 {
+		fullClientResponse["chef_key"] = clientResponse
+	} else {
+		for k, v := range clientResponse {
+			fullClientResponse[k] = v
+		}
+	}
+
 	fullClientResponse["uri"] = util.ObjURL(chefClient)
-	fullClientResponse["chef_key"] = clientResponse
 	w.WriteHeader(http.StatusCreated)
 
 	enc := json.NewEncoder(w)
