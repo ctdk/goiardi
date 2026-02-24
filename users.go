@@ -544,7 +544,11 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 		// Annoyingly, it looks like this is NOT different between
 		// API versions. I think. Comment out for now, remove if it's
 		// truly unneeded.
-		/*
+		//
+		// Even more annoyingly, at least some of the time (but not all
+		// the time, apparently, this is needed. Putting it back while
+		// I get to the bottom of it.
+
 		apiVer, apiErr := apiver.GetReqAPIVersion(r)
 		if apiErr != nil {
 			jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
@@ -556,7 +560,6 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			userResponse = make(map[string]interface{})
 			userResponse["chef_key"] = t
 		}
-		*/
 
 		userResponse["uri"] = util.CustomURL(util.JoinStr("/users/", chefUser.Username))
 		w.WriteHeader(http.StatusCreated)
