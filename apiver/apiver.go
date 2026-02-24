@@ -35,17 +35,17 @@ const ChefApiVersion = "0"
 const MinAPIVersion = "0"
 
 // Maximum supported API version
-const MaxAPIVersion = "1"
+const MaxAPIVersion = "2"
 
 // Default API version if no header or API version provided.
-const DefaultAPIVersion = MaxAPIVersion
+const DefaultAPIVersion = "1"
 
 const APIv0 = 0
 const APIv1 = 1
-const APIv2 = 2 // there might be a v2 API, but it's not entirely clear yet
+const APIv2 = 2 // there definitely is a v2 API, but it's still mysterious to me
 
 // All supported API versions
-var SupportedAPIVersions = []string{"0", "1"}
+var SupportedAPIVersions = []string{"0", "1", "2"}
 
 // MatchSupportedAPIVersion compares an API version requested from the headers
 // to the versions supported by this server.
@@ -78,7 +78,7 @@ func GetReqAPIVersion(r *http.Request) (int, gerror.Error) {
 	// and return some sort of error if it doesn't match. It's possible that
 	// we shouldn't, but we'll see.
 	if !MatchSupportedVersion(v) {
-		gerr := gerror.Errorf("Unsupported Server API Version '%s'. Supported versions are %s", strings.Join(SupportedAPIVersions, ", "))
+		gerr := gerror.Errorf("Unsupported Server API Version '%s'. Supported versions are %s", v, strings.Join(SupportedAPIVersions, ", "))
 		return 0, gerr
 	}
 
