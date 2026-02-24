@@ -178,7 +178,7 @@ type Options struct {
 	LogFile        string `short:"L" long:"log-file" description:"Log to file X" env:"GOIARDI_LOG_FILE"`
 	SysLog         bool   `short:"s" long:"syslog" description:"Log to syslog rather than a log file. Incompatible with -L/--log-file." env:"GOIARDI_SYSLOG"`
 	LogLevel       string `short:"g" long:"log-level" description:"Specify logging verbosity. Performs the same function as -V, but works like the 'log-level' option in the configuration file. Acceptable values are 'debug', 'info', 'notice', 'warning', 'error', 'critical', and 'fatal'." env:"GOIARDI_LOG_LEVEL"`
-	LogUseJSONOutput bool `short:"J" long:"log-use-json-output" description: "Format log statements as JSON.", env:"GOIARDI_LOG_USE_JSON_OUTPUT"`
+	LogUseJSONOutput bool `short:"J" long:"log-use-json-output" description: "Format log statements as JSON." env:"GOIARDI_LOG_USE_JSON_OUTPUT"`
 	TimeSlew       string `long:"time-slew" description:"Time difference allowed between the server's clock and the time in the X-OPS-TIMESTAMP header. Formatted like 5m, 150s, etc. Defaults to 15m." env:"GOIARDI_TIME_SLEW"`
 	ConfRoot       string `long:"conf-root" description:"Root directory for configs and certificates. Default: the directory the config file is in, or the current directory if no config file is set." env:"GOIARDI_CONF_ROOT"`
 	UseAuth        bool   `short:"A" long:"use-auth" description:"Use authentication. Default: false. (NB: At a future time, the default behavior will change to authentication being enabled.)" env:"GOIARDI_USE_AUTH"`
