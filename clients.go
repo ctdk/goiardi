@@ -397,7 +397,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		default:
-			jsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
+			jsonErrorReport(w, r, "Bad public key (T %T) (val '%v')", http.StatusBadRequest, publicKey, publicKey)
 			return
 		}
 	}
