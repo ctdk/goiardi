@@ -9,18 +9,29 @@ p, role##admins, containers, containers, containers, read, allow
 p, role##admins, containers, containers, containers, update, allow
 p, role##admins, containers, containers, containers, delete, allow
 p, role##admins, containers, containers, containers, grant, allow
+p, role##users, containers, containers, containers, read, allow
 
 p, role##admins, containers, containers, data, create, allow
 p, role##admins, containers, containers, data, read, allow
 p, role##admins, containers, containers, data, update, allow
 p, role##admins, containers, containers, data, delete, allow
 p, role##admins, containers, containers, data, grant, allow
+p, role##users, containers, containers, data, create, allow
+p, role##users, containers, containers, data, read, allow
+p, role##users, containers, containers, data, update, allow
+p, role##users, containers, containers, data, delete, allow
+p, role##clients, containers, containers, data, read, allow
 
 p, role##admins, containers, containers, cookbooks, create, allow
 p, role##admins, containers, containers, cookbooks, read, allow
 p, role##admins, containers, containers, cookbooks, update, allow
 p, role##admins, containers, containers, cookbooks, delete, allow
 p, role##admins, containers, containers, cookbooks, grant, allow
+p, role##users, containers, containers, cookbooks, create, allow
+p, role##users, containers, containers, cookbooks, read, allow
+p, role##users, containers, containers, cookbooks, update, allow
+p, role##users, containers, containers, cookbooks, delete, allow
+p, role##clients, containers, containers, cookbooks, read, allow
 
 p, role##admins, containers, containers, nodes, create, allow
 p, role##admins, containers, containers, nodes, read, allow
@@ -29,6 +40,10 @@ p, role##admins, containers, containers, nodes, delete, allow
 p, role##admins, containers, containers, nodes, grant, allow
 p, role##users, containers, containers, nodes, create, allow
 p, role##users, containers, containers, nodes, read, allow
+p, role##users, containers, containers, nodes, update, allow
+p, role##users, containers, containers, nodes, delete, allow
+p, role##clients, containers, containers, nodes, create, allow
+p, role##clients, containers, containers, nodes, read, allow
 
 p, role##admins, containers, containers, environments, create, allow
 p, role##admins, containers, containers, environments, read, allow
@@ -37,6 +52,8 @@ p, role##admins, containers, containers, environments, delete, allow
 p, role##admins, containers, containers, environments, grant, allow
 p, role##users, containers, containers, environments, create, allow
 p, role##users, containers, containers, environments, read, allow
+p, role##users, containers, containers, environments, update, allow
+p, role##users, containers, containers, environments, delete, allow
 p, role##clients, containers, containers, environments, read, allow
 
 p, role##admins, containers, containers, roles, create, allow
@@ -44,6 +61,11 @@ p, role##admins, containers, containers, roles, read, allow
 p, role##admins, containers, containers, roles, update, allow
 p, role##admins, containers, containers, roles, delete, allow
 p, role##admins, containers, containers, roles, grant, allow
+p, role##users, containers, containers, roles, create, allow
+p, role##users, containers, containers, roles, read, allow
+p, role##users, containers, containers, roles, update, allow
+p, role##users, containers, containers, roles, delete, allow
+p, role##clients, containers, containers, roles, read, allow
 
 p, role##admins, containers, containers, shovey-keys, create, allow
 p, role##admins, containers, containers, shovey-keys, read, allow
