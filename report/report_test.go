@@ -113,7 +113,7 @@ func TestReportListing(t *testing.T) {
 	}
 	rs = GetList(org)
 	if len(zs) != len(rs) {
-		t.Errorf("Searching on 'started' status here should have returned everything but it didn't. zs %d rs %d %v", len(zs), len(rs), rs)
+		t.Errorf("Searching on 'started' status here should have returned everything but it didn't. zs %d rs %d", len(zs), len(rs))
 	}
 	zs, rerr = GetReportList(org, from, until, 100, "success")
 	if rerr != nil {
