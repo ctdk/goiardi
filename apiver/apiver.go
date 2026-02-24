@@ -21,6 +21,7 @@ package apiver
 
 import (
 	"github.com/ctdk/goiardi/gerror"
+	"github.com/ctdk/goiardi/logger"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,6 +36,10 @@ const MinAPIVersion = "0"
 
 // Maximum supported API version
 const MaxAPIVersion = "1"
+
+const APIv0 = 0
+const APIv1 = 1
+const APIv2 = 2 // there might be a v2 API, but it's not entirely clear yet
 
 // All supported API versions
 var SupportedAPIVersions = []string{"0", "1"}
@@ -54,6 +59,7 @@ func MatchSupportedVersion(ver string) bool {
 // returns an int for easy checking in a handler.
 func GetReqAPIVersion(r *http.Request) (int, gerror.Error) {
 	v := r.Header.Get("X-Ops-Server-API-Version")
+	logger.Debugf("Requested Server API version: '%s'", v)
 
 	apiVer, err := strconv.Atoi(v)
 	if err != nil {
