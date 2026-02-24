@@ -258,6 +258,8 @@ func main() {
 	muxer.HandleFunc("/users/{name}/association_requests/{id}", userAssocIDHandler)
 	muxer.HandleFunc("/users/{name}/organizations", userListOrgHandler)
 	muxer.HandleFunc("/system_recovery", systemRecoveryHandler)
+	// license info for the hell of it
+	muxer.HandleFunc("/license", licenseHandler)
 	// rebuild all indices across all orgs - for the per-org version of
 	// this, see reindexOrgHandler
 	muxer.HandleFunc("/reindex", reindexHandler)
