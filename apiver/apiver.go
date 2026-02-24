@@ -60,6 +60,10 @@ func MatchSupportedVersion(ver string) bool {
 func GetReqAPIVersion(r *http.Request) (int, gerror.Error) {
 	v := r.Header.Get("X-Ops-Server-API-Version")
 	logger.Debugf("Requested Server API version: '%s'", v)
+	if v == "" {
+		v = "0"
+		logger.Debug("Requested empty Server API version or the header was missing. Setting API to v0.")
+	}
 
 	apiVer, err := strconv.Atoi(v)
 	if err != nil {
