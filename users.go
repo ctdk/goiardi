@@ -539,7 +539,12 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
 			return
 		}
+
 		// Switch things around if Server API is > 0
+		// Annoyingly, it looks like this is NOT different between
+		// API versions. I think. Comment out for now, remove if it's
+		// truly unneeded.
+		/*
 		apiVer, apiErr := apiver.GetReqAPIVersion(r)
 		if apiErr != nil {
 			jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
@@ -551,6 +556,7 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			userResponse = make(map[string]interface{})
 			userResponse["chef_key"] = t
 		}
+		*/
 
 		userResponse["uri"] = util.CustomURL(util.JoinStr("/users/", chefUser.Username))
 		w.WriteHeader(http.StatusCreated)

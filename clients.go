@@ -127,6 +127,17 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		 * json_class
 		 */
 		jsonClient := chefClient.ToJSON()
+		apiVer, apiErr := apiver.GetReqAPIVersion(r)
+		if apiErr != nil {
+			jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
+			return
+		}
+
+		if apiVer > apiver.APIv0 {
+			// hmph
+			jsonClient["clientname"] = jsonClient["name"]
+		}
+
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(&jsonClient); err != nil {
 			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
