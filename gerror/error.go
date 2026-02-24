@@ -43,7 +43,8 @@ type Error interface {
 	Unwrap() error
 }
 
-// New makes a new Error. Usually you want Errorf.
+// New makes a new Error. Usually you want Errorf, unless the error message
+// doesn't have a formatted string.
 func New(text string) Error {
 	return &gerror{err: errors.New(text),
 		status: http.StatusBadRequest,

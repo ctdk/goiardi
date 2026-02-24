@@ -41,6 +41,7 @@ import (
 
 	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/actor"
+	"github.com/ctdk/goiardi/apiver"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/authentication"
 	"github.com/ctdk/goiardi/client"
@@ -447,7 +448,7 @@ func diceApiURL(urlPath string) (*apiPathInfo, error) {
 	// the path isn't empty, so move on. Keeping it simple still for now.
 	op := pathElements[0]
 	switch op {
-	case "authenticate_user", "users", "system_recovery", "reindex":
+	case "authenticate_user", "users", "system_recovery", "reindex", "license":
 		// orgless handlers
 
 	case "organizations":
@@ -549,16 +550,18 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	apiInfo := fmt.Sprintf("flavor=osc;version:%s;goiardi=%s", config.ChefVersion, config.Version)
 	w.Header().Set("X-Ops-API-Info", apiInfo)
 
-	apiver := r.Header.Get("X-Ops-Server-API-Version")
-	if matchSupportedVersion(apiver) {
+	// TODO: depending on how errors with Server API should work, tighten
+	// this up and move it to apiver.
+	apiversion := r.Header.Get("X-Ops-Server-API-Version")
+	if apiver.MatchSupportedVersion(apiversion) {
 		w.Header().Set(
 			"X-Ops-Server-API-Version",
 			fmt.Sprintf(
 				`{"min_version": "%s", "max_version": "%s", "request_version": "%s", "response_version": "%s"}`,
-				config.MinAPIVersion,
-				config.MaxAPIVersion,
-				apiver,
-				apiver,
+				apiver.MinAPIVersion,
+				apiver.MaxAPIVersion,
+				apiversion,
+				apiversion,
 			),
 		)
 	}
@@ -1206,15 +1209,6 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 			lastSampleTime = now
 		}
 	}()
-}
-
-func matchSupportedVersion(ver string) bool {
-	for _, v := range config.SupportedAPIVersions {
-		if ver == v {
-			return true
-		}
-	}
-	return false
 }
 
 func createDefaultOrg() *organization.Organization {
