@@ -441,9 +441,9 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if apiVer > apiver.APIv0 {
-		fullClientResponse["chef_key"] = clientResponse
 		// Apparently this is needed now. o_O
-		fullClientResponse["chef_key"]["expiration_date"] = "infinity"
+		clientResponse["expiration_date"] = "infinity"
+		fullClientResponse["chef_key"] = clientResponse
 	} else {
 		for k, v := range clientResponse {
 			fullClientResponse[k] = v
