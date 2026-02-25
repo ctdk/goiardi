@@ -449,6 +449,10 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		// with it later.
 		// TODO: it looks like client and user keys need revamping.
 		clientResponse["name"] = "default"
+		// There's a URI for the keys as well. Multiple keys seems to
+		// definitely either be a thing or be a planned thing. This is
+		// part of the keys TODO above.
+		clientResponse["uri"] = util.CustomObjURL(chefClient, "/keys/default")
 		fullClientResponse["chef_key"] = clientResponse
 	} else {
 		for k, v := range clientResponse {
