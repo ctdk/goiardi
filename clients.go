@@ -443,8 +443,12 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	if apiVer > apiver.APIv0 {
 		// Apparently this is needed now. o_O
 		clientResponse["expiration_date"] = "infinity"
-		// Wait, did we not have the name in the response before?!?
-		clientResponse["name"] = chefClient.Name
+		// It's the name of the *key* that goes here. Aha! It looks like
+		// clients (and probably users) can have multiple keys. Since
+		// that's not implemented yet, just name it "default" and deal
+		// with it later.
+		// TODO: it looks like client and user keys need revamping.
+		clientResponse["name"] = "default"
 		fullClientResponse["chef_key"] = clientResponse
 	} else {
 		for k, v := range clientResponse {
