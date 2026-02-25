@@ -258,6 +258,8 @@ func main() {
 	muxer.HandleFunc("/users/{name}/association_requests/count", userAssocCountHandler)
 	muxer.HandleFunc("/users/{name}/association_requests/{id}", userAssocIDHandler)
 	muxer.HandleFunc("/users/{name}/organizations", userListOrgHandler)
+	muxer.HandleFunc("/users/{name}/keys", userKeysHandler)
+	muxer.HandleFunc("/users/{name}/keys/{key}", userIndividualKeyHandler)
 	muxer.HandleFunc("/system_recovery", systemRecoveryHandler)
 	// license info for the hell of it
 	muxer.HandleFunc("/license", licenseHandler)
@@ -276,6 +278,8 @@ func main() {
 	s.HandleFunc("/clients/{name}", clientHandler)
 	s.HandleFunc("/clients/{name}/_acl", clientACLHandler)
 	s.HandleFunc("/clients/{name}/_acl/{perm}", clientACLPermHandler)
+	s.HandleFunc("/clients/{name}/keys", clientKeysHandler)
+	s.HandleFunc("/clients/{name}/keys/{key}", clientIndividualKeyHandler)
 	// may be broken up more later
 	s.HandleFunc("/containers", containerListHandler)
 	s.HandleFunc("/containers/{name}", containerHandler)
