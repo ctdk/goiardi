@@ -264,7 +264,9 @@ func (c *Client) Delete() util.Gerror {
 func (c *Client) ToJSON() map[string]interface{} {
 	toJSON := make(map[string]interface{})
 	toJSON["name"] = c.Name
-	toJSON["admin"] = c.Admin
+	// This might always be bad now that there's proper RBAC. 0.11.x might
+	// still need it for 11 compat.
+	// toJSON["admin"] = c.Admin
 	toJSON["public_key"] = c.PublicKey()
 	toJSON["validator"] = c.Validator
 	toJSON["json_class"] = c.JSONClass
