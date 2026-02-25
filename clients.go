@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/apiver"
 	"github.com/ctdk/goiardi/client"
 	"github.com/ctdk/goiardi/group"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/loginfo"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/util"
@@ -320,9 +321,13 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	clientData, jerr := parseObjJSON(r.Body)
 	if jerr != nil {
+		logger.Debugf("couldn't parse JSON POST body for client creation %s", jerr.Error())
 		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 		return
 	}
+	// Maybe this should be TRACE. Also, would add TRACE to the log levels.
+	logger.Debugf("Client creation POST data: %v", clientData)
+
 	if averr := util.CheckAdminPlusValidator(clientData); averr != nil {
 		jsonErrorReport(w, r, averr.Error(), averr.Status())
 		return
