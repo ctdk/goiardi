@@ -49,7 +49,11 @@ var SupportedAPIVersions = []string{"0", "1", "2"}
 
 // MatchSupportedAPIVersion compares an API version requested from the headers
 // to the versions supported by this server.
-func MatchSupportedVersion(ver string) bool {
+func MatchSupportedAPIVersion(ver string) bool {
+	// if it's empty, it should match the default API version
+	if ver == "" {
+		return true
+	}
 	for _, v := range SupportedAPIVersions {
 		if ver == v {
 			return true
@@ -77,7 +81,7 @@ func GetReqAPIVersion(r *http.Request) (int, gerror.Error) {
 	// Assuming for the moment that we ought to check the supported versions
 	// and return some sort of error if it doesn't match. It's possible that
 	// we shouldn't, but we'll see.
-	if !MatchSupportedVersion(v) {
+	if !MatchSupportedAPIVersion(v) {
 		gerr := gerror.Errorf("Unsupported Server API Version '%s'. Supported versions are %s", v, strings.Join(SupportedAPIVersions, ", "))
 		return 0, gerr
 	}

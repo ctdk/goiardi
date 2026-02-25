@@ -553,8 +553,8 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: depending on how errors with Server API should work, tighten
 	// this up and move it to apiver.
 	apiversion := r.Header.Get("X-Ops-Server-API-Version")
-	logger.Debugf("apiversion in goiardi.go: '%s'", apiversion)
-	if apiver.MatchSupportedVersion(apiversion) {
+	logger.Debugf("X-Ops-Server-API-Version: '%s'", apiversion)
+	if apiver.MatchSupportedAPIVersion(apiversion) {
 		w.Header().Set(
 			"X-Ops-Server-API-Version",
 			fmt.Sprintf(
