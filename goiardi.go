@@ -258,6 +258,7 @@ func main() {
 	muxer.HandleFunc("/users/{name}/association_requests/count", userAssocCountHandler)
 	muxer.HandleFunc("/users/{name}/association_requests/{id}", userAssocIDHandler)
 	muxer.HandleFunc("/users/{name}/organizations", userListOrgHandler)
+	// v1 API key handling for users
 	muxer.HandleFunc("/users/{name}/keys", userKeysHandler)
 	muxer.HandleFunc("/users/{name}/keys/{key}", userIndividualKeyHandler)
 	muxer.HandleFunc("/system_recovery", systemRecoveryHandler)
@@ -278,6 +279,7 @@ func main() {
 	s.HandleFunc("/clients/{name}", clientHandler)
 	s.HandleFunc("/clients/{name}/_acl", clientACLHandler)
 	s.HandleFunc("/clients/{name}/_acl/{perm}", clientACLPermHandler)
+	// v1 API key handling for clients
 	s.HandleFunc("/clients/{name}/keys", clientKeysHandler)
 	s.HandleFunc("/clients/{name}/keys/{key}", clientIndividualKeyHandler)
 	// may be broken up more later
@@ -677,7 +679,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Now instead of using the default ServeHTTP, we use the gorilla mux
 	// one. We aren't able to use it directly, however, because the chef
 	// clients and knife get unhappy unless we're able to do the above work
-	// before serving the reuquests.
+	// before serving the requests.
 	//
 	// And now, of course, it also uses a native golang context.
 	h.router.ServeHTTP(w, r.WithContext(ctx))
