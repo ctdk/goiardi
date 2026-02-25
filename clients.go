@@ -443,6 +443,8 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	if apiVer > apiver.APIv0 {
 		// Apparently this is needed now. o_O
 		clientResponse["expiration_date"] = "infinity"
+		// Wait, did we not have the name in the response before?!?
+		clientResponse["name"] = chefClient.Name
 		fullClientResponse["chef_key"] = clientResponse
 	} else {
 		for k, v := range clientResponse {
