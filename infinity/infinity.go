@@ -26,10 +26,16 @@ import (
 // It's not quite infinity, but it's close enough. Client and user keys can have
 // "infinity" as an expiration date, which are supported as special values by
 // the Postgres DB driver, but since golang doesn't provide a convenient way to
-// handle that directly we'll do the next best thing: use dates ~292 billion
+// handle that directly we'll do the next best thing: use dates ~146 billion
 // years in the past and future to represent "infinity" and "-infinity". The
-// Year 292,277,026,596 Problem will need to be dealt with sometime in the next
+// Year 146,138,514,283 Problem will need to be dealt with sometime in the next
 // several aeons.
+//
+// Originally this used the full MaxInt64 and MinInt64 values, but unfortunately
+// that managed to break the Before method on a time.Time object. At the risk of
+// being rash, this program is taking the easy way out and only using half the
+// possible values. What should have been a Year 292,277,026,596 Problem will
+// now come nearly 150 billion years sooner than it should have.
 
 // Infinity is the next best thing to an infinite date in the future we can
 // currently have.
