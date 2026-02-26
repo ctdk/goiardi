@@ -462,7 +462,7 @@ func JoinStr(str ...string) string {
 // JSON for the client's benefit before completing the errored out request.
 func JSONErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
 	SpewCallers()
-	logger.Info(errorStr)
+	logger.LogSkip(errorStr, logger.LevelInfo, 1)
 	jsonError := map[string][]string{"error": []string{errorStr}}
 	sendErrorReport(w, r, jsonError, status)
 	return
@@ -470,7 +470,7 @@ func JSONErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, st
 
 func JSONErrorNonArrayReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
 	SpewCallers()
-	logger.Info(errorStr)
+	logger.LogSkip(errorStr, logger.LevelInfo, 1)
 	jsonError := map[string]string{"error": errorStr}
 	sendErrorReport(w, r, jsonError, status)
 	return
@@ -478,7 +478,8 @@ func JSONErrorNonArrayReport(w http.ResponseWriter, r *http.Request, errorStr st
 
 func JSONErrorMapReport(w http.ResponseWriter, r *http.Request, errMap map[string]interface{}, status int) {
 	SpewCallers()
-	logger.Infof("%+v", errMap)
+	msg := fmt.Sprintf("%+v", errMap)
+	logger.LogSkip(msg, logger.LevelInfo, 1)
 	sendErrorReport(w, r, errMap, status)
 	return
 }
