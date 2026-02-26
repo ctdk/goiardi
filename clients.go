@@ -59,7 +59,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		if f, err := org.PermCheck.CheckItemPerm(chefClient, opUser, "delete"); err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
-		} else if !f && !opUser.IsSelf(chefClient) {
+		} else if !f && (opUser.IsValidator() || !opUser.IsSelf(chefClient)) {
 			jsonErrorReport(w, r, "Deleting that client is forbidden", http.StatusForbidden)
 			return
 		}
@@ -170,7 +170,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
-		} else if !f && !opUser.IsSelf(chefClient) {
+		} else if !f && (opUser.IsValidator() || !opUser.IsSelf(chefClient)) {
 			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
 			return
 		}
