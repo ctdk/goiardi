@@ -43,6 +43,10 @@ const (
 	LevelFatal = LogLevel(slog.Level(12))
 )
 
+// CurrentLogLevel is the current log level. Useful if you need to conditionally
+// execute expensive operations to log.
+var CurrentLogLevel LogLevel
+
 // Taking a hint from the tideland golib logger library here for fatal exits.
 
 // FatalExiterFunc is a type to define a function that runs after a call to
@@ -121,6 +125,8 @@ func InitializeLogger(logLevel LogLevelName, logFile string, useJsonOutput bool,
 	if !ok {
 		return fmt.Errorf("Log level '%s' is not a valid log level.", logLevel)
 	}
+
+	CurrentLogLevel = lvl
 
 	// handler options
 	handlerOpts := &slog.HandlerOptions{
@@ -349,6 +355,7 @@ func SetFatalExiter(f FatalExiterFunc) FatalExiterFunc {
 func SetLevel(level LogLevelName) LogLevelName {
 	lvl, _ := LogLevelNames[level]
 	oldLevel := LogLevel(slog.SetLogLoggerLevel(slog.Level(lvl)))
+	CurrentLogLevel = lvl
 	// reverse LogLevelNames
 	l := make(map[LogLevel]LogLevelName)
 	for k, v := range LogLevelNames {
