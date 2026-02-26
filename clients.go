@@ -477,7 +477,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		if b, berr := json.Marshal(&fullClientResponse); berr != nil {
 			logger.Debugf("Attempting to log the JSON output of client creation failed: %s", berr.Error())
 		} else {
-			logger.Debugf("client PUT JSON output: %s", b)
+			logger.Debugf("client POST JSON output: %s", b)
 		}
 	}
 
