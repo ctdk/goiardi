@@ -39,10 +39,10 @@ import (
 
 // Infinity is the next best thing to an infinite date in the future we can
 // currently have.
-var Infinity = time.Unix(math.MaxInt64, 0)
+var Infinity = time.Unix(int64(math.MaxInt64/2), 0)
 
 // MinusInfinity is, similarly, the next best thing to a date in the infinite
 // past that we can have. Since the universe itself is not nearly as old as this
 // date, it should not be a problem given our current understanding of the
 // history of the universe and physics.
-var MinusInfinity = time.Unix(math.MinInt64, 0)
+var MinusInfinity = time.Unix(int64(math.MinInt64/2), 0)
