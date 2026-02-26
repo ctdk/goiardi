@@ -262,10 +262,6 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// hmm. We might want to set clientname in client.ToJSON? Might
-		// be server API version dependent.
-		jsonClient["clientname"] = jsonClient["name"]
-
 		// Another use case for TRACE, I think.
 		if logger.CurrentLogLevel <= logger.LevelDebug {
 			if b, berr := json.Marshal(&jsonClient); berr != nil {
@@ -467,14 +463,14 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		// part of the keys TODO above.
 		clientResponse["uri"] = util.CustomObjURL(chefClient, "/keys/default")
 		fullClientResponse["chef_key"] = clientResponse
+		// Might be v1+, might be every version
+		fullClientResponse["clientname"] = chefClient.Name
 	} else {
 		for k, v := range clientResponse {
 			fullClientResponse[k] = v
 		}
 	}
 
-	// might be everybody that gets this?
-	fullClientResponse["clientname"] = chefClient.Name
 	fullClientResponse["uri"] = util.ObjURL(chefClient)
 	w.WriteHeader(http.StatusCreated)
 
