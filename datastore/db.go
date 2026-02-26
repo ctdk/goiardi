@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/infinity"
 	"github.com/lib/pq"
 	"strings"
 )
@@ -74,17 +75,12 @@ func (n *NullInt64Array) Val() []int64 {
 func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 	switch strings.ToLower(dbEngine) {
 	case "postgres":
-		var connectStr string
-		var cerr error
-		switch strings.ToLower(dbEngine) {
-		case "postgres":
-			// no error needed at this step with
-			// postgres
-			connectStr = formatPostgresqlConStr(params)
-		}
-		if cerr != nil {
-			return nil, cerr
-		}
+		connectStr := formatPostgresqlConStr(params)
+
+		// To infinity, and beyond! Well, to specific dates far in the
+		// future and past, but no further.
+		pq.EnableInfinityTs(infinity.MinusInfinity, infinity.Infinity)
+
 		db, err := sql.Open(strings.ToLower(dbEngine), connectStr)
 		if err != nil {
 			return nil, err

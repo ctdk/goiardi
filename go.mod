@@ -17,7 +17,6 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/pmylund/go-cache v2.1.0+incompatible
 	github.com/raintank/met v0.0.0-20190828160749-80f9c6e35175
-	github.com/tideland/golib v4.24.2+incompatible
 	github.com/tinylib/msgp v1.6.3
 )
 
