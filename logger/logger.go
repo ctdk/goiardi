@@ -198,12 +198,18 @@ func VerboseFlagToLevel(vnum int) LogLevelName {
 }
 
 // Base log statement function used by these convenient helper functions.
-func logStatement(msg string, lvl LogLevel) {
+func logStatement(msg string, lvl LogLevel, skip int) {
 	l := slog.Default()
 	var pcs [1]uintptr
-	runtime.Callers(3, pcs[:]) // skip Callers, the calling wrapper, & this
+	runtime.Callers(3+skip, pcs[:]) // skip Callers, the calling wrapper, & this
 	r := slog.NewRecord(time.Now(), slog.Level(lvl), msg, pcs[0])
 	_ = l.Handler().Handle(context.Background(), r)
+}
+
+// LogSkip logs a message at the given level with an additional number of
+// calling functions to skip for the source code line in the log statement.
+func LogSkip(msg string, lvl LogLevel, skip int) {
+	logStatement(msg, lvl, skip)
 }
 
 // Debugf logs a formatted message at the debug level.
@@ -213,7 +219,7 @@ func Debugf(format string, args ...interface{}) {
 		return
 	}
 	msg := fmt.Sprintf(format, args...)
-	logStatement(msg, LevelDebug)
+	logStatement(msg, LevelDebug, 0)
 }
 
 // Debug logs an unformatted message at the debug level.
@@ -222,7 +228,7 @@ func Debug(msg string) {
 	if !l.Enabled(context.Background(), slog.Level(LevelDebug)) {
 		return
 	}
-	logStatement(msg, LevelDebug)
+	logStatement(msg, LevelDebug, 0)
 }
 
 // Infof logs a formatted message at the debug level.
@@ -232,7 +238,7 @@ func Infof(format string, args ...interface{}) {
 		return
 	}
 	msg := fmt.Sprintf(format, args...)
-	logStatement(msg, LevelInfo)
+	logStatement(msg, LevelInfo, 0)
 }
 
 // Info logs an unformatted message at the debug level.
@@ -241,7 +247,7 @@ func Info(msg string) {
 	if !l.Enabled(context.Background(), slog.Level(LevelInfo)) {
 		return
 	}
-	logStatement(msg, LevelInfo)
+	logStatement(msg, LevelInfo, 0)
 }
 
 // Noticef logs a formatted message at the debug level.
@@ -251,7 +257,7 @@ func Noticef(format string, args ...interface{}) {
 		return
 	}
 	msg := fmt.Sprintf(format, args...)
-	logStatement(msg, LevelNotice)
+	logStatement(msg, LevelNotice, 0)
 }
 
 // Notice logs an unformatted message at the debug level.
@@ -260,7 +266,7 @@ func Notice(msg string) {
 	if !l.Enabled(context.Background(), slog.Level(LevelNotice)) {
 		return
 	}
-	logStatement(msg, LevelNotice)
+	logStatement(msg, LevelNotice, 0)
 }
 
 // Warningf logs a formatted message at the debug level.
@@ -270,7 +276,7 @@ func Warningf(format string, args ...interface{}) {
 		return
 	}
 	msg := fmt.Sprintf(format, args...)
-	logStatement(msg, LevelWarning)
+	logStatement(msg, LevelWarning, 0)
 }
 
 // Warning logs an unformatted message at the debug level.
@@ -279,7 +285,7 @@ func Warning(msg string) {
 	if !l.Enabled(context.Background(), slog.Level(LevelWarning)) {
 		return
 	}
-	logStatement(msg, LevelWarning)
+	logStatement(msg, LevelWarning, 0)
 }
 
 // Errorf logs a formatted message at the debug level.
@@ -289,7 +295,7 @@ func Errorf(format string, args ...interface{}) {
 		return
 	}
 	msg := fmt.Sprintf(format, args...)
-	logStatement(msg, LevelError)
+	logStatement(msg, LevelError, 0)
 }
 
 // Error logs an unformatted message at the debug level.
@@ -298,7 +304,7 @@ func Error(msg string) {
 	if !l.Enabled(context.Background(), slog.Level(LevelError)) {
 		return
 	}
-	logStatement(msg, LevelError)
+	logStatement(msg, LevelError, 0)
 }
 
 // Criticalf logs a formatted message at the debug level.
@@ -308,7 +314,7 @@ func Criticalf(format string, args ...interface{}) {
 		return
 	}
 	msg := fmt.Sprintf(format, args...)
-	logStatement(msg, LevelCritical)
+	logStatement(msg, LevelCritical, 0)
 }
 
 // Critical logs an unformatted message at the debug level.
@@ -317,7 +323,7 @@ func Critical(msg string) {
 	if !l.Enabled(context.Background(), slog.Level(LevelCritical)) {
 		return
 	}
-	logStatement(msg, LevelCritical)
+	logStatement(msg, LevelCritical, 0)
 }
 
 // Fatalf logs a formatted message at the debug level.
@@ -327,7 +333,7 @@ func Fatalf(format string, args ...interface{}) {
 		return
 	}
 	msg := fmt.Sprintf(format, args...)
-	logStatement(msg, LevelFatal)
+	logStatement(msg, LevelFatal, 0)
 	logFatalExiter()
 }
 
@@ -337,7 +343,7 @@ func Fatal(msg string) {
 	if !l.Enabled(context.Background(), slog.Level(LevelFatal)) {
 		return
 	}
-	logStatement(msg, LevelFatal)
+	logStatement(msg, LevelFatal, 0)
 	logFatalExiter()
 }
 
