@@ -267,7 +267,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			if b, berr := json.Marshal(&jsonClient); berr != nil {
 				logger.Debugf("Attempting to log the JSON output of client creation failed: %s", berr.Error())
 			} else {
-				logger.Debugf("client POST JSON output: %s", b)
+				logger.Debugf("client PUT JSON output: %s", b)
 			}
 		}
 
@@ -471,6 +471,15 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	fullClientResponse["uri"] = util.ObjURL(chefClient)
 	w.WriteHeader(http.StatusCreated)
+
+	// Another another use case for TRACE, I think.
+	if logger.CurrentLogLevel <= logger.LevelDebug {
+		if b, berr := json.Marshal(&fullClientResponse); berr != nil {
+			logger.Debugf("Attempting to log the JSON output of client creation failed: %s", berr.Error())
+		} else {
+			logger.Debugf("client PUT JSON output: %s", b)
+		}
+	}
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&fullClientResponse); err != nil {
