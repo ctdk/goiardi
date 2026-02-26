@@ -463,6 +463,8 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		// part of the keys TODO above.
 		clientResponse["uri"] = util.CustomObjURL(chefClient, "/keys/default")
 		fullClientResponse["chef_key"] = clientResponse
+		// Might be v1+, might be every version
+		fullClientResponse["clientname"] = chefClient.Name
 	} else {
 		for k, v := range clientResponse {
 			fullClientResponse[k] = v
