@@ -136,17 +136,17 @@ func InitializeLogger(logLevel LogLevelName, logFile string, useJsonOutput bool,
 			if a.Key == slog.LevelKey {
 				lev := LogLevel(a.Value.Any().(slog.Level))
 				switch {
-				case lev < LevelDebug:
-					a.Value = slogDebug
 				case lev < LevelInfo:
-					a.Value = slogInfo
+					a.Value = slogDebug
 				case lev < LevelNotice:
-					a.Value = slogNotice
+					a.Value = slogInfo
 				case lev < LevelWarning:
-					a.Value = slogWarning
+					a.Value = slogNotice
 				case lev < LevelError:
-					a.Value = slogError
+					a.Value = slogWarning
 				case lev < LevelCritical:
+					a.Value = slogError
+				case lev < LevelFatal:
 					a.Value = slogCritical
 				default:
 					a.Value = slogFatal
