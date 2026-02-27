@@ -131,10 +131,6 @@ const (
 	defaultShoveyKeyOldStyle = "keys/shovey/signing"
 )
 
-// LogLevelNames give convenient, easier to remember than number name for the
-// different levels of logging.
-var LogLevelNames = map[string]int{"debug": 5, "info": 4, "warning": 3, "error": 2, "critical": 1, "fatal": 0}
-
 // MySQLdb holds MySQL connection options. WARNING: These are no longer used,
 // since MySQL support has been removed. They're still lurking here prevent
 // goiardi from blowing up on startup too early before a more meaningful error
