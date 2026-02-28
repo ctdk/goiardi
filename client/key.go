@@ -157,6 +157,17 @@ func (c *Client) GenerateNamedKeys(name string, expiration time.Time) (string, *
 	return privPem, k, nil
 }
 
+// GenerateDefaultKeys is a convenience wrapper around GenerateNamedKeys that
+// generates a default set of public and private keys without the caller needing
+// to specify the name or expiration.
+func (c *Client) GenerateDefaultKeys() (string, util.Gerror) {
+	priv, _, err := c.GenerateNamedKeys("default", infinity.Infinity)
+	if err != nil {
+		return "", err
+	}
+	return priv, nil
+}
+
 // SetNamedKey adds the Key object to the client's list of keys.
 func (c *Client) SetNamedKey(k *Key) util.Gerror {
 	if config.UsingExternalSecrets() {

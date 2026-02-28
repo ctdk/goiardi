@@ -503,12 +503,7 @@ func GetList(org *organization.Organization) []string {
 // is saved with the client, the public key is given to the client and not saved
 // on the server at all.
 func (c *Client) GenerateKeys() (string, error) {
-	privPem, pubPem, err := chefcrypto.GenerateRSAKeys()
-	if err != nil {
-		return "", err
-	}
-	c.SetPublicKey(pubPem)
-	return privPem, nil
+	return c.GenerateDefaultKeys()
 }
 
 // GetName gives the client's name.
@@ -621,7 +616,8 @@ func (c *Client) PublicKey() string {
 		}
 		return pk
 	}
-	return c.pubKey
+	k := c.DefaultPublicKey()
+	return k.PublicKey
 }
 
 // SetPublicKey sets the client's public key.
@@ -635,7 +631,15 @@ func (c *Client) SetPublicKey(pk interface{}) error {
 		if config.UsingExternalSecrets() {
 			secret.SetPublicKey(c, pk)
 		} else {
-			c.pubKey = pk
+			n := make(map[string]interface{})
+			n["name"] = "default"
+			n["public_key"] = pk
+			nk, nerr := newKey(n); if nerr != nil {
+				return nerr
+			}
+			if nerr = c.SetNamedKey(nk); nerr != nil {
+				return nerr
+			}
 		}
 	default:
 		err := fmt.Errorf("invalid type %T for public key", pk)
