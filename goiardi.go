@@ -894,6 +894,8 @@ func gobRegister() {
 	gob.Register(new(aclhelper.ACLItem))
 	var jn json.Number
 	gob.Register(jn)
+	gob.Register(new(client.Key))
+	gob.Register(make(map[string]*Key))
 }
 
 func setSaveTicker() {
