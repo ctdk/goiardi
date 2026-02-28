@@ -250,6 +250,11 @@ func (c *Client) Delete() util.Gerror {
 		}
 	}
 
+	// Delete the public keys
+	if pkErr := c.DeleteAllKeys(); pkErr != nil {
+		return pkErr
+	}
+
 	// And delete the ACL for this item.
 	_, aerr := c.org.PermCheck.DeleteItemACL(c)
 	if aerr != nil {
@@ -316,6 +321,15 @@ func (c *Client) Rename(newName string) util.Gerror {
 		}
 	}
 
+	keys := c.GetAllPublicKeys()
+	// the keys don't need to change if we're using the DB datastore,
+	// because the keys are linked to the client by id, not name.
+	if !config.UsingDB() {
+		if pkErr := c.DeleteAllKeys(); pkErr != nil {
+			return pkErr
+		}
+	}
+
 	if config.UsingDB() {
 		if err := c.renamePostgreSQL(newName); err != nil {
 			return err
@@ -342,6 +356,13 @@ func (c *Client) Rename(newName string) util.Gerror {
 			return util.CastErr(err)
 		}
 	}
+	// this part might change with implementing the key DB functions
+	if !config.UsingDB() {
+		if pkErr := c.saveAllKeys(keys); pkErr != nil {
+			return pkErr
+		}
+	}
+
 	if aerr := c.org.PermCheck.RenameItemACL(c, oldName); aerr != nil {
 		return util.CastErr(aerr)
 	}

@@ -19,6 +19,7 @@ package client
 
 import (
 	"encoding/gob"
+	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/fakeacl"
 	"github.com/ctdk/goiardi/indexer"
@@ -214,5 +215,73 @@ func TestKeysArray(t *testing.T) {
 	keys := c.GetKeysArray()
 	if len(keys) != len(keyNames) {
 		t.Errorf("array of keys returned should have had len(%d), but had len(%d) instead", len(keyNames), len(keys))
+	}
+}
+
+func TestKeyDelete(t *testing.T) {
+	c, _ := New(keyOrg, "foo_key_8")
+	c.Save()
+
+	keyNames := []string{"default", "foober", "noomer"}
+	for _, kName := range keyNames {
+		_, _, err := c.GenerateNamedKeys(kName, infinity.Infinity)
+		if err != nil {
+			t.Errorf("generating %s key failed: %s", kName, err.Error())
+		}
+	}
+	c.DeleteKey("noomer")
+
+	keys := c.GetAllPublicKeys()
+	if len(keys) != len(keyNames)-1 {
+		t.Errorf("len(keys) should have been %d after deleting one key, but was %d instead", len(keyNames)-1, len(keys))
+	}
+
+	k := c.NamedPublicKey("noomer")
+	if k != nil {
+		t.Errorf("Attempting to fetch 'noomer' should have returned a nil key, but instead returned %v", k)
+	}
+}
+
+func TestKeyDeleteAll(t *testing.T) {
+	c, _ := New(keyOrg, "foo_key_9")
+	c.Save()
+
+	keyNames := []string{"default", "foober", "noomer"}
+	for _, kName := range keyNames {
+		_, _, err := c.GenerateNamedKeys(kName, infinity.Infinity)
+		if err != nil {
+			t.Errorf("generating %s key failed: %s", kName, err.Error())
+		}
+	}
+	c.DeleteAllKeys()
+
+	keys := c.GetAllPublicKeys()
+	if len(keys) != 0 {
+		t.Errorf("len(keys) should have been 0 after deleting all, but was %d instead", len(keys))
+	}
+
+	k := c.NamedPublicKey("noomer")
+	if k != nil {
+		t.Errorf("Attempting to fetch 'noomer' should have returned a nil key, but instead returned %v", k)
+	}
+}
+
+// simulate creating a key from a JSON blob
+func TestKeyFromJSON(t *testing.T) {
+	j := make(map[string]interface{})
+	j["expiration_date"] = "infinity"
+	j["name"] = "from_json"
+	_, pubPem, _ := chefcrypto.GenerateRSAKeys()
+	j["public_key"] = pubPem
+
+	k, err := KeyFromJSON(j)
+	if err != nil {
+		t.Errorf("error creating public key from JSON stand-in: %s", err.Error())
+	}
+	if k.ExpirationDate != infinity.Infinity {
+		t.Errorf("KeyFromJSON expiration should have been (essentially) infinite, but was %v", k.ExpirationDate)
+	}
+	if k.Name != "from_json" {
+		t.Errorf("KeyFromJSON name should have been 'from_json', but was '%s'", k.Name)
 	}
 }

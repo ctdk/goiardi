@@ -21,6 +21,7 @@ import (
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/gerror"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/infinity"
 	"github.com/ctdk/goiardi/util"
 	"time"
@@ -38,7 +39,7 @@ type Key struct {
 	// The expiration_date can be "infinity", which requires a bit of hoop
 	// jumping on the golang end.
 	ExpirationDate time.Time `json:"expiration_date"`
-	client_id int64
+	clientId int64
 	id int64
 }
 
@@ -56,7 +57,11 @@ func (c *Client) NamedPublicKey(name string) *Key {
 
 	// if using the DB, but not external secrets
 	if config.UsingDB() {
-
+		k, err := c.getKeySQL(name)
+		if err != nil {
+			logger.Errorf("Error getting client key from DB: %s", err.Error())
+		}
+		return k
 	}
 
 	k := c.GetAllPublicKeys()
@@ -71,7 +76,11 @@ func (c *Client) GetAllPublicKeys() map[string]*Key {
 
 	// if using the DB, but not external secrets
 	if config.UsingDB() {
-
+		keys, err := c.getAllKeysSQL()
+		if err != nil {
+			logger.Errorf("Error getting allclient keys from DB: %s", err.Error())
+		}
+		return keys
 	}
 
 	ds := datastore.New()
@@ -132,7 +141,7 @@ func (c *Client) SetNamedKey(k *Key) util.Gerror {
 
 	// if using the DB, but not external secrets
 	if config.UsingDB() {
-
+		return c.saveKeyPostgreSQL(k)
 	}
 
 	keys := c.GetAllPublicKeys()
@@ -140,10 +149,42 @@ func (c *Client) SetNamedKey(k *Key) util.Gerror {
 	return c.saveAllKeys(keys)
 }
 
+// DeleteKey deletes a public key.
+func (c *Client) DeleteKey(name string) util.Gerror {
+	if config.UsingExternalSecrets() {
+		// do whatever, not implemented yet
+	}
+
+	// if using the DB, but not external secrets
+	if config.UsingDB() {
+		return c.deleteKeySQL(name)
+	}
+
+	keys := c.GetAllPublicKeys()
+	delete(keys, name)
+	return c.saveAllKeys(keys)
+}
+
+// DeleteAllKeys deletes all of a client's public keys.
+func (c *Client) DeleteAllKeys() util.Gerror {
+	if config.UsingExternalSecrets() {
+		// do whatever, not implemented yet
+	}
+
+	// if using the DB, but not external secrets
+	if config.UsingDB() {
+		return c.deleteAllKeysSQL()
+	}
+
+	ds := datastore.New()
+	ds.Delete(c.org.DataKey("client-keys"), c.Name)
+	return nil
+}
+
 // Only useful for in-mem store, I think
 func (c *Client) saveAllKeys(keys map[string]*Key) util.Gerror {
 	ds := datastore.New()
-	ds.Set(c.org.DataKey("client-keys"), c.Name, &keys)
+	ds.Set(c.org.DataKey("client-keys"), c.Name, keys)
 	return nil
 }
 
