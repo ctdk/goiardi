@@ -43,6 +43,13 @@ type Key struct {
 	id int64
 }
 
+// KeyInfo represents a key more sparsely for listing.
+type KeyInfo struct {
+	Name string `json:"name"`
+	Uri string `json:"uri"`
+	Expired bool `json:"expired"`
+}
+
 // DefaultPublicKey is a convenience method that returns the client's default
 // public key without having to provide the name.
 func (c *Client) DefaultPublicKey() *Key {
@@ -104,6 +111,23 @@ func (c *Client) GetKeysArray() []*Key {
 		i++
 	}
 	return keys
+}
+
+// GetKeyInfo returns an array of KeyInfo objects representing the shorter
+// version of a key's information for one list endpoint.
+func (c *Client) GetKeyInfo() []*KeyInfo {
+	keys := c.GetKeysArray()
+	keyInfo := make([]*KeyInfo, len(keys))
+	now := time.Now()
+	for i, v := range keys {
+		ki := new(KeyInfo)
+		ki.Name = v.Name
+		ki.Expired = now.After(v.ExpirationDate)
+		ki.Uri = util.CustomObjURL(c, util.JoinStr("/keys/", ki.Name))
+		keyInfo[i] = ki
+	}
+
+	return keyInfo
 }
 
 // GenerateNamedKeys generates a new set of RSA keys for a client and stored
