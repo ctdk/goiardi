@@ -32,7 +32,7 @@ func (c *Client) saveKeyPostgreSQL(key *Key) util.Gerror {
 		gerr := util.CastErr(err)
 		return gerr
 	}
-	err = tx.QueryRow("SELECT goiardi.merge_clients($1, $2, $3, $4)", key.Name, key.PublicKey, key.ExpirationDate, c.GetId()).Scan(&key.id)
+	err = tx.QueryRow("SELECT goiardi.merge_client_keys($1, $2, $3, $4)", key.Name, key.PublicKey, key.ExpirationDate, c.GetId()).Scan(&key.id)
 	if err != nil {
 		tx.Rollback()
 		gerr := util.CastErr(err)
