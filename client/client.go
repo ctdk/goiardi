@@ -617,6 +617,9 @@ func (c *Client) PublicKey() string {
 		return pk
 	}
 	k := c.DefaultPublicKey()
+	if k == nil {
+		return ""
+	}
 	return k.PublicKey
 }
 
