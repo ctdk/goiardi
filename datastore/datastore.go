@@ -610,6 +610,11 @@ func (ds *DataStore) Load(dsFile string) error {
 // JSON to the client. This makes the client very unhappy, so those empty slices
 // need to be recreated again. Annoying, but it's how it goes.
 func ChkNilArray(obj interface{}) {
+	// Live dangerously. If obj is neither a pointer nor an interface, just
+	// bail and return.
+	if reflect.ValueOf(obj).Kind() != reflect.Interface && reflect.ValueOf(obj).Kind() != reflect.Pointer {
+		return
+	}
 	s := reflect.ValueOf(obj).Elem()
 	for i := 0; i < s.NumField(); i++ {
 		v := s.Field(i)
