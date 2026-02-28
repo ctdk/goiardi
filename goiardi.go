@@ -895,7 +895,7 @@ func gobRegister() {
 	var jn json.Number
 	gob.Register(jn)
 	gob.Register(new(client.Key))
-	gob.Register(make(map[string]*Key))
+	gob.Register(make(map[string]*client.Key))
 }
 
 func setSaveTicker() {
