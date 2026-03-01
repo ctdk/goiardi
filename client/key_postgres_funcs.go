@@ -22,8 +22,6 @@ package client
 import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/util"
-	"net/http"
-	"strings"
 )
 
 func (c *Client) saveKeyPostgreSQL(key *Key) util.Gerror {
