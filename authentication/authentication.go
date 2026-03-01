@@ -30,6 +30,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/association"
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/ctdk/goiardi/masteracl"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
@@ -64,6 +65,7 @@ func CheckHeader(userID string, r *http.Request) util.Gerror {
 		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
 	}
+	logger.Debugf("Attempting to authenticate as: %s (%T)", u.GetName(), u)
 
 	auerr := AuthenticateHeader(u.PublicKey(), config.Config.TimeSlewDur, r)
 	if auerr != nil {
