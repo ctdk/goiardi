@@ -374,13 +374,18 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// We need to save *before* we screw around with the key pairs
+	chefClient.Save()
+
 	if publicKey, pkok := clientData["public_key"]; !pkok {
+		logger.Debug("Generating client keys supposedly")
 		var perr error
 		if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
 			jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 			return
 		}
 	} else {
+		logger.Debugf("Client creation: Provided a public key: T %t v %+v", publicKey, publicKey)
 		switch publicKey := publicKey.(type) {
 		case string:
 			if pkok, pkerr := client.ValidatePublicKey(publicKey); !pkok {
@@ -404,7 +409,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	 * response. I think. */
 	clientResponse["public_key"] = chefClient.PublicKey()
 
-	chefClient.Save()
 	if !chefClient.IsValidator() {
 		g, err := group.Get(org, "clients")
 		if err != nil {
