@@ -29,17 +29,12 @@ import (
 func (c *Client) saveKeyPostgreSQL(key *Key) util.Gerror {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		gerr := util.CastErr(err)
-		return gerr
+		return util.CastErr(err)
 	}
 	err = tx.QueryRow("SELECT goiardi.merge_client_keys($1, $2, $3, $4)", key.Name, key.PublicKey, key.ExpirationDate, c.GetId()).Scan(&key.id)
 	if err != nil {
 		tx.Rollback()
-		gerr := util.CastErr(err)
-		if strings.HasPrefix(err.Error(), "a user with") {
-			gerr.SetStatus(http.StatusConflict)
-		}
-		return gerr
+		return util.CastErr(err)
 	}
 	tx.Commit()
 	return nil
