@@ -376,6 +376,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// We need to save *before* we screw around with the key pairs
 	chefClient.Save()
+	logger.Debugf("Just saved the client. ID? %d", chefClient.GetId())
 
 	if publicKey, pkok := clientData["public_key"]; !pkok {
 		logger.Debug("Generating client keys supposedly")
@@ -394,7 +395,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			chefClient.SetPublicKey(publicKey)
 		case nil:
-
 			var perr error
 			if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
 				jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
