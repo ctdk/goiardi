@@ -415,6 +415,13 @@ func makeValidator(org *organization.Organization, opUser actor.Actor) (*client.
 		return nil, "", err
 	}
 	val.Validator = true
+	// save before generating keys - need the id in DB mode at least, and
+	// we'll probably want it to fully exist for external secret stores as
+	// well
+	if verr := val.Save(); verr != nil {
+		return nil, "", util.CastErr(verr)
+	}
+
 	pem, perr := val.GenerateKeys()
 	if perr != nil {
 		return nil, "", util.CastErr(perr)
