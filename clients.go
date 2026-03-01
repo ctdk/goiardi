@@ -136,10 +136,11 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if apiVer > apiver.APIv0 {
-			// hmph
-			jsonClient["clientname"] = jsonClient["name"]
 			delete(jsonClient, "admin")
 			jsonClient["orgname"] = org.Name
+		} else {
+			// hmph
+			jsonClient["clientname"] = jsonClient["name"]
 		}
 
 		enc := json.NewEncoder(w)
@@ -474,12 +475,12 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		// part of the keys TODO above.
 		clientResponse["uri"] = util.CustomObjURL(chefClient, "/keys/default")
 		fullClientResponse["chef_key"] = clientResponse
-		// Might be v1+, might be every version
-		fullClientResponse["clientname"] = chefClient.Name
 	} else {
 		for k, v := range clientResponse {
 			fullClientResponse[k] = v
 		}
+		// clientname is v0 I think?
+		fullClientResponse["clientname"] = chefClient.Name
 	}
 
 	fullClientResponse["uri"] = util.ObjURL(chefClient)
