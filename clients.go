@@ -137,10 +137,9 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 
 		if apiVer > apiver.APIv0 {
 			delete(jsonClient, "admin")
-		} else {
-			// hmph
-			jsonClient["clientname"] = jsonClient["name"]
 		}
+		// maybe everyone does get this.
+		jsonClient["clientname"] = jsonClient["name"]
 		jsonClient["orgname"] = org.Name
 
 		enc := json.NewEncoder(w)
@@ -193,6 +192,13 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// go ahead and grab the requested server API version
+		apiVer, apiErr := apiver.GetReqAPIVersion(r)
+		if apiErr != nil {
+			jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
+			return
+		}
+
 		jsonName, sterr := util.ValidateAsString(clientData["name"])
 		if sterr != nil {
 			jsonErrorReport(w, r, sterr.Error(), http.StatusBadRequest)
@@ -220,43 +226,56 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if pk, pkfound := clientData["public_key"]; pkfound {
-			switch pk := pk.(type) {
-			case string:
-				if pkok, pkerr := client.ValidatePublicKey(pk); !pkok {
-					jsonErrorReport(w, r, pkerr.Error(), http.StatusBadRequest)
+		// POSSIBLY WRONG: It appears with server API v1+, having any
+		// of the values "public_key", "private_key", or "create_key"
+		// in the POSTed data needs to return 400 Bad Request.
+		if apiVer > apiver.APIv0 {
+			for _, s := range []string{"public_key", "private_key", "create_key"} {
+				if _, sfound := clientData[s]; sfound {
+					jsonErrorReport(w, r, fmt.Sprintf("forbidden key %s in request", s), http.StatusBadRequest)
 					return
 				}
-				chefClient.SetPublicKey(pk)
-				jsonClient["public_key"] = pk
-			case nil:
-				//show_public_key = false
-
-			default:
-				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
-				return
 			}
-		}
-
-		if p, pfound := clientData["private_key"]; pfound {
-			switch p := p.(type) {
-			case bool:
-				if p {
-					var cgerr error
-					if jsonClient["private_key"], cgerr = chefClient.GenerateKeys(); cgerr != nil {
-						jsonErrorReport(w, r, cgerr.Error(), http.StatusInternalServerError)
+		} else {
+			if pk, pkfound := clientData["public_key"]; pkfound {
+				switch pk := pk.(type) {
+				case string:
+					if pkok, pkerr := client.ValidatePublicKey(pk); !pkok {
+						jsonErrorReport(w, r, pkerr.Error(), http.StatusBadRequest)
 						return
 					}
-					// make sure the json
-					// client gets the new
-					// public key
-					jsonClient["public_key"] = chefClient.PublicKey()
+					chefClient.SetPublicKey(pk)
+					jsonClient["public_key"] = pk
+				case nil:
+					//show_public_key = false
+
+				default:
+					jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+					return
 				}
-			default:
-				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
-				return
+			}
+
+			if p, pfound := clientData["private_key"]; pfound {
+				switch p := p.(type) {
+				case bool:
+					if p {
+						var cgerr error
+						if jsonClient["private_key"], cgerr = chefClient.GenerateKeys(); cgerr != nil {
+							jsonErrorReport(w, r, cgerr.Error(), http.StatusInternalServerError)
+							return
+						}
+						// make sure the json
+						// client gets the new
+						// public key
+						jsonClient["public_key"] = chefClient.PublicKey()
+					}
+				default:
+					jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+					return
+				}
 			}
 		}
+
 		chefClient.Save()
 		if lerr := loginfo.LogEvent(org, opUser, chefClient, "modify"); lerr != nil {
 			jsonErrorReport(w, r, lerr.Error(), http.StatusInternalServerError)
@@ -266,7 +285,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		// Another use case for TRACE, I think.
 		if logger.CurrentLogLevel <= logger.LevelDebug {
 			if b, berr := json.Marshal(&jsonClient); berr != nil {
-				logger.Debugf("Attempting to log the JSON output of client creation failed: %s", berr.Error())
+				logger.Debugf("Attempting to log the JSON output of client update failed: %s", berr.Error())
 			} else {
 				logger.Debugf("client PUT JSON output: %s", b)
 			}
