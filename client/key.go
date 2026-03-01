@@ -17,6 +17,7 @@
 package client
 
 import (
+	"encoding/json"
 	"github.com/ctdk/chefcrypto"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
@@ -258,4 +259,24 @@ func newKey(k map[string]interface{}) (*Key, util.Gerror) {
 	}
 
 	return nk, nil
+}
+
+// MarshalJSON and UnmarshalJSON methods for Keys need to be provided because
+// the expiration date field needs special handing in case it's the common case
+// where the expiration date is "infinity".
+func (k *Key) MarshalJSON() ([]byte, error) {
+	m := make(map[string]interface{})
+	m["name"] = k.Name
+	m["public_key"] = k.PublicKey
+	if k.ExpirationDate.Equal(infinity.Infinity) {
+		m["expiration_date"] = "infinity"
+	} else {
+		m["expiration_date"] = k.ExpirationDate
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON, fortunately, doesn't need anything special.
+func (k *Key) UnmarshalJSON(b []byte) error {
+	return json.Unmarshal(b, &k)
 }
