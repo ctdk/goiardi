@@ -766,6 +766,7 @@ func createDefaultActors(cworg *organization.Organization) {
 			logger.Fatal(verr.Error())
 		} else {
 			validator.Validator = true
+			validator.Save()
 			pem, err := validator.GenerateKeys()
 			if err != nil {
 				logger.Fatal(err.Error())
