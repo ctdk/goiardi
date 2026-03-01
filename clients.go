@@ -390,6 +390,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		logger.Debug("Generating client keys supposedly")
 		var perr error
 		if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
+			chefClient.Delete()
 			jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -398,17 +399,24 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		switch publicKey := publicKey.(type) {
 		case string:
 			if pkok, pkerr := client.ValidatePublicKey(publicKey); !pkok {
+				chefClient.Delete()
 				jsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
 				return
 			}
-			chefClient.SetPublicKey(publicKey)
+			if e := chefClient.SetPublicKey(publicKey); e != nil {
+				chefClient.Delete()
+				jsonErrorReport(w, r, e.Error(), http.StatusInternalServerError)
+				return
+			}
 		case nil:
 			var perr error
 			if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
+				chefClient.Delete()
 				jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 				return
 			}
 		default:
+			chefClient.Delete()
 			jsonErrorReport(w, r, fmt.Sprintf("Bad public key (T %T) (val '%v')", publicKey, publicKey), http.StatusBadRequest)
 			return
 		}
