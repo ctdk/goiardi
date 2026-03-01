@@ -137,11 +137,11 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 
 		if apiVer > apiver.APIv0 {
 			delete(jsonClient, "admin")
-			jsonClient["orgname"] = org.Name
 		} else {
 			// hmph
 			jsonClient["clientname"] = jsonClient["name"]
 		}
+		jsonClient["orgname"] = org.Name
 
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(&jsonClient); err != nil {
@@ -488,7 +488,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 			fullClientResponse[k] = v
 		}
 		// clientname is v0 I think?
-		fullClientResponse["clientname"] = chefClient.Name
+		//fullClientResponse["clientname"] = chefClient.Name
 	}
 
 	fullClientResponse["uri"] = util.ObjURL(chefClient)
