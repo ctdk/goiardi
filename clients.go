@@ -350,6 +350,13 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// go ahead and get this information early
+	apiVer, apiErr := apiver.GetReqAPIVersion(r)
+	if apiErr != nil {
+		jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
+		return
+	}
+
 	logger.Debug("clientCreateHandler 3")
 	clientData, jerr := parseObjJSON(r.Body)
 	if jerr != nil {
@@ -405,7 +412,27 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	chefClient.Save()
 	logger.Debugf("Just saved the client. ID? %d", chefClient.GetId())
 
-	if publicKey, pkok := clientData["public_key"]; !pkok {
+	// The madness of the v1+ API key-ness
+	var publicKey interface{}
+	var crtok bool
+	var pubok bool
+
+	if apiVer > apiver.APIv0 {
+		if _, prvok := clientData["private_key"]; prvok {
+			chefClient.Delete()
+			jsonErrorReport(w, r, "private key should not be true in client creation request", http.StatusBadRequest)
+			return
+		}
+		_, crtok = clientData["create_key"]
+		_, pkok = clientData["public_key"]
+		if crtok && pubok {
+			chefClient.Delete()
+			jsonErrorReport(w, r, "both create_key and public_key must not be specified in client creation request", http.StatusBadRequest)
+			return
+		}
+	}
+
+	if (apiVer > apiver.APIv0 && crtok) || !pkok {
 		logger.Debug("Generating client keys supposedly")
 		var perr error
 		if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
@@ -413,7 +440,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 			return
 		}
-	} else {
+	} else if pkok {
 		logger.Debugf("Client creation: Provided a public key: T %t v %+v", publicKey, publicKey)
 		switch publicKey := publicKey.(type) {
 		case string:
@@ -442,7 +469,13 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	/* If we make it here, we want the public key in the
 	 * response. I think. */
-	clientResponse["public_key"] = chefClient.PublicKey()
+	// It's a little hazy, but I think this should be nil if server api ver
+	// is > 0 and neither create_key or public_key were specified.
+	if npk := chefClient.PublicKey(); npk != "" && apiVer > apiver.APIv0 {
+		clientResponse["public_key"] = chefClient.PublicKey()
+	} else {
+		clientResponse["public_key"] = chefClient.PublicKey()
+	}
 
 	if !chefClient.IsValidator() {
 		g, err := group.Get(org, "clients")
@@ -506,8 +539,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		for k, v := range clientResponse {
 			fullClientResponse[k] = v
 		}
-		// clientname is v0 I think?
-		//fullClientResponse["clientname"] = chefClient.Name
 	}
 
 	fullClientResponse["uri"] = util.ObjURL(chefClient)
