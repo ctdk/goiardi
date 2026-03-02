@@ -338,13 +338,11 @@ func clientListHandler(w http.ResponseWriter, r *http.Request) {
 
 func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	logger.Debug("clientCreateHandler 1")
 	org, orgerr := reqctx.CtxOrg(r.Context())
 	if orgerr != nil {
 		jsonErrorReport(w, r, orgerr.Error(), orgerr.Status())
 		return
 	}
-	logger.Debug("clientCreateHandler 2")
 	clientResponse := make(map[string]string)
 	opUser, oerr := actor.GetReqUser(org, r.Header.Get("X-OPS-USERID"))
 	if oerr != nil {
@@ -359,21 +357,17 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Debug("clientCreateHandler 3")
 	clientData, jerr := parseObjJSON(r.Body)
 	if jerr != nil {
-		logger.Debugf("couldn't parse JSON POST body for client creation %s", jerr.Error())
+		logger.Errorf("couldn't parse JSON POST body for client creation %s", jerr.Error())
 		jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 		return
 	}
-	// Maybe this should be TRACE. Also, would add TRACE to the log levels.
-	logger.Debugf("Client creation POST data: %v", clientData)
 
 	if averr := util.CheckAdminPlusValidator(clientData); averr != nil {
 		jsonErrorReport(w, r, averr.Error(), averr.Status())
 		return
 	}
-	logger.Debug("clientCreateHandler 4")
 	if f, err := org.PermCheck.CheckContainerPerm(opUser, "clients", "create"); err != nil {
 		jsonErrorReport(w, r, err.Error(), err.Status())
 		return
@@ -396,7 +390,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	logger.Debug("clientCreateHandler 5")
 	clientName, sterr := util.ValidateAsString(clientData["name"])
 	if sterr != nil || clientName == "" {
 		jsonErrorReport(w, r, "Field 'name' missing", http.StatusBadRequest)
@@ -409,10 +402,8 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Debug("clientCreateHandler 6")
 	// We need to save *before* we screw around with the key pairs
 	chefClient.Save()
-	logger.Debugf("Just saved the client. ID? %d", chefClient.GetId())
 
 	// The madness of the v1+ API key-ness
 	var createKey bool
@@ -433,7 +424,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if (apiVer > apiver.APIv0 && createKey) || !pkok && apiVer == apiver.APIv0 {
-		logger.Debug("Generating client keys supposedly")
 		var perr error
 		if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
 			chefClient.Delete()
@@ -441,7 +431,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else if pkok {
-		logger.Debugf("Client creation: Provided a public key: T %t v %+v", publicKey, publicKey)
 		switch publicKey := publicKey.(type) {
 		case string:
 			if pkok, pkerr := client.ValidatePublicKey(publicKey); !pkok {
