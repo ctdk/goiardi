@@ -432,7 +432,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if (apiVer > apiver.APIv0 && createKey) || !pkok {
+	if (apiVer > apiver.APIv0 && createKey) || !pkok && apiVer == apiver.APIv0 {
 		logger.Debug("Generating client keys supposedly")
 		var perr error
 		if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
