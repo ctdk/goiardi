@@ -417,7 +417,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	// The madness of the v1+ API key-ness
 	var publicKey interface{}
 	var crtok bool
-	var pubok bool
+	var pkok bool
 
 	if apiVer > apiver.APIv0 {
 		if _, prvok := clientData["private_key"]; prvok {
@@ -427,7 +427,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		_, crtok = clientData["create_key"]
 		_, pkok = clientData["public_key"]
-		if crtok && pubok {
+		if crtok && pkok {
 			chefClient.Delete()
 			jsonErrorReport(w, r, "both create_key and public_key must not be specified in client creation request", http.StatusBadRequest)
 			return
@@ -517,11 +517,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	// The response is slightly different between API versions and need to
 	// be handled accordingly.
 	fullClientResponse := make(map[string]interface{})
-	apiVer, apiErr := apiver.GetReqAPIVersion(r)
-	if apiErr != nil {
-		jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
-		return
-	}
 
 	if apiVer > apiver.APIv0 {
 		// Apparently this is needed now. o_O
