@@ -415,9 +415,8 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	logger.Debugf("Just saved the client. ID? %d", chefClient.GetId())
 
 	// The madness of the v1+ API key-ness
-	var publicKey interface{}
 	var createKey bool
-	var pkok bool
+	publicKey, pkok := clientData["public_key"]
 
 	if apiVer > apiver.APIv0 {
 		if _, prvok := clientData["private_key"]; prvok {
@@ -426,7 +425,6 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		createKey, _ = clientData["create_key"].(bool)
-		publicKey, pkok = clientData["public_key"]
 		if createKey && pkok {
 			chefClient.Delete()
 			jsonErrorReport(w, r, "both create_key and public_key must not be specified in client creation request", http.StatusBadRequest)
