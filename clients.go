@@ -531,7 +531,10 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		// definitely either be a thing or be a planned thing. This is
 		// part of the keys TODO above.
 		clientResponse["uri"] = util.CustomObjURL(chefClient, "/keys/default")
-		fullClientResponse["chef_key"] = clientResponse
+		// aha!
+		if createKey || pkok {
+			fullClientResponse["chef_key"] = clientResponse
+		}
 	} else {
 		for k, v := range clientResponse {
 			fullClientResponse[k] = v
