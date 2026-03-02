@@ -416,6 +416,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// The madness of the v1+ API key-ness
 	var publicKey interface{}
+	var createKey bool
 	var crtok bool
 	var pkok bool
 
@@ -425,8 +426,8 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, "private key should not be true in client creation request", http.StatusBadRequest)
 			return
 		}
-		_, crtok = clientData["create_key"]
-		_, pkok = clientData["public_key"]
+		createKey, crtok = clientData["create_key"].(bool)
+		publicKey, pkok = clientData["public_key"]
 		if crtok && pkok {
 			chefClient.Delete()
 			jsonErrorReport(w, r, "both create_key and public_key must not be specified in client creation request", http.StatusBadRequest)
@@ -434,7 +435,7 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if (apiVer > apiver.APIv0 && crtok) || !pkok {
+	if (apiVer > apiver.APIv0 && createKey) || !pkok {
 		logger.Debug("Generating client keys supposedly")
 		var perr error
 		if clientResponse["private_key"], perr = chefClient.GenerateKeys(); perr != nil {
