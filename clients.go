@@ -137,6 +137,8 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 
 		if apiVer > apiver.APIv0 {
 			delete(jsonClient, "admin")
+			// also delete the public key?
+			delete(jsonClient, "public_key")
 		}
 		// maybe everyone does get this.
 		jsonClient["clientname"] = jsonClient["name"]
