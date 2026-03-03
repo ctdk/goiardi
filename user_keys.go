@@ -19,17 +19,90 @@
 package main
 
 import (
+	"encoding/json"
+	"github.com/ctdk/goiardi/logger"
+	"github.com/ctdk/goiardi/masteracl"
+	"github.com/ctdk/goiardi/reqctx"
+	"github.com/ctdk/goiardi/user"
+	"github.com/ctdk/goiardi/util"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
 func userKeysHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	userName := vars["name"]
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
 
 	switch r.Method {
 	case http.MethodGet:
+		chefUser, gerr := user.Get(userName)
 
+		if gerr != nil {
+			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
+			return
+		}
+
+		if f, err := masteracl.MasterCheckPerm(opUser, masteracl.Users, "read"); err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		} else if !f && !opUser.IsSelf(chefUser) {
+			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+			return
+		}
+
+		keyInfo := chefUser.GetKeyInfo()
+
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(&keyInfo); err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	case http.MethodPost:
+		chefUser, gerr := user.Get(userName)
 
+		if gerr != nil {
+			jsonErrorReport(w, r, gerr.Error(), gerr.Status())
+			return
+		}
+		keyData, jerr := parseObjJSON(r.Body)
+		if jerr != nil {
+			logger.Debugf("couldn't parse JSON POST body for user key creation: %s", jerr.Error())
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			return
+		}
+		if f, err := masteracl.MasterCheckPerm(opUser, masteracl.Users, "update"); err != nil {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		} else if !f && (opUser.IsValidator() || !opUser.IsSelf(chefUser)) {
+			jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+			return
+		}
+
+		// try to make the key
+		k, kerr := user.KeyFromJSON(keyData)
+		if kerr != nil {
+			jsonErrorReport(w, r, kerr.Error(), kerr.Status())
+			return
+		}
+		if kerr = chefUser.SetNamedKey(k); kerr != nil {
+			jsonErrorReport(w, r, kerr.Error(), kerr.Status())
+			return
+		}
+		// if it worked, make the response
+		resp := make(map[string]string)
+		resp["uri"] = util.CustomObjURL(chefUser, util.JoinStr("/keys/", k.Name))
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(&resp); err != nil {
+			jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	default:
 		jsonErrorReport(w, r, "Unrecognized method for user keys!", http.StatusMethodNotAllowed)
 	}
@@ -37,14 +110,87 @@ func userKeysHandler(w http.ResponseWriter, r *http.Request) {
 
 func userIndividualKeyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+
+	userName := vars["name"]
+	keyName := vars["key"]
+	opUser, oerr := reqctx.CtxReqUser(r.Context())
+	if oerr != nil {
+		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
+		return
+	}
+
+	var perm string
 	switch r.Method {
 	case http.MethodGet:
-
+		perm = "read"
 	case http.MethodPut:
-
+		perm = "update"
 	case http.MethodDelete:
-
+		perm = "delete"
 	default:
 		jsonErrorReport(w, r, "Unrecognized method for individual user key!", http.StatusMethodNotAllowed)
+		return
+	}
+
+	chefUser, gerr := user.Get(userName)
+	if gerr != nil {
+		jsonErrorReport(w, r, gerr.Error(), gerr.Status())
+		return
+	}
+
+	if f, err := masteracl.MasterCheckPerm(opUser, masteracl.Users, perm); err != nil {
+		jsonErrorReport(w, r, err.Error(), err.Status())
+		return
+	} else if !f && !opUser.IsSelf(chefUser) {
+		jsonErrorReport(w, r, "You are not allowed to perform that action.", http.StatusForbidden)
+		return
+	}
+
+	key := chefUser.NamedPublicKey(keyName)
+	if key == nil {
+		jsonErrorReport(w, r, "key not found", http.StatusNotFound)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		; // don't actually need to do anything else, but we don't want
+		  // an error either
+	case http.MethodPut:
+		// can keys be renamed? I'm unsure
+		keyData, jerr := parseObjJSON(r.Body)
+		if jerr != nil {
+			logger.Debugf("couldn't parse JSON POST body for user key update: %s", jerr.Error())
+			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
+			return
+		}
+
+		nk, kerr := user.KeyFromJSON(keyData)
+		if kerr != nil {
+			jsonErrorReport(w, r, kerr.Error(), kerr.Status())
+			return
+		}
+		// err right now if key names don't match
+		if key.Name != nk.Name {
+			jsonErrorReport(w, r, "key names don't match", http.StatusBadRequest)
+			return
+		}
+		kerr = chefUser.SetNamedKey(nk)
+		// reload key to be safe instead of passing nk back
+		key = chefUser.NamedPublicKey(keyName)
+	case http.MethodDelete:
+		if kerr := chefUser.DeleteKey(keyName); kerr != nil {
+			jsonErrorReport(w, r, kerr.Error(), kerr.Status())
+			return
+		}
+	default:
+		jsonErrorReport(w, r, "Unrecognized method for individual user key!", http.StatusMethodNotAllowed)
+	}
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&key); err != nil {
+		jsonErrorReport(w, r, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
