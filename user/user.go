@@ -154,6 +154,7 @@ func Get(name string) (*User, util.Gerror) {
 
 func GetByEmail(email string) (*User, util.Gerror) {
 	// waaaay easier with a db.
+	// ... but we actually have to do it.
 	if config.UsingDB() {
 
 	}
@@ -221,15 +222,20 @@ func (u *User) Delete() util.Gerror {
 		ds.Delete("user", u.Username)
 	}
 	if config.UsingExternalSecrets() {
-		err := secret.DeletePublicKey(u)
-		if err != nil {
+		if err := secret.DeletePublicKey(u); err != nil {
 			return util.CastErr(err)
 		}
-		err = secret.DeletePasswdHash(u)
-		if err != nil {
+		if err := secret.DeletePasswdHash(u); err != nil {
 			return util.CastErr(err)
 		}
 	}
+
+	// Delete the public keys. Needs some coordination with external secret
+	// stores when we get to that point.
+	if pkErr := u.DeleteAllKeys(); pkErr != nil {
+		return pkErr
+	}
+
 	return nil
 }
 
@@ -258,6 +264,7 @@ func (u *User) Rename(newName string) util.Gerror {
 			return util.CastErr(err)
 		}
 	}
+	keys := u.GetAllPublicKeys()
 	if config.UsingDB() {
 		if err := u.renamePostgreSQL(newName); err != nil {
 			return err
@@ -274,6 +281,9 @@ func (u *User) Rename(newName string) util.Gerror {
 			err.SetStatus(http.StatusConflict)
 			return err
 		}
+		if pkErr := u.DeleteAllKeys(); pkErr != nil {
+			return pkErr
+		}
 		ds.Delete("user", u.Username)
 	}
 	u.Username = newName
@@ -285,6 +295,13 @@ func (u *User) Rename(newName string) util.Gerror {
 		err = secret.SetPasswdHash(u, pw)
 		if err != nil {
 			return util.CastErr(err)
+		}
+	}
+	// shouldn't be able to ever get here if we're using the db, but I feel
+	// safer with this guard in place.
+	if !config.UsingDB() {
+		if pkErr := u.saveAllKeys(keys); pkErr != nil {
+			return nil
 		}
 	}
 	return nil
@@ -496,12 +513,7 @@ func (u *User) isLastAdmin() bool {
 // key is saved with the user object, the public key is given to the user and
 // not saved on the server at all.
 func (u *User) GenerateKeys() (string, error) {
-	privPem, pubPem, err := chefcrypto.GenerateRSAKeys()
-	if err != nil {
-		return "", err
-	}
-	u.SetPublicKey(pubPem)
-	return privPem, nil
+	return u.GenerateDefaultKeys()
 }
 
 // ValidatePublicKey checks that the provided public key is valid. Wrapper
@@ -559,14 +571,18 @@ func (u *User) PublicKey() string {
 	if config.UsingExternalSecrets() {
 		pk, err := secret.GetPublicKey(u)
 		if err != nil {
-			// pubKey's not goign to work very well if we can't get
+			// pubKey's not going to work very well if we can't get
 			// it....
 			logger.Error(err.Error())
 			return ""
 		}
 		return pk
 	}
-	return u.pubKey
+	k := u.DefaultPublicKey()
+	if k == nil {
+		return ""
+	}
+	return k.PublicKey
 }
 
 // SetPublicKey does what it says on the tin. Part of the Actor interface.
@@ -580,7 +596,15 @@ func (u *User) SetPublicKey(pk interface{}) error {
 		if config.UsingExternalSecrets() {
 			secret.SetPublicKey(u, pk)
 		} else {
-			u.pubKey = pk
+			n := make(map[string]interface{})
+			n["name"] = "default"
+			n["public_key"] = pk
+			nk, nerr := newKey(n); if nerr != nil {
+				return nerr
+			}
+			if nerr = u.SetNamedKey(nk); nerr != nil {
+				return nerr
+			}
 		}
 	default:
 		err := fmt.Errorf("invalid type %T for public key", pk)
