@@ -897,6 +897,8 @@ func gobRegister() {
 	gob.Register(jn)
 	gob.Register(new(client.Key))
 	gob.Register(make(map[string]*client.Key))
+	gob.Register(new(user.Key))
+	gob.Register(make(map[string]*user.Key))
 }
 
 func setSaveTicker() {
