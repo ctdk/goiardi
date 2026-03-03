@@ -87,7 +87,7 @@ func (c *Client) deleteKeySQL(name string) util.Gerror {
 		return gerr
 	}
 
-	_, err = tx.Exec("DELETE FROM goiardi.client_keys WHERE client_id = $1 AND name = $2", c.GetId(), c.Name)
+	_, err = tx.Exec("DELETE FROM goiardi.client_keys WHERE client_id = $1 AND name = $2", c.GetId(), name)
 
 	if err != nil {
 		tx.Rollback()
