@@ -710,6 +710,7 @@ func createDefaultActors(cworg *organization.Organization) {
 			logger.Fatal(aerr.Error())
 		} else {
 			admin.Admin = true
+			admin.Save()
 			pem, err := admin.GenerateKeys()
 			if err != nil {
 				logger.Fatal(err.Error())
@@ -741,6 +742,7 @@ func createDefaultActors(cworg *organization.Organization) {
 		if webui, nerr := user.New(config.DefaultWebui); nerr != nil {
 			logger.Fatal(nerr.Error())
 		} else {
+			webui.Save()
 			// webui.Admin = true
 			pem, err := webui.GenerateKeys()
 			if err != nil {
