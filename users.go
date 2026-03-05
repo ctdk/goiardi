@@ -183,6 +183,9 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		 * json_class
 		 */
 		jsonUser := chefUser.ToJSON()
+		if apiVer > apiver.APIv0 {
+			delete(jsonUser, "public_key")
+		}
 		enc := json.NewEncoder(w)
 		if encerr := enc.Encode(&jsonUser); encerr != nil {
 			jsonErrorReport(w, r, encerr.Error(), http.StatusInternalServerError)
@@ -605,7 +608,7 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			// TODO: probably ought to do this right eventually
 			userResponse["expiration_date"] = "infinity"
 			userResponse["name"] = "default"
-			userResponse["uri"] = util.CustomObjURL(chefUser, "/keys/default")
+			userResponse["uri"] = util.CustomURL(util.JoinStr("/users/", chefUser.Username, "/keys/default"))
 			t := userResponse
 			userResponse = make(map[string]interface{})
 			if createKey || pkok {
