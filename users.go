@@ -61,6 +61,12 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	apiVer, apiErr := apiver.GetReqAPIVersion(r)
+	if apiErr != nil {
+		jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
+		return
+	}
+
 	switch r.Method {
 	case http.MethodHead:
 		permCheck := func(r *http.Request, userName string, opUser actor.Actor) util.Gerror {
@@ -355,11 +361,6 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		// Deal with it accordingly, may need changed elsewhere in here.
 		userResponse := make(map[string]interface{})
 		userResponse["uri"] = util.CustomURL(util.JoinStr("users/", chefUser.Username))
-		apiVer, apiErr := apiver.GetReqAPIVersion(r)
-		if apiErr != nil {
-			jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
-			return
-		}
 
 		if apiVer > apiver.APIv0 {
 			userResponse["chef_key"] = jsonUser
@@ -397,6 +398,13 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	apiVer, apiErr := apiver.GetReqAPIVersion(r)
+	if apiErr != nil {
+		jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
+		return
+	}
+
 	r.ParseForm()
 	var email string
 	if e, found := r.Form["email"]; found {
@@ -503,11 +511,23 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), err.Status())
 			return
 		}
+		// need to save before dealing with the keys
+		chefUser.Save()
+		deleteUser := false
+		defer func() {
+			if deleteUser {
+				logger.Warningf("Deleting user %s, there was some sort of issue with public key creation or setting", chefUser.Username)
+				chefUser.Delete()
+			} else {
+				logger.Debugf("No issues with user %s public keys, keeping", chefUser.Username)
+			}
+		}()
 
 		if publicKey, pkok := userData["public_key"]; !pkok {
 			var perr error
 			if userResponse["private_key"], perr = chefUser.GenerateKeys(); perr != nil {
 				jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
+				deleteUser = true
 				return
 			}
 		} else {
@@ -515,6 +535,7 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			case string:
 				if pkok, pkerr := user.ValidatePublicKey(publicKey); !pkok {
 					jsonErrorReport(w, r, pkerr.Error(), pkerr.Status())
+					deleteUser = true
 					return
 				}
 				chefUser.SetPublicKey(publicKey)
@@ -523,10 +544,12 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 				var perr error
 				if userResponse["private_key"], perr = chefUser.GenerateKeys(); perr != nil {
 					jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
+					deleteUser = true
 					return
 				}
 			default:
 				jsonErrorReport(w, r, "Bad public key", http.StatusBadRequest)
+				deleteUser = true
 				return
 			}
 		}
@@ -548,12 +571,6 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 		// Even more annoyingly, at least some of the time (but not all
 		// the time, apparently, this is needed. Putting it back while
 		// I get to the bottom of it.
-
-		apiVer, apiErr := apiver.GetReqAPIVersion(r)
-		if apiErr != nil {
-			jsonErrorReport(w, r, apiErr.Error(), apiErr.Status())
-			return
-		}
 
 		if apiVer > apiver.APIv0 {
 			t := userResponse
