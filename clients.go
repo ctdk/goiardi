@@ -460,10 +460,8 @@ func clientCreateHandler(w http.ResponseWriter, r *http.Request) {
 	 * response. I think. */
 	// It's a little hazy, but I think this should be nil if server api ver
 	// is > 0 and neither create_key or public_key were specified.
-	if npk := chefClient.PublicKey(); npk != "" && apiVer > apiver.APIv0 {
-		clientResponse["public_key"] = chefClient.PublicKey()
-	} else {
-		clientResponse["public_key"] = chefClient.PublicKey()
+	if npk := chefClient.PublicKey(); (npk != "" && apiVer > apiver.APIv0) || apiVer == apiver.APIv0 {
+		clientResponse["public_key"] = npk
 	}
 
 	if !chefClient.IsValidator() {
