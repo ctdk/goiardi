@@ -281,55 +281,65 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var pkChange bool
-		if pk, pkfound := userData["public_key"]; pkfound {
-			switch pk := pk.(type) {
-			case string:
-				if strings.Contains(pk, "CERTIFICATE") {
-					logger.Infof("Tried to set the public key for user %s to be a certificate", chefUser.Username)
-					p, _ := userData["private_key"].(bool)
-					if !p {
-						jsonErrorReport(w, r, "invalid public key (is a certificate)", http.StatusBadRequest)
-						return
-					}
-					logger.Info("going to recreate private key")
-				} else {
-					if pkok, pkerr := user.ValidatePublicKey(pk); !pkok {
-						jsonErrorReport(w, r, pkerr.Error(), http.StatusBadRequest)
-						return
-					}
-					chefUser.SetPublicKey(pk)
-					jsonUser["public_key"] = pk
-					pkChange = true
-				}
-			case nil:
-				//show_public_key = false
-
-			default:
-				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
-				return
-			}
-		}
-
 		var privChange bool
-		if p, pfound := userData["private_key"]; pfound {
-			switch p := p.(type) {
-			case bool:
-				if p {
-					var perr error
-					if jsonUser["private_key"], perr = chefUser.GenerateKeys(); perr != nil {
-						jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
-						return
-					}
-					
-					// make sure the json user gets the new
-					// public key
-					jsonUser["public_key"] = chefUser.PublicKey()
-					privChange = true
-					pkChange = true
+
+		// cf. the equivalent section in clients.go
+		if apiVer > apiver.APIv0 {
+			for _, s := range []string{"public_key", "private_key", "create_key"} {
+				if _, sfound := userData[s]; sfound {
+					jsonErrorReport(w, r, fmt.Sprintf("forbidden key %s in request", s), http.StatusBadRequest)
+					return
 				}
-			default:
-				jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
-				return
+			}
+		} else {
+			if pk, pkfound := userData["public_key"]; pkfound {
+				switch pk := pk.(type) {
+				case string:
+					if strings.Contains(pk, "CERTIFICATE") {
+						logger.Infof("Tried to set the public key for user %s to be a certificate", chefUser.Username)
+						p, _ := userData["private_key"].(bool)
+						if !p {
+							jsonErrorReport(w, r, "invalid public key (is a certificate)", http.StatusBadRequest)
+							return
+						}
+						logger.Info("going to recreate private key")
+					} else {
+						if pkok, pkerr := user.ValidatePublicKey(pk); !pkok {
+							jsonErrorReport(w, r, pkerr.Error(), http.StatusBadRequest)
+							return
+						}
+						chefUser.SetPublicKey(pk)
+						jsonUser["public_key"] = pk
+						pkChange = true
+					}
+				case nil:
+					//show_public_key = false
+
+				default:
+					jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+					return
+				}
+			}
+
+			if p, pfound := userData["private_key"]; pfound {
+				switch p := p.(type) {
+				case bool:
+					if p {
+						var perr error
+						if jsonUser["private_key"], perr = chefUser.GenerateKeys(); perr != nil {
+							jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
+							return
+						}
+						// make sure the json user gets
+						// the new public key
+						jsonUser["public_key"] = chefUser.PublicKey()
+						privChange = true
+						pkChange = true
+					}
+				default:
+					jsonErrorReport(w, r, "Bad request", http.StatusBadRequest)
+					return
+				}
 			}
 		}
 
@@ -523,14 +533,31 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}()
 
-		if publicKey, pkok := userData["public_key"]; !pkok {
+		var createKey bool
+		publicKey, pkok := userData["public_key"]
+
+		if apiVer > apiver.APIv0 {
+			if _, prvok := userData["private_key"]; prvok {
+				jsonErrorReport(w, r, "private key should not be true in user creation request", http.StatusBadRequest)
+				deleteUser = true
+				return
+			}
+			createKey, _ = userData["create_key"].(bool)
+			if createKey && pkok {
+				jsonErrorReport(w, r, "both create_key and public_key must not be specified in user creation request", http.StatusBadRequest)
+				deleteUser = true
+				return
+			}
+		} 
+
+		if (apiVer > apiver.APIv0 && createKey) || !pkok && apiVer == apiver.APIv0 {
 			var perr error
 			if userResponse["private_key"], perr = chefUser.GenerateKeys(); perr != nil {
 				jsonErrorReport(w, r, perr.Error(), http.StatusInternalServerError)
 				deleteUser = true
 				return
 			}
-		} else {
+		} else if pkok {
 			switch publicKey := publicKey.(type) {
 			case string:
 				if pkok, pkerr := user.ValidatePublicKey(publicKey); !pkok {
@@ -555,7 +582,9 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		/* If we make it here, we want the public key in the
 		 * response. I think. Maybe not anymore, though. */
-		//userResponse["public_key"] = chefUser.PublicKey()
+		if npk := chefUser.PublicKey(); (npk != "" && apiVer > apiver.APIv0) || apiVer == apiver.APIv0 {
+			userResponse["public_key"] = npk
+		}
 
 		chefUser.Save()
 		if lerr := loginfo.LogEvent(org, opUser, chefUser, "create"); lerr != nil {
@@ -573,9 +602,15 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 		// I get to the bottom of it.
 
 		if apiVer > apiver.APIv0 {
+			// TODO: probably ought to do this right eventually
+			userResponse["expiration_date"] = "infinity"
+			userResponse["name"] = "default"
+			userResponse["uri"] = util.CustomObjURL(chefUser, "/keys/default")
 			t := userResponse
 			userResponse = make(map[string]interface{})
-			userResponse["chef_key"] = t
+			if createKey || pkok {
+				userResponse["chef_key"] = t
+			}
 		}
 
 		userResponse["uri"] = util.CustomURL(util.JoinStr("/users/", chefUser.Username))
