@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
+	"github.com/ctdk/goiardi/util"
 	"log"
 	"strings"
 )
@@ -100,6 +101,22 @@ func getUserSQL(name string) (*User, error) {
 	err = user.fillUserFromSQL(row)
 	if err != nil {
 		return nil, err
+	}
+	return user, nil
+}
+
+func getUserByEmailSQL(email string) (*User, util.Gerror) {
+	user := new(User)
+	sqlStatement := "SELECT name, displayname, admin, public_key, email, passwd, salt, id, first_name, last_name, recoveror, authz_id FROM goiardi.users WHERE email = $1"
+	stmt, err := datastore.Dbh.Prepare(sqlStatement)
+	if err != nil {
+		return nil, util.CastErr(err)
+	}
+	defer stmt.Close()
+	row := stmt.QueryRow(email)
+	err = user.fillUserFromSQL(row)
+	if err != nil {
+		return nil, util.CastErr(err)
 	}
 	return user, nil
 }

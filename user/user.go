@@ -39,6 +39,7 @@ import (
 	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/util"
 	"net/http"
+	"strings"
 )
 
 // User is, uh, a user. It's very similar to a Client, but subtly different, as
@@ -154,9 +155,10 @@ func Get(name string) (*User, util.Gerror) {
 
 func GetByEmail(email string) (*User, util.Gerror) {
 	// waaaay easier with a db.
+	email = strings.ToLower(email)
 	// ... but we actually have to do it.
 	if config.UsingDB() {
-
+		return getUserByEmailSQL(email)
 	}
 	users := AllUsers()
 	for _, u := range users {
@@ -428,7 +430,7 @@ func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
 		if merr != nil {
 			return merr
 		}
-		u.Email = email.Address
+		u.Email = strings.ToLower(email.Address)
 	} else {
 		return util.Errorf("no email address provided")
 	}
