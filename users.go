@@ -585,9 +585,9 @@ func userListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		/* If we make it here, we want the public key in the
 		 * response. I think. Maybe not anymore, though. */
-		if npk := chefUser.PublicKey(); (npk != "" && apiVer > apiver.APIv0) || apiVer == apiver.APIv0 {
+		/* if npk := chefUser.PublicKey(); (npk != "" && apiVer > apiver.APIv0) || apiVer == apiver.APIv0 {
 			userResponse["public_key"] = npk
-		}
+		} */
 
 		chefUser.Save()
 		if lerr := loginfo.LogEvent(org, opUser, chefUser, "create"); lerr != nil {
