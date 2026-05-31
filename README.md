@@ -1,7 +1,7 @@
 Goiardi
 =======
 
-[![Circle CI](https://circleci.com/gh/ctdk/goiardi/tree/master.svg?style=svg&circle-token=849db1a2f08048be1253cfb876483949b4dc7d7e)](https://circleci.com/gh/ctdk/goiardi/tree/master) [![Documentation Status](https://readthedocs.org/projects/goiardi/badge/?version=latest)](http://goiardi.readthedocs.io/en/latest/?badge=latest) [![GoDoc](https://godoc.org/github.com/ctdk/goiardi?status.svg)](https://pkg.go.dev/github.com/ctdk/goiardi)
+[![CI](https://github.com/ctdk/goiardi/actions/workflows/ci.yml/badge.svg)](https://github.com/ctdk/goiardi/actions/workflows/ci.yml) [![Documentation Status](https://readthedocs.org/projects/goiardi/badge/?version=latest)](http://goiardi.readthedocs.io/en/latest/?badge=latest) [![GoDoc](https://godoc.org/github.com/ctdk/goiardi?status.svg)](https://pkg.go.dev/github.com/ctdk/goiardi)
 
 Goiardi is an implementation of the Chef server (http://www.chef.io) written
 in Go. It can either run entirely in memory with the option to save and load the
@@ -69,6 +69,7 @@ CODE OF CONDUCT
 ---------------
 
 This project adheres to the [Open Code of Conduct][code-of-conduct]. By participating, you are expected to honor this code.
+
 [code-of-conduct]: http://todogroup.org/opencodeofconduct/#Goiardi/abuse-coc@goiardi.gl
 
 This code of conduct can also be found in CONDUCT.md in this repository.
@@ -94,7 +95,7 @@ to remove a circular dependency with tests between goiardi and go-chef, only
 enough to make a minimal client sufficient to test authenticating headers. It is
 copyright 2013-2019, Jesse Nelson under the terms of the Apache 2.0 license.
 
-Thanks go out to the fine folks of Chef Software and the Chef community for all 
+Thanks go out to the fine folks of Chef Software and the Chef community for all
 their hard work.
 
 Also, if you were wondering, Ettore Boiardi was the man behind Chef Boyardee.
