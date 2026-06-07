@@ -277,7 +277,7 @@ func main() {
 		MaxHeaderBytes:    1 << 20,
 	}
 	if config.Config.UseSSL {
-		srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS10}
+		srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12}
 		err = srv.ListenAndServeTLS(config.Config.SSLCert, config.Config.SSLKey)
 	} else {
 		err = srv.ListenAndServe()
