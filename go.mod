@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/aws/aws-sdk-go v1.4.6
-	github.com/ctdk/chefcrypto v0.2.0
+	github.com/ctdk/chefcrypto v1.0.0
 	github.com/ctdk/go-trie v0.0.0-20161110000926-fe74c509b12e
 	github.com/go-sql-driver/mysql v1.2.1-0.20160802113842-0b58b37b664c
 	github.com/hashicorp/go-version v1.1.0
