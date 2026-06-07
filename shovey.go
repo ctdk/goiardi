@@ -54,7 +54,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	op := pathArray[1]
 
-	shoveyResponse := make(map[string]interface{})
+	shoveyResponse := make(map[string]any)
 
 	switch op {
 	case "jobs":
@@ -132,7 +132,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			var nodeNames []string
 
-			if shvNodes, ok := shvData["nodes"].([]interface{}); ok {
+			if shvNodes, ok := shvData["nodes"].([]any); ok {
 				if len(shvNodes) == 0 {
 					jsonErrorReport(w, r, "no nodes provided", http.StatusBadRequest)
 					return
@@ -179,7 +179,7 @@ func shoveyHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
-				if nn, ok := cancelData["nodes"].([]interface{}); ok {
+				if nn, ok := cancelData["nodes"].([]any); ok {
 					for _, v := range nn {
 						nodeNames = append(nodeNames, v.(string))
 					}

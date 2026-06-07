@@ -43,7 +43,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var statusResponse interface{}
+	var statusResponse any
 
 	switch r.Method {
 	case http.MethodHead:

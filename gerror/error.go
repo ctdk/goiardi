@@ -49,7 +49,7 @@ func New(text string) Error {
 }
 
 // Errorf creates a new Error, with a formatted error string.
-func Errorf(format string, a ...interface{}) Error {
+func Errorf(format string, a ...any) Error {
 	return New(fmt.Sprintf(format, a...))
 }
 

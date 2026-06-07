@@ -31,6 +31,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -951,10 +952,5 @@ func UsingExternalSecrets() bool {
 }
 
 func PprofWhitelisted(remoteIP net.IP) bool {
-	for _, wl := range pprofWhitelist {
-		if remoteIP.Equal(wl) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(pprofWhitelist, remoteIP.Equal)
 }

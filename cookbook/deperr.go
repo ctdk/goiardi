@@ -54,8 +54,8 @@ func (d *DependsError) String() string {
 	return d.Error()
 }
 
-func (d *DependsError) ErrMap() map[string]interface{} {
-	errMap := make(map[string]interface{})
+func (d *DependsError) ErrMap() map[string]any {
+	errMap := make(map[string]any)
 
 	allMsgs := make([]string, 0)
 	notFound := make([]*versionConstraintError, 0)

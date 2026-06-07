@@ -56,7 +56,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	 * go. */
 	w.Header().Set("Content-Type", "application/json")
 
-	searchResponse := make(map[string]interface{})
+	searchResponse := make(map[string]any)
 	pathArray := splitPath(r.URL.Path)
 	pathArrayLen := len(pathArray)
 
@@ -159,7 +159,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 			/* start figuring out what comes in POSTS now,
 			 * so the partial search tests don't complain
 			 * anymore. */
-			var partialData map[string]interface{}
+			var partialData map[string]any
 			if r.Method == http.MethodPost {
 				var perr error
 				partialData, perr = parseObjJSON(r.Body)
@@ -203,7 +203,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 
 func reindexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	reindexResponse := make(map[string]interface{})
+	reindexResponse := make(map[string]any)
 	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())

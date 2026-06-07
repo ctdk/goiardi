@@ -132,9 +132,9 @@ func eventListHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 			return
 		}
-		leResp := make([]map[string]interface{}, len(leList))
+		leResp := make([]map[string]any, len(leList))
 		for i, v := range leList {
-			leResp[i] = make(map[string]interface{})
+			leResp[i] = make(map[string]any)
 			leResp[i]["event"] = v
 			leURL := fmt.Sprintf("/events/%d", v.ID)
 			leResp[i]["url"] = util.CustomURL(leURL)

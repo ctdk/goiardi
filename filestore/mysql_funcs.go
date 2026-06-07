@@ -52,7 +52,7 @@ func deleteHashesMySQL(fileHashes []string) {
 		log.Fatal(err)
 	}
 	deleteQuery := "DELETE FROM file_checksums WHERE checksum IN(?" + strings.Repeat(",?", len(fileHashes)-1) + ")"
-	delArgs := make([]interface{}, len(fileHashes))
+	delArgs := make([]any, len(fileHashes))
 	for i, v := range fileHashes {
 		delArgs[i] = v
 	}

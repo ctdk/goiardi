@@ -33,13 +33,13 @@ import (
 type Actor interface {
 	IsAdmin() bool
 	IsValidator() bool
-	IsSelf(interface{}) bool
+	IsSelf(any) bool
 	IsUser() bool
 	IsClient() bool
 	PublicKey() string
-	SetPublicKey(interface{}) error
+	SetPublicKey(any) error
 	GetName() string
-	CheckPermEdit(map[string]interface{}, string) util.Gerror
+	CheckPermEdit(map[string]any, string) util.Gerror
 }
 
 // GetReqUser gets the actor making the request. If use-auth is not on, always

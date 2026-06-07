@@ -272,7 +272,7 @@ func (u *User) Rename(newName string) util.Gerror {
 }
 
 // NewFromJSON builds a new user from a JSON object.
-func NewFromJSON(jsonUser map[string]interface{}) (*User, util.Gerror) {
+func NewFromJSON(jsonUser map[string]any) (*User, util.Gerror) {
 	userName, nerr := util.ValidateAsString(jsonUser["name"])
 	if nerr != nil {
 		return nil, nerr
@@ -296,7 +296,7 @@ func NewFromJSON(jsonUser map[string]interface{}) (*User, util.Gerror) {
 
 // UpdateFromJSON updates a user from a JSON object, carrying out a bunch of
 // validations inside.
-func (u *User) UpdateFromJSON(jsonUser map[string]interface{}) util.Gerror {
+func (u *User) UpdateFromJSON(jsonUser map[string]any) util.Gerror {
 	userName, nerr := util.ValidateAsString(jsonUser["name"])
 	if nerr != nil {
 		return nerr
@@ -387,8 +387,8 @@ func GetList() []string {
 // ToJSON converts the user to a JSON object, massaging it as needed to keep
 // the chef client happy (be it knife, chef-pedant, etc.) NOTE: There may be a
 // more idiomatic way to do this.
-func (u *User) ToJSON() map[string]interface{} {
-	toJSON := make(map[string]interface{})
+func (u *User) ToJSON() map[string]any {
+	toJSON := make(map[string]any)
 	toJSON["name"] = u.Name
 	toJSON["admin"] = u.Admin
 	toJSON["public_key"] = u.PublicKey()
@@ -431,7 +431,7 @@ func (u *User) GenerateKeys() (string, error) {
 
 // ValidatePublicKey checks that the provided public key is valid. Wrapper
 // around chefcrypto.ValidatePublicKey(), but with a different error type.
-func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
+func ValidatePublicKey(publicKey any) (bool, util.Gerror) {
 	ok, pkerr := chefcrypto.ValidatePublicKey(publicKey)
 	var err util.Gerror
 	if !ok {
@@ -457,7 +457,7 @@ func (u *User) IsValidator() bool {
 
 // IsSelf returns true if the actor in question s the same client or user as the
 // caller. Always returns true if use-auth is false.
-func (u *User) IsSelf(other interface{}) bool {
+func (u *User) IsSelf(other any) bool {
 	if !config.Config.UseAuth {
 		return true
 	}
@@ -495,7 +495,7 @@ func (u *User) PublicKey() string {
 }
 
 // SetPublicKey does what it says on the tin. Part of the Actor interface.
-func (u *User) SetPublicKey(pk interface{}) error {
+func (u *User) SetPublicKey(pk any) error {
 	switch pk := pk.(type) {
 	case string:
 		ok, err := ValidatePublicKey(pk)
@@ -519,7 +519,7 @@ func (u *User) SetPublicKey(pk interface{}) error {
 
 // CheckPermEdit checks to see if the user is trying to edit admin and
 // validator attributes, and if it has permissions to do so.
-func (u *User) CheckPermEdit(userData map[string]interface{}, perm string) util.Gerror {
+func (u *User) CheckPermEdit(userData map[string]any, perm string) util.Gerror {
 	gerr := util.Errorf("You are not allowed to take this action.")
 	gerr.SetStatus(http.StatusForbidden)
 
@@ -647,9 +647,9 @@ func AllUsers() []*User {
 }
 
 // ExportAllUsers return all users, in a fashion suitable for exporting.
-func ExportAllUsers() []interface{} {
+func ExportAllUsers() []any {
 	users := AllUsers()
-	export := make([]interface{}, len(users))
+	export := make([]any, len(users))
 	for i, u := range users {
 		export[i] = u.export()
 	}

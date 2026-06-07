@@ -43,12 +43,12 @@ func TestReportCreation(t *testing.T) {
 }
 
 func TestReportUpdating(t *testing.T) {
-	create := map[string]interface{}{"action": "start", "run_id": "12b8be8d-a2ef-4fc6-88b3-4c18103b88df", "start_time": "2014-05-10 01:05:42 +0000"}
+	create := map[string]any{"action": "start", "run_id": "12b8be8d-a2ef-4fc6-88b3-4c18103b88df", "start_time": "2014-05-10 01:05:42 +0000"}
 	//update := map[string]interface{}{"action":"end","resources":[],"status":"success","run_list":[],"total_res_count":"0","data":{},"start_time":"2014-05-10 01:05:42 +0000","end_time":"2014-05-10 01:05:42 +0000"}
-	update := map[string]interface{}{"action": "end", "status": "success", "start_time": "2014-05-10 01:05:42 +0000", "end_time": "2014-05-10 01:05:42 +0000", "total_res_count": "0"}
-	update["resources"] = make([]interface{}, 0)
+	update := map[string]any{"action": "end", "status": "success", "start_time": "2014-05-10 01:05:42 +0000", "end_time": "2014-05-10 01:05:42 +0000", "total_res_count": "0"}
+	update["resources"] = make([]any, 0)
 	update["run_list"] = "[]"
-	update["data"] = make(map[string]interface{})
+	update["data"] = make(map[string]any)
 	r, err := NewFromJSON("node", create)
 	if err != nil {
 		t.Errorf(err.Error())

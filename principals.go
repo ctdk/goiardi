@@ -56,7 +56,7 @@ func principalHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			chefType = "client"
 		}
-		jsonPrincipal := map[string]interface{}{
+		jsonPrincipal := map[string]any{
 			"name":       chefActor.GetName(),
 			"type":       chefType,
 			"public_key": chefActor.PublicKey(),

@@ -25,7 +25,7 @@ import (
 
 type ActorKeyer interface {
 	PublicKey() string
-	SetPublicKey(interface{}) error
+	SetPublicKey(any) error
 	util.GoiardiObj
 }
 

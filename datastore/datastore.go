@@ -76,7 +76,7 @@ type dsFileStore struct {
 }
 
 type dsItem struct {
-	Item interface{}
+	Item any
 }
 
 var dataStoreCache = initDataStore()
@@ -101,7 +101,7 @@ func (ds *DataStore) makeKey(keyType string, key string) string {
 }
 
 // Set a value of the given type with the provided key.
-func (ds *DataStore) Set(keyType string, key string, val interface{}) {
+func (ds *DataStore) Set(keyType string, key string, val any) {
 	dsKey := ds.makeKey(keyType, key)
 	ds.m.Lock()
 	defer ds.m.Unlock()
@@ -119,8 +119,8 @@ func (ds *DataStore) Set(keyType string, key string, val interface{}) {
 }
 
 // Get a value of the given type associated with the given key, if it exists.
-func (ds *DataStore) Get(keyType string, key string) (interface{}, bool) {
-	var val interface{}
+func (ds *DataStore) Get(keyType string, key string) (any, bool) {
+	var val any
 	var found bool
 
 	dsKey := ds.makeKey(keyType, key)
@@ -147,7 +147,7 @@ func (ds *DataStore) Get(keyType string, key string) (interface{}, bool) {
 	return val, found
 }
 
-func encodeSafeVal(val interface{}) ([]byte, error) {
+func encodeSafeVal(val any) ([]byte, error) {
 	valBuf := new(bytes.Buffer)
 	valItem := &dsItem{Item: val}
 	enc := gob.NewEncoder(valBuf)
@@ -159,7 +159,7 @@ func encodeSafeVal(val interface{}) ([]byte, error) {
 	return valBuf.Bytes(), nil
 }
 
-func decodeSafeVal(valEnc interface{}) (interface{}, error) {
+func decodeSafeVal(valEnc any) (any, error) {
 	valBuf := bytes.NewBuffer(valEnc.([]byte))
 	valItem := new(dsItem)
 	dec := gob.NewDecoder(valBuf)
@@ -213,7 +213,7 @@ func (ds *DataStore) GetList(keyType string) []string {
 }
 
 // SetNodeStatus updates a node's status using the in-memory data store.
-func (ds *DataStore) SetNodeStatus(nodeName string, obj interface{}, nsID ...int) error {
+func (ds *DataStore) SetNodeStatus(nodeName string, obj any, nsID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	ds.updated = true
@@ -221,9 +221,9 @@ func (ds *DataStore) SetNodeStatus(nodeName string, obj interface{}, nsID ...int
 	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
-		a = make(map[int]interface{})
+		a = make(map[int]any)
 	}
-	ns := a.(map[int]interface{})
+	ns := a.(map[int]any)
 	a, _ = ds.dsc.Get(nsListKey)
 	if a == nil {
 		a = make(map[string][]int)
@@ -254,7 +254,7 @@ func (ds *DataStore) SetNodeStatus(nodeName string, obj interface{}, nsID ...int
 // ReplaceNodeStatuses replaces the node statuses being stored in the data store
 // with the provided statuses that have been ordered by age already. This is
 // most useful when purging old statuses.
-func (ds *DataStore) ReplaceNodeStatuses(nodeName string, objs []interface{}) error {
+func (ds *DataStore) ReplaceNodeStatuses(nodeName string, objs []any) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	ds.updated = true
@@ -273,9 +273,9 @@ func (ds *DataStore) ReplaceNodeStatuses(nodeName string, objs []interface{}) er
 	nsListKey := ds.makeKey("nodestatuslist", "nodestatuslists")
 	a, _ := ds.dsc.Get(nsKey)
 	if a == nil {
-		a = make(map[int]interface{})
+		a = make(map[int]any)
 	}
-	ns := a.(map[int]interface{})
+	ns := a.(map[int]any)
 	a, _ = ds.dsc.Get(nsListKey)
 	if a == nil {
 		a = make(map[string][]int)
@@ -302,7 +302,7 @@ func (ds *DataStore) ReplaceNodeStatuses(nodeName string, objs []interface{}) er
 
 // AllNodeStatuses returns a list of all statuses known for the given node from
 // the in-memory data store.
-func (ds *DataStore) AllNodeStatuses(nodeName string) ([]interface{}, error) {
+func (ds *DataStore) AllNodeStatuses(nodeName string) ([]any, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
 	nsKey := ds.makeKey("nodestatus", "nodestatuses")
@@ -311,13 +311,13 @@ func (ds *DataStore) AllNodeStatuses(nodeName string) ([]interface{}, error) {
 	if a == nil {
 		return nil, ErrNoStatuses
 	}
-	ns := a.(map[int]interface{})
+	ns := a.(map[int]any)
 	a, _ = ds.dsc.Get(nsListKey)
 	if a == nil {
 		return nil, ErrNoStatusList
 	}
 	nslist := a.(map[string][]int)
-	arr := make([]interface{}, len(nslist[nodeName]))
+	arr := make([]any, len(nslist[nodeName]))
 	for i, v := range nslist[nodeName] {
 		if config.Config.UseUnsafeMemStore {
 			arr[i] = ns[v]
@@ -334,7 +334,7 @@ func (ds *DataStore) AllNodeStatuses(nodeName string) ([]interface{}, error) {
 
 // LatestNodeStatus returns the latest status for a node from the in-memory
 // data store.
-func (ds *DataStore) LatestNodeStatus(nodeName string) (interface{}, error) {
+func (ds *DataStore) LatestNodeStatus(nodeName string) (any, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
 	nsKey := ds.makeKey("nodestatus", "nodestatuses")
@@ -343,7 +343,7 @@ func (ds *DataStore) LatestNodeStatus(nodeName string) (interface{}, error) {
 	if a == nil {
 		return nil, ErrNoStatuses
 	}
-	ns := a.(map[int]interface{})
+	ns := a.(map[int]any)
 	a, _ = ds.dsc.Get(nsListKey)
 	if a == nil {
 		return nil, ErrNoStatusList
@@ -355,7 +355,7 @@ func (ds *DataStore) LatestNodeStatus(nodeName string) (interface{}, error) {
 		return nil, ErrorNodeStatus(err)
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(nsarr)))
-	var n interface{}
+	var n any
 	var err error
 
 	if config.Config.UseUnsafeMemStore {
@@ -386,7 +386,7 @@ func (ds *DataStore) deleteStatuses(nodeName string) error {
 	if a == nil {
 		return ErrNoStatuses
 	}
-	ns := a.(map[int]interface{})
+	ns := a.(map[int]any)
 	a, _ = ds.dsc.Get(nsListKey)
 	if a == nil {
 		return ErrNoStatusList
@@ -401,9 +401,9 @@ func (ds *DataStore) deleteStatuses(nodeName string) error {
 	return nil
 }
 
-func (ds *DataStore) getLogInfoMap() map[int]interface{} {
+func (ds *DataStore) getLogInfoMap() map[int]any {
 	dsKey := ds.makeKey("loginfo", "loginfos")
-	var a interface{}
+	var a any
 	if config.Config.UseUnsafeMemStore {
 		a, _ = ds.dsc.Get(dsKey)
 	} else {
@@ -417,13 +417,13 @@ func (ds *DataStore) getLogInfoMap() map[int]interface{} {
 		}
 	}
 	if a == nil {
-		a = make(map[int]interface{})
+		a = make(map[int]any)
 	}
-	arr := a.(map[int]interface{})
+	arr := a.(map[int]any)
 	return arr
 }
 
-func (ds *DataStore) setLogInfoMap(liMap map[int]interface{}) {
+func (ds *DataStore) setLogInfoMap(liMap map[int]any) {
 	dsKey := ds.makeKey("loginfo", "loginfos")
 	if config.Config.UseUnsafeMemStore {
 		ds.dsc.Set(dsKey, liMap, -1)
@@ -438,7 +438,7 @@ func (ds *DataStore) setLogInfoMap(liMap map[int]interface{}) {
 
 // SetLogInfo sets a loginfo in the data store. Unlike most of these objects,
 // log infos are stored and retrieved by id, since they have no useful names.
-func (ds *DataStore) SetLogInfo(obj interface{}, logID ...int) error {
+func (ds *DataStore) SetLogInfo(obj any, logID ...int) error {
 	ds.m.Lock()
 	defer ds.m.Unlock()
 	ds.updated = true
@@ -472,7 +472,7 @@ func (ds *DataStore) PurgeLogInfoBefore(id int) (int64, error) {
 	defer ds.m.Unlock()
 	ds.updated = true
 	arr := ds.getLogInfoMap()
-	newLogs := make(map[int]interface{})
+	newLogs := make(map[int]any)
 	var purged int64
 	for k, v := range arr {
 		if k > id {
@@ -485,7 +485,7 @@ func (ds *DataStore) PurgeLogInfoBefore(id int) (int64, error) {
 	return purged, nil
 }
 
-func getNextID(lis map[int]interface{}) int {
+func getNextID(lis map[int]any) int {
 	if len(lis) == 0 {
 		return 1
 	}
@@ -498,7 +498,7 @@ func getNextID(lis map[int]interface{}) int {
 }
 
 // GetLogInfo gets a loginfo by id.
-func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
+func (ds *DataStore) GetLogInfo(id int) (any, error) {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
 	arr := ds.getLogInfoMap()
@@ -511,7 +511,7 @@ func (ds *DataStore) GetLogInfo(id int) (interface{}, error) {
 }
 
 // GetLogInfoList gets all the log infos currently stored.
-func (ds *DataStore) GetLogInfoList() map[int]interface{} {
+func (ds *DataStore) GetLogInfoList() map[int]any {
 	ds.m.RLock()
 	defer ds.m.RUnlock()
 	arr := ds.getLogInfoMap()
@@ -630,7 +630,7 @@ func (ds *DataStore) Load(dsFile string) error {
 // data structures, empty slices are encoded as "null" when they're sent out as
 // JSON to the client. This makes the client very unhappy, so those empty slices
 // need to be recreated again. Annoying, but it's how it goes.
-func ChkNilArray(obj interface{}) {
+func ChkNilArray(obj any) {
 	s := reflect.ValueOf(obj).Elem()
 	for i := 0; i < s.NumField(); i++ {
 		v := s.Field(i)
@@ -652,9 +652,9 @@ func ChkNilArray(obj interface{}) {
 // WalkMapForNil walks through the given map, searching for nil slices to create.
 // This does not handle all possible cases, but it *does* handle the cases found
 // with the chef objects in goiardi.
-func WalkMapForNil(r interface{}) interface{} {
+func WalkMapForNil(r any) any {
 	switch m := r.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		for k, v := range m {
 			m[k] = WalkMapForNil(v)
 		}
@@ -666,9 +666,9 @@ func WalkMapForNil(r interface{}) interface{} {
 		}
 		r = m
 		return r
-	case []interface{}:
+	case []any:
 		if m == nil {
-			m = make([]interface{}, 0)
+			m = make([]any, 0)
 		}
 		r = m
 		return r

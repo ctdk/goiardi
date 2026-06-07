@@ -15,7 +15,8 @@
  */
 
 /*
-Package loginfo tracks changes to objects when they're saved, noting the actor performing the action, what kind of action it was, the time of the change, the type of object and its id, and a dump of the object's state. */
+Package loginfo tracks changes to objects when they're saved, noting the actor performing the action, what kind of action it was, the time of the change, the type of object and its id, and a dump of the object's state.
+*/
 package loginfo
 
 import (
@@ -86,7 +87,7 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 	}
 	le.ActorInfo = actorInfo
 	if config.Config.SerfEventAnnounce {
-		qle := make(map[string]interface{}, 4)
+		qle := make(map[string]any, 4)
 		qle["time"] = le.Time
 		qle["action"] = le.Action
 		qle["object_type"] = le.ObjectType
@@ -101,7 +102,7 @@ func LogEvent(doer actor.Actor, obj util.GoiardiObj, action string) error {
 }
 
 // Import a log info event from an export dump.
-func Import(logData map[string]interface{}) error {
+func Import(logData map[string]any) error {
 	le := new(LogInfo)
 	le.Action = logData["action"].(string)
 	le.ActorType = logData["actor_type"].(string)
@@ -290,10 +291,7 @@ func GetLogInfos(searchParams map[string]string, limits ...int) ([]*LogInfo, err
 		return lis, nil
 	}
 	if len(limits) > 1 {
-		limit = offset + limit
-		if limit > len(lis) {
-			limit = len(lis)
-		}
+		limit = min(offset+limit, len(lis))
 	} else {
 		limit = len(lis)
 	}

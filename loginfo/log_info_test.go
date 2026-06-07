@@ -28,7 +28,7 @@ import (
 )
 
 func TestLogEvent(t *testing.T) {
-	k := make(map[int]interface{})
+	k := make(map[int]any)
 	gob.Register(k)
 	kk := new(LogInfo)
 	gob.Register(kk)

@@ -75,7 +75,7 @@ type Gerror interface {
 
 // Errorf creates a new Gerror, with a formatted error string. A convenience
 // wrapper around error.Errorf.
-func Errorf(format string, a ...interface{}) Gerror {
+func Errorf(format string, a ...any) Gerror {
 	return gerror.Errorf(format, a...)
 }
 
@@ -114,9 +114,9 @@ func chkPath(p *string) {
 // it's suitable for indexing, either with solr (eventually) or with the whipped
 // up replacement for local mode. Objects fed into this function *must* have the
 // "json" tag set for their struct members.
-func FlattenObj(obj interface{}) map[string]interface{} {
+func FlattenObj(obj any) map[string]any {
 	s := reflect.ValueOf(obj).Elem()
-	expanded := make(map[string]interface{}, s.NumField())
+	expanded := make(map[string]any, s.NumField())
 
 	for i := 0; i < s.NumField(); i++ {
 		if !s.Field(i).CanInterface() {
@@ -142,8 +142,8 @@ func FlattenObj(obj interface{}) map[string]interface{} {
 // MapifyObject turns an object into a map[string]interface{}. Useful for when
 // you have a slice of objects that you need to trim, mutilate, fold, etc.
 // before returning them as JSON.
-func MapifyObject(obj interface{}) map[string]interface{} {
-	mapified := make(map[string]interface{})
+func MapifyObject(obj any) map[string]any {
+	mapified := make(map[string]any)
 	s := reflect.ValueOf(obj).Elem()
 	for i := 0; i < s.NumField(); i++ {
 		if !s.Field(i).CanInterface() {
@@ -158,7 +158,7 @@ func MapifyObject(obj interface{}) map[string]interface{} {
 
 // Indexify prepares a flattened object for indexing by turning it into a sorted
 // slice of strings formatted like "key:value".
-func Indexify(flattened map[string]interface{}) []string {
+func Indexify(flattened map[string]any) []string {
 	var readyToIndex []string
 	// keep values in the index down to a reasonable size
 	maxValLen := config.Config.IndexValTrim
@@ -198,7 +198,7 @@ func IndexEscapeStr(s string) string {
 }
 
 // DeepMerge merges disparate data structures into a flat hash.
-func DeepMerge(key string, source interface{}) map[string]interface{} {
+func DeepMerge(key string, source any) map[string]any {
 	refIface := reflect.ValueOf(source)
 	var mapCap int
 	if refIface.Kind() == reflect.Map {
@@ -207,7 +207,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 		mapCap = defaultMapCap
 	}
 
-	merger := make(map[string]interface{}, mapCap)
+	merger := make(map[string]any, mapCap)
 	var sep string
 	if config.Config.DotSearch {
 		sep = "."
@@ -215,7 +215,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 		sep = "_"
 	}
 	switch v := source.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		/* We also need to get things like
 		 * "default_attributes:key" indexed. */
 		topLev := make([]string, len(v))
@@ -252,7 +252,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 			merger[key] = topLev
 		}
 
-	case []interface{}:
+	case []any:
 		km := make([]string, 0, len(v))
 		mapMerge := make(map[string][]string)
 		for _, w := range v {
@@ -268,7 +268,7 @@ func DeepMerge(key string, source interface{}) map[string]interface{} {
 					mapMerge[nk] = mergeInterfaceMapChildren(mapMerge[nk], imv)
 				}
 			} else if vRef.Kind() == reflect.Slice {
-				for _, sv := range w.([]interface{}) {
+				for _, sv := range w.([]any) {
 					smMerge := DeepMerge("", sv)
 					// WARNING: This *may* be a little iffy
 					// still, there are some very weird
@@ -339,7 +339,7 @@ func getNKey(key string, subkey string, sep string) string {
 	return nkey
 }
 
-func mergeInterfaceMapChildren(strArr []string, val interface{}) []string {
+func mergeInterfaceMapChildren(strArr []string, val any) []string {
 	if reflect.ValueOf(val).Kind() == reflect.Slice {
 		strArr = append(strArr, val.([]string)...)
 	} else {
@@ -348,7 +348,7 @@ func mergeInterfaceMapChildren(strArr []string, val interface{}) []string {
 	return strArr
 }
 
-func stringify(source interface{}) string {
+func stringify(source any) string {
 	switch s := source.(type) {
 	case string:
 		return s

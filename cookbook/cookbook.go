@@ -56,22 +56,22 @@ type Cookbook struct {
 // CookbookVersion is the meat of the cookbook. This is what's set when a new
 // cookbook is uploaded.
 type CookbookVersion struct {
-	CookbookName string                   `json:"cookbook_name"`
-	Name         string                   `json:"name"`
-	Version      string                   `json:"version"`
-	ChefType     string                   `json:"chef_type"`
-	JSONClass    string                   `json:"json_class"`
-	Definitions  []map[string]interface{} `json:"definitions"`
-	Libraries    []map[string]interface{} `json:"libraries"`
-	Attributes   []map[string]interface{} `json:"attributes"`
-	Recipes      []map[string]interface{} `json:"recipes"`
-	Providers    []map[string]interface{} `json:"providers"`
-	Resources    []map[string]interface{} `json:"resources"`
-	Templates    []map[string]interface{} `json:"templates"`
-	RootFiles    []map[string]interface{} `json:"root_files"`
-	Files        []map[string]interface{} `json:"files"`
-	IsFrozen     bool                     `json:"frozen?"`
-	Metadata     map[string]interface{}   `json:"metadata"`
+	CookbookName string           `json:"cookbook_name"`
+	Name         string           `json:"name"`
+	Version      string           `json:"version"`
+	ChefType     string           `json:"chef_type"`
+	JSONClass    string           `json:"json_class"`
+	Definitions  []map[string]any `json:"definitions"`
+	Libraries    []map[string]any `json:"libraries"`
+	Attributes   []map[string]any `json:"attributes"`
+	Recipes      []map[string]any `json:"recipes"`
+	Providers    []map[string]any `json:"providers"`
+	Resources    []map[string]any `json:"resources"`
+	Templates    []map[string]any `json:"templates"`
+	RootFiles    []map[string]any `json:"root_files"`
+	Files        []map[string]any `json:"files"`
+	IsFrozen     bool             `json:"frozen?"`
+	Metadata     map[string]any   `json:"metadata"`
 	id           int32
 	cookbookID   int32
 }
@@ -187,7 +187,7 @@ func Get(name string) (cookbook *Cookbook, found bool, gerror util.Gerror) {
 
 	//get the cookbook from internal datastore
 	ds := datastore.New()
-	var c interface{}
+	var c any
 	c, found = ds.Get("cookbook", name)
 	if !found {
 		return nil, false, nil
@@ -319,11 +319,11 @@ func (c *Cookbook) LatestVersion() *CookbookVersion {
 
 // CookbookLister lists all of the cookbooks on the server, along with some
 // information like URL, available versions, etc.
-func CookbookLister(numResults interface{}) map[string]interface{} {
+func CookbookLister(numResults any) map[string]any {
 	if config.UsingDB() {
 		return cookbookListerSQL(numResults)
 	}
-	cr := make(map[string]interface{})
+	cr := make(map[string]any)
 	for _, cb := range AllCookbooks() {
 		cr[cb.Name] = cb.InfoHash(numResults)
 	}
@@ -332,13 +332,13 @@ func CookbookLister(numResults interface{}) map[string]interface{} {
 
 // CookbookLatest returns the URL of the latest version of each cookbook on the
 // server.
-func CookbookLatest() map[string]interface{} {
-	latest := make(map[string]interface{})
+func CookbookLatest() map[string]any {
+	latest := make(map[string]any)
 	if config.UsingDB() {
 		cs := CookbookLister("")
 		for name, cbdata := range cs {
-			if len(cbdata.(map[string]interface{})["versions"].([]interface{})) > 0 {
-				latest[name] = cbdata.(map[string]interface{})["versions"].([]interface{})[0].(map[string]string)["url"]
+			if len(cbdata.(map[string]any)["versions"].([]any)) > 0 {
+				latest[name] = cbdata.(map[string]any)["versions"].([]any)[0].(map[string]string)["url"]
 			}
 		}
 	} else {
@@ -376,20 +376,20 @@ func CookbookRecipes() ([]string, util.Gerror) {
 
 // InfoHash gets numResults (or all if numResults is nil) versions of a
 // cookbook,returning a hash describing the cookbook and the versions returned.
-func (c *Cookbook) InfoHash(numResults interface{}) map[string]interface{} {
+func (c *Cookbook) InfoHash(numResults any) map[string]any {
 	return c.infoHashBase(numResults, "")
 }
 
 // ConstrainedInfoHash gets numResults (or all if numResults is nil) versions of
 // a cookbook that match the given constraint and returns a hash describing the
 // cookbook and the versions returned.
-func (c *Cookbook) ConstrainedInfoHash(numResults interface{}, constraint string) map[string]interface{} {
+func (c *Cookbook) ConstrainedInfoHash(numResults any, constraint string) map[string]any {
 	return c.infoHashBase(numResults, constraint)
 }
 
 // DependsCookbooks will, for the given run list and environment constraints,
 // return the cookbook dependencies.
-func DependsCookbooks(runList []string, envConstraints map[string]string) (map[string]interface{}, error) {
+func DependsCookbooks(runList []string, envConstraints map[string]string) (map[string]any, error) {
 	nodes := make(map[string]*depgraph.Noun)
 	runListRef := make([]string, len(runList))
 
@@ -461,7 +461,7 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 		return nil, err
 	}
 
-	cookbookDeps := make(map[string]interface{}, len(cbShelf))
+	cookbookDeps := make(map[string]any, len(cbShelf))
 	for k, c := range cbShelf {
 		constraints := nodes[k].Meta.(*depMeta).constraint
 		cbv := c.latestMultiConstraint(constraints)
@@ -473,7 +473,7 @@ func DependsCookbooks(runList []string, envConstraints map[string]string) (map[s
 
 		for _, cd := range chkDiv {
 			if gcbvJSON[cd] == nil {
-				gcbvJSON[cd] = make([]map[string]interface{}, 0)
+				gcbvJSON[cd] = make([]map[string]any, 0)
 			}
 		}
 		cookbookDeps[cbv.CookbookName] = gcbvJSON
@@ -521,7 +521,7 @@ func (c *Cookbook) badConstraints(constraints versionConstraint) []string {
 }
 
 func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]*depgraph.Noun, cbShelf map[string]*Cookbook) {
-	depList := cbv.Metadata["dependencies"].(map[string]interface{})
+	depList := cbv.Metadata["dependencies"].(map[string]any)
 	for r, c2 := range depList {
 		if _, ok := nodes[r]; ok {
 			if nodes[r].Meta.(*depMeta).noVersion || nodes[r].Meta.(*depMeta).notFound {
@@ -591,8 +591,8 @@ func (cbv *CookbookVersion) getDependencies(g *depgraph.Graph, nodes map[string]
 	}
 }
 
-func (c *Cookbook) infoHashBase(numResults interface{}, constraint string) map[string]interface{} {
-	cbHash := make(map[string]interface{})
+func (c *Cookbook) infoHashBase(numResults any, constraint string) map[string]any {
+	cbHash := make(map[string]any)
 	cbHash["url"] = util.ObjURL(c)
 
 	nr := 0
@@ -612,7 +612,7 @@ func (c *Cookbook) infoHashBase(numResults interface{}, constraint string) map[s
 		allVersions = true
 	}
 
-	cbHash["versions"] = make([]interface{}, 0)
+	cbHash["versions"] = make([]any, 0)
 
 	var constraintVersion string
 	var constraintOp string
@@ -652,7 +652,7 @@ VerLoop:
 		cvInfo := make(map[string]string)
 		cvInfo["url"] = util.CustomObjURL(c, cv.Version)
 		cvInfo["version"] = cv.Version
-		cbHash["versions"] = append(cbHash["versions"].([]interface{}), cvInfo)
+		cbHash["versions"] = append(cbHash["versions"].([]any), cvInfo)
 		nr++
 	}
 	return cbHash
@@ -688,11 +688,11 @@ func (c *Cookbook) LatestConstrained(constraint string) *CookbookVersion {
 // Universe returns a hash of the cookbooks stored on this server, with a list
 // of each version of each cookbook formatted to be compatible with the
 // supermarket/berks /universe endpoint.
-func Universe() map[string]map[string]interface{} {
+func Universe() map[string]map[string]any {
 	if config.UsingDB() {
 		return universeSQL()
 	}
-	universe := make(map[string]map[string]interface{})
+	universe := make(map[string]map[string]any)
 
 	for _, cb := range AllCookbooks() {
 		universe[cb.Name] = cb.universeFormat()
@@ -702,10 +702,10 @@ func Universe() map[string]map[string]interface{} {
 
 // universeFormat returns a sorted list of this cookbook's versions, formatted
 // to be compatible with the supermarket/berks /universe endpoint.
-func (c *Cookbook) universeFormat() map[string]interface{} {
-	u := make(map[string]interface{})
+func (c *Cookbook) universeFormat() map[string]any {
+	u := make(map[string]any)
 	for _, cbv := range c.sortedVersions() {
-		v := make(map[string]interface{})
+		v := make(map[string]any)
 		v["location_path"] = util.CustomObjURL(c, cbv.Version)
 		v["location_type"] = "chef_server"
 		v["dependencies"] = cbv.Metadata["dependencies"]
@@ -717,7 +717,7 @@ func (c *Cookbook) universeFormat() map[string]interface{} {
 /* CookbookVersion methods and functions */
 
 // NewVersion creates a new version of the cookbook.
-func (c *Cookbook) NewVersion(cbVersion string, cbvData map[string]interface{}) (*CookbookVersion, util.Gerror) {
+func (c *Cookbook) NewVersion(cbVersion string, cbvData map[string]any) (*CookbookVersion, util.Gerror) {
 	if _, err := c.GetVersion(cbVersion); err == nil {
 		err := util.Errorf("Version %s of cookbook %s already exists, and shouldn't be created like this. Use UpdateVersion instead.", cbVersion, c.Name)
 		err.SetStatus(http.StatusConflict)
@@ -777,7 +777,7 @@ func (c *Cookbook) GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) 
 		if cbv != nil {
 			datastore.ChkNilArray(cbv)
 			if cbv.Recipes == nil {
-				cbv.Recipes = make([]map[string]interface{}, 0)
+				cbv.Recipes = make([]map[string]any, 0)
 			}
 		}
 	}
@@ -880,7 +880,7 @@ func (c *Cookbook) DeleteVersion(cbVersion string) util.Gerror {
 }
 
 // UpdateVersion updates a specific version of a cookbook.
-func (cbv *CookbookVersion) UpdateVersion(cbvData map[string]interface{}, force bool) util.Gerror {
+func (cbv *CookbookVersion) UpdateVersion(cbvData map[string]any, force bool) util.Gerror {
 	/* Allow force to update a frozen cookbook */
 	if cbv.IsFrozen == true && !force {
 		err := util.Errorf("The cookbook %s at version %s is frozen. Use the 'force' option to override.", cbv.CookbookName, cbv.Version)
@@ -993,7 +993,7 @@ ValidElem:
 	cbv.Definitions = convertToCookbookDiv(cbvData["definitions"])
 	cbv.Libraries = convertToCookbookDiv(cbvData["libraries"])
 	cbv.Attributes = convertToCookbookDiv(cbvData["attributes"])
-	cbv.Recipes = cbvData["recipes"].([]map[string]interface{})
+	cbv.Recipes = cbvData["recipes"].([]map[string]any)
 	cbv.Providers = convertToCookbookDiv(cbvData["providers"])
 	cbv.Resources = convertToCookbookDiv(cbvData["resources"])
 	cbv.Templates = convertToCookbookDiv(cbvData["templates"])
@@ -1002,7 +1002,7 @@ ValidElem:
 	if cbv.IsFrozen != true {
 		cbv.IsFrozen = cbvData["frozen?"].(bool)
 	}
-	cbv.Metadata = cbvData["metadata"].(map[string]interface{})
+	cbv.Metadata = cbvData["metadata"].(map[string]any)
 
 	/* If we're using SQL, update this version in the DB. */
 	if config.UsingDB() {
@@ -1029,9 +1029,9 @@ ValidElem:
 	return nil
 }
 
-func convertToCookbookDiv(div interface{}) []map[string]interface{} {
+func convertToCookbookDiv(div any) []map[string]any {
 	switch div := div.(type) {
-	case []map[string]interface{}:
+	case []map[string]any:
 		return div
 	default:
 		return nil
@@ -1064,8 +1064,8 @@ func (cbv *CookbookVersion) fileHashes() []string {
 
 // ToJSON is a helper function that coverts the internal representation of a
 // cookbook version to JSON in a way that knife and chef-client expect.
-func (cbv *CookbookVersion) ToJSON(method string) map[string]interface{} {
-	toJSON := make(map[string]interface{})
+func (cbv *CookbookVersion) ToJSON(method string) map[string]any {
+	toJSON := make(map[string]any)
 	toJSON["name"] = cbv.Name
 	toJSON["cookbook_name"] = cbv.CookbookName
 	if cbv.Version != "0.0.0" {
@@ -1078,7 +1078,7 @@ func (cbv *CookbookVersion) ToJSON(method string) map[string]interface{} {
 	if cbv.Recipes != nil {
 		toJSON["recipes"] = methodize(method, cbv.Recipes)
 	} else {
-		toJSON["recipes"] = make([]map[string]interface{}, 0)
+		toJSON["recipes"] = make([]map[string]any, 0)
 	}
 	toJSON["metadata"] = cbv.Metadata
 
@@ -1113,12 +1113,12 @@ func (cbv *CookbookVersion) ToJSON(method string) map[string]interface{} {
 	return toJSON
 }
 
-func methodize(method string, cbThing []map[string]interface{}) []map[string]interface{} {
-	retHash := make([]map[string]interface{}, len(cbThing))
+func methodize(method string, cbThing []map[string]any) []map[string]any {
+	retHash := make([]map[string]any, len(cbThing))
 	baseURL := config.ServerBaseURL()
 	r := regexp.MustCompile(`/file_store/`)
 	for i, v := range cbThing {
-		retHash[i] = make(map[string]interface{})
+		retHash[i] = make(map[string]any)
 		chkSum := cbThing[i]["checksum"].(string)
 		for k, j := range v {
 			if method == "PUT" && k == "url" {
@@ -1144,7 +1144,7 @@ func methodize(method string, cbThing []map[string]interface{}) []map[string]int
 	return retHash
 }
 
-func getAttrHashes(attr []map[string]interface{}) []string {
+func getAttrHashes(attr []map[string]any) []string {
 	hashes := make([]string, len(attr))
 	for i, v := range attr {
 		/* Woo, type assertion again */

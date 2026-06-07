@@ -39,7 +39,7 @@ func init() {
 type Indexable interface {
 	DocID() string
 	Index() string
-	Flatten() map[string]interface{}
+	Flatten() map[string]any
 }
 
 // Index holds a map of document collections.
@@ -66,8 +66,7 @@ type ObjIndexer interface {
 	Clear() error
 }
 
-type Document interface {
-}
+type Document any
 
 var indexMap Index
 var objIndex ObjIndexer

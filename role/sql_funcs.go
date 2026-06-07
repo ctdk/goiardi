@@ -113,7 +113,7 @@ func getMultiSQL(roleNames []string) ([]*Role, error) {
 		return nil, err
 	}
 	defer stmt.Close()
-	nameArgs := make([]interface{}, len(roleNames))
+	nameArgs := make([]any, len(roleNames))
 	for i, v := range roleNames {
 		nameArgs[i] = v
 	}

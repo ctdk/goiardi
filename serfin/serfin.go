@@ -149,7 +149,7 @@ func CloseSerfClient(serfAddr string) {
 }
 
 // SendEvent sends a serf event out from goiardi.
-func SendEvent(eventName string, payload interface{}) {
+func SendEvent(eventName string, payload any) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		logger.Errorf(err.Error())
@@ -163,7 +163,7 @@ func SendEvent(eventName string, payload interface{}) {
 }
 
 // SendQuery sends a basic, no frills query out over serf.
-func SendQuery(queryName string, payload interface{}) {
+func SendQuery(queryName string, payload any) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		logger.Errorf(err.Error())

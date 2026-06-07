@@ -28,7 +28,7 @@ import (
 type StringSlice []string
 
 // Scan implements sql.Scanner for the StringSlice type.
-func (s *StringSlice) Scan(src interface{}) error {
+func (s *StringSlice) Scan(src any) error {
 	asBytes, ok := src.([]byte)
 	if !ok {
 		return error(gerror.New("Scan source was not []bytes"))

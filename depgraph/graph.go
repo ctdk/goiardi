@@ -21,7 +21,7 @@ type WalkFunc func(*Noun) error
 // Graph is used to represent a dependency graph.
 type Graph struct {
 	Name  string
-	Meta  interface{}
+	Meta  any
 	Nouns []*Noun
 	Root  *Noun
 }
