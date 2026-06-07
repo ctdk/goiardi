@@ -513,8 +513,8 @@ func (cbv *CookbookVersion) deleteCookbookVersionSQL() util.Gerror {
 	return nil
 }
 
-func universeSQL() map[string]map[string]interface{} {
-	universe := make(map[string]map[string]interface{})
+func universeSQL() map[string]map[string]any {
+	universe := make(map[string]map[string]any)
 	var (
 		major int64
 		minor int64
@@ -545,8 +545,8 @@ func universeSQL() map[string]map[string]interface{} {
 
 	for rows.Next() {
 		var metb sql.RawBytes
-		metadata := make(map[string]interface{})
-		u := make(map[string]interface{})
+		metadata := make(map[string]any)
+		u := make(map[string]any)
 		err := rows.Scan(&major, &minor, &patch, &name, &metb)
 		if err != nil {
 			log.Fatal(err)
@@ -566,7 +566,7 @@ func universeSQL() map[string]map[string]interface{} {
 			u["dependencies"] = metadata["dependencies"]
 		}
 		if _, ok := universe[name]; !ok {
-			universe[name] = make(map[string]interface{})
+			universe[name] = make(map[string]any)
 		}
 		universe[name][version] = u
 	}
@@ -577,11 +577,11 @@ func universeSQL() map[string]map[string]interface{} {
 	return universe
 }
 
-func cookbookListerSQL(numResults interface{}) map[string]interface{} {
+func cookbookListerSQL(numResults any) map[string]any {
 	var numVersions int
 	allVersions := false
 
-	cl := make(map[string]interface{})
+	cl := make(map[string]any)
 
 	if numResults != "" && numResults != "all" {
 		numVersions, _ = strconv.Atoi(numResults.(string))
@@ -627,9 +627,9 @@ func cookbookListerSQL(numResults interface{}) map[string]interface{} {
 	for name, versions := range scratch {
 		nr := 0
 		cburl := fmt.Sprintf("/cookbooks/%s", name)
-		cb := make(map[string]interface{})
+		cb := make(map[string]any)
 		cb["url"] = util.CustomURL(cburl)
-		cb["versions"] = make([]interface{}, 0)
+		cb["versions"] = make([]any, 0)
 		for _, ver := range versions {
 			if !allVersions && nr >= numVersions {
 				break
@@ -637,7 +637,7 @@ func cookbookListerSQL(numResults interface{}) map[string]interface{} {
 			cv := make(map[string]string)
 			cv["url"] = util.CustomURL(fmt.Sprintf("/cookbooks/%s/%s", name, ver))
 			cv["version"] = ver
-			cb["versions"] = append(cb["versions"].([]interface{}), cv)
+			cb["versions"] = append(cb["versions"].([]any), cv)
 			nr++
 		}
 		cl[name] = cb
@@ -672,7 +672,7 @@ func cookbookRecipesSQL() ([]string, util.Gerror) {
 	for rows.Next() {
 		var n, v string
 		var rec sql.RawBytes
-		recipes := make([]map[string]interface{}, 0)
+		recipes := make([]map[string]any, 0)
 		err := rows.Scan(&v, &n, &rec)
 		if seen[n] {
 			continue

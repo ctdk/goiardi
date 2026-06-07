@@ -25,6 +25,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -617,10 +618,8 @@ func (idoc *IdxDoc) regexSearch(reTerm string) (bool, error) {
 	}
 	if n, _ := trie.HasPrefix(key); n != nil {
 		kids := n.ChildKeys()
-		for _, c := range kids {
-			if reComp.MatchString(c) {
-				return true, nil
-			}
+		if slices.ContainsFunc(kids, reComp.MatchString) {
+			return true, nil
 		}
 	}
 	return false, nil

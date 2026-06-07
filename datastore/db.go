@@ -42,20 +42,20 @@ const MySQLTimeFormat = "2006-01-02 15:04:05"
 // Dbhandle is an interface for db handle types that can execute queries.
 type Dbhandle interface {
 	Prepare(query string) (*sql.Stmt, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	Exec(query string, args ...interface{}) (sql.Result, error)
+	QueryRow(query string, args ...any) *sql.Row
+	Query(query string, args ...any) (*sql.Rows, error)
+	Exec(query string, args ...any) (sql.Result, error)
 }
 
 // ResRow is an interface for rows returned by Query, or a single row returned by
 // QueryRow. Used for passing in a db handle or a transaction to a function.
 type ResRow interface {
-	Scan(dest ...interface{}) error
+	Scan(dest ...any) error
 }
 
 // ConnectDB connects to a database with the database name and a map of
 // connection options. Currently supports MySQL and PostgreSQL.
-func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
+func ConnectDB(dbEngine string, params any) (*sql.DB, error) {
 	switch strings.ToLower(dbEngine) {
 	case "mysql", "postgres":
 		var connectStr string
@@ -88,7 +88,7 @@ func ConnectDB(dbEngine string, params interface{}) (*sql.DB, error) {
 }
 
 // EncodeToJSON encodes an object to a JSON string.
-func EncodeToJSON(obj interface{}) (string, error) {
+func EncodeToJSON(obj any) (string, error) {
 	buf := new(bytes.Buffer)
 	enc := json.NewEncoder(buf)
 	var err error
@@ -107,7 +107,7 @@ func EncodeToJSON(obj interface{}) (string, error) {
 // EncodeBlob encodes a slice or map of goiardi object data to save in the
 // database. Pass the object to be encoded in like
 // datastore.EncodeBlob(&foo.Thing).
-func EncodeBlob(obj interface{}) ([]byte, error) {
+func EncodeBlob(obj any) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	enc := json.NewEncoder(buf)
 	var err error
@@ -127,7 +127,7 @@ func EncodeBlob(obj interface{}) ([]byte, error) {
 // database so it can be loaded back into a goiardi object. The 'obj' in the
 // arguments *must* be the address of the object receiving the blob of data (e.g.
 // datastore.DecodeBlob(data, &obj).
-func DecodeBlob(data []byte, obj interface{}) error {
+func DecodeBlob(data []byte, obj any) error {
 	// hmmm
 	dbuf := bytes.NewBuffer(data)
 	dec := json.NewDecoder(dbuf)

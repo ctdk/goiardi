@@ -34,7 +34,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 
 	pathArray := splitPath(r.URL.Path)
 
-	dbResponse := make(map[string]interface{})
+	dbResponse := make(map[string]any)
 	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())

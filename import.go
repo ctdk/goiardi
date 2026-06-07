@@ -61,11 +61,11 @@ func importAll(fileName string) error {
 		// load clients
 		logger.Infof("Loading clients")
 		for _, v := range exportedData.Data["client"] {
-			c, err := client.NewFromJSON(v.(map[string]interface{}))
+			c, err := client.NewFromJSON(v.(map[string]any))
 			if err != nil {
 				return err
 			}
-			pkerr := c.SetPublicKey(v.(map[string]interface{})["public_key"])
+			pkerr := c.SetPublicKey(v.(map[string]any)["public_key"])
 			if pkerr != nil {
 				return pkerr
 			}
@@ -78,14 +78,14 @@ func importAll(fileName string) error {
 		// load users
 		logger.Infof("Loading users")
 		for _, v := range exportedData.Data["user"] {
-			pwhash, _ := v.(map[string]interface{})["password"].(string)
-			v.(map[string]interface{})["password"] = ""
-			u, err := user.NewFromJSON(v.(map[string]interface{}))
+			pwhash, _ := v.(map[string]any)["password"].(string)
+			v.(map[string]any)["password"] = ""
+			u, err := user.NewFromJSON(v.(map[string]any))
 			if err != nil {
 				return err
 			}
 			u.SetPasswdHash(pwhash)
-			pkerr := u.SetPublicKey(v.(map[string]interface{})["public_key"])
+			pkerr := u.SetPublicKey(v.(map[string]any)["public_key"])
 			if pkerr != nil {
 				return pkerr
 			}
@@ -98,13 +98,13 @@ func importAll(fileName string) error {
 		// load filestore
 		logger.Infof("Loading filestore")
 		for _, v := range exportedData.Data["filestore"] {
-			fileData, err := base64.StdEncoding.DecodeString(v.(map[string]interface{})["Data"].(string))
+			fileData, err := base64.StdEncoding.DecodeString(v.(map[string]any)["Data"].(string))
 			if err != nil {
 				return err
 			}
 			fdBuf := bytes.NewBuffer(fileData)
 			fdRc := ioutil.NopCloser(fdBuf)
-			fs, err := filestore.New(v.(map[string]interface{})["Chksum"].(string), fdRc, int64(fdBuf.Len()))
+			fs, err := filestore.New(v.(map[string]any)["Chksum"].(string), fdRc, int64(fdBuf.Len()))
 			if err != nil {
 				return err
 			}
@@ -116,7 +116,7 @@ func importAll(fileName string) error {
 		// load cookbooks
 		logger.Infof("Loading cookbooks")
 		for _, v := range exportedData.Data["cookbook"] {
-			cb, err := cookbook.New(v.(map[string]interface{})["Name"].(string))
+			cb, err := cookbook.New(v.(map[string]any)["Name"].(string))
 			if err != nil {
 				return err
 			}
@@ -124,8 +124,8 @@ func importAll(fileName string) error {
 			if gerr != nil {
 				return gerr
 			}
-			for ver, cbvData := range v.(map[string]interface{})["Versions"].(map[string]interface{}) {
-				cbvData, cerr := checkAttrs(cbvData.(map[string]interface{}))
+			for ver, cbvData := range v.(map[string]any)["Versions"].(map[string]any) {
+				cbvData, cerr := checkAttrs(cbvData.(map[string]any))
 				if cerr != nil {
 					return cerr
 				}
@@ -139,7 +139,7 @@ func importAll(fileName string) error {
 		// load data bags
 		logger.Infof("Loading data bags")
 		for _, v := range exportedData.Data["data_bag"] {
-			dbag, err := databag.New(v.(map[string]interface{})["Name"].(string))
+			dbag, err := databag.New(v.(map[string]any)["Name"].(string))
 			if err != nil {
 				return err
 			}
@@ -147,8 +147,8 @@ func importAll(fileName string) error {
 			if gerr != nil {
 				return gerr
 			}
-			for _, dbagData := range v.(map[string]interface{})["DataBagItems"].(map[string]interface{}) {
-				_, dbierr := dbag.NewDBItem(dbagData.(map[string]interface{})["raw_data"].(map[string]interface{}))
+			for _, dbagData := range v.(map[string]any)["DataBagItems"].(map[string]any) {
+				_, dbierr := dbag.NewDBItem(dbagData.(map[string]any)["raw_data"].(map[string]any))
 				if dbierr != nil {
 					return dbierr
 				}
@@ -161,7 +161,7 @@ func importAll(fileName string) error {
 		// load environments
 		logger.Infof("Loading environments")
 		for _, v := range exportedData.Data["environment"] {
-			envData, cerr := checkAttrs(v.(map[string]interface{}))
+			envData, cerr := checkAttrs(v.(map[string]any))
 			if cerr != nil {
 				return nil
 			}
@@ -180,7 +180,7 @@ func importAll(fileName string) error {
 		// load nodes
 		logger.Infof("Loading nodes")
 		for _, v := range exportedData.Data["node"] {
-			nodeData, cerr := checkAttrs(v.(map[string]interface{}))
+			nodeData, cerr := checkAttrs(v.(map[string]any))
 			if cerr != nil {
 				return nil
 			}
@@ -197,7 +197,7 @@ func importAll(fileName string) error {
 		// load roles
 		logger.Infof("Loading roles")
 		for _, v := range exportedData.Data["role"] {
-			roleData, cerr := checkAttrs(v.(map[string]interface{}))
+			roleData, cerr := checkAttrs(v.(map[string]any))
 			if cerr != nil {
 				return nil
 			}
@@ -214,10 +214,10 @@ func importAll(fileName string) error {
 		// load sandboxes
 		logger.Infof("Loading sandboxes")
 		for _, v := range exportedData.Data["sandbox"] {
-			sbid, _ := v.(map[string]interface{})["Id"].(string)
-			sbts, _ := v.(map[string]interface{})["CreationTime"].(string)
-			sbcomplete, _ := v.(map[string]interface{})["Completed"].(bool)
-			sbck, _ := v.(map[string]interface{})["Checksums"].([]interface{})
+			sbid, _ := v.(map[string]any)["Id"].(string)
+			sbts, _ := v.(map[string]any)["CreationTime"].(string)
+			sbcomplete, _ := v.(map[string]any)["Completed"].(bool)
+			sbck, _ := v.(map[string]any)["Checksums"].([]any)
 			sbTime, err := time.Parse(time.RFC3339, sbts)
 			if err != nil {
 				return err
@@ -235,7 +235,7 @@ func importAll(fileName string) error {
 		// load loginfos
 		logger.Infof("Loading loginfo")
 		for _, v := range exportedData.Data["loginfo"] {
-			if err := loginfo.Import(v.(map[string]interface{})); err != nil {
+			if err := loginfo.Import(v.(map[string]any)); err != nil {
 				return err
 			}
 		}
@@ -245,7 +245,7 @@ func importAll(fileName string) error {
 		for _, o := range exportedData.Data["report"] {
 			// handle data exported from a bugged report export
 			var nodeName string
-			v := o.(map[string]interface{})
+			v := o.(map[string]any)
 			if n, ok := v["node_name"]; ok {
 				nodeName = n.(string)
 			} else if n, ok := v["nodeName"]; ok {
@@ -289,7 +289,7 @@ func importAll(fileName string) error {
 			// statuses
 			logger.Infof("Loading node statuses...")
 			for _, v := range exportedData.Data["node_status"] {
-				ns := v.(map[string]interface{})
+				ns := v.(map[string]any)
 				err := node.ImportStatus(ns)
 				if err != nil {
 					return err
@@ -297,7 +297,7 @@ func importAll(fileName string) error {
 			}
 			logger.Infof("Loading shoveys...")
 			for _, v := range exportedData.Data["shovey"] {
-				s := v.(map[string]interface{})
+				s := v.(map[string]any)
 				err := shovey.ImportShovey(s)
 				if err != nil {
 					return err
@@ -305,7 +305,7 @@ func importAll(fileName string) error {
 			}
 			logger.Infof("Loading shovey runs...")
 			for _, v := range exportedData.Data["shovey_run"] {
-				s := v.(map[string]interface{})
+				s := v.(map[string]any)
 				err := shovey.ImportShoveyRun(s)
 				if err != nil {
 					return err
@@ -314,7 +314,7 @@ func importAll(fileName string) error {
 			}
 			logger.Infof("Loading shovey run streams...")
 			for _, v := range exportedData.Data["shovey_run_stream"] {
-				s := v.(map[string]interface{})
+				s := v.(map[string]any)
 				err := shovey.ImportShoveyRunStream(s)
 				if err != nil {
 					return err

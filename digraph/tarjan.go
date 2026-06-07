@@ -1,5 +1,7 @@
 package digraph
 
+import "slices"
+
 // sccAcct is used ot pass around accounting information for
 // the StronglyConnectedComponents algorithm
 type sccAcct struct {
@@ -37,12 +39,7 @@ func (s *sccAcct) pop() Node {
 
 // inStack checks if a node is in the stack
 func (s *sccAcct) inStack(needle Node) bool {
-	for _, n := range s.Stack {
-		if n == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s.Stack, needle)
 }
 
 // StronglyConnectedComponents implements Tarjan's algorithm to
@@ -101,11 +98,4 @@ func stronglyConnected(acct *sccAcct, node Node) int {
 	}
 
 	return minIdx
-}
-
-func min(a, b int) int {
-	if a <= b {
-		return a
-	}
-	return b
 }

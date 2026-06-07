@@ -26,10 +26,10 @@ import (
 )
 
 type testObj struct {
-	Name    string                 `json:"name"`
-	URLType string                 `json:"url_type"`
-	Normal  map[string]interface{} `json:"normal"`
-	RunList []string               `json:"run_list"`
+	Name    string         `json:"name"`
+	URLType string         `json:"url_type"`
+	Normal  map[string]any `json:"normal"`
+	RunList []string       `json:"run_list"`
 }
 
 var conf *config.Conf
@@ -49,7 +49,7 @@ func (to *testObj) Index() string {
 	return "test_obj"
 }
 
-func (to *testObj) Flatten() map[string]interface{} {
+func (to *testObj) Flatten() map[string]any {
 	flatten := util.FlattenObj(to)
 	return flatten
 }

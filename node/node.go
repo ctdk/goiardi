@@ -30,15 +30,15 @@ import (
 
 // Node is a basic Chef node, holding the run list and attributes of the node.
 type Node struct {
-	Name            string                 `json:"name"`
-	ChefEnvironment string                 `json:"chef_environment"`
-	RunList         []string               `json:"run_list"`
-	JSONClass       string                 `json:"json_class"`
-	ChefType        string                 `json:"chef_type"`
-	Automatic       map[string]interface{} `json:"automatic"`
-	Normal          map[string]interface{} `json:"normal"`
-	Default         map[string]interface{} `json:"default"`
-	Override        map[string]interface{} `json:"override"`
+	Name            string         `json:"name"`
+	ChefEnvironment string         `json:"chef_environment"`
+	RunList         []string       `json:"run_list"`
+	JSONClass       string         `json:"json_class"`
+	ChefType        string         `json:"chef_type"`
+	Automatic       map[string]any `json:"automatic"`
+	Normal          map[string]any `json:"normal"`
+	Default         map[string]any `json:"default"`
+	Override        map[string]any `json:"override"`
 	isDown          bool
 }
 
@@ -77,16 +77,16 @@ func New(name string) (*Node, util.Gerror) {
 		ChefType:        "node",
 		JSONClass:       "Chef::Node",
 		RunList:         []string{},
-		Automatic:       map[string]interface{}{},
-		Normal:          map[string]interface{}{},
-		Default:         map[string]interface{}{},
-		Override:        map[string]interface{}{},
+		Automatic:       map[string]any{},
+		Normal:          map[string]any{},
+		Default:         map[string]any{},
+		Override:        map[string]any{},
 	}
 	return node, nil
 }
 
 // NewFromJSON creates a new node from the uploaded JSON.
-func NewFromJSON(jsonNode map[string]interface{}) (*Node, util.Gerror) {
+func NewFromJSON(jsonNode map[string]any) (*Node, util.Gerror) {
 	nodeName, nerr := util.ValidateAsString(jsonNode["name"])
 	if nerr != nil {
 		return nil, nerr
@@ -120,7 +120,7 @@ func Get(nodeName string) (*Node, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		var n interface{}
+		var n any
 		n, found = ds.Get("node", nodeName)
 		if n != nil {
 			node = n.(*Node)
@@ -175,7 +175,7 @@ func GetMulti(nodeNames []string) ([]*Node, util.Gerror) {
 }
 
 // UpdateFromJSON updates an existing node with the uploaded JSON.
-func (n *Node) UpdateFromJSON(jsonNode map[string]interface{}) util.Gerror {
+func (n *Node) UpdateFromJSON(jsonNode map[string]any) util.Gerror {
 	/* It's actually totally legitimate to save a node with a different
 	 * name than you started with, but we need to get/create a new node for
 	 * it is all. */
@@ -265,10 +265,10 @@ ValidElem:
 	n.ChefType = jsonNode["chef_type"].(string)
 	n.JSONClass = jsonNode["json_class"].(string)
 	n.RunList = jsonNode["run_list"].([]string)
-	n.Normal = jsonNode["normal"].(map[string]interface{})
-	n.Automatic = jsonNode["automatic"].(map[string]interface{})
-	n.Default = jsonNode["default"].(map[string]interface{})
-	n.Override = jsonNode["override"].(map[string]interface{})
+	n.Normal = jsonNode["normal"].(map[string]any)
+	n.Automatic = jsonNode["automatic"].(map[string]any)
+	n.Default = jsonNode["default"].(map[string]any)
+	n.Override = jsonNode["override"].(map[string]any)
 	return nil
 }
 
@@ -359,7 +359,7 @@ func (n *Node) Index() string {
 }
 
 // Flatten a node for indexing.
-func (n *Node) Flatten() map[string]interface{} {
+func (n *Node) Flatten() map[string]any {
 	return util.FlattenObj(n)
 }
 

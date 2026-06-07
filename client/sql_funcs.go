@@ -87,7 +87,7 @@ func getMultiSQL(clientNames []string) ([]*Client, error) {
 		return nil, err
 	}
 	defer stmt.Close()
-	nameArgs := make([]interface{}, len(clientNames))
+	nameArgs := make([]any, len(clientNames))
 	for i, v := range clientNames {
 		nameArgs[i] = v
 	}

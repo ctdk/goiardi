@@ -49,7 +49,7 @@ func ValidateEnvName(name string) bool {
 	return !m
 }
 
-func ValidateAsString(str interface{}) (string, Gerror) {
+func ValidateAsString(str any) (string, Gerror) {
 	switch str := str.(type) {
 	case string:
 		return str, nil
@@ -62,7 +62,7 @@ func ValidateAsString(str interface{}) (string, Gerror) {
 	}
 }
 
-func ValidateAsBool(b interface{}) (bool, Gerror) {
+func ValidateAsBool(b any) (bool, Gerror) {
 	switch b := b.(type) {
 	case bool:
 		return b, nil
@@ -72,7 +72,7 @@ func ValidateAsBool(b interface{}) (bool, Gerror) {
 	}
 }
 
-func ValidateAsFieldString(str interface{}) (string, Gerror) {
+func ValidateAsFieldString(str any) (string, Gerror) {
 	switch str := str.(type) {
 	case string:
 		return str, nil
@@ -85,7 +85,7 @@ func ValidateAsFieldString(str interface{}) (string, Gerror) {
 	}
 }
 
-func ValidateAsVersion(ver interface{}) (string, Gerror) {
+func ValidateAsVersion(ver any) (string, Gerror) {
 	switch ver := ver.(type) {
 	case string:
 		validVer := regexp.MustCompile(`^(\d+)\.(\d+)(\.?)(\d+)?$`)
@@ -124,13 +124,13 @@ func ValidateAsVersion(ver interface{}) (string, Gerror) {
 	}
 }
 
-func ValidateAttributes(key string, attrs interface{}) (map[string]interface{}, Gerror) {
+func ValidateAttributes(key string, attrs any) (map[string]any, Gerror) {
 	switch attrs := attrs.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		return attrs, nil
 	case nil:
 		/* Separate to do more validations above */
-		nilAttrs := make(map[string]interface{})
+		nilAttrs := make(map[string]any)
 		return nilAttrs, nil
 	default:
 		err := Errorf("Field '%s' is not a hash", key)
@@ -138,15 +138,15 @@ func ValidateAttributes(key string, attrs interface{}) (map[string]interface{}, 
 	}
 }
 
-func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]interface{}, Gerror) {
+func ValidateCookbookDivision(dname string, div any) ([]map[string]any, Gerror) {
 	switch div := div.(type) {
-	case []interface{}:
-		var d []map[string]interface{}
+	case []any:
+		var d []map[string]any
 		err := Errorf("Invalid element in array value of '%s'.", dname)
 
 		for _, v := range div {
 			switch v := v.(type) {
-			case map[string]interface{}:
+			case map[string]any:
 				if len(v) < 4 {
 					return nil, err
 				}
@@ -227,9 +227,9 @@ func ValidateNumVersions(nr string) Gerror {
 	return nil
 }
 
-func ValidateCookbookMetadata(mdata interface{}) (map[string]interface{}, Gerror) {
+func ValidateCookbookMetadata(mdata any) (map[string]any, Gerror) {
 	switch mdata := mdata.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		if len(mdata) == 0 {
 			/* This error message would make more sense as
 			 * "Metadata empty" if the metadata is, you
@@ -293,7 +293,7 @@ func ValidateCookbookMetadata(mdata interface{}) (map[string]interface{}, Gerror
 		for _, v := range hashchk {
 			err := Errorf("Field 'metadata.%s' invalid", v)
 			switch hv := mdata[v].(type) {
-			case map[string]interface{}:
+			case map[string]any:
 				for _, j := range hv {
 					switch s := j.(type) {
 					case string:
@@ -303,7 +303,7 @@ func ValidateCookbookMetadata(mdata interface{}) (map[string]interface{}, Gerror
 								return nil, cerr
 							}
 						}
-					case map[string]interface{}:
+					case map[string]any:
 						if v != "groupings" {
 							err := Errorf("Invalid value '{[]}' for metadata.%s", v)
 							return nil, err
@@ -319,7 +319,7 @@ func ValidateCookbookMetadata(mdata interface{}) (map[string]interface{}, Gerror
 				}
 			case nil:
 				if v == "dependencies" {
-					mdata[v] = make(map[string]interface{})
+					mdata[v] = make(map[string]any)
 				}
 			default:
 				return nil, err
@@ -333,7 +333,7 @@ func ValidateCookbookMetadata(mdata interface{}) (map[string]interface{}, Gerror
 	}
 }
 
-func ValidateAsConstraint(t interface{}) (bool, Gerror) {
+func ValidateAsConstraint(t any) (bool, Gerror) {
 	err := Errorf("Invalid constraint")
 	switch t := t.(type) {
 	case string:
@@ -352,7 +352,7 @@ func ValidateAsConstraint(t interface{}) (bool, Gerror) {
 	}
 }
 
-func ValidateRunList(rl interface{}) ([]string, Gerror) {
+func ValidateRunList(rl any) ([]string, Gerror) {
 	switch rl := rl.(type) {
 	case []string:
 		for i, r := range rl {
@@ -461,7 +461,7 @@ func validateRecipeName(name string) bool {
 // CheckAdminPlusValidator checks that client/user json is not trying to set
 // admin and validator at the same time. This has to be checked separately to
 // make chef-pedent happy.
-func CheckAdminPlusValidator(jsonActor map[string]interface{}) Gerror {
+func CheckAdminPlusValidator(jsonActor map[string]any) Gerror {
 	var ab, vb bool
 	if adminVal, ok := jsonActor["admin"]; ok {
 		ab, _ = ValidateAsBool(adminVal)

@@ -58,8 +58,8 @@ func (e *ChefEnvironment) fillEnvFromSQL(row datastore.ResRow) error {
 	e.ChefType = "environment"
 	e.JSONClass = "Chef::Environment"
 	if e.Name == "_default" {
-		e.Default = make(map[string]interface{})
-		e.Override = make(map[string]interface{})
+		e.Default = make(map[string]any)
+		e.Override = make(map[string]any)
 		e.CookbookVersions = make(map[string]string)
 		return nil
 	}
@@ -121,7 +121,7 @@ func getMultiSQL(envNames []string) ([]*ChefEnvironment, error) {
 		return nil, err
 	}
 	defer stmt.Close()
-	nameArgs := make([]interface{}, len(envNames))
+	nameArgs := make([]any, len(envNames))
 	for i, v := range envNames {
 		nameArgs[i] = v
 	}

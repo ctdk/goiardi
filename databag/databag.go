@@ -44,11 +44,11 @@ type DataBag struct {
 
 // DataBagItem is an individual item within a data bag.
 type DataBagItem struct {
-	Name        string                 `json:"name"`
-	ChefType    string                 `json:"chef_type"`
-	JSONClass   string                 `json:"json_class"`
-	DataBagName string                 `json:"data_bag"`
-	RawData     map[string]interface{} `json:"raw_data"`
+	Name        string         `json:"name"`
+	ChefType    string         `json:"chef_type"`
+	JSONClass   string         `json:"json_class"`
+	DataBagName string         `json:"data_bag"`
+	RawData     map[string]any `json:"raw_data"`
 	id          int32
 	dataBagID   int32
 	origName    string
@@ -121,7 +121,7 @@ func Get(dbName string) (*DataBag, util.Gerror) {
 			dataBag = d.(*DataBag)
 			for _, v := range dataBag.DataBagItems {
 				z := datastore.WalkMapForNil(v.RawData)
-				v.RawData = z.(map[string]interface{})
+				v.RawData = z.(map[string]any)
 			}
 		}
 	}
@@ -213,7 +213,7 @@ func (dbi *DataBagItem) URLType() string {
 /* Data bag item functions and methods */
 
 // NewDBItem creates a new data bag item in the associated data bag.
-func (db *DataBag) NewDBItem(rawDbagItem map[string]interface{}) (*DataBagItem, util.Gerror) {
+func (db *DataBag) NewDBItem(rawDbagItem map[string]any) (*DataBagItem, util.Gerror) {
 	var dbiID string
 	var dbagItem *DataBagItem
 	switch t := rawDbagItem["id"].(type) {
@@ -280,7 +280,7 @@ func (db *DataBag) NewDBItem(rawDbagItem map[string]interface{}) (*DataBagItem, 
 }
 
 // UpdateDBItem updates a data bag item in this data bag.
-func (db *DataBag) UpdateDBItem(dbiID string, rawDbagItem map[string]interface{}) (*DataBagItem, error) {
+func (db *DataBag) UpdateDBItem(dbiID string, rawDbagItem map[string]any) (*DataBagItem, error) {
 	dbItem, err := db.GetDBItem(dbiID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -416,13 +416,13 @@ func (db *DataBag) fullDBItemName(dbItemName string) string {
 
 // RawDataBagJSON extract the data bag item's raw data from the request, saving
 // it to the server.
-func RawDataBagJSON(data io.ReadCloser) map[string]interface{} {
-	rawDbagItem := make(map[string]interface{})
+func RawDataBagJSON(data io.ReadCloser) map[string]any {
+	rawDbagItem := make(map[string]any)
 	dec := json.NewDecoder(data)
 	dec.UseNumber()
 
 	dec.Decode(&rawDbagItem)
-	var rawData map[string]interface{}
+	var rawData map[string]any
 
 	/* The way data can come from knife may
 	 * not be entirely consistent. Use
@@ -432,7 +432,7 @@ func RawDataBagJSON(data io.ReadCloser) map[string]interface{} {
 	 * stuff added. */
 
 	if _, ok := rawDbagItem["raw_data"]; ok {
-		rawData = rawDbagItem["raw_data"].(map[string]interface{})
+		rawData = rawDbagItem["raw_data"].(map[string]any)
 	} else {
 		rawData = rawDbagItem
 	}
@@ -473,8 +473,8 @@ func (dbi *DataBagItem) Index() string {
 }
 
 // Flatten a data bag item out so it's suitable for indexing.
-func (dbi *DataBagItem) Flatten() map[string]interface{} {
-	flatten := make(map[string]interface{})
+func (dbi *DataBagItem) Flatten() map[string]any {
+	flatten := make(map[string]any)
 	for key, v := range dbi.RawData {
 		subExpand := util.DeepMerge(key, v)
 		for k, u := range subExpand {

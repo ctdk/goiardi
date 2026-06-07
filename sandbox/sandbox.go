@@ -59,7 +59,7 @@ func (a ByDate) Less(i, j int) bool { return a[j].CreationTime.After(a[i].Creati
 
 // New creates a new sandbox, given a map of null values with file checksums as
 // keys.
-func New(checksumHash map[string]interface{}) (*Sandbox, error) {
+func New(checksumHash map[string]any) (*Sandbox, error) {
 	/* For some reason the checksums come in a JSON hash that looks like
 	 * this:
 	 * { "checksums": {
@@ -142,7 +142,7 @@ func Get(sandboxID string) (*Sandbox, error) {
 		}
 	} else {
 		ds := datastore.New()
-		var s interface{}
+		var s any
 		s, found = ds.Get("sandbox", sandboxID)
 		if s != nil {
 			sandbox = s.(*Sandbox)
@@ -200,11 +200,11 @@ func GetList() []string {
 
 // UploadChkList builds the list of file checksums and whether or not they need
 // to be uploaded. If they do, the upload URL is also provided.
-func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
+func (s *Sandbox) UploadChkList() map[string]map[string]any {
 	/* Uh... */
-	chksumStats := make(map[string]map[string]interface{})
+	chksumStats := make(map[string]map[string]any)
 	for _, chk := range s.Checksums {
-		chksumStats[chk] = make(map[string]interface{})
+		chksumStats[chk] = make(map[string]any)
 		var n bool
 		if config.Config.UseS3Upload {
 			n = util.S3CheckFile("default", chk)

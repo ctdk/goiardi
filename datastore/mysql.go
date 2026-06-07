@@ -26,7 +26,7 @@ import (
 	"strings"
 )
 
-func formatMysqlConStr(p interface{}) (string, error) {
+func formatMysqlConStr(p any) (string, error) {
 	params := p.(config.MySQLdb)
 	var (
 		userpass      string

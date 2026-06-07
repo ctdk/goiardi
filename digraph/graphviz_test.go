@@ -2,6 +2,7 @@ package digraph
 
 import (
 	"bytes"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -36,11 +37,8 @@ b -> e
 
 	count := 0
 	for _, el := range expectedLines[1 : len(expectedLines)-1] {
-		for _, al := range actualLines[1 : len(actualLines)-1] {
-			if el == al {
-				count++
-				break
-			}
+		if slices.Contains(actualLines[1:len(actualLines)-1], el) {
+			count++
 		}
 	}
 

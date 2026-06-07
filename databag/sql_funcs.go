@@ -140,7 +140,7 @@ func (db *DataBag) getMultiDBItemSQL(dbItemNames []string) ([]*DataBagItem, erro
 		return nil, err
 	}
 	defer stmt.Close()
-	nameArgs := make([]interface{}, len(dbItemNames)+1)
+	nameArgs := make([]any, len(dbItemNames)+1)
 	nameArgs[0] = db.id
 	for i, v := range dbItemNames {
 		nameArgs[i+1] = v

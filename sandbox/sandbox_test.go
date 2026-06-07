@@ -60,8 +60,8 @@ func randStringBytesMaskImprSrc(n int) string {
 	return string(b)
 }
 
-func randomHashes(num int) map[string]interface{} {
-	h := make(map[string]interface{}, num)
+func randomHashes(num int) map[string]any {
+	h := make(map[string]any, num)
 	for i := 0; i < num; i++ {
 		s := randStringBytesMaskImprSrc(randStrLen)
 		chksum := md5.Sum([]byte(s))

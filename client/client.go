@@ -250,8 +250,8 @@ func (c *Client) Delete() error {
 
 // ToJSON converts the client object into a JSON object, massaging it as needed
 // to make chef-pedant happy.
-func (c *Client) ToJSON() map[string]interface{} {
-	toJSON := make(map[string]interface{})
+func (c *Client) ToJSON() map[string]any {
+	toJSON := make(map[string]any)
 	toJSON["name"] = c.Name
 	toJSON["admin"] = c.Admin
 	toJSON["public_key"] = c.PublicKey()
@@ -338,7 +338,7 @@ func (c *Client) Rename(newName string) util.Gerror {
 }
 
 // NewFromJSON builds a new client/user from a json object.
-func NewFromJSON(jsonActor map[string]interface{}) (*Client, util.Gerror) {
+func NewFromJSON(jsonActor map[string]any) (*Client, util.Gerror) {
 	actorName, nerr := util.ValidateAsString(jsonActor["name"])
 	if nerr != nil {
 		return nil, nerr
@@ -356,7 +356,7 @@ func NewFromJSON(jsonActor map[string]interface{}) (*Client, util.Gerror) {
 
 // UpdateFromJSON updates a client/user from a json object. Does a bunch of
 // validations inside rather than in the handler.
-func (c *Client) UpdateFromJSON(jsonActor map[string]interface{}) util.Gerror {
+func (c *Client) UpdateFromJSON(jsonActor map[string]any) util.Gerror {
 	actorName, nerr := util.ValidateAsString(jsonActor["name"])
 	if nerr != nil {
 		return nerr
@@ -445,7 +445,7 @@ ValidElem:
 
 // ValidatePublicKey checks that the provided public key is valid. Wrapper around
 // chefcrypto.ValidatePublicKey(), but with a different error type.
-func ValidatePublicKey(publicKey interface{}) (bool, util.Gerror) {
+func ValidatePublicKey(publicKey any) (bool, util.Gerror) {
 	ok, pkerr := chefcrypto.ValidatePublicKey(publicKey)
 	var err util.Gerror
 	if !ok {
@@ -510,7 +510,7 @@ func (c *Client) Index() string {
 }
 
 // Flatten out the client so it's suitable for indexing.
-func (c *Client) Flatten() map[string]interface{} {
+func (c *Client) Flatten() map[string]any {
 	return util.FlattenObj(c.flatExport())
 }
 
@@ -539,7 +539,7 @@ func (c *Client) IsValidator() bool {
 }
 
 // IsSelf returns true if the other actor provided is the same as the caller.
-func (c *Client) IsSelf(other interface{}) bool {
+func (c *Client) IsSelf(other any) bool {
 	if !useAuth() {
 		return true
 	}
@@ -577,7 +577,7 @@ func (c *Client) PublicKey() string {
 }
 
 // SetPublicKey sets the client's public key.
-func (c *Client) SetPublicKey(pk interface{}) error {
+func (c *Client) SetPublicKey(pk any) error {
 	switch pk := pk.(type) {
 	case string:
 		ok, err := ValidatePublicKey(pk)
@@ -598,7 +598,7 @@ func (c *Client) SetPublicKey(pk interface{}) error {
 
 // CheckPermEdit checks to see if the client is trying to edit admin and
 // validator attributes, and if it has permissions to do so.
-func (c *Client) CheckPermEdit(clientData map[string]interface{}, perm string) util.Gerror {
+func (c *Client) CheckPermEdit(clientData map[string]any, perm string) util.Gerror {
 	gerr := util.Errorf("You are not allowed to take this action.")
 	gerr.SetStatus(http.StatusForbidden)
 
@@ -665,9 +665,9 @@ func AllClients() []*Client {
 }
 
 // ExportAllClients returns all clients in a fashion suitable for exporting.
-func ExportAllClients() []interface{} {
+func ExportAllClients() []any {
 	clients := AllClients()
-	export := make([]interface{}, len(clients))
+	export := make([]any, len(clients))
 	for i, c := range clients {
 		export[i] = c.export()
 	}
