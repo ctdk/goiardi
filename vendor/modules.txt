@@ -36,8 +36,8 @@ github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
 github.com/aws/aws-sdk-go/private/waiter
 github.com/aws/aws-sdk-go/service/s3
 github.com/aws/aws-sdk-go/service/sts
-# github.com/ctdk/chefcrypto v0.2.0
-## explicit
+# github.com/ctdk/chefcrypto v1.0.0
+## explicit; go 1.11
 github.com/ctdk/chefcrypto
 # github.com/ctdk/go-trie v0.0.0-20161110000926-fe74c509b12e
 ## explicit
