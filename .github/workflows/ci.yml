@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Test & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          check-latest: true
+
+      - name: Run 'go test'
+        run: |
+          mkdir -p test-results
+          go test -v -race ./... 2>&1 | tee test-results/goiardi-test.out
+
+      - name: Run 'go build'
+        run: go build -v .
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results
+
+  package:
+    name: Build packages
+    runs-on: ubuntu-latest
+    needs: build
+    # Mirror the CircleCI behaviour: only build packages on pushes (branches
+    # and tags), not on every pull request.
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # packaging.sh runs `git describe --long` for the version string, so
+          # we need the full history and all tags.
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          check-latest: true
+
+      - name: Install packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm python3-sphinx ruby ruby-dev
+          sudo gem install --no-document fpm
+          go install github.com/ctdk/gox@latest
+
+      - name: Build packages
+        working-directory: packaging
+        run: /bin/bash packaging.sh
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: packaging/artifacts
+
+  deploy:
+    name: Deploy packages
+    runs-on: ubuntu-latest
+    needs: package
+    # Only deploy from the releases branch, matching the old CircleCI filter.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/releases'
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Ruby tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev
+          sudo gem install --no-document package_cloud -v "0.2.43"
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: packages
+          path: packaging/artifacts
+
+      - name: Deploy packages
+        working-directory: packaging
+        env:
+          PACKAGECLOUD_REPO: ${{ secrets.PACKAGECLOUD_REPO }}
+          PACKAGECLOUD_TOKEN: ${{ secrets.PACKAGECLOUD_TOKEN }}
+        run: /bin/bash deploy.sh
