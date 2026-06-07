@@ -1,4 +1,7 @@
 // Package awserr represents API error interface accessors for the SDK.
+//
+// Deprecated: aws-sdk-go is deprecated. Use aws-sdk-go-v2.
+// See https://aws.amazon.com/blogs/developer/announcing-end-of-support-for-aws-sdk-for-go-v1-on-july-31-2025/.
 package awserr
 
 // An Error wraps lower level errors with code, message and an original error.
@@ -10,24 +13,23 @@ package awserr
 //
 // Example:
 //
-//     output, err := s3manage.Upload(svc, input, opts)
-//     if err != nil {
-//         if awsErr, ok := err.(awserr.Error); ok {
-//             // Get error details
-//             log.Println("Error:", awsErr.Code(), awsErr.Message())
+//	output, err := s3manage.Upload(svc, input, opts)
+//	if err != nil {
+//	    if awsErr, ok := err.(awserr.Error); ok {
+//	        // Get error details
+//	        log.Println("Error:", awsErr.Code(), awsErr.Message())
 //
-//             // Prints out full error message, including original error if there was one.
-//             log.Println("Error:", awsErr.Error())
+//	        // Prints out full error message, including original error if there was one.
+//	        log.Println("Error:", awsErr.Error())
 //
-//             // Get original error
-//             if origErr := awsErr.OrigErr(); origErr != nil {
-//                 // operate on original error.
-//             }
-//         } else {
-//             fmt.Println(err.Error())
-//         }
-//     }
-//
+//	        // Get original error
+//	        if origErr := awsErr.OrigErr(); origErr != nil {
+//	            // operate on original error.
+//	        }
+//	    } else {
+//	        fmt.Println(err.Error())
+//	    }
+//	}
 type Error interface {
 	// Satisfy the generic error interface.
 	error
@@ -100,32 +102,31 @@ func NewBatchError(code, message string, errs []error) BatchedErrors {
 //
 // Example:
 //
-//     output, err := s3manage.Upload(svc, input, opts)
-//     if err != nil {
-//         if reqerr, ok := err.(RequestFailure); ok {
-//             log.Println("Request failed", reqerr.Code(), reqerr.Message(), reqerr.RequestID())
-//         } else {
-//             log.Println("Error:", err.Error())
-//         }
-//     }
+//	output, err := s3manage.Upload(svc, input, opts)
+//	if err != nil {
+//	    if reqerr, ok := err.(RequestFailure); ok {
+//	        log.Println("Request failed", reqerr.Code(), reqerr.Message(), reqerr.RequestID())
+//	    } else {
+//	        log.Println("Error:", err.Error())
+//	    }
+//	}
 //
 // Combined with awserr.Error:
 //
-//    output, err := s3manage.Upload(svc, input, opts)
-//    if err != nil {
-//        if awsErr, ok := err.(awserr.Error); ok {
-//            // Generic AWS Error with Code, Message, and original error (if any)
-//            fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
+//	output, err := s3manage.Upload(svc, input, opts)
+//	if err != nil {
+//	    if awsErr, ok := err.(awserr.Error); ok {
+//	        // Generic AWS Error with Code, Message, and original error (if any)
+//	        fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 //
-//            if reqErr, ok := err.(awserr.RequestFailure); ok {
-//                // A service error occurred
-//                fmt.Println(reqErr.StatusCode(), reqErr.RequestID())
-//            }
-//        } else {
-//            fmt.Println(err.Error())
-//        }
-//    }
-//
+//	        if reqErr, ok := err.(awserr.RequestFailure); ok {
+//	            // A service error occurred
+//	            fmt.Println(reqErr.StatusCode(), reqErr.RequestID())
+//	        }
+//	    } else {
+//	        fmt.Println(err.Error())
+//	    }
+//	}
 type RequestFailure interface {
 	Error
 
@@ -138,8 +139,27 @@ type RequestFailure interface {
 	RequestID() string
 }
 
-// NewRequestFailure returns a new request error wrapper for the given Error
-// provided.
+// NewRequestFailure returns a wrapped error with additional information for
+// request status code, and service requestID.
+//
+// Should be used to wrap all request which involve service requests. Even if
+// the request failed without a service response, but had an HTTP status code
+// that may be meaningful.
 func NewRequestFailure(err Error, statusCode int, reqID string) RequestFailure {
 	return newRequestError(err, statusCode, reqID)
+}
+
+// UnmarshalError provides the interface for the SDK failing to unmarshal data.
+type UnmarshalError interface {
+	awsError
+	Bytes() []byte
+}
+
+// NewUnmarshalError returns an initialized UnmarshalError error wrapper adding
+// the bytes that fail to unmarshal to the error.
+func NewUnmarshalError(err error, msg string, bytes []byte) UnmarshalError {
+	return &unmarshalError{
+		awsError: New("UnmarshalError", msg, err),
+		bytes:    bytes,
+	}
 }

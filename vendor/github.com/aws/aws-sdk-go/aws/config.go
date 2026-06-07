@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
 // UseServiceDefaultRetries instructs the config to use the service's own
@@ -17,18 +18,18 @@ const UseServiceDefaultRetries = -1
 type RequestRetryer interface{}
 
 // A Config provides service configuration for service clients. By default,
-// all clients will use the defaults.DefaultConfig tructure.
+// all clients will use the defaults.DefaultConfig structure.
 //
-//     // Create Session with MaxRetry configuration to be shared by multiple
-//     // service clients.
-//     sess, err := session.NewSession(&aws.Config{
-//         MaxRetries: aws.Int(3),
-//     })
+//	// Create Session with MaxRetries configuration to be shared by multiple
+//	// service clients.
+//	sess := session.Must(session.NewSession(&aws.Config{
+//	    MaxRetries: aws.Int(3),
+//	}))
 //
-//     // Create S3 service client with a specific Region.
-//     svc := s3.New(sess, &aws.Config{
-//         Region: aws.String("us-west-2"),
-//     })
+//	// Create S3 service client with a specific Region.
+//	svc := s3.New(sess, &aws.Config{
+//	    Region: aws.String("us-west-2"),
+//	})
 type Config struct {
 	// Enables verbose error printing of all credential chain errors.
 	// Should be used when wanting to see all errors while attempting to
@@ -42,19 +43,30 @@ type Config struct {
 
 	// An optional endpoint URL (hostname only or fully qualified URI)
 	// that overrides the default generated endpoint for a client. Set this
-	// to `""` to use the default generated endpoint.
+	// to `nil` or the value to `""` to use the default generated endpoint.
 	//
-	// @note You must still provide a `Region` value when specifying an
-	//   endpoint for a client.
+	// Note: You must still provide a `Region` value when specifying an
+	// endpoint for a client.
 	Endpoint *string
+
+	// The resolver to use for looking up endpoints for AWS service clients
+	// to use based on region.
+	EndpointResolver endpoints.Resolver
+
+	// EnforceShouldRetryCheck is used in the AfterRetryHandler to always call
+	// ShouldRetry regardless of whether or not if request.Retryable is set.
+	// This will utilize ShouldRetry method of custom retryers. If EnforceShouldRetryCheck
+	// is not set, then ShouldRetry will only be called if request.Retryable is nil.
+	// Proper handling of the request.Retryable field is important when setting this field.
+	EnforceShouldRetryCheck *bool
 
 	// The region to send requests to. This parameter is required and must
 	// be configured globally or on a per-client basis unless otherwise
 	// noted. A full list of regions is found in the "Regions and Endpoints"
 	// document.
 	//
-	// @see http://docs.aws.amazon.com/general/latest/gr/rande.html
-	//   AWS Regions and Endpoints
+	// See http://docs.aws.amazon.com/general/latest/gr/rande.html for AWS
+	// Regions and Endpoints.
 	Region *string
 
 	// Set this to `true` to disable SSL when sending requests. Defaults
@@ -83,7 +95,7 @@ type Config struct {
 	// recoverable failures.
 	//
 	// When nil or the value does not implement the request.Retryer interface,
-	// the request.DefaultRetryer will be used.
+	// the client.DefaultRetryer will be used.
 	//
 	// When both Retryer and MaxRetries are non-nil, the former is used and
 	// the latter ignored.
@@ -108,9 +120,10 @@ type Config struct {
 	// will use virtual hosted bucket addressing when possible
 	// (`http://BUCKET.s3.amazonaws.com/KEY`).
 	//
-	// @note This configuration option is specific to the Amazon S3 service.
-	// @see http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
-	//   Amazon S3: Virtual Hosting of Buckets
+	// Note: This configuration option is specific to the Amazon S3 service.
+	//
+	// See http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
+	// for Amazon S3: Virtual Hosting of Buckets
 	S3ForcePathStyle *bool
 
 	// Set this to `true` to disable the SDK adding the `Expect: 100-Continue`
@@ -125,7 +138,7 @@ type Config struct {
 	// `ExpectContinueTimeout` for information on adjusting the continue wait
 	// timeout. https://golang.org/pkg/net/http/#Transport
 	//
-	// You should use this flag to disble 100-Continue if you experience issues
+	// You should use this flag to disable 100-Continue if you experience issues
 	// with proxies or third party S3 compatible services.
 	S3Disable100Continue *bool
 
@@ -137,10 +150,30 @@ type Config struct {
 	// accelerate enabled. If the bucket is not enabled for accelerate an error
 	// will be returned. The bucket name must be DNS compatible to also work
 	// with accelerate.
-	//
-	// Not compatible with UseDualStack requests will fail if both flags are
-	// specified.
 	S3UseAccelerate *bool
+
+	// S3DisableContentMD5Validation config option is temporarily disabled,
+	// For S3 GetObject API calls, #1837.
+	//
+	// Set this to `true` to disable the S3 service client from automatically
+	// adding the ContentMD5 to S3 Object Put and Upload API calls. This option
+	// will also disable the SDK from performing object ContentMD5 validation
+	// on GetObject API calls.
+	S3DisableContentMD5Validation *bool
+
+	// Set this to `true` to have the S3 service client to use the region specified
+	// in the ARN, when an ARN is provided as an argument to a bucket parameter.
+	S3UseARNRegion *bool
+
+	// Set this to `true` to enable the SDK to unmarshal API response header maps to
+	// normalized lower case map keys.
+	//
+	// For example S3's X-Amz-Meta prefixed header will be unmarshaled to lower case
+	// Metadata member's map keys. The value of the header in the map is unaffected.
+	//
+	// The AWS SDK for Go v2, uses lower case header maps by default. The v1
+	// SDK provides this opt-in for this option, for backwards compatibility.
+	LowerCaseHeaderMaps *bool
 
 	// Set this to `true` to disable the EC2Metadata client from overriding the
 	// default http.Client's Timeout. This is helpful if you do not want the
@@ -152,18 +185,36 @@ type Config struct {
 	// the EC2Metadata overriding the timeout for default credentials chain.
 	//
 	// Example:
-	//    sess, err := session.NewSession(aws.NewConfig().WithEC2MetadataDiableTimeoutOverride(true))
+	//    sess := session.Must(session.NewSession(aws.NewConfig()
+	//       .WithEC2MetadataDisableTimeoutOverride(true)))
 	//
 	//    svc := s3.New(sess)
 	//
 	EC2MetadataDisableTimeoutOverride *bool
 
-	// Instructs the endpiont to be generated for a service client to
+	// Set this to `false` to disable EC2Metadata client from falling back to IMDSv1.
+	// By default, EC2 role credentials will fall back to IMDSv1 as needed for backwards compatibility.
+	// You can disable this behavior by explicitly setting this flag to `false`. When false, the EC2Metadata
+	// client will return any errors encountered from attempting to fetch a token instead of silently
+	// using the insecure data flow of IMDSv1.
+	//
+	// Example:
+	//    sess := session.Must(session.NewSession(aws.NewConfig()
+	//       .WithEC2MetadataEnableFallback(false)))
+	//
+	//    svc := s3.New(sess)
+	//
+	// See [configuring IMDS] for more information.
+	//
+	// [configuring IMDS]: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html
+	EC2MetadataEnableFallback *bool
+
+	// Instructs the endpoint to be generated for a service client to
 	// be the dual stack endpoint. The dual stack endpoint will support
 	// both IPv4 and IPv6 addressing.
 	//
 	// Setting this for a service which does not support dual stack will fail
-	// to make requets. It is not recommended to set this value on the session
+	// to make requests. It is not recommended to set this value on the session
 	// as it will apply to all service clients created with the session. Even
 	// services which don't support dual stack endpoints.
 	//
@@ -172,34 +223,93 @@ type Config struct {
 	//
 	// Only supported with.
 	//
-	//     sess, err := session.NewSession()
+	//     sess := session.Must(session.NewSession())
 	//
 	//     svc := s3.New(sess, &aws.Config{
 	//         UseDualStack: aws.Bool(true),
 	//     })
+	//
+	// Deprecated: This option will continue to function for S3 and S3 Control for backwards compatibility.
+	// UseDualStackEndpoint should be used to enable usage of a service's dual-stack endpoint for all service clients
+	// moving forward. For S3 and S3 Control, when UseDualStackEndpoint is set to a non-zero value it takes higher
+	// precedence then this option.
 	UseDualStack *bool
+
+	// Sets the resolver to resolve a dual-stack endpoint for the service.
+	UseDualStackEndpoint endpoints.DualStackEndpointState
+
+	// UseFIPSEndpoint specifies the resolver must resolve a FIPS endpoint.
+	UseFIPSEndpoint endpoints.FIPSEndpointState
 
 	// SleepDelay is an override for the func the SDK will call when sleeping
 	// during the lifecycle of a request. Specifically this will be used for
 	// request delays. This value should only be used for testing. To adjust
 	// the delay of a request see the aws/client.DefaultRetryer and
 	// aws/request.Retryer.
+	//
+	// SleepDelay will prevent any Context from being used for canceling retry
+	// delay of an API operation. It is recommended to not use SleepDelay at all
+	// and specify a Retryer instead.
 	SleepDelay func(time.Duration)
+
+	// DisableRestProtocolURICleaning will not clean the URL path when making rest protocol requests.
+	// Will default to false. This would only be used for empty directory names in s3 requests.
+	//
+	// Example:
+	//    sess := session.Must(session.NewSession(&aws.Config{
+	//         DisableRestProtocolURICleaning: aws.Bool(true),
+	//    }))
+	//
+	//    svc := s3.New(sess)
+	//    out, err := svc.GetObject(&s3.GetObjectInput {
+	//    	Bucket: aws.String("bucketname"),
+	//    	Key: aws.String("//foo//bar//moo"),
+	//    })
+	DisableRestProtocolURICleaning *bool
+
+	// EnableEndpointDiscovery will allow for endpoint discovery on operations that
+	// have the definition in its model. By default, endpoint discovery is off.
+	// To use EndpointDiscovery, Endpoint should be unset or set to an empty string.
+	//
+	// Example:
+	//    sess := session.Must(session.NewSession(&aws.Config{
+	//         EnableEndpointDiscovery: aws.Bool(true),
+	//    }))
+	//
+	//    svc := s3.New(sess)
+	//    out, err := svc.GetObject(&s3.GetObjectInput {
+	//    	Bucket: aws.String("bucketname"),
+	//    	Key: aws.String("/foo/bar/moo"),
+	//    })
+	EnableEndpointDiscovery *bool
+
+	// DisableEndpointHostPrefix will disable the SDK's behavior of prefixing
+	// request endpoint hosts with modeled information.
+	//
+	// Disabling this feature is useful when you want to use local endpoints
+	// for testing that do not support the modeled host prefix pattern.
+	DisableEndpointHostPrefix *bool
+
+	// STSRegionalEndpoint will enable regional or legacy endpoint resolving
+	STSRegionalEndpoint endpoints.STSRegionalEndpoint
+
+	// S3UsEast1RegionalEndpoint will enable regional or legacy endpoint resolving
+	S3UsEast1RegionalEndpoint endpoints.S3UsEast1RegionalEndpoint
 }
 
 // NewConfig returns a new Config pointer that can be chained with builder
 // methods to set multiple configuration values inline without using pointers.
 //
-//     // Create Session with MaxRetry configuration to be shared by multiple
-//     // service clients.
-//     sess, err := session.NewSession(aws.NewConfig().
-//         WithMaxRetries(3),
-//     )
+//	// Create Session with MaxRetries configuration to be shared by multiple
+//	// service clients.
+//	sess := session.Must(session.NewSession(aws.NewConfig().
+//	    WithMaxRetries(3),
+//	))
 //
-//     // Create S3 service client with a specific Region.
-//     svc := s3.New(sess, aws.NewConfig().
-//         WithRegion("us-west-2"),
-//     )
+//	// Create S3 service client with a specific Region.
+//	svc := s3.New(sess, aws.NewConfig().
+//	    WithRegion("us-west-2"),
+//	)
 func NewConfig() *Config {
 	return &Config{}
 }
@@ -222,6 +332,13 @@ func (c *Config) WithCredentials(creds *credentials.Credentials) *Config {
 // chaining.
 func (c *Config) WithEndpoint(endpoint string) *Config {
 	c.Endpoint = &endpoint
+	return c
+}
+
+// WithEndpointResolver sets a config EndpointResolver value returning a
+// Config pointer for chaining.
+func (c *Config) WithEndpointResolver(resolver endpoints.Resolver) *Config {
+	c.EndpointResolver = resolver
 	return c
 }
 
@@ -300,12 +417,39 @@ func (c *Config) WithS3Disable100Continue(disable bool) *Config {
 func (c *Config) WithS3UseAccelerate(enable bool) *Config {
 	c.S3UseAccelerate = &enable
 	return c
+
+}
+
+// WithS3DisableContentMD5Validation sets a config
+// S3DisableContentMD5Validation value returning a Config pointer for chaining.
+func (c *Config) WithS3DisableContentMD5Validation(enable bool) *Config {
+	c.S3DisableContentMD5Validation = &enable
+	return c
+
+}
+
+// WithS3UseARNRegion sets a config S3UseARNRegion value and
+// returning a Config pointer for chaining
+func (c *Config) WithS3UseARNRegion(enable bool) *Config {
+	c.S3UseARNRegion = &enable
+	return c
 }
 
 // WithUseDualStack sets a config UseDualStack value returning a Config
 // pointer for chaining.
 func (c *Config) WithUseDualStack(enable bool) *Config {
 	c.UseDualStack = &enable
+	return c
+}
+
+// WithUseFIPSEndpoint sets a config UseFIPSEndpoint value returning a Config
+// pointer for chaining.
+func (c *Config) WithUseFIPSEndpoint(enable bool) *Config {
+	if enable {
+		c.UseFIPSEndpoint = endpoints.FIPSEndpointStateEnabled
+	} else {
+		c.UseFIPSEndpoint = endpoints.FIPSEndpointStateDisabled
+	}
 	return c
 }
 
@@ -316,10 +460,58 @@ func (c *Config) WithEC2MetadataDisableTimeoutOverride(enable bool) *Config {
 	return c
 }
 
+// WithEC2MetadataEnableFallback sets a config EC2MetadataEnableFallback value
+// returning a Config pointer for chaining.
+func (c *Config) WithEC2MetadataEnableFallback(v bool) *Config {
+	c.EC2MetadataEnableFallback = &v
+	return c
+}
+
 // WithSleepDelay overrides the function used to sleep while waiting for the
 // next retry. Defaults to time.Sleep.
 func (c *Config) WithSleepDelay(fn func(time.Duration)) *Config {
 	c.SleepDelay = fn
+	return c
+}
+
+// WithEndpointDiscovery will set whether or not to use endpoint discovery.
+func (c *Config) WithEndpointDiscovery(t bool) *Config {
+	c.EnableEndpointDiscovery = &t
+	return c
+}
+
+// WithDisableEndpointHostPrefix will set whether or not to use modeled host prefix
+// when making requests.
+func (c *Config) WithDisableEndpointHostPrefix(t bool) *Config {
+	c.DisableEndpointHostPrefix = &t
+	return c
+}
+
+// WithSTSRegionalEndpoint will set whether or not to use regional endpoint flag
+// when resolving the endpoint for a service
+func (c *Config) WithSTSRegionalEndpoint(sre endpoints.STSRegionalEndpoint) *Config {
+	c.STSRegionalEndpoint = sre
+	return c
+}
+
+// WithS3UsEast1RegionalEndpoint will set whether or not to use regional endpoint flag
+// when resolving the endpoint for a service
+func (c *Config) WithS3UsEast1RegionalEndpoint(sre endpoints.S3UsEast1RegionalEndpoint) *Config {
+	c.S3UsEast1RegionalEndpoint = sre
+	return c
+}
+
+// WithLowerCaseHeaderMaps sets a config LowerCaseHeaderMaps value
+// returning a Config pointer for chaining.
+func (c *Config) WithLowerCaseHeaderMaps(t bool) *Config {
+	c.LowerCaseHeaderMaps = &t
+	return c
+}
+
+// WithDisableRestProtocolURICleaning sets a config DisableRestProtocolURICleaning value
+// returning a Config pointer for chaining.
+func (c *Config) WithDisableRestProtocolURICleaning(t bool) *Config {
+	c.DisableRestProtocolURICleaning = &t
 	return c
 }
 
@@ -345,6 +537,10 @@ func mergeInConfig(dst *Config, other *Config) {
 
 	if other.Endpoint != nil {
 		dst.Endpoint = other.Endpoint
+	}
+
+	if other.EndpointResolver != nil {
+		dst.EndpointResolver = other.EndpointResolver
 	}
 
 	if other.Region != nil {
@@ -395,16 +591,68 @@ func mergeInConfig(dst *Config, other *Config) {
 		dst.S3UseAccelerate = other.S3UseAccelerate
 	}
 
+	if other.S3DisableContentMD5Validation != nil {
+		dst.S3DisableContentMD5Validation = other.S3DisableContentMD5Validation
+	}
+
+	if other.S3UseARNRegion != nil {
+		dst.S3UseARNRegion = other.S3UseARNRegion
+	}
+
 	if other.UseDualStack != nil {
 		dst.UseDualStack = other.UseDualStack
+	}
+
+	if other.UseDualStackEndpoint != endpoints.DualStackEndpointStateUnset {
+		dst.UseDualStackEndpoint = other.UseDualStackEndpoint
 	}
 
 	if other.EC2MetadataDisableTimeoutOverride != nil {
 		dst.EC2MetadataDisableTimeoutOverride = other.EC2MetadataDisableTimeoutOverride
 	}
 
+	if other.EC2MetadataEnableFallback != nil {
+		dst.EC2MetadataEnableFallback = other.EC2MetadataEnableFallback
+	}
+
 	if other.SleepDelay != nil {
 		dst.SleepDelay = other.SleepDelay
+	}
+
+	if other.DisableRestProtocolURICleaning != nil {
+		dst.DisableRestProtocolURICleaning = other.DisableRestProtocolURICleaning
+	}
+
+	if other.EnforceShouldRetryCheck != nil {
+		dst.EnforceShouldRetryCheck = other.EnforceShouldRetryCheck
+	}
+
+	if other.EnableEndpointDiscovery != nil {
+		dst.EnableEndpointDiscovery = other.EnableEndpointDiscovery
+	}
+
+	if other.DisableEndpointHostPrefix != nil {
+		dst.DisableEndpointHostPrefix = other.DisableEndpointHostPrefix
+	}
+
+	if other.STSRegionalEndpoint != endpoints.UnsetSTSEndpoint {
+		dst.STSRegionalEndpoint = other.STSRegionalEndpoint
+	}
+
+	if other.S3UsEast1RegionalEndpoint != endpoints.UnsetS3UsEast1Endpoint {
+		dst.S3UsEast1RegionalEndpoint = other.S3UsEast1RegionalEndpoint
+	}
+
+	if other.LowerCaseHeaderMaps != nil {
+		dst.LowerCaseHeaderMaps = other.LowerCaseHeaderMaps
+	}
+
+	if other.UseDualStackEndpoint != endpoints.DualStackEndpointStateUnset {
+		dst.UseDualStackEndpoint = other.UseDualStackEndpoint
+	}
+
+	if other.UseFIPSEndpoint != endpoints.FIPSEndpointStateUnset {
+		dst.UseFIPSEndpoint = other.UseFIPSEndpoint
 	}
 }
 
