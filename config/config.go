@@ -448,7 +448,7 @@ func ParseConfigOptions() error {
 		Config.SysLog = opts.SysLog
 	}
 	if Config.LogFile != "" {
-		lfp, lerr := os.OpenFile(Config.LogFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModeAppend|0666)
+		lfp, lerr := os.OpenFile(Config.LogFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModeAppend|0640)
 		if lerr != nil {
 			log.Println(err)
 			os.Exit(1)
