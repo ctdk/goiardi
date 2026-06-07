@@ -262,7 +262,19 @@ func main() {
 
 	listenAddr := config.ListenAddr()
 	var err error
-	srv := &http.Server{Addr: listenAddr, Handler: &interceptHandler{}}
+	srv := &http.Server{
+		Addr:    listenAddr,
+		Handler: &interceptHandler{},
+		// Bound how long a single connection may spend sending its
+		// request headers, and how long an idle keep-alive connection
+		// may linger, so that slow-sending clients (Slowloris) cannot
+		// tie up server goroutines indefinitely. Read/Write timeouts on
+		// the body are intentionally left unset to avoid interrupting
+		// large but legitimate cookbook uploads/downloads.
+		ReadHeaderTimeout: 60 * time.Second,
+		IdleTimeout:       180 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+	}
 	if config.Config.UseSSL {
 		srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS10}
 		err = srv.ListenAndServeTLS(config.Config.SSLCert, config.Config.SSLKey)
