@@ -56,7 +56,7 @@ func New(name string) (*Node, util.Gerror) {
 		var err error
 		found, err = checkForNodeSQL(datastore.Dbh, name)
 		if err != nil {
-			gerr := util.Errorf(err.Error())
+			gerr := util.Errorf("%s", err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
 			return nil, gerr
 		}
@@ -141,7 +141,7 @@ func DoesExist(nodeName string) (bool, util.Gerror) {
 		var cerr error
 		found, cerr = checkForNodeSQL(datastore.Dbh, nodeName)
 		if cerr != nil {
-			err := util.Errorf(cerr.Error())
+			err := util.Errorf("%s", cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
 			return false, err
 		}

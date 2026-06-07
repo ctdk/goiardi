@@ -102,7 +102,7 @@ func ValidateAsVersion(ver interface{}) (string, Gerror) {
 				}
 				v, err := strconv.ParseInt(inspectVer[n], 10, 64)
 				if err != nil {
-					verr := Errorf(err.Error())
+					verr := Errorf("%s", err.Error())
 					return "", verr
 				}
 				if v < 0 {
@@ -162,7 +162,7 @@ func ValidateCookbookDivision(dname string, div interface{}) ([]map[string]inter
 						uploaded, ferr = CheckForObject("default", chksum)
 						if ferr != nil {
 							uploaded = false
-							logger.Errorf(ferr.Error())
+							logger.Errorf("%s", ferr.Error())
 						} else if uploaded {
 							itemURL, _ = S3GetURL("default", chksum)
 						}
@@ -213,7 +213,7 @@ func ValidateNumVersions(nr string) Gerror {
 		}
 		n, nerr := strconv.Atoi(nr)
 		if nerr != nil {
-			err := Errorf(nerr.Error())
+			err := Errorf("%s", nerr.Error())
 			return err
 		}
 		if n < 0 {

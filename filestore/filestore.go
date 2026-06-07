@@ -232,7 +232,7 @@ func DeleteHashes(fileHashes []string) {
 			delFile, err := Get(ff)
 			if err != nil {
 				logger.Debugf("Strange, we got an error trying to get %s to delete it.\n", ff)
-				logger.Debugf(err.Error())
+				logger.Debugf("%s", err.Error())
 			} else {
 				_ = delFile.Delete()
 			}
@@ -247,7 +247,7 @@ func DeleteHashes(fileHashes []string) {
 		for _, fh := range fileHashes {
 			err := os.Remove(path.Join(config.Config.LocalFstoreDir, fh))
 			if err != nil {
-				logger.Errorf(err.Error())
+				logger.Errorf("%s", err.Error())
 			}
 		}
 	}

@@ -76,14 +76,14 @@ func StartSerfin() error {
 	var err error
 	Serfer, err = NewRPCClient(config.Config.SerfAddr)
 	if err != nil {
-		logger.Criticalf(err.Error())
+		logger.Criticalf("%s", err.Error())
 		os.Exit(1)
 	}
 
 	if config.Config.SerfEventAnnounce {
 		err = Serfer.UserEvent("goiardi-join", []byte(config.Config.Hostname), true)
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Criticalf("%s", err.Error())
 			os.Exit(1)
 		}
 	}
@@ -152,12 +152,12 @@ func CloseSerfClient(serfAddr string) {
 func SendEvent(eventName string, payload interface{}) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Errorf("%s", err.Error())
 		return
 	}
 	err = Serfer.UserEvent(eventName, jsonPayload, true)
 	if err != nil {
-		logger.Debugf(err.Error())
+		logger.Debugf("%s", err.Error())
 	}
 	return
 }
@@ -166,13 +166,13 @@ func SendEvent(eventName string, payload interface{}) {
 func SendQuery(queryName string, payload interface{}) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Errorf("%s", err.Error())
 		return
 	}
 	q := &serfclient.QueryParam{Name: queryName, Payload: jsonPayload}
 	err = Serfer.Query(q)
 	if err != nil {
-		logger.Debugf(err.Error())
+		logger.Debugf("%s", err.Error())
 	}
 	return
 }

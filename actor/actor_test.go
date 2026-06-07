@@ -34,7 +34,7 @@ func TestActorClient(t *testing.T) {
 	c.Save()
 	c1, err := GetReqUser("fooclient")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	y := c1.IsSelf(c)
 	if y == false {
@@ -64,12 +64,12 @@ func TestActorUser(t *testing.T) {
 	config.Config.UseAuth = true
 	u, err := user.New("foo1user")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	u.Save()
 	u1, err := GetReqUser("foo1user")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	y := u1.IsSelf(u)
 	if y == false {

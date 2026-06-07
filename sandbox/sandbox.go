@@ -223,7 +223,7 @@ func (s *Sandbox) UploadChkList() map[string]map[string]interface{} {
 				var err error
 				chksumStats[chk]["url"], err = util.S3PutURL("default", chk)
 				if err != nil {
-					logger.Errorf(err.Error())
+					logger.Errorf("%s", err.Error())
 				}
 			} else {
 				itemURL := fmt.Sprintf("/file_store/%s", chk)

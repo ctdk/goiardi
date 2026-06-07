@@ -765,7 +765,7 @@ func ParseConfigOptions() error {
 			}
 			privPem, err := ioutil.ReadAll(privfp)
 			if err != nil {
-				logger.Fatalf(err.Error())
+				logger.Fatalf("%s", err.Error())
 				os.Exit(1)
 			}
 			privBlock, _ := pem.Decode(privPem)
@@ -775,7 +775,7 @@ func ParseConfigOptions() error {
 			}
 			privKey, err := x509.ParsePKCS1PrivateKey(privBlock.Bytes)
 			if err != nil {
-				logger.Fatalf(err.Error())
+				logger.Fatalf("%s", err.Error())
 				os.Exit(1)
 			}
 			Key.Lock()
@@ -855,7 +855,7 @@ func ParseConfigOptions() error {
 				os.Exit(1)
 			}
 			if verr := os.Setenv(env[0], env[1]); verr != nil {
-				logger.Fatalf(verr.Error())
+				logger.Fatalf("%s", verr.Error())
 				os.Exit(1)
 			}
 		}

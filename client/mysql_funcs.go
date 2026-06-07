@@ -50,12 +50,12 @@ func (c *Client) saveMySQL() error {
 func (c *Client) renameMySQL(newName string) util.Gerror {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		gerr := util.Errorf(err.Error())
+		gerr := util.Errorf("%s", err.Error())
 		return gerr
 	}
 	if err = chkForUser(tx, newName); err != nil {
 		tx.Rollback()
-		gerr := util.Errorf(err.Error())
+		gerr := util.Errorf("%s", err.Error())
 		return gerr
 	}
 	found, err := checkForClientSQL(datastore.Dbh, newName)
@@ -66,14 +66,14 @@ func (c *Client) renameMySQL(newName string) util.Gerror {
 			gerr.SetStatus(http.StatusConflict)
 			return gerr
 		}
-		gerr := util.Errorf(err.Error())
+		gerr := util.Errorf("%s", err.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
 	_, err = tx.Exec("UPDATE clients SET name = ? WHERE name = ?", newName, c.Name)
 	if err != nil {
 		tx.Rollback()
-		gerr := util.Errorf(err.Error())
+		gerr := util.Errorf("%s", err.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}

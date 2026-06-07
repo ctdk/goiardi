@@ -437,7 +437,7 @@ func (idoc *IdxDoc) update(object Indexable) {
 	}()
 	trie, err := gtrie.Create(flattened)
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Errorf("%s", err.Error())
 	} else {
 		var err error
 		idoc.trie, err = compressTrie(trie)
