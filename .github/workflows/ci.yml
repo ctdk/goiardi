@@ -95,7 +95,7 @@ jobs:
           sudo gem install --no-document package_cloud -v "0.2.43"
 
       - name: Download package artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: packages
           path: packaging/artifacts
