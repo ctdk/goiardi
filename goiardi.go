@@ -450,6 +450,16 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Body = reader
 	}
 
+	// Enforce the body size limit on the bytes actually read, not just the
+	// client-supplied Content-Length. A chunked request carries no
+	// Content-Length (so the check above is skipped entirely), and a
+	// gzipped body can inflate far beyond its compressed length; without
+	// this, either can be read unbounded into memory. The file_store
+	// handler wraps its own (larger) MaxBytesReader, so it is excluded.
+	if !strings.HasPrefix(r.URL.Path, "/file_store") {
+		r.Body = http.MaxBytesReader(w, r.Body, config.Config.JSONReqMaxSize)
+	}
+
 	// Set up the context for the request. At this time, this means setting
 	// the opUser for this request for most (but not all) types of requests.
 	// At this time the exceptions are "/file_store", "/universe", and
