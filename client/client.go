@@ -409,8 +409,12 @@ ValidElem:
 		}
 	}
 
-	var ab, vb bool
+	// Only touch the admin/validator flags when the client actually
+	// supplies them. Previously these were unconditionally reset to false
+	// when the keys were absent, which silently demoted a client on any
+	// partial update and bypassed the last-admin guard below.
 	if adminVal, ok := jsonActor["admin"]; ok {
+		var ab bool
 		if ab, verr = util.ValidateAsBool(adminVal); verr != nil {
 			// NOTE: may need to tweak this error message depending
 			// if this is a user or a client
@@ -423,19 +427,20 @@ ValidElem:
 				return verr
 			}
 		}
+		c.Admin = ab
 	}
 	if validatorVal, ok := jsonActor["validator"]; ok {
+		var vb bool
 		if vb, verr = util.ValidateAsBool(validatorVal); verr != nil {
 			return verr
 		}
+		c.Validator = vb
 	}
-	if ab && vb {
+	if c.Admin && c.Validator {
 		verr = util.Errorf("Client can be either an admin or a validator, but not both.")
 		verr.SetStatus(http.StatusBadRequest)
 		return verr
 	}
-	c.Admin = ab
-	c.Validator = vb
 
 	c.ChefType = jsonActor["chef_type"].(string)
 	c.JSONClass = jsonActor["json_class"].(string)

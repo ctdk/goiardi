@@ -65,3 +65,42 @@ func TestActionAtADistance(t *testing.T) {
 		t.Errorf("Changing the value of validator on one client improperly changed it on the other")
 	}
 }
+
+// TestUpdateFromJSONPreservesFlags guards against the admin/validator flags
+// being silently reset when an update omits those keys.
+func TestUpdateFromJSONPreservesFlags(t *testing.T) {
+	c, _ := New("flagtest")
+	c.Admin = true
+
+	// An update that omits "admin" and "validator" must leave the existing
+	// flag values untouched.
+	upd := map[string]interface{}{
+		"name":       "flagtest",
+		"json_class": "Chef::ApiClient",
+		"chef_type":  "client",
+	}
+	if err := c.UpdateFromJSON(upd); err != nil {
+		t.Fatalf("UpdateFromJSON returned an error: %s", err.Error())
+	}
+	if !c.Admin {
+		t.Errorf("admin flag was reset to false when the 'admin' key was omitted from the update")
+	}
+	if c.Validator {
+		t.Errorf("validator flag unexpectedly became true")
+	}
+
+	// Supplying a flag explicitly must still take effect.
+	c2, _ := New("flagtest2")
+	upd2 := map[string]interface{}{
+		"name":       "flagtest2",
+		"json_class": "Chef::ApiClient",
+		"chef_type":  "client",
+		"validator":  true,
+	}
+	if err := c2.UpdateFromJSON(upd2); err != nil {
+		t.Fatalf("UpdateFromJSON returned an error: %s", err.Error())
+	}
+	if !c2.Validator {
+		t.Errorf("validator flag was not set to true when supplied")
+	}
+}
