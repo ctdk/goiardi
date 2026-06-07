@@ -42,7 +42,7 @@ type PgQuery struct {
 	queryStrs  []string
 	arguments  []string
 	fullQuery  string
-	allArgs    []interface{}
+	allArgs    []any
 }
 
 type gClause struct {
@@ -50,7 +50,7 @@ type gClause struct {
 	op     Op
 }
 
-func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
+func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string, start int, partialData map[string]any) ([]map[string]any, error) {
 	// check that the endpoint actually exists
 	sqlStmt := "SELECT 1 FROM goiardi.search_collections WHERE organization_id = $1 AND name = $2"
 	stmt, serr := datastore.Dbh.Prepare(sqlStmt)
@@ -127,11 +127,11 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 	// THE WRONG WAY:
 	// Eventually, ordering by the keys themselves would be awesome.
 	objs := getResults(idx, qresults)
-	res := make([]map[string]interface{}, len(objs))
+	res := make([]map[string]any, len(objs))
 	for i, r := range objs {
 		switch r := r.(type) {
 		case *client.Client:
-			jc := map[string]interface{}{
+			jc := map[string]any{
 				"name":       r.Name,
 				"chef_type":  r.ChefType,
 				"json_class": r.JSONClass,
@@ -174,10 +174,7 @@ func (p *PostgresSearch) Search(idx string, q string, rows int, sortOrder string
 	}
 	res = sortResults.res
 
-	end := start + rows
-	if end > len(res) {
-		end = len(res)
-	}
+	end := min(start+rows, len(res))
 	res = res[start:end]
 	return res, nil
 }
@@ -496,8 +493,8 @@ func binOp(op Op) string {
 	return opStr
 }
 
-func craftFullQuery(orgID int, idx string, paths []string, arguments []string, queryStrs []string, tNum *int) (string, []interface{}) {
-	allArgs := make([]interface{}, 0, len(paths)+len(arguments)+2)
+func craftFullQuery(orgID int, idx string, paths []string, arguments []string, queryStrs []string, tNum *int) (string, []any) {
+	allArgs := make([]any, 0, len(paths)+len(arguments)+2)
 	allArgs = append(allArgs, orgID)
 	allArgs = append(allArgs, idx)
 
@@ -560,7 +557,7 @@ func craftAltQueryPath(a, b string) string {
 	return util.PgSearchQueryKey(strings.Join([]string{a, b}, "."))
 }
 
-func searchQueryDebugf(format string, args ...interface{}) {
+func searchQueryDebugf(format string, args ...any) {
 	if config.Config.SearchQueryDebug {
 		logger.Debugf(format, args...)
 	}

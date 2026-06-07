@@ -29,7 +29,7 @@ import (
 func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	pathArray := splitPath(r.URL.Path)
-	sboxResponse := make(map[string]interface{})
+	sboxResponse := make(map[string]any)
 	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
 		jsonErrorReport(w, r, oerr.Error(), oerr.Status())
@@ -51,7 +51,7 @@ func sandboxHandler(w http.ResponseWriter, r *http.Request) {
 			jsonErrorReport(w, r, jerr.Error(), http.StatusBadRequest)
 			return
 		}
-		sboxHash, ok := jsonReq["checksums"].(map[string]interface{})
+		sboxHash, ok := jsonReq["checksums"].(map[string]any)
 		if !ok {
 			jsonErrorReport(w, r, "Field 'checksums' missing", http.StatusBadRequest)
 			return

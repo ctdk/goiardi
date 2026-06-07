@@ -33,7 +33,7 @@ import (
 func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	pathArray := splitPath(r.URL.Path)
-	cookbookResponse := make(map[string]interface{})
+	cookbookResponse := make(map[string]any)
 
 	opUser, oerr := reqctx.CtxReqUser(r.Context())
 	if oerr != nil {
@@ -253,7 +253,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 					chkDiv := []string{"definitions", "libraries", "attributes", "providers", "resources", "templates", "root_files", "files"}
 					for _, cd := range chkDiv {
 						if cookbookResponse[cd] == nil {
-							cookbookResponse[cd] = make([]map[string]interface{}, 0)
+							cookbookResponse[cd] = make([]map[string]any, 0)
 						}
 					}
 				}

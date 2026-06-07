@@ -126,7 +126,7 @@ func getMultiSQL(nodeNames []string) ([]*Node, error) {
 		return nil, err
 	}
 	defer stmt.Close()
-	nameArgs := make([]interface{}, len(nodeNames))
+	nameArgs := make([]any, len(nodeNames))
 	for i, v := range nodeNames {
 		nameArgs[i] = v
 	}

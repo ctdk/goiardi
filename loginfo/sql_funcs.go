@@ -59,7 +59,7 @@ func (le *LogInfo) importEventSQL() error {
 
 	aiBuf := bytes.NewBuffer([]byte(le.ActorInfo))
 	aiRC := ioutil.NopCloser(aiBuf)
-	doer := make(map[string]interface{})
+	doer := make(map[string]any)
 
 	dec := json.NewDecoder(aiRC)
 	dec.UseNumber()
@@ -209,7 +209,7 @@ func getLogInfoListSQL(searchParams map[string]string, from, until time.Time, li
 	var loggedEvents []*LogInfo
 
 	var sqlStmt string
-	sqlArgs := []interface{}{from, until}
+	sqlArgs := []any{from, until}
 	if config.Config.UseMySQL {
 		sqlStmt = "SELECT li.id, actor_type, actor_info, time, action, object_type, object_name, extended_info FROM log_infos li JOIN users u ON li.actor_id = u.id WHERE time >= ? AND time <= ?"
 		if action, ok := searchParams["action"]; ok {

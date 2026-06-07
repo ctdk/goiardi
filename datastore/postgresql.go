@@ -24,7 +24,7 @@ import (
 	"strings"
 )
 
-func formatPostgresqlConStr(p interface{}) string {
+func formatPostgresqlConStr(p any) string {
 	params := p.(config.PostgreSQLdb)
 	var conParams []string
 

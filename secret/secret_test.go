@@ -1,3 +1,4 @@
+//go:build !novault
 // +build !novault
 
 /*
@@ -86,7 +87,7 @@ func (k *keyer) PublicKey() string {
 	return ""
 }
 
-func (k *keyer) SetPublicKey(i interface{}) error {
+func (k *keyer) SetPublicKey(i any) error {
 	return nil
 }
 
@@ -142,7 +143,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("error setting up vault client: %s", err.Error())
 	}
-	_, err = cl.Logical().Write(signingPath, map[string]interface{}{
+	_, err = cl.Logical().Write(signingPath, map[string]any{
 		"RSAKey": signingKey,
 	})
 	if err != nil {

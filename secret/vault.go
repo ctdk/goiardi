@@ -1,3 +1,4 @@
+//go:build !novault
 // +build !novault
 
 /*
@@ -55,10 +56,10 @@ type secretVal struct {
 	stale         bool
 	staleTryAgain time.Time
 	staleTime     time.Time
-	value         interface{}
+	value         any
 }
 
-type secretConvert func(interface{}) (interface{}, error)
+type secretConvert func(any) (any, error)
 
 func configureVault() (*vaultSecretStore, error) {
 	conf := vault.DefaultConfig()
@@ -78,7 +79,7 @@ func configureVault() (*vaultSecretStore, error) {
 	return v, nil
 }
 
-func (v *vaultSecretStore) getSecret(path string, secretType string) (interface{}, error) {
+func (v *vaultSecretStore) getSecret(path string, secretType string) (any, error) {
 	if v.secrets[path] == nil {
 		logger.Debugf("secret (%s) for %s is nil, fetching from vault", secretType, path)
 		s, err := v.getSecretPath(path, secretType)
@@ -116,10 +117,10 @@ func (v *vaultSecretStore) getSecretPath(path string, secretType string) (*secre
 	return sVal, nil
 }
 
-func (v *vaultSecretStore) setSecret(path string, secretType string, value interface{}) error {
+func (v *vaultSecretStore) setSecret(path string, secretType string, value any) error {
 	logger.Debugf("setting public key for %s (%s)", path, secretType)
 	t := time.Now()
-	_, err := v.Logical().Write(path, map[string]interface{}{
+	_, err := v.Logical().Write(path, map[string]any{
 		secretType: value,
 	})
 	if err != nil {
@@ -189,7 +190,7 @@ func makeHashPath(c ActorKeyer) string {
 	return fmt.Sprintf("keys/passwd/%s/%s", c.URLType(), c.GetName())
 }
 
-func newSecretVal(path string, secretType string, value interface{}, t time.Time, s *vault.Secret) *secretVal {
+func newSecretVal(path string, secretType string, value any, t time.Time, s *vault.Secret) *secretVal {
 	sVal := new(secretVal)
 	sVal.path = path
 	sVal.secretType = secretType
@@ -208,7 +209,7 @@ func (s *secretVal) isExpired() bool {
 	return time.Now().After(s.expires)
 }
 
-func (v *vaultSecretStore) secretValue(s *secretVal) (interface{}, error) {
+func (v *vaultSecretStore) secretValue(s *secretVal) (any, error) {
 	if s.isExpired() {
 		logger.Debugf("trying to renew secret for %s", s.path)
 		s2, err := v.getSecretPath(s.path, s.secretType)
@@ -314,11 +315,11 @@ func (v *vaultSecretStore) deletePasswdHash(c ActorKeyer) error {
 
 // funcs to process secrets after fetching them from vault
 
-func secretPassThrough(i interface{}) (interface{}, error) {
+func secretPassThrough(i any) (any, error) {
 	return i, nil
 }
 
-func secretRSAKey(i interface{}) (interface{}, error) {
+func secretRSAKey(i any) (any, error) {
 	p, ok := i.(string)
 	if !ok {
 		return nil, fmt.Errorf("not an RSA private key in string form")

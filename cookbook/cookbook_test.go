@@ -44,7 +44,7 @@ func TestLatestConstrained(t *testing.T) {
 	gob.Register(c)
 	v := new(CookbookVersion)
 	gob.Register(v)
-	rm := make(map[string]interface{})
+	rm := make(map[string]any)
 	gob.Register(rm)
 
 	a := []string{"0ab75b43c726c3e7c00d7950dd6c3577", "b43166991a65cc7e711a018b93105544", "e2ff77580f69d7612e6a67640fdc2fe0", "5822b0e3808ed57308a0eff8b61f7dc2"}
@@ -88,7 +88,7 @@ func TestLatestConstrained(t *testing.T) {
 
 	for _, tc := range conTests {
 		tcb := cb.ConstrainedInfoHash("1", tc.constraint)
-		vs := tcb["versions"].([]interface{})
+		vs := tcb["versions"].([]any)
 		lvs := len(vs)
 
 		if lvs != tc.expectedNumResults {
@@ -104,7 +104,7 @@ func TestLatestConstrained(t *testing.T) {
 	}
 }
 
-func loadCookbookFromJSON(path string) (map[string]interface{}, error) {
+func loadCookbookFromJSON(path string) (map[string]any, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func loadCookbookFromJSON(path string) (map[string]interface{}, error) {
 	defer f.Close()
 
 	dec := json.NewDecoder(f)
-	var mc map[string]interface{}
+	var mc map[string]any
 	if err = dec.Decode(&mc); err != nil {
 		return nil, err
 	}

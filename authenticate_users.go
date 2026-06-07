@@ -39,7 +39,7 @@ func authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	dec := json.NewDecoder(r.Body)
 	dec.UseNumber()
-	authJSON := make(map[string]interface{})
+	authJSON := make(map[string]any)
 	if err := dec.Decode(&authJSON); err != nil {
 		jsonErrorReport(w, r, err.Error(), http.StatusBadRequest)
 		return
@@ -81,7 +81,7 @@ func validateLogin(auth *authenticator) authResponse {
 	return resp
 }
 
-func validateJSON(authJSON map[string]interface{}) (*authenticator, error) {
+func validateJSON(authJSON map[string]any) (*authenticator, error) {
 	auth := new(authenticator)
 	if name, ok := authJSON["name"]; ok {
 		switch name := name.(type) {

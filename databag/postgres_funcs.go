@@ -22,7 +22,7 @@ import (
 
 // PostgreSQL-specific functions for data bags & data bag items.
 
-func (db *DataBag) newDBItemPostgreSQL(dbiID string, rawDbagItem map[string]interface{}) (*DataBagItem, error) {
+func (db *DataBag) newDBItemPostgreSQL(dbiID string, rawDbagItem map[string]any) (*DataBagItem, error) {
 	rawb, rawerr := datastore.EncodeBlob(&rawDbagItem)
 	if rawerr != nil {
 		return nil, rawerr

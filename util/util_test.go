@@ -22,10 +22,10 @@ import (
 )
 
 type testObj struct {
-	Name        string                 `json:"name"`
-	TestURLType string                 `json:"test_url_type"`
-	Normal      map[string]interface{} `json:"normal"`
-	RunList     []string               `json:"run_list"`
+	Name        string         `json:"name"`
+	TestURLType string         `json:"test_url_type"`
+	Normal      map[string]any `json:"normal"`
+	RunList     []string       `json:"run_list"`
 }
 
 func (to *testObj) GetName() string {
@@ -88,13 +88,13 @@ func TestGerror(t *testing.T) {
 
 func TestFlatten(t *testing.T) {
 	rl := []string{"recipe[foo]", "role[bar]"}
-	normmap := make(map[string]interface{})
+	normmap := make(map[string]any)
 	normmap["foo"] = "bar"
 	normmap["baz"] = "buz"
 	normmap["slice"] = []string{"fee", "fie", "fo"}
-	normmap["map"] = make(map[string]interface{})
-	normmap["map"].(map[string]interface{})["first"] = "mook"
-	normmap["map"].(map[string]interface{})["second"] = "nork"
+	normmap["map"] = make(map[string]any)
+	normmap["map"].(map[string]any)["first"] = "mook"
+	normmap["map"].(map[string]any)["second"] = "nork"
 	obj := &testObj{Name: "foo", TestURLType: "bar", RunList: rl, Normal: normmap}
 	flattened := FlattenObj(obj)
 	if _, ok := flattened["name"]; !ok {
@@ -130,13 +130,13 @@ func TestFlatten(t *testing.T) {
 
 func TestMapify(t *testing.T) {
 	rl := []string{"recipe[foo]", "role[bar]"}
-	normmap := make(map[string]interface{})
+	normmap := make(map[string]any)
 	normmap["foo"] = "bar"
 	normmap["baz"] = "buz"
 	normmap["slice"] = []string{"fee", "fie", "fo"}
-	normmap["map"] = make(map[string]interface{})
-	normmap["map"].(map[string]interface{})["first"] = "mook"
-	normmap["map"].(map[string]interface{})["second"] = "nork"
+	normmap["map"] = make(map[string]any)
+	normmap["map"].(map[string]any)["first"] = "mook"
+	normmap["map"].(map[string]any)["second"] = "nork"
 	obj := &testObj{Name: "foo", TestURLType: "bar", RunList: rl, Normal: normmap}
 	mapify := MapifyObject(obj)
 	if mapify["name"].(string) != obj.Name {
@@ -152,13 +152,13 @@ func TestMapify(t *testing.T) {
 
 func TestIndexify(t *testing.T) {
 	rl := []string{"recipe[foo]", "role[bar]"}
-	normmap := make(map[string]interface{})
+	normmap := make(map[string]any)
 	normmap["foo"] = "bar"
 	normmap["baz"] = "buz"
 	normmap["slice"] = []string{"fee", "fie", "fo"}
-	normmap["map"] = make(map[string]interface{})
-	normmap["map"].(map[string]interface{})["first"] = "mook"
-	normmap["map"].(map[string]interface{})["second"] = "nork"
+	normmap["map"] = make(map[string]any)
+	normmap["map"].(map[string]any)["first"] = "mook"
+	normmap["map"].(map[string]any)["second"] = "nork"
 	obj := &testObj{Name: "foo", TestURLType: "bar", RunList: rl, Normal: normmap}
 	flatten := FlattenObj(obj)
 	indexificate := Indexify(flatten)
@@ -217,7 +217,7 @@ func TestValidateAsVersion(t *testing.T) {
 	goodVersion2 := "1.0"
 	badVer1 := "1"
 	badVer2 := "foo"
-	var badVer3 interface{}
+	var badVer3 any
 	badVer3 = nil
 
 	if _, err := ValidateAsVersion(goodVersion); err != nil {

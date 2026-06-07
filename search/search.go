@@ -39,12 +39,12 @@ import (
 // up to the Searcher to use whatever backend it wants to return the desired
 // results.
 type Searcher interface {
-	Search(string, string, int, string, int, map[string]interface{}) ([]map[string]interface{}, error)
+	Search(string, string, int, string, int, map[string]any) ([]map[string]any, error)
 	GetEndpoints() []string
 }
 
 type results struct {
-	res     []map[string]interface{}
+	res     []map[string]any
 	sortKey string
 }
 
@@ -98,7 +98,7 @@ type TrieSearch struct {
 
 // Search parses the given query string and search the given index for any
 // matching results.
-func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string, start int, partialData map[string]interface{}) ([]map[string]interface{}, error) {
+func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string, start int, partialData map[string]any) ([]map[string]any, error) {
 	defer trackSearchTiming(time.Now(), query, inMemSearchTimings)
 	m.Lock()
 	defer m.Unlock()
@@ -118,11 +118,11 @@ func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string
 	}
 	qresults := solrQ.results()
 	objs := getResults(idx, qresults)
-	res := make([]map[string]interface{}, len(objs))
+	res := make([]map[string]any, len(objs))
 	for i, r := range objs {
 		switch r := r.(type) {
 		case *client.Client:
-			jc := map[string]interface{}{
+			jc := map[string]any{
 				"name":       r.Name,
 				"chef_type":  r.ChefType,
 				"json_class": r.JSONClass,
@@ -164,10 +164,7 @@ func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string
 	}
 	res = sortResults.res
 
-	end := start + rows
-	if end > len(res) {
-		end = len(res)
-	}
+	end := min(start+rows, len(res))
 	res = res[start:end]
 	return res, nil
 }
@@ -324,12 +321,12 @@ func getResults(variety string, toGet []string) []indexer.Indexable {
 	return results
 }
 
-func partialSearchFormat(results []map[string]interface{}, partialFormat map[string]interface{}) ([]map[string]interface{}, error) {
+func partialSearchFormat(results []map[string]any, partialFormat map[string]any) ([]map[string]any, error) {
 	/* regularize partial search keys */
 	psearchKeys := make(map[string][]string, len(partialFormat))
 	for k, v := range partialFormat {
 		switch v := v.(type) {
-		case []interface{}:
+		case []any:
 			psearchKeys[k] = make([]string, len(v))
 			for i, j := range v {
 				switch j := j.(type) {
@@ -350,12 +347,12 @@ func partialSearchFormat(results []map[string]interface{}, partialFormat map[str
 			return nil, err
 		}
 	}
-	newResults := make([]map[string]interface{}, len(results))
+	newResults := make([]map[string]any, len(results))
 
 	for i, j := range results {
-		newResults[i] = make(map[string]interface{})
+		newResults[i] = make(map[string]any)
 		for key, vals := range psearchKeys {
-			var pval interface{}
+			var pval any
 			/* The first key can either be top or first level.
 			 * Annoying, but that's how it is. */
 			if len(vals) > 0 {
@@ -375,10 +372,10 @@ func partialSearchFormat(results []map[string]interface{}, partialFormat map[str
 							tval := walk(j[r], vals[0:])
 							if tval != nil {
 								switch pv := pval.(type) {
-								case map[string]interface{}:
+								case map[string]any:
 									// only merge if tval is also a map[string]interface{}
 									switch tval := tval.(type) {
-									case map[string]interface{}:
+									case map[string]any:
 										for g, h := range tval {
 											pv[g] = h
 										}
@@ -398,9 +395,9 @@ func partialSearchFormat(results []map[string]interface{}, partialFormat map[str
 	return newResults, nil
 }
 
-func walk(v interface{}, keys []string) interface{} {
+func walk(v any, keys []string) any {
 	switch v := v.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		if _, found := v[keys[0]]; found {
 			if len(keys) > 1 {
 				return walk(v[keys[0]], keys[1:])
@@ -420,14 +417,14 @@ func walk(v interface{}, keys []string) interface{} {
 	}
 }
 
-func formatPartials(results []map[string]interface{}, objs []indexer.Indexable, partialData map[string]interface{}) ([]map[string]interface{}, error) {
+func formatPartials(results []map[string]any, objs []indexer.Indexable, partialData map[string]any) ([]map[string]any, error) {
 	var err error
 	results, err = partialSearchFormat(results, partialData)
 	if err != nil {
 		return nil, err
 	}
 	for x, z := range results {
-		tmpRes := make(map[string]interface{})
+		tmpRes := make(map[string]any)
 		switch ro := objs[x].(type) {
 		case *databag.DataBagItem:
 			dbiURL := fmt.Sprintf("/data/%s/%s", ro.DataBagName, ro.RawData["id"].(string))

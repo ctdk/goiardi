@@ -15,7 +15,8 @@
  */
 
 /*
-Package report implements reporting on client runs and node changes. See http://docs.opscode.com/reporting.html for details. CURRENTLY EXPERIMENTAL. */
+Package report implements reporting on client runs and node changes. See http://docs.opscode.com/reporting.html for details. CURRENTLY EXPERIMENTAL.
+*/
 package report
 
 import (
@@ -42,15 +43,15 @@ const ReportTimeFormat = "2006-01-02 15:04:05 -0700"
 // resources changed, what recipes were in the run list, and whether the run was
 // successful or not.
 type Report struct {
-	RunID          string                 `json:"run_id"`
-	StartTime      time.Time              `json:"start_time"`
-	EndTime        time.Time              `json:"end_time"`
-	TotalResCount  int                    `json:"total_res_count"`
-	Status         string                 `json:"status"`
-	RunList        string                 `json:"run_list"`
-	Resources      []interface{}          `json:"resources"`
-	Data           map[string]interface{} `json:"data"` // I think this is right
-	NodeName       string                 `json:"node_name"`
+	RunID          string         `json:"run_id"`
+	StartTime      time.Time      `json:"start_time"`
+	EndTime        time.Time      `json:"end_time"`
+	TotalResCount  int            `json:"total_res_count"`
+	Status         string         `json:"status"`
+	RunList        string         `json:"run_list"`
+	Resources      []any          `json:"resources"`
+	Data           map[string]any `json:"data"` // I think this is right
+	NodeName       string         `json:"node_name"`
 	organizationID int
 }
 
@@ -61,8 +62,8 @@ type privReport struct {
 	TotalResCount  *int
 	Status         *string
 	RunList        *string
-	Resources      *[]interface{}
-	Data           *map[string]interface{}
+	Resources      *[]any
+	Data           *map[string]any
 	NodeName       *string
 	OrganizationID *int
 }
@@ -138,7 +139,7 @@ func Get(runID string) (*Report, util.Gerror) {
 		}
 	} else {
 		ds := datastore.New()
-		var r interface{}
+		var r any
 		r, found = ds.Get("report", runID)
 		if r != nil {
 			report = r.(*Report)
@@ -205,7 +206,7 @@ func DeleteByAge(dur time.Duration) (int, error) {
 }
 
 // NewFromJSON creates a new report from the given uploaded JSON.
-func NewFromJSON(nodeName string, jsonReport map[string]interface{}) (*Report, util.Gerror) {
+func NewFromJSON(nodeName string, jsonReport map[string]any) (*Report, util.Gerror) {
 	rid, ok := jsonReport["run_id"].(string)
 	if !ok {
 		err := util.Errorf("invalid run id")
@@ -245,7 +246,7 @@ func NewFromJSON(nodeName string, jsonReport map[string]interface{}) (*Report, u
 }
 
 // UpdateFromJSON updates a report with the values in the uploaded JSON.
-func (r *Report) UpdateFromJSON(jsonReport map[string]interface{}) util.Gerror {
+func (r *Report) UpdateFromJSON(jsonReport map[string]any) util.Gerror {
 	if action, ok := jsonReport["action"].(string); ok {
 		if action != "end" {
 			err := util.Errorf("invalid action %s", action)
@@ -307,12 +308,12 @@ func (r *Report) UpdateFromJSON(jsonReport map[string]interface{}) util.Gerror {
 		err := util.Errorf("invalid run_list")
 		return err
 	}
-	_, ok = jsonReport["resources"].([]interface{})
+	_, ok = jsonReport["resources"].([]any)
 	if !ok {
 		err := util.Errorf("invalid resources %T", jsonReport["resources"])
 		return err
 	}
-	_, ok = jsonReport["data"].(map[string]interface{})
+	_, ok = jsonReport["data"].(map[string]any)
 	if !ok {
 		err := util.Errorf("invalid data")
 		return err
@@ -322,8 +323,8 @@ func (r *Report) UpdateFromJSON(jsonReport map[string]interface{}) util.Gerror {
 	r.TotalResCount = trc
 	r.Status = jsonReport["status"].(string)
 	r.RunList = jsonReport["run_list"].(string)
-	r.Resources = jsonReport["resources"].([]interface{})
-	r.Data = jsonReport["data"].(map[string]interface{})
+	r.Resources = jsonReport["resources"].([]any)
+	r.Data = jsonReport["data"].(map[string]any)
 	return nil
 }
 

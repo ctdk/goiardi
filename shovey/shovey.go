@@ -110,7 +110,7 @@ func newQuerror(text string) Qerror {
 }
 
 // Errorf creates a new Qerror, with a formatted error string.
-func Errorf(format string, a ...interface{}) Qerror {
+func Errorf(format string, a ...any) Qerror {
 	return newQuerror(fmt.Sprintf(format, a...))
 }
 
@@ -528,8 +528,8 @@ func (s *Shovey) checkCompleted() {
 }
 
 // ToJSON formats a shovey instance to render as JSON for the client.
-func (s *Shovey) ToJSON() (map[string]interface{}, util.Gerror) {
-	toJSON := make(map[string]interface{})
+func (s *Shovey) ToJSON() (map[string]any, util.Gerror) {
+	toJSON := make(map[string]any)
 	toJSON["id"] = s.RunID
 	toJSON["command"] = s.Command
 	toJSON["run_timeout"] = s.Timeout
@@ -619,7 +619,7 @@ func AllShoveyRunStreams() []*ShoveyRunStream {
 }
 
 // UpdateFromJSON updates a ShoveyRun with the given JSON from the client.
-func (sr *ShoveyRun) UpdateFromJSON(srData map[string]interface{}) util.Gerror {
+func (sr *ShoveyRun) UpdateFromJSON(srData map[string]any) util.Gerror {
 	if status, ok := srData["status"].(string); ok {
 		if status == "invalid" || status == "succeeded" || status == "failed" || status == "nacked" {
 			sr.EndTime = time.Now()
@@ -706,9 +706,9 @@ func (sr *ShoveyRun) CombineStreamOutput(outputType string, seq int) (string, ut
 }
 
 // ToJSON formats a ShoveyRun for marshalling as JSON.
-func (sr *ShoveyRun) ToJSON() (map[string]interface{}, util.Gerror) {
+func (sr *ShoveyRun) ToJSON() (map[string]any, util.Gerror) {
 	var err util.Gerror
-	toJSON := make(map[string]interface{})
+	toJSON := make(map[string]any)
 	toJSON["run_id"] = sr.ShoveyUUID
 	toJSON["node_name"] = sr.NodeName
 	toJSON["status"] = sr.Status
@@ -799,9 +799,9 @@ func (s *Shovey) signRequest(payload map[string]string) (string, error) {
 }
 
 // ImportShovey is used to import shovey jobs from the exported JSON dump.
-func ImportShovey(shoveyJSON map[string]interface{}) error {
+func ImportShovey(shoveyJSON map[string]any) error {
 	runID := shoveyJSON["id"].(string)
-	nn := shoveyJSON["nodes"].([]interface{})
+	nn := shoveyJSON["nodes"].([]any)
 	nodeNames := make([]string, len(nn))
 	for i, v := range nn {
 		nodeNames[i] = v.(string)
@@ -826,7 +826,7 @@ func ImportShovey(shoveyJSON map[string]interface{}) error {
 }
 
 // ImportShoveyRun is used to import shovey jobs from the exported JSON dump.
-func ImportShoveyRun(sRunJSON map[string]interface{}) error {
+func ImportShoveyRun(sRunJSON map[string]any) error {
 	shoveyUUID := sRunJSON["run_id"].(string)
 	nodeName := sRunJSON["node_name"].(string)
 	status := sRunJSON["status"].(string)
@@ -853,7 +853,7 @@ func ImportShoveyRun(sRunJSON map[string]interface{}) error {
 
 // ImportShoveyRunStream is used to import shovey jobs from the exported JSON
 // dump.
-func ImportShoveyRunStream(srStreamJSON map[string]interface{}) error {
+func ImportShoveyRunStream(srStreamJSON map[string]any) error {
 	shoveyUUID := srStreamJSON["ShoveyUUID"].(string)
 	nodeName := srStreamJSON["NodeName"].(string)
 	seqtmp, _ := intify(srStreamJSON["Seq"])
@@ -893,7 +893,7 @@ func (s BySeq) Len() int           { return len(s) }
 func (s BySeq) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s BySeq) Less(i, j int) bool { return s[i].Seq < s[j].Seq }
 
-func intify(i interface{}) (int64, bool) {
+func intify(i any) (int64, bool) {
 	var retint int64
 	var ok bool
 

@@ -28,7 +28,8 @@ type Body struct {
 }
 
 // AuthConfig representing a client and a private key used for encryption
-//  This is embedded in the Client type
+//
+//	This is embedded in the Client type
 type AuthConfig struct {
 	PrivateKey *rsa.PrivateKey
 	ClientName string
@@ -143,7 +144,7 @@ func NewClient(cfg *Config) (*Client, error) {
 }
 
 // magicRequestDecoder performs a request on an endpoint, and decodes the response into the passed in Type
-func (c *Client) magicRequestDecoder(method, path string, body io.Reader, v interface{}) error {
+func (c *Client) magicRequestDecoder(method, path string, body io.Reader, v any) error {
 	req, err := c.NewRequest(method, path, body)
 	if err != nil {
 		return err
@@ -209,7 +210,7 @@ func CheckResponse(r *http.Response) error {
 }
 
 // Do is used either internally via our magic request shite or a user may use it
-func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
+func (c *Client) Do(req *http.Request, v any) (*http.Response, error) {
 	res, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -300,4 +301,4 @@ func PrivateKeyFromString(key []byte) (*rsa.PrivateKey, error) {
 	return rsaKey, nil
 }
 
-func debug(fmt string, args ...interface{}) {}
+func debug(fmt string, args ...any) {}

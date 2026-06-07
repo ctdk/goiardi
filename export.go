@@ -44,7 +44,7 @@ type ExportData struct {
 	CreatedTime  time.Time
 	// It's a map of interfaces because the object structs may change
 	// between releases.
-	Data map[string][]interface{}
+	Data map[string][]any
 }
 
 // Major version number of the export file format.
@@ -59,7 +59,7 @@ const ExportMinorVersion = 1
 
 func exportAll(fileName string) error {
 	exportedData := &ExportData{MajorVersion: ExportMajorVersion, MinorVersion: ExportMinorVersion, CreatedTime: time.Now()}
-	exportedData.Data = make(map[string][]interface{})
+	exportedData.Data = make(map[string][]any)
 	// ... and march through everything.
 	exportedData.Data["client"] = client.ExportAllClients()
 	exportedData.Data["cookbook"] = exportTransformSlice(cookbook.AllCookbooks())
@@ -88,81 +88,81 @@ func exportAll(fileName string) error {
 	return nil
 }
 
-func exportTransformSlice(data interface{}) []interface{} {
-	var exp []interface{}
+func exportTransformSlice(data any) []any {
+	var exp []any
 	switch data := data.(type) {
 	case []*client.Client:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*user.User:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*cookbook.Cookbook:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*databag.DataBag:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*environment.ChefEnvironment:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*filestore.FileStore:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*loginfo.LogInfo:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*node.Node:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*report.Report:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*role.Role:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*sandbox.Sandbox:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*node.NodeStatus:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*shovey.Shovey:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*shovey.ShoveyRun:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}
 	case []*shovey.ShoveyRunStream:
-		exp = make([]interface{}, len(data))
+		exp = make([]any, len(data))
 		for i, v := range data {
 			exp[i] = v
 		}

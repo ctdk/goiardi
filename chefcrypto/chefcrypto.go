@@ -71,7 +71,7 @@ func GenerateRSAKeys() (string, string, error) {
 }
 
 // ValidatePublicKey checks that the provided public key is valid.
-func ValidatePublicKey(publicKey interface{}) (bool, error) {
+func ValidatePublicKey(publicKey any) (bool, error) {
 	switch publicKey := publicKey.(type) {
 	case string:
 		// at the moment we don't care about the pub interface

@@ -62,7 +62,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 
 	pathArray := splitPath(r.URL.Path)
 	pathArrayLen := len(pathArray)
-	reportResponse := make(map[string]interface{})
+	reportResponse := make(map[string]any)
 
 	switch r.Method {
 	case http.MethodHead:
@@ -182,7 +182,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		// Can't use the usual parseObjJSON function here, since
 		// the reporting "run_list" type is a string rather
 		// than []interface{}.
-		jsonReport := make(map[string]interface{})
+		jsonReport := make(map[string]any)
 		dec := json.NewDecoder(r.Body)
 		dec.UseNumber()
 		if jerr := dec.Decode(&jsonReport); jerr != nil {
@@ -241,11 +241,11 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 
 // This function is subject to change, depending on what the client actually
 // expects. This may not be entirely correct.
-func formatRunShow(run *report.Report) map[string]interface{} {
+func formatRunShow(run *report.Report) map[string]any {
 	reportMap := util.MapifyObject(run)
 	resources := reportMap["resources"]
 	delete(reportMap, "resources")
-	reportFmt := make(map[string]interface{})
+	reportFmt := make(map[string]any)
 	reportFmt["run_detail"] = reportMap
 	reportFmt["resources"] = resources
 	return reportFmt

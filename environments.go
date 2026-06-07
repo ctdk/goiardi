@@ -50,7 +50,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pathArray := splitPath(r.URL.Path)
-	envResponse := make(map[string]interface{})
+	envResponse := make(map[string]any)
 	var numResults string
 	r.ParseForm()
 	if nrs, found := r.Form["num_versions"]; found {
@@ -310,8 +310,8 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 					// In 1.0.0-dev, there's a
 					// JSONErrorMapReport function in util.
 					// Use that when moving this forward
-					errMap := make(map[string][]map[string]interface{})
-					errMap["error"] = make([]map[string]interface{}, 1)
+					errMap := make(map[string][]map[string]any)
+					errMap["error"] = make([]map[string]any, 1)
 					errMap["error"][0] = derr.ErrMap()
 					w.WriteHeader(http.StatusPreconditionFailed)
 					logger.Infof("Cookbook Depends Errors in %s: %+v", env.Name, derr.ErrMap())

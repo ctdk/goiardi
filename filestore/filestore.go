@@ -108,7 +108,7 @@ func Get(chksum string) (*FileStore, error) {
 		}
 	} else {
 		ds := datastore.New()
-		var f interface{}
+		var f any
 		f, found = ds.Get("filestore", chksum)
 		if f != nil {
 			filestore = f.(*FileStore)

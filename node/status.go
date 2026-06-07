@@ -68,8 +68,8 @@ func (n *Node) UpdateStatus(status string) error {
 
 // ImportStatus is used by the import function to import node statuses from the
 // exported JSON dump.
-func ImportStatus(nodeJSON map[string]interface{}) error {
-	n := nodeJSON["Node"].(map[string]interface{})
+func ImportStatus(nodeJSON map[string]any) error {
+	n := nodeJSON["Node"].(map[string]any)
 	status := nodeJSON["Status"].(string)
 	ut := nodeJSON["UpdatedAt"].(string)
 	updatedAt, err := time.Parse(time.RFC3339, ut)
@@ -240,7 +240,7 @@ func DeleteNodeStatusesByAge(dur time.Duration) (int, error) {
 		}
 		i := sort.Search(len(statuses), func(i int) bool { return statuses[i].UpdatedAt.After(cutoff) })
 		statuses = statuses[i:]
-		statusesIface := make([]interface{}, len(statuses))
+		statusesIface := make([]any, len(statuses))
 		for z, v := range statuses {
 			statusesIface[z] = v
 		}

@@ -56,7 +56,7 @@ var oldLabelPubKey = "-----BEGIN RSA PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAA
 var onePubKey = "1"
 var realBadPubKey = "-----BEGIN PUBLIC KEY-----\nI'm bad to the bone\n-----END PUBLIC KEY-----"
 var arrPubKey = []string{}
-var mapPubKey = make(map[string]interface{})
+var mapPubKey = make(map[string]any)
 
 func TestGoodPubKey(t *testing.T) {
 	ok, err := ValidatePublicKey(goodPubKey)

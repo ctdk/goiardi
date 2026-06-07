@@ -28,8 +28,8 @@ import (
 	"github.com/tideland/golib/logger"
 )
 
-func parseObjJSON(data io.ReadCloser) (map[string]interface{}, error) {
-	objData := make(map[string]interface{})
+func parseObjJSON(data io.ReadCloser) (map[string]any, error) {
+	objData := make(map[string]any)
 	dec := json.NewDecoder(data)
 	dec.UseNumber()
 
@@ -39,7 +39,7 @@ func parseObjJSON(data io.ReadCloser) (map[string]interface{}, error) {
 	return checkAttrs(objData)
 }
 
-func checkAttrs(objData map[string]interface{}) (map[string]interface{}, error) {
+func checkAttrs(objData map[string]any) (map[string]any, error) {
 	/* If this kind of object comes with a run_list, process it */
 	if _, ok := objData["run_list"]; ok {
 		rl, err := chkRunList(objData["run_list"])
@@ -52,7 +52,7 @@ func checkAttrs(objData map[string]interface{}) (map[string]interface{}, error) 
 	/* And if we have env_run_lists */
 	if _, ok := objData["env_run_lists"]; ok {
 		switch erl := objData["env_run_lists"].(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			newEnvRunList := make(map[string][]string, len(erl))
 			var erlerr error
 			for i, v := range erl {
@@ -74,7 +74,7 @@ func checkAttrs(objData map[string]interface{}) (map[string]interface{}, error) 
 		/* Don't add if it doesn't exist in the json data at all */
 		if _, ok := objData[k]; ok {
 			if objData[k] == nil {
-				objData[k] = make(map[string]interface{})
+				objData[k] = make(map[string]any)
 			}
 		}
 	}
@@ -110,9 +110,9 @@ func checkAccept(w http.ResponseWriter, r *http.Request, acceptType string) erro
 	return err
 }
 
-func chkRunList(rl interface{}) ([]string, error) {
+func chkRunList(rl any) ([]string, error) {
 	switch o := rl.(type) {
-	case []interface{}:
+	case []any:
 		_ = o
 		newRunList := make([]string, len(o))
 		for i, v := range o {

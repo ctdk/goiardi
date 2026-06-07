@@ -35,6 +35,7 @@ import (
 	"os/signal"
 	"path"
 	"runtime"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -617,15 +618,15 @@ func gobRegister() {
 	gob.Register(r)
 	s := new(sandbox.Sandbox)
 	gob.Register(s)
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	gob.Register(m)
-	var si []interface{}
+	var si []any
 	gob.Register(si)
 	var ss []string
 	gob.Register(ss)
 	ms := make(map[string]string)
 	gob.Register(ms)
-	var smsi []map[string]interface{}
+	var smsi []map[string]any
 	gob.Register(smsi)
 	msss := make(map[string][]string)
 	gob.Register(msss)
@@ -635,7 +636,7 @@ func gobRegister() {
 	gob.Register(uu)
 	li := new(loginfo.LogInfo)
 	gob.Register(li)
-	mis := map[int]interface{}{}
+	mis := map[int]any{}
 	gob.Register(mis)
 	cbv := new(cookbook.CookbookVersion)
 	gob.Register(cbv)
@@ -734,7 +735,7 @@ func startEventMonitor(serfAddr string, errch chan<- error) {
 }
 
 func runEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
-	ch := make(chan map[string]interface{}, 10)
+	ch := make(chan map[string]any, 10)
 	sh, err := sc.Stream("*", ch)
 	if err != nil {
 		errch <- err
@@ -963,10 +964,5 @@ func initGeneralStatsd(metricsBackend met.Backend) {
 }
 
 func matchSupportedVersion(ver string) bool {
-	for _, v := range config.SupportedAPIVersions {
-		if ver == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(config.SupportedAPIVersions, ver)
 }

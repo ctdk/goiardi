@@ -11,7 +11,7 @@ import (
 // that cannot be violated
 type Dependency struct {
 	Name        string
-	Meta        interface{}
+	Meta        any
 	Constraints []Constraint
 	Source      *Noun
 	Target      *Noun

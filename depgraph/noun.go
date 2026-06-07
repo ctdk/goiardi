@@ -11,7 +11,7 @@ import (
 // by depedencies.
 type Noun struct {
 	Name string // Opaque name
-	Meta interface{}
+	Meta any
 	Deps []*Dependency
 }
 

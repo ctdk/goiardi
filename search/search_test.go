@@ -87,7 +87,7 @@ func makeSearchItems() int {
 		clients[i].Save()
 		dbags[i], _ = databag.New(fmt.Sprintf("databag%d", i))
 		dbags[i].Save()
-		dbi := make(map[string]interface{})
+		dbi := make(map[string]any)
 		dbi["id"] = fmt.Sprintf("dbi%d", i)
 		dbi["foo"] = fmt.Sprintf("dbag_item_%d", i)
 		dbi["mac"] = fmt.Sprintf("01:02:03:04:05:%02d", i)
@@ -104,7 +104,7 @@ func makeSearchItems() int {
 	dbagunic, _ = databag.New("unicode")
 	dbagunic.Save()
 	for k := 0; k < 500; k++ {
-		dbu := make(map[string]interface{})
+		dbu := make(map[string]any)
 		dbu["id"] = fmt.Sprintf("dbagunic%d", k)
 		dbu["foo"] = fmt.Sprintf("dbagunic_thingamagic_%d", k)
 		dbu["blè"] = "üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü"

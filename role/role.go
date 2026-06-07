@@ -34,14 +34,14 @@ import (
 
 // Role is a way to specify shared run lists and attributes for nodes.
 type Role struct {
-	Name        string                 `json:"name"`
-	ChefType    string                 `json:"chef_type"`
-	JSONClass   string                 `json:"json_class"`
-	RunList     []string               `json:"run_list"`
-	EnvRunLists map[string][]string    `json:"env_run_lists"`
-	Description string                 `json:"description"`
-	Default     map[string]interface{} `json:"default_attributes"`
-	Override    map[string]interface{} `json:"override_attributes"`
+	Name        string              `json:"name"`
+	ChefType    string              `json:"chef_type"`
+	JSONClass   string              `json:"json_class"`
+	RunList     []string            `json:"run_list"`
+	EnvRunLists map[string][]string `json:"env_run_lists"`
+	Description string              `json:"description"`
+	Default     map[string]any      `json:"default_attributes"`
+	Override    map[string]any      `json:"override_attributes"`
 }
 
 // New creates a new role.
@@ -75,15 +75,15 @@ func New(name string) (*Role, util.Gerror) {
 		JSONClass:   "Chef::Role",
 		RunList:     []string{},
 		EnvRunLists: map[string][]string{},
-		Default:     map[string]interface{}{},
-		Override:    map[string]interface{}{},
+		Default:     map[string]any{},
+		Override:    map[string]any{},
 	}
 
 	return role, nil
 }
 
 // NewFromJSON creates a new role from the uploaded JSON.
-func NewFromJSON(jsonRole map[string]interface{}) (*Role, util.Gerror) {
+func NewFromJSON(jsonRole map[string]any) (*Role, util.Gerror) {
 	role, err := New(jsonRole["name"].(string))
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func NewFromJSON(jsonRole map[string]interface{}) (*Role, util.Gerror) {
 }
 
 // UpdateFromJSON updates an existing role with the uploaded JSON.
-func (r *Role) UpdateFromJSON(jsonRole map[string]interface{}) util.Gerror {
+func (r *Role) UpdateFromJSON(jsonRole map[string]any) util.Gerror {
 	/* TODO - this and node.UpdateFromJSON may be generalizeable with
 	 * reflect - look into it. */
 	if r.Name != jsonRole["name"] {
@@ -179,8 +179,8 @@ ValidElem:
 	r.Description = jsonRole["description"].(string)
 	r.RunList = jsonRole["run_list"].([]string)
 	r.EnvRunLists = jsonRole["env_run_lists"].(map[string][]string)
-	r.Default = jsonRole["default_attributes"].(map[string]interface{})
-	r.Override = jsonRole["override_attributes"].(map[string]interface{})
+	r.Default = jsonRole["default_attributes"].(map[string]any)
+	r.Override = jsonRole["override_attributes"].(map[string]any)
 	return nil
 }
 
@@ -202,7 +202,7 @@ func Get(roleName string) (*Role, error) {
 		}
 	} else {
 		ds := datastore.New()
-		var r interface{}
+		var r any
 		r, found = ds.Get("role", roleName)
 		if r != nil {
 			role = r.(*Role)
@@ -320,7 +320,7 @@ func (r *Role) Index() string {
 }
 
 // Flatten a role so it's suitable for indexing.
-func (r *Role) Flatten() map[string]interface{} {
+func (r *Role) Flatten() map[string]any {
 	return util.FlattenObj(r)
 }
 
