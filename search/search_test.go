@@ -331,6 +331,29 @@ func TestSearchNotSubquery(t *testing.T) {
 	}
 }
 
+// TestSearchPaginationBounds verifies that out-of-range or negative start/rows
+// values are clamped rather than panicking the result pager's slice
+// expression. A pre-fix panic in any case below fails the subtest.
+func TestSearchPaginationBounds(t *testing.T) {
+	cases := []struct {
+		name  string
+		rows  int
+		start int
+	}{
+		{"negative start", 1000, -1},
+		{"start past end", 1000, 1 << 20},
+		{"negative rows", -5, 0},
+		{"both negative", -5, -5},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := searcher.Search("node", "*:*", tc.rows, "id ASC", tc.start, nil); err != nil {
+				t.Errorf("unexpected error: %s", err.Error())
+			}
+		})
+	}
+}
+
 // Probably don't want this as an always test, but it's handy to have available.
 /*
 func TestEmbiggenSearch(t *testing.T) {

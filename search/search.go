@@ -164,7 +164,21 @@ func (t *TrieSearch) Search(idx string, query string, rows int, sortOrder string
 	}
 	res = sortResults.res
 
-	end := min(start+rows, len(res))
+	// Clamp the client-supplied start/rows so out-of-range or negative
+	// values (e.g. ?start=-1 or ?start past the end) cannot panic the
+	// slice expression below.
+	if start < 0 {
+		start = 0
+	} else if start > len(res) {
+		start = len(res)
+	}
+	end := start + rows
+	if end > len(res) {
+		end = len(res)
+	}
+	if end < start {
+		end = start
+	}
 	res = res[start:end]
 	return res, nil
 }
