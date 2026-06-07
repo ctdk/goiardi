@@ -58,7 +58,7 @@ func TestNodeStatus(t *testing.T) {
 	n.UpdateStatus("up")
 	ns, err := n.LatestStatus()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	if ns == nil {
 		t.Errorf("node status was nil!")
@@ -73,7 +73,7 @@ func TestNodeStatus(t *testing.T) {
 	}
 	err = n.deleteStatuses()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	nses, _ = n.AllStatuses()
 	if len(nses) != 0 {

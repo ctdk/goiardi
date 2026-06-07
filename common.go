@@ -88,12 +88,12 @@ func splitPath(path string) []string {
 }
 
 func jsonErrorReport(w http.ResponseWriter, r *http.Request, errorStr string, status int) {
-	logger.Infof(errorStr)
+	logger.Infof("%s", errorStr)
 	jsonError := map[string][]string{"error": []string{errorStr}}
 	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&jsonError); err != nil {
-		logger.Errorf(err.Error())
+		logger.Errorf("%s", err.Error())
 	}
 	return
 }

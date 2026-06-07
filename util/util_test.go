@@ -73,7 +73,7 @@ func TestCustomURL(t *testing.T) {
 
 func TestGerror(t *testing.T) {
 	errmsg := "foo bar"
-	err := Errorf(errmsg)
+	err := Errorf("%s", errmsg)
 	if err.Error() != errmsg {
 		t.Errorf("expected %s to match %s", err.Error(), errmsg)
 	}

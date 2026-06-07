@@ -131,7 +131,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, fmt.Sprintf("Cannot find a cookbook named %s", cookbookName), http.StatusNotFound)
 				return
 			case err != nil:
-				logger.Errorf(err.Error())
+				logger.Errorf("%s", err.Error())
 				jsonErrorReport(w, r, fmt.Sprintf("Cannot get a cookbook named %s", cookbookName), err.Status())
 				return
 			}
@@ -180,7 +180,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				headResponse(w, r, http.StatusNotFound)
 				return
 			case err != nil:
-				logger.Errorf(err.Error())
+				logger.Errorf("%s", err.Error())
 				headResponse(w, r, err.Status())
 				return
 			}
@@ -198,7 +198,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, fmt.Sprintf("Cannot find a cookbook named %s", cookbookName), http.StatusNotFound)
 				return
 			case err != nil:
-				logger.Errorf(err.Error())
+				logger.Errorf("%s", err.Error())
 				jsonErrorReport(w, r, fmt.Sprintf("Cannot get a cookbook named %s", cookbookName), err.Status())
 				return
 			}
@@ -276,7 +276,7 @@ func cookbookHandler(w http.ResponseWriter, r *http.Request) {
 			cb, found, err := cookbook.Get(cookbookName)
 			if err != nil {
 				//there was some kind of unexpected error. report it and quit early
-				logger.Errorf(err.Error())
+				logger.Errorf("%s", err.Error())
 				jsonErrorReport(w, r, fmt.Sprintf("Cannot get a cookbook named %s", cookbookName), err.Status())
 				return
 			}

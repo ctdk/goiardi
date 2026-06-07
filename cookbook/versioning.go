@@ -134,20 +134,20 @@ func extractVerNums(cbVersion string) (maj, min, patch int64, err util.Gerror) {
 	var nerr error
 	vt, nerr = strconv.ParseInt(nums[0], 0, 64)
 	if nerr != nil {
-		err = util.Errorf(nerr.Error())
+		err = util.Errorf("%s", nerr.Error())
 		return 0, 0, 0, err
 	}
 	maj = vt
 	vt, nerr = strconv.ParseInt(nums[1], 0, 64)
 	if nerr != nil {
-		err = util.Errorf(nerr.Error())
+		err = util.Errorf("%s", nerr.Error())
 		return 0, 0, 0, err
 	}
 	min = vt
 	if len(nums) == 3 {
 		vt, nerr = strconv.ParseInt(nums[2], 0, 64)
 		if nerr != nil {
-			err = util.Errorf(nerr.Error())
+			err = util.Errorf("%s", nerr.Error())
 			return 0, 0, 0, err
 		}
 		patch = vt

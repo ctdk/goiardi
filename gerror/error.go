@@ -55,7 +55,7 @@ func Errorf(format string, a ...interface{}) Error {
 
 // CastErr will easily cast a different kind of error to a goiardi Error.
 func CastErr(err error) Error {
-	return Errorf(err.Error())
+	return Errorf("%s", err.Error())
 }
 
 // Error returns the error message.

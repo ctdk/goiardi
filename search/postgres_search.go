@@ -186,7 +186,7 @@ func (p *PostgresSearch) GetEndpoints() []string {
 	// TODO: deal with possible errors
 	endpoints, err := indexer.Endpoints()
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Errorf("%s", err.Error())
 	}
 	return endpoints
 }

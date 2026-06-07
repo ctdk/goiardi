@@ -48,7 +48,7 @@ func (c *Cookbook) saveCookbookMySQL() error {
 func (cbv *CookbookVersion) updateCookbookVersionMySQL(defb, libb, attb, recb, prob, resb, temb, roob, filb, metb []byte, maj, min, patch int64) util.Gerror {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		gerr := util.Errorf(err.Error())
+		gerr := util.Errorf("%s", err.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
@@ -63,7 +63,7 @@ func (cbv *CookbookVersion) updateCookbookVersionMySQL(defb, libb, attb, recb, p
 	cID, err := res.LastInsertId()
 	if err != nil {
 		tx.Rollback()
-		gerr := util.Errorf(err.Error())
+		gerr := util.Errorf("%s", err.Error())
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}

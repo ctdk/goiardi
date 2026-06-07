@@ -51,7 +51,7 @@ func New(name string) (*Role, util.Gerror) {
 		var err error
 		found, err = checkForRoleSQL(datastore.Dbh, name)
 		if err != nil {
-			gerr := util.Errorf(err.Error())
+			gerr := util.Errorf("%s", err.Error())
 			gerr.SetStatus(http.StatusInternalServerError)
 			return nil, gerr
 		}
@@ -222,7 +222,7 @@ func DoesExist(roleName string) (bool, util.Gerror) {
 		var cerr error
 		found, cerr = checkForRoleSQL(datastore.Dbh, roleName)
 		if cerr != nil {
-			err := util.Errorf(cerr.Error())
+			err := util.Errorf("%s", cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
 			return false, err
 		}

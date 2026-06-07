@@ -301,7 +301,7 @@ func reindexAll() {
 		i := 0
 		allDBItems, derr := dbag.AllDBItems()
 		if derr != nil {
-			logger.Errorf(derr.Error())
+			logger.Errorf("%s", derr.Error())
 			continue
 		}
 		for _, k := range allDBItems {

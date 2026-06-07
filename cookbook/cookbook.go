@@ -161,7 +161,7 @@ func AllCookbooks() (cookbooks []*Cookbook) {
 			// todo: this needs to be handled in a much better way.
 			// AllCookbooks() should return an err which should be
 			// checked above. Leaving this for another day
-			logger.Errorf(err.Error())
+			logger.Errorf("%s", err.Error())
 			continue
 		}
 		cookbooks = append(cookbooks, cb)
@@ -216,7 +216,7 @@ func DoesExist(cookbookName string) (bool, util.Gerror) {
 		var cerr error
 		found, cerr = checkForCookbookSQL(datastore.Dbh, cookbookName)
 		if cerr != nil {
-			err := util.Errorf(cerr.Error())
+			err := util.Errorf("%s", cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
 			return false, err
 		}
@@ -757,7 +757,7 @@ func (c *Cookbook) GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) 
 				if err == sql.ErrNoRows {
 					found = false
 				} else {
-					gerr := util.Errorf(err.Error())
+					gerr := util.Errorf("%s", err.Error())
 					gerr.SetStatus(http.StatusInternalServerError)
 					return nil, gerr
 				}
@@ -1125,7 +1125,7 @@ func methodize(method string, cbThing []map[string]interface{}) []map[string]int
 					var err error
 					retHash[i][k], err = util.S3GetURL("default", chkSum)
 					if err != nil {
-						logger.Errorf(err.Error())
+						logger.Errorf("%s", err.Error())
 					}
 				} else {
 					retHash[i][k] = baseURL + "/file_store/" + chkSum

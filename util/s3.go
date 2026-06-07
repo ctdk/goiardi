@@ -128,7 +128,7 @@ func S3DeleteHashes(fileHashes []string) {
 
 	r, err := s3cli.s3.DeleteObjects(params)
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Errorf("%s", err.Error())
 	} else {
 		logger.Debugf("%v", r)
 	}

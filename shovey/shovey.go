@@ -121,7 +121,7 @@ func (e *qerror) Error() string {
 
 // CastErr will easily cast a different kind of error to a Qerror.
 func CastErr(err error) Qerror {
-	return Errorf(err.Error())
+	return Errorf("%s", err.Error())
 }
 
 // String returns a string representation of a Qerror.
@@ -578,7 +578,7 @@ func AllShoveys() []*Shovey {
 	for _, s := range shoveList {
 		sh, err := Get(s)
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Criticalf("%s", err.Error())
 			os.Exit(1)
 		}
 		shoveys = append(shoveys, sh)
@@ -593,7 +593,7 @@ func AllShoveyRuns() []*ShoveyRun {
 	for _, s := range shoveys {
 		runs, err := s.GetNodeRuns()
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Criticalf("%s", err.Error())
 			os.Exit(1)
 		}
 		shoveyRuns = append(shoveyRuns, runs...)
@@ -609,7 +609,7 @@ func AllShoveyRunStreams() []*ShoveyRunStream {
 		for _, t := range outputTypes {
 			srs, err := sr.GetStreamOutput(t, 0)
 			if err != nil {
-				logger.Criticalf(err.Error())
+				logger.Criticalf("%s", err.Error())
 				os.Exit(1)
 			}
 			streams = append(streams, srs...)

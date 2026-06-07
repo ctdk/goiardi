@@ -93,7 +93,7 @@ func New(clientname string) (*Client, util.Gerror) {
 		var cerr error
 		found, cerr = checkForClientSQL(datastore.Dbh, clientname)
 		if cerr != nil {
-			err = util.Errorf(cerr.Error())
+			err = util.Errorf("%s", cerr.Error())
 			err.SetStatus(http.StatusInternalServerError)
 			return nil, err
 		}
@@ -133,7 +133,7 @@ func Get(clientname string) (*Client, util.Gerror) {
 		if err != nil {
 			var gerr util.Gerror
 			if err != sql.ErrNoRows {
-				gerr = util.Errorf(err.Error())
+				gerr = util.Errorf("%s", err.Error())
 				gerr.SetStatus(http.StatusInternalServerError)
 			} else {
 				gerr = util.Errorf("Client %s not found", clientname)
@@ -315,7 +315,7 @@ func (c *Client) Rename(newName string) util.Gerror {
 		}
 	} else {
 		if err := chkInMemUser(newName); err != nil {
-			gerr := util.Errorf(err.Error())
+			gerr := util.Errorf("%s", err.Error())
 			gerr.SetStatus(http.StatusConflict)
 			return gerr
 		}
@@ -568,7 +568,7 @@ func (c *Client) PublicKey() string {
 		if err != nil {
 			// pubKey's not goign to work very well if we can't get
 			// it....
-			logger.Errorf(err.Error())
+			logger.Errorf("%s", err.Error())
 			return ""
 		}
 		return pk

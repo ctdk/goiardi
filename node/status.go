@@ -128,7 +128,7 @@ func AllNodeStatuses() []*NodeStatus {
 	for _, n := range nodes {
 		ns, err := n.AllStatuses()
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Criticalf("%s", err.Error())
 			os.Exit(1)
 		}
 		allStatus = append(allStatus, ns...)

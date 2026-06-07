@@ -317,7 +317,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 					logger.Infof("Cookbook Depends Errors in %s: %+v", env.Name, derr.ErrMap())
 					enc := json.NewEncoder(w)
 					if jerr := enc.Encode(&errMap); jerr != nil {
-						logger.Errorf(jerr.Error())
+						logger.Errorf("%s", jerr.Error())
 					}
 				default:
 					jsonErrorReport(w, r, derr.Error(), http.StatusPreconditionFailed)
@@ -403,7 +403,7 @@ func environmentHandler(w http.ResponseWriter, r *http.Request) {
 				jsonErrorReport(w, r, fmt.Sprintf("Cannot find a cookbook named %s", opName), http.StatusNotFound)
 				return
 			case err != nil:
-				logger.Errorf(err.Error())
+				logger.Errorf("%s", err.Error())
 				jsonErrorReport(w, r, fmt.Sprintf("Cannot get a cookbook named %s", opName), err.Status())
 				return
 			}
