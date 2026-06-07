@@ -194,7 +194,7 @@ func Get(name string) (cookbook *Cookbook, found bool, gerror util.Gerror) {
 	}
 	// this should never happen, but still lets put a check in place
 	if c == nil {
-		err := util.Errorf("a cookbook has been reported as found but it is null", name)
+		err := util.Errorf("a cookbook named %s has been reported as found but it is null", name)
 		err.SetStatus(http.StatusNotFound)
 		return nil, false, err
 	}
