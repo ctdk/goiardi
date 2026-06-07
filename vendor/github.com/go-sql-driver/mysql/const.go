@@ -8,27 +8,46 @@
 
 package mysql
 
+import "runtime"
+
 const (
-	minProtocolVersion byte = 10
+	debug = false // for debugging. Set true only in development.
+
+	defaultAuthPlugin       = "mysql_native_password"
+	defaultMaxAllowedPacket = 64 << 20 // 64 MiB. See https://github.com/go-sql-driver/mysql/issues/1355
+	minProtocolVersion      = 10
 	maxPacketSize           = 1<<24 - 1
 	timeFormat              = "2006-01-02 15:04:05.999999"
+
+	// Connection attributes
+	// See https://dev.mysql.com/doc/refman/8.0/en/performance-schema-connection-attribute-tables.html#performance-schema-connection-attributes-available
+	connAttrClientName      = "_client_name"
+	connAttrClientNameValue = "Go-MySQL-Driver"
+	connAttrOS              = "_os"
+	connAttrOSValue         = runtime.GOOS
+	connAttrPlatform        = "_platform"
+	connAttrPlatformValue   = runtime.GOARCH
+	connAttrPid             = "_pid"
+	connAttrServerHost      = "_server_host"
 )
 
 // MySQL constants documentation:
-// http://dev.mysql.com/doc/internals/en/client-server-protocol.html
+// https://dev.mysql.com/doc/dev/mysql-server/latest/PAGE_PROTOCOL.html
 
 const (
-	iOK          byte = 0x00
-	iLocalInFile byte = 0xfb
-	iEOF         byte = 0xfe
-	iERR         byte = 0xff
+	iOK           byte = 0x00
+	iAuthMoreData byte = 0x01
+	iLocalInFile  byte = 0xfb
+	iEOF          byte = 0xfe
+	iERR          byte = 0xff
 )
 
-// https://dev.mysql.com/doc/internals/en/capability-flags.html#packet-Protocol::CapabilityFlags
-type clientFlag uint32
+// https://dev.mysql.com/doc/dev/mysql-server/latest/group__group__cs__capabilities__flags.html
+// https://mariadb.com/kb/en/connection/#capabilities
+type capabilityFlag uint32
 
 const (
-	clientLongPassword clientFlag = 1 << iota
+	clientMySQL capabilityFlag = 1 << iota
 	clientFoundRows
 	clientLongFlag
 	clientConnectWithDB
@@ -53,6 +72,18 @@ const (
 	clientCanHandleExpiredPasswords
 	clientSessionTrack
 	clientDeprecateEOF
+)
+
+// https://mariadb.com/kb/en/connection/#capabilities
+type extendedCapabilityFlag uint32
+
+const (
+	progressIndicator extendedCapabilityFlag = 1 << iota
+	clientComMulti
+	clientStmtBulkOperations
+	clientExtendedMetadata
+	clientCacheMetadata
+	clientUnitBulkResult
 )
 
 const (
@@ -87,8 +118,10 @@ const (
 )
 
 // https://dev.mysql.com/doc/internals/en/com-query-response.html#packet-Protocol::ColumnType
+type fieldType byte
+
 const (
-	fieldTypeDecimal byte = iota
+	fieldTypeDecimal fieldType = iota
 	fieldTypeTiny
 	fieldTypeShort
 	fieldTypeLong
@@ -107,7 +140,10 @@ const (
 	fieldTypeBit
 )
 const (
-	fieldTypeJSON byte = iota + 0xf5
+	fieldTypeVector fieldType = iota + 0xf2
+	fieldTypeInvalid
+	fieldTypeBool
+	fieldTypeJSON
 	fieldTypeNewDecimal
 	fieldTypeEnum
 	fieldTypeSet
@@ -160,4 +196,10 @@ const (
 	statusPsOutParams
 	statusInTransReadonly
 	statusSessionStateChanged
+)
+
+const (
+	cachingSha2PasswordRequestPublicKey          = 2
+	cachingSha2PasswordFastAuthSuccess           = 3
+	cachingSha2PasswordPerformFullAuthentication = 4
 )
