@@ -28,6 +28,7 @@ package user
 
 import (
 	"bytes"
+	"crypto/subtle"
 	"database/sql"
 	"encoding/gob"
 	"fmt"
@@ -563,7 +564,7 @@ func (u *User) CheckPasswd(password string) util.Gerror {
 		err := util.Errorf(perr.Error())
 		return err
 	}
-	if u.Passwd() != h {
+	if subtle.ConstantTimeCompare([]byte(u.Passwd()), []byte(h)) != 1 {
 		err := util.Errorf("password did not match")
 		return err
 	}
