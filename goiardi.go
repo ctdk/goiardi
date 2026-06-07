@@ -324,6 +324,32 @@ func apiTimerMaster(apiChan chan *apiTimerInfo, metricsBackend met.Backend) {
 	}
 }
 
+// pprofAllowed reports whether a request to /debug/* may proceed. Access is
+// restricted to loopback and operator-whitelisted addresses. The
+// X-Forwarded-For header is attacker-controlled, so it is only consulted when
+// the direct peer (remoteAddr) is itself trusted — i.e. a local reverse proxy.
+// Otherwise a remote client could spoof a loopback value to bypass the gate.
+func pprofAllowed(remoteAddr, xForwardedFor string) bool {
+	remoteIP, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return false
+	}
+	rIP := net.ParseIP(remoteIP)
+	if !rIP.IsLoopback() && !config.PprofWhitelisted(rIP) {
+		return false
+	}
+	// The direct peer is trusted; if it forwarded a client address, that
+	// client must also be loopback or whitelisted.
+	if xForwardedFor != "" {
+		fwded := strings.Split(xForwardedFor, ", ")
+		xFIP := net.ParseIP(fwded[len(fwded)-1])
+		if !xFIP.IsLoopback() && !config.PprofWhitelisted(xFIP) {
+			return false
+		}
+	}
+	return true
+}
+
 func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* knife sometimes sends URL paths that start with //. Redirecting
 	 * worked for GETs, but since it was breaking POSTs and screwing with
@@ -336,27 +362,10 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: set this to verbosity level 4 or so
 	logger.Debugf("Serving %s -- %s", r.URL.Path, r.Method)
 
-	// block /debug/pprof if not localhost
+	// block /debug/pprof unless the request comes from a trusted source
 	if strings.HasPrefix(r.URL.Path, "/debug") {
-		fwded := strings.Split(r.Header.Get("X-Forwarded-For"), ", ")
-		remoteIP, _, rerr := net.SplitHostPort(r.RemoteAddr)
-		var block bool
-		if rerr == nil {
-			var xForwarded string
-			if len(fwded) != 0 {
-				xForwarded = fwded[len(fwded)-1]
-			}
-			rIP := net.ParseIP(remoteIP)
-			xFIP := net.ParseIP(xForwarded)
-			if !rIP.IsLoopback() && !xFIP.IsLoopback() && !config.PprofWhitelisted(rIP) && !config.PprofWhitelisted(xFIP) {
-				logger.Debugf("blocked %s (x-forwarded-for: %s) from accessing /debug/pprof!", rIP.String(), xFIP.String())
-				block = true
-			}
-		} else {
-			logger.Debugf("remote ip %q is bad, not IP:port (blocking from /debug/pprof)", r.RemoteAddr)
-			block = true
-		}
-		if block {
+		if !pprofAllowed(r.RemoteAddr, r.Header.Get("X-Forwarded-For")) {
+			logger.Debugf("blocked %s (x-forwarded-for: %q) from accessing /debug/pprof!", r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
 			http.Error(w, "Forbidden!", http.StatusForbidden)
 			return
 		}
