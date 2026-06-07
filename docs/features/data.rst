@@ -3,7 +3,7 @@
 Import and Export of Data
 =========================
 
-Goiardi can now import and export its data in a JSON file. This can help both when upgrading, when the on-disk data format changes between releases, and to convert your goiardi installation from in-memory to MySQL (or vice versa). The JSON file has a version number set (currently 1.0), so that in the future if there is some sort of incompatible change to the JSON file format the importer will be able to handle it.
+Goiardi can now import and export its data in a JSON file. This can help both when upgrading, when the on-disk data format changes between releases, and to convert your goiardi installation from in-memory to MySQL/MariaDB (or vice versa). The JSON file has a version number set (currently 1.0), so that in the future if there is some sort of incompatible change to the JSON file format the importer will be able to handle it.
 
 Before importing data, you should back up any existing data and index files (and take a snapshot of the SQL db, if applicable) if there's any reason you might want it around later. After exporting, you may wish to hold on to the old installation data until you're satisfied that the import went well.
 

@@ -10,7 +10,7 @@ Additional different search backends are now a possibility as well; goiardi sear
 Ersatz Solr Search
 ------------------
 
-Nothing special needs to be done to use this search. It remains the default search implementation, and the only choice for the in-memory/file based storage and MySQL. It works well for smaller installations, but when you get in the neighborhood of hundreds of nodes it begins to get bogged down.
+Nothing special needs to be done to use this search. It remains the default search implementation, and the only choice for the in-memory/file based storage and MySQL/MariaDB. It works well for smaller installations, but when you get in the neighborhood of hundreds of nodes it begins to get bogged down.
 
 Postgres Search
 ---------------

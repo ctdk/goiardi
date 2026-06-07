@@ -7,10 +7,10 @@ There are two general options that can be set for either database: ``--db-pool-s
 
 It should go without saying that these options don't do much if you aren't using one of the SQL backends.
 
-Of the two databases available, PostgreSQL is the better supported and recommended configuration. MySQL still works, of course, but it can't take advantage of some of the very helpful Postgres features.
+Of the two databases available, PostgreSQL is the better supported and recommended configuration. MySQL (or MariaDB) still works, of course, but it can't take advantage of some of the very helpful Postgres features.
 
-MySQL mode
-----------
+MySQL / MariaDB mode
+--------------------
 
 Goiardi can use MySQL to store its data, instead of keeping all its data in memory (and optionally freezing its data to disk for persistence).
 

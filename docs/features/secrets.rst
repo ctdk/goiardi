@@ -28,7 +28,7 @@ Populating
 
 A new goiardi installation won't need to do anything special to use vault for secrets - assuming everything's set up properly, new clients and users will work as expected.
 
-Existing goiardi installations will need to transfer their various secrets into vault. A persistent but not DB backed goiardi installation will need to export and import all of goiardi's data. With MySQL or Postgres, it's much simpler.
+Existing goiardi installations will need to transfer their various secrets into vault. A persistent but not DB backed goiardi installation will need to export and import all of goiardi's data. With MySQL/MariaDB or Postgres, it's much simpler.
 
 For each secret, get the key or password hash from the database for each object and make a JSON file like this: ::
 

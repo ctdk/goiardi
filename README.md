@@ -6,7 +6,7 @@ Goiardi
 Goiardi is an implementation of the Chef server (http://www.chef.io) written
 in Go. It can either run entirely in memory with the option to save and load the
 in-memory data and search indexes to and from disk, drawing inspiration from
-chef-zero, or it can use MySQL or PostgreSQL as its storage backend.
+chef-zero, or it can use MariaDB, MySQL or PostgreSQL as its storage backend.
 
 DOCUMENTATION
 -------------

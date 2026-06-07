@@ -101,11 +101,11 @@ Currently available command line and config file options::
                                 Useful when goiardi is sitting behind a reverse
                                 proxy that uses SSL, but is communicating with
                                 the proxy over HTTP. [$GOIARDI_HTTPS_URLS]
-        --disable-webui         If enabled, disables connections and logins to
+        --disable-webui.        If enabled, disables connections and logins to
                                 goiardi over the webui interface.
                                 [$GOIARDI_DISABLE_WEBUI]
-        --use-mysql             Use a MySQL database for data storage. Configure
-                                database options in the config file.
+        --use-mysql.            Use a MySQL/MariaDB database for data storage. 
+								Configure database options in the config file.
                                 [$GOIARDI_USE_MYSQL]
         --use-postgresql        Use a PostgreSQL database for data storage.
                                 Configure database options in the config file.
@@ -239,7 +239,7 @@ Currently available command line and config file options::
                                 disable sandbox purging.
                                 [$GOIARDI_PURGE_SANDBOXES_AFTER]
 
-  MySQL connection options (requires --use-mysql):
+  MySQL/MariaDB connection options (requires --use-mysql):
         --mysql-username=       MySQL username [$GOIARDI_MYSQL_USERNAME]
         --mysql-password=       MySQL password [$GOIARDI_MYSQL_PASSWORD]
         --mysql-protocol=       MySQL protocol (tcp or unix)
