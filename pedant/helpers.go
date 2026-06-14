@@ -185,6 +185,12 @@ func (c *ChefSigningClient) signRequest(req *http.Request, body []byte) {
 	}
 }
 
+// SignRawRequest signs an already-constructed HTTP request with Chef auth headers.
+// This is useful for sending raw payloads that can't be JSON-marshaled.
+func (c *ChefSigningClient) SignRawRequest(req *http.Request, body []byte) {
+	c.signRequest(req, body)
+}
+
 func hashStr(toHash string) string {
 	h := sha1.New()
 	io.WriteString(h, toHash)
