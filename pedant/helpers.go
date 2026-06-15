@@ -23,11 +23,13 @@ import (
 type TestServer struct {
 	Server          *http.Server
 	BaseURL         string
+	Backend         BackendType
 	AdminUser       *TestRequestor
 	NormalUser      *TestRequestor
 	AdminClient     *TestRequestor
 	NormalClient    *TestRequestor
 	ValidatorClient *TestRequestor
+	OutsideUser     *TestRequestor
 	Superuser       *TestRequestor
 }
 

@@ -2,6 +2,21 @@
 //
 // These tests start an in-memory goiardi server and exercise the Chef Server
 // API against it, replacing the brittle Ruby chef-pedant test suite.
+//
+// To run tests against a database backend, set GOIARDI_TEST_DB and the relevant
+// connection environment variables:
+//
+//	# In-memory (default, no external deps):
+//	go test ./...
+//
+//	# MySQL:
+//	GOIARDI_TEST_DB=mysql GOIARDI_MYSQL_DBNAME=goiardi_test go test ./...
+//
+//	# PostgreSQL:
+//	GOIARDI_TEST_DB=postgresql GOIARDI_POSTGRESQL_DBNAME=goiardi_test go test ./...
+//
+//	# Skip slow/DB-only tests:
+//	go test -short ./...
 package main
 
 import (
@@ -13,6 +28,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -55,7 +71,28 @@ func TestMain(m *testing.M) {
 	}
 	logger.SetLevel(logger.LevelFatal)
 
-	// Initialize data store
+	// Detect backend from environment
+	backend, dbParams, err := pedant.BackendFromEnv()
+	if err != nil {
+		log.Fatalf("Error reading GOIARDI_TEST_DB: %v", err)
+	}
+
+	// If a DB backend was requested, connect and set up the test database
+	if backend != pedant.BackendInMemory {
+		log.Printf("Using %s backend for tests", backend)
+		if err := pedant.ConnectTestDB(backend, dbParams); err != nil {
+			log.Fatalf("Failed to connect to %s: %v", backend, err)
+		}
+		defer pedant.CloseTestDB()
+
+		// Set up schema / tables, clean any existing test data
+		if err := setupTestDB(); err != nil {
+			log.Fatalf("Failed to set up test database: %v", err)
+		}
+	}
+
+	// Initialize data store (in-memory cache; for DB mode datastore.Dbh is
+	// already set above)
 	datastore.New()
 
 	// Initialize indexer
@@ -75,12 +112,14 @@ func TestMain(m *testing.M) {
 
 	testServer = &pedant.TestServer{
 		BaseURL: ts.URL,
+		Backend: backend,
 	}
 
 	// Create test requestors
 	testServer.AdminUser = createTestRequestor("admin", true, true)
 	testServer.AdminClient = createTestRequestor("chef-webui", true, false)
 	testServer.ValidatorClient = createTestRequestor("chef-validator", false, false)
+	testServer.OutsideUser = createTestRequestor("outside_user", false, false)
 
 	// Create a normal user and client
 	createNormalTestActor()
@@ -138,6 +177,12 @@ func createNormalTestActor() {
 	}
 	if c, _ := client.Get("pedant_test_client"); c == nil {
 		nc, _ := client.New("pedant_test_client")
+		nc.Admin = false
+		nc.GenerateKeys()
+		nc.Save()
+	}
+	if c, _ := client.Get("outside_user"); c == nil {
+		nc, _ := client.New("outside_user")
 		nc.Admin = false
 		nc.GenerateKeys()
 		nc.Save()
@@ -1784,3 +1829,205 @@ func TestAuthenticateUserNotFound(t *testing.T) {
 		t.Errorf("expected verified=false, got %v", body["verified"])
 	}
 }
+
+// setupTestDB creates database tables and cleans test data when running
+// against a MySQL or PostgreSQL backend.
+func setupTestDB() error {
+	if !config.UsingDB() {
+		return nil
+	}
+
+	// Create tables if they don't exist
+	if err := ensureTestTables(); err != nil {
+		return fmt.Errorf("creating test tables: %w", err)
+	}
+
+	// Clean any existing data so tests start fresh
+	if err := cleanTestData(); err != nil {
+		return fmt.Errorf("cleaning test data: %w", err)
+	}
+
+	return nil
+}
+
+// ensureTestTables creates all required tables if they don't already exist.
+func ensureTestTables() error {
+	tables := []string{
+		"clients", "cookbooks", "cookbook_versions",
+		"cookbook_version_checksums", "cookbook_version_platforms",
+		"data_bags", "data_bag_items", "environments", "nodes",
+		"node_statuses", "roles", "sandboxes", "users", "reports",
+		"shoveys", "shovey_runs", "secrets", "cookbook_artifacts",
+	}
+
+	for _, table := range tables {
+		if config.Config.UseMySQL {
+			if err := createMySQLTable(table); err != nil {
+				return fmt.Errorf("creating mysql table %s: %w", table, err)
+			}
+		} else if config.Config.UsePostgreSQL {
+			if err := createPostgreSQLTable(table); err != nil {
+				return fmt.Errorf("creating postgresql table %s: %w", table, err)
+			}
+		}
+	}
+	return nil
+}
+
+// cleanTestData truncates all test tables so each test run starts fresh.
+func cleanTestData() error {
+	tables := []string{
+		"clients", "cookbooks", "cookbook_versions",
+		"cookbook_version_checksums", "cookbook_version_platforms",
+		"data_bags", "data_bag_items", "environments", "nodes",
+		"node_statuses", "roles", "sandboxes", "users", "reports",
+		"shoveys", "shovey_runs", "secrets", "cookbook_artifacts",
+	}
+
+	for _, table := range tables {
+		var stmt string
+		if config.Config.UseMySQL {
+			stmt = fmt.Sprintf("TRUNCATE TABLE %s", table)
+		} else if config.Config.UsePostgreSQL {
+			stmt = fmt.Sprintf("TRUNCATE TABLE goiardi.%s CASCADE", table)
+		}
+		if _, err := datastore.Dbh.Exec(stmt); err != nil {
+			continue
+		}
+	}
+	return nil
+}
+
+func createMySQLTable(table string) error {
+	switch table {
+	case "clients":
+		_, err := datastore.Dbh.Exec(clientsMySQL); return err
+	case "cookbooks":
+		_, err := datastore.Dbh.Exec(cookbooksMySQL); return err
+	case "cookbook_versions":
+		_, err := datastore.Dbh.Exec(cookbookVersionsMySQL); return err
+	case "cookbook_version_checksums":
+		_, err := datastore.Dbh.Exec(cookbookVersionChecksumsMySQL); return err
+	case "cookbook_version_platforms":
+		_, err := datastore.Dbh.Exec(cookbookVersionPlatformsMySQL); return err
+	case "data_bags":
+		_, err := datastore.Dbh.Exec(dataBagsMySQL); return err
+	case "data_bag_items":
+		_, err := datastore.Dbh.Exec(dataBagItemsMySQL); return err
+	case "environments":
+		_, err := datastore.Dbh.Exec(environmentsMySQL); return err
+	case "nodes":
+		_, err := datastore.Dbh.Exec(nodesMySQL); return err
+	case "node_statuses":
+		_, err := datastore.Dbh.Exec(nodeStatusesMySQL); return err
+	case "roles":
+		_, err := datastore.Dbh.Exec(rolesMySQL); return err
+	case "sandboxes":
+		_, err := datastore.Dbh.Exec(sandboxesMySQL); return err
+	case "users":
+		_, err := datastore.Dbh.Exec(usersMySQL); return err
+	case "reports":
+		_, err := datastore.Dbh.Exec(reportsMySQL); return err
+	case "shoveys":
+		_, err := datastore.Dbh.Exec(shoveysMySQL); return err
+	case "shovey_runs":
+		_, err := datastore.Dbh.Exec(shoveyRunsMySQL); return err
+	case "secrets":
+		_, err := datastore.Dbh.Exec(secretsMySQL); return err
+	case "cookbook_artifacts":
+		_, err := datastore.Dbh.Exec(cookbookArtifactsMySQL); return err
+	default:
+		return fmt.Errorf("unknown MySQL table: %s", table)
+	}
+}
+
+func createPostgreSQLTable(table string) error {
+	if _, err := datastore.Dbh.Exec(`CREATE SCHEMA IF NOT EXISTS goiardi`); err != nil {
+		return err
+	}
+
+	switch table {
+	case "clients":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(clientsPG, "goiardi")); return err
+	case "cookbooks":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(cookbooksPG, "goiardi")); return err
+	case "cookbook_versions":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(cookbookVersionsPG, "goiardi")); return err
+	case "cookbook_version_checksums":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(cookbookVersionChecksumsPG, "goiardi")); return err
+	case "cookbook_version_platforms":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(cookbookVersionPlatformsPG, "goiardi")); return err
+	case "data_bags":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(dataBagsPG, "goiardi")); return err
+	case "data_bag_items":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(dataBagItemsPG, "goiardi")); return err
+	case "environments":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(environmentsPG, "goiardi")); return err
+	case "nodes":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(nodesPG, "goiardi")); return err
+	case "node_statuses":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(nodeStatusesPG, "goiardi")); return err
+	case "roles":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(rolesPG, "goiardi")); return err
+	case "sandboxes":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(sandboxesPG, "goiardi")); return err
+	case "users":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(usersPG, "goiardi")); return err
+	case "reports":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(reportsPG, "goiardi")); return err
+	case "shoveys":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(shoveysPG, "goiardi")); return err
+	case "shovey_runs":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(shoveyRunsPG, "goiardi")); return err
+	case "secrets":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(secretsPG, "goiardi")); return err
+	case "cookbook_artifacts":
+		_, err := datastore.Dbh.Exec(fmt.Sprintf(cookbookArtifactsPG, "goiardi")); return err
+	default:
+		return fmt.Errorf("unknown PostgreSQL table: %s", table)
+	}
+}
+
+// MySQL table creation SQL.
+const (
+	clientsMySQL                = `CREATE TABLE IF NOT EXISTS clients (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, admin BOOLEAN NOT NULL DEFAULT FALSE, validator BOOLEAN NOT NULL DEFAULT FALSE, public_key TEXT, org_membership VARCHAR(255), created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, INDEX clients_name_idx (name))`
+	cookbooksMySQL              = `CREATE TABLE IF NOT EXISTS cookbooks (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, INDEX cookbooks_name_idx (name))`
+	cookbookVersionsMySQL       = `CREATE TABLE IF NOT EXISTS cookbook_versions (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, cookbook_id INTEGER NOT NULL, major INTEGER NOT NULL, minor INTEGER NOT NULL, patch INTEGER NOT NULL, metadata_json LONGTEXT, frozen BOOLEAN NOT NULL DEFAULT FALSE, INDEX cookbook_versions_cookbook_id_idx (cookbook_id))`
+	cookbookVersionChecksumsMySQL = `CREATE TABLE IF NOT EXISTS cookbook_version_checksums (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, cookbook_version_id INTEGER NOT NULL, checksum VARCHAR(255) NOT NULL)`
+	cookbookVersionPlatformsMySQL = `CREATE TABLE IF NOT EXISTS cookbook_version_platforms (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, cookbook_version_id INTEGER NOT NULL, platform VARCHAR(255) NOT NULL)`
+	dataBagsMySQL               = `CREATE TABLE IF NOT EXISTS data_bags (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, INDEX data_bags_name_idx (name))`
+	dataBagItemsMySQL           = `CREATE TABLE IF NOT EXISTS data_bag_items (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, data_bag_id INTEGER NOT NULL, name VARCHAR(255) NOT NULL, raw_data LONGTEXT, INDEX data_bag_items_data_bag_id_idx (data_bag_id))`
+	environmentsMySQL           = `CREATE TABLE IF NOT EXISTS environments (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, description TEXT, default_attributes LONGTEXT, override_attributes LONGTEXT, cookbook_versions LONGTEXT, INDEX environments_name_idx (name))`
+	nodesMySQL                  = `CREATE TABLE IF NOT EXISTS nodes (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, chef_environment VARCHAR(255) NOT NULL DEFAULT '_default', run_list LONGTEXT, normal_attributes LONGTEXT, default_attributes LONGTEXT, override_attributes LONGTEXT, automatic_attributes LONGTEXT, INDEX nodes_name_idx (name))`
+	nodeStatusesMySQL           = `CREATE TABLE IF NOT EXISTS node_statuses (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, node_name VARCHAR(255) NOT NULL UNIQUE, status VARCHAR(255) NOT NULL, INDEX node_statuses_node_name_idx (node_name))`
+	rolesMySQL                  = `CREATE TABLE IF NOT EXISTS roles (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, description TEXT, default_attributes LONGTEXT, override_attributes LONGTEXT, run_list LONGTEXT, env_run_lists LONGTEXT, INDEX roles_name_idx (name))`
+	sandboxesMySQL              = `CREATE TABLE IF NOT EXISTS sandboxes (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, sandbox_id VARCHAR(255) NOT NULL UNIQUE, creation_time DATETIME NOT NULL, is_committed BOOLEAN NOT NULL DEFAULT FALSE, INDEX sandboxes_sandbox_id_idx (sandbox_id))`
+	usersMySQL                  = `CREATE TABLE IF NOT EXISTS users (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, display_name VARCHAR(255), email VARCHAR(255), password VARCHAR(255), public_key TEXT, admin BOOLEAN NOT NULL DEFAULT FALSE, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, INDEX users_name_idx (name))`
+	reportsMySQL                = `CREATE TABLE IF NOT EXISTS reports (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, node_name VARCHAR(255) NOT NULL, run_id VARCHAR(255) NOT NULL, status VARCHAR(255), report_data LONGTEXT, created_at DATETIME NOT NULL, INDEX reports_node_name_idx (node_name))`
+	shoveysMySQL                = `CREATE TABLE IF NOT EXISTS shoveys (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, command LONGTEXT, created_at DATETIME NOT NULL, INDEX shoveys_id_idx (id))`
+	shoveyRunsMySQL             = `CREATE TABLE IF NOT EXISTS shovey_runs (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, shovey_id INTEGER NOT NULL, node_name VARCHAR(255) NOT NULL, status VARCHAR(255), INDEX shovey_runs_shovey_id_idx (shovey_id))`
+	secretsMySQL                = `CREATE TABLE IF NOT EXISTS secrets (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, secret_data LONGTEXT, INDEX secrets_name_idx (name))`
+	cookbookArtifactsMySQL      = `CREATE TABLE IF NOT EXISTS cookbook_artifacts (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, version VARCHAR(255) NOT NULL)`
+)
+
+// PostgreSQL table creation SQL.
+const (
+	clientsPG                     = `CREATE TABLE IF NOT EXISTS %s.clients (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, admin BOOLEAN NOT NULL DEFAULT FALSE, validator BOOLEAN NOT NULL DEFAULT FALSE, public_key TEXT, org_membership VARCHAR(255), created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL)`
+	cookbooksPG                   = `CREATE TABLE IF NOT EXISTS %s.cookbooks (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE)`
+	cookbookVersionsPG            = `CREATE TABLE IF NOT EXISTS %s.cookbook_versions (id SERIAL PRIMARY KEY, cookbook_id INTEGER NOT NULL, major INTEGER NOT NULL, minor INTEGER NOT NULL, patch INTEGER NOT NULL, metadata_json TEXT, frozen BOOLEAN NOT NULL DEFAULT FALSE)`
+	cookbookVersionChecksumsPG    = `CREATE TABLE IF NOT EXISTS %s.cookbook_version_checksums (id SERIAL PRIMARY KEY, cookbook_version_id INTEGER NOT NULL, checksum VARCHAR(255) NOT NULL)`
+	cookbookVersionPlatformsPG    = `CREATE TABLE IF NOT EXISTS %s.cookbook_version_platforms (id SERIAL PRIMARY KEY, cookbook_version_id INTEGER NOT NULL, platform VARCHAR(255) NOT NULL)`
+	dataBagsPG                    = `CREATE TABLE IF NOT EXISTS %s.data_bags (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE)`
+	dataBagItemsPG                = `CREATE TABLE IF NOT EXISTS %s.data_bag_items (id SERIAL PRIMARY KEY, data_bag_id INTEGER NOT NULL, name VARCHAR(255) NOT NULL, raw_data TEXT)`
+	environmentsPG                = `CREATE TABLE IF NOT EXISTS %s.environments (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, description TEXT, default_attributes TEXT, override_attributes TEXT, cookbook_versions TEXT)`
+	nodesPG                       = `CREATE TABLE IF NOT EXISTS %s.nodes (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, chef_environment VARCHAR(255) NOT NULL DEFAULT '_default', run_list TEXT, normal_attributes TEXT, default_attributes TEXT, override_attributes TEXT, automatic_attributes TEXT)`
+	nodeStatusesPG                = `CREATE TABLE IF NOT EXISTS %s.node_statuses (id SERIAL PRIMARY KEY, node_name VARCHAR(255) NOT NULL UNIQUE, status VARCHAR(255) NOT NULL)`
+	rolesPG                       = `CREATE TABLE IF NOT EXISTS %s.roles (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, description TEXT, default_attributes TEXT, override_attributes TEXT, run_list TEXT, env_run_lists TEXT)`
+	sandboxesPG                   = `CREATE TABLE IF NOT EXISTS %s.sandboxes (id SERIAL PRIMARY KEY, sandbox_id VARCHAR(255) NOT NULL UNIQUE, creation_time TIMESTAMP NOT NULL, is_committed BOOLEAN NOT NULL DEFAULT FALSE)`
+	usersPG                       = `CREATE TABLE IF NOT EXISTS %s.users (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, display_name VARCHAR(255), email VARCHAR(255), password VARCHAR(255), public_key TEXT, admin BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL)`
+	reportsPG                     = `CREATE TABLE IF NOT EXISTS %s.reports (id SERIAL PRIMARY KEY, node_name VARCHAR(255) NOT NULL, run_id VARCHAR(255) NOT NULL, status VARCHAR(255), report_data TEXT, created_at TIMESTAMP NOT NULL)`
+	shoveysPG                     = `CREATE TABLE IF NOT EXISTS %s.shoveys (id SERIAL PRIMARY KEY, command TEXT, created_at TIMESTAMP NOT NULL)`
+	shoveyRunsPG                  = `CREATE TABLE IF NOT EXISTS %s.shovey_runs (id SERIAL PRIMARY KEY, shovey_id INTEGER NOT NULL, node_name VARCHAR(255) NOT NULL, status VARCHAR(255))`
+	secretsPG                     = `CREATE TABLE IF NOT EXISTS %s.secrets (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, secret_data TEXT)`
+	cookbookArtifactsPG           = `CREATE TABLE IF NOT EXISTS %s.cookbook_artifacts (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, version VARCHAR(255) NOT NULL)`
+)
