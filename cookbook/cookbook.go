@@ -360,7 +360,11 @@ func CookbookRecipes() ([]string, util.Gerror) {
 		/* Damn it, this sends back an array of
 		 * all the recipes. Fill it in, and send
 		 * back the JSON ourselves. */
-		rlistTmp, err := cb.LatestVersion().RecipeList()
+		lv := cb.LatestVersion()
+		if lv == nil {
+			continue
+		}
+		rlistTmp, err := lv.RecipeList()
 		if err != nil {
 			return nil, err
 		}

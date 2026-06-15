@@ -289,3 +289,99 @@ func TestCookbooksNamedFiltersMultipleCookbooksMultipleVersions(t *testing.T) {
 		t.Errorf("expected 2 versions for %q, got %d: %v", cb1, len(versionsResp), versionsResp)
 	}
 }
+
+func TestCookbooksRecipesNoCookbooks(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+
+	resp, err := client.Get("/cookbooks/_recipes")
+	if err != nil {
+		t.Fatalf("GET /cookbooks/_recipes: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	body := pedant.GetJSONArray(t, resp)
+	if len(body) != 0 {
+		t.Errorf("expected empty _recipes with no cookbooks, got %d entries", len(body))
+	}
+}
+
+func TestCookbooksRecipesWithCookbooks(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	cbName := "my_cookbook"
+	cbVersion := "1.0.0"
+	payload := newCookbookPayload(cbName, cbVersion)
+	defer client.Delete("/cookbooks/" + cbName + "/" + cbVersion)
+
+	resp, err := client.Put("/cookbooks/"+cbName+"/"+cbVersion, payload)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	resp, err = client.Get("/cookbooks/_recipes")
+	if err != nil {
+		t.Fatalf("GET /cookbooks/_recipes: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	// Recipes may be empty if no recipe files are included in payload;
+	// the important thing is the endpoint doesn't panic and returns 200
+}
+
+func TestCookbooksRecipesMultipleCookbooks(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	cb1 := "my_cookbook"
+	cb2 := "your_cookbook"
+
+	payload1 := newCookbookPayload(cb1, "1.0.0")
+	payload2 := newCookbookPayload(cb2, "1.3.0")
+
+	resp, err := client.Put("/cookbooks/"+cb1+"/1.0.0", payload1)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/1.0.0: %v", cb1, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	resp, err = client.Put("/cookbooks/"+cb2+"/1.3.0", payload2)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/1.3.0: %v", cb2, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	defer func() {
+		client.Delete("/cookbooks/" + cb1 + "/1.0.0")
+		client.Delete("/cookbooks/" + cb2 + "/1.3.0")
+	}()
+
+	resp, err = client.Get("/cookbooks/_recipes")
+	if err != nil {
+		t.Fatalf("GET /cookbooks/_recipes: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	// Just verify it returns 200 without panicking
+}
+
+func TestCookbooksRecipesLatestVersion(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	cbName := "my_cookbook"
+	versions := []string{"1.0.0", "1.5.0"}
+
+	for _, v := range versions {
+		payload := newCookbookPayload(cbName, v)
+		resp, err := client.Put("/cookbooks/"+cbName+"/"+v, payload)
+		if err != nil {
+			t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, v, err)
+		}
+		pedant.AssertStatus(t, resp, 201)
+	}
+	defer func() {
+		for _, v := range versions {
+			client.Delete("/cookbooks/" + cbName + "/" + v)
+		}
+	}()
+
+	resp, err := client.Get("/cookbooks/_recipes")
+	if err != nil {
+		t.Fatalf("GET /cookbooks/_recipes: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	// Just verify it returns 200 without panicking
+}

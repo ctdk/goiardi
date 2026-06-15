@@ -351,10 +351,6 @@ func TestEnvironmentsRecipesNonExistent(t *testing.T) {
 }
 
 func TestEnvironmentsRecipesWithCookbooks(t *testing.T) {
-	// _recipes endpoint panics on empty cookbook list (known goiardi bug)
-	// Skip until the bug is fixed
-	t.Skip("_recipes endpoint panics on empty cookbook list (known bug)")
-
 	client := testServer.NewClient(testServer.AdminUser)
 	envName := pedant.UniqueName("env_rec_cb")
 	env := pedant.NewEnvironment(envName)
