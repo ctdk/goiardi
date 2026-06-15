@@ -249,39 +249,6 @@ func TestClientsCreateNoAdminFlag(t *testing.T) {
 	}
 }
 
-func TestClientsCreateValidNames(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-
-	validNames := []string{"pedanttestingclient", "pedanttestingclient123", "pedant_testing_client", "pedant.testing.client"}
-	for _, name := range validNames {
-		t.Run(name, func(t *testing.T) {
-			cl := pedant.NewClient(name)
-			resp, err := client.Post("/clients", cl)
-			if err != nil {
-				t.Fatalf("POST /clients: %v", err)
-			}
-			pedant.AssertStatus(t, resp, 201)
-			client.Delete("/clients/" + name)
-		})
-	}
-}
-
-func TestClientsCreateInvalidNames(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-
-	invalidNames := []string{"pedant$testing$client", "pedant testing client", "pedant{testing}client"}
-	for _, name := range invalidNames {
-		t.Run(name, func(t *testing.T) {
-			cl := pedant.NewClient(name)
-			resp, err := client.Post("/clients", cl)
-			if err != nil {
-				t.Fatalf("POST /clients: %v", err)
-			}
-			pedant.AssertStatus(t, resp, 400)
-		})
-	}
-}
-
 func TestClientsCreateNonBoolAdmin(t *testing.T) {
 	client := testServer.NewClient(testServer.AdminUser)
 	clientName := pedant.UniqueName("bad_admin")

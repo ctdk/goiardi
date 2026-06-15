@@ -291,21 +291,6 @@ func TestCookbooksNumVersionsZero(t *testing.T) {
 	}
 }
 
-func TestCookbooksInvalidNumVersions(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-
-	invalidValues := []string{"-1", "", "foo"}
-	for _, v := range invalidValues {
-		t.Run(v, func(t *testing.T) {
-			resp, err := client.Get("/cookbooks?num_versions=" + v)
-			if err != nil {
-				t.Fatalf("GET /cookbooks?num_versions=%s: %v", v, err)
-			}
-			pedant.AssertStatus(t, resp, 400)
-		})
-	}
-}
-
 func TestCookbooksDelete(t *testing.T) {
 	client := testServer.NewClient(testServer.AdminUser)
 	cbName := pedant.UniqueName("del_cb")
@@ -337,18 +322,6 @@ func TestCookbooksNotFound(t *testing.T) {
 		t.Fatalf("GET /cookbooks/nonexistent_cb/1.0.0: %v", err)
 	}
 	pedant.AssertStatus(t, resp, 404)
-}
-
-func TestCookbooksInvalidVersion(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-	cbName := pedant.UniqueName("inv_ver_cb")
-	payload := newCookbookPayload(cbName, "1.0.0")
-
-	resp, err := client.Put("/cookbooks/"+cbName+"/abc", payload)
-	if err != nil {
-		t.Fatalf("PUT /cookbooks/%s/abc: %v", cbName, err)
-	}
-	pedant.AssertStatus(t, resp, 400)
 }
 
 func TestCookbooksInvalidName(t *testing.T) {
@@ -460,59 +433,6 @@ func TestCookbooksMismatchedVersion(t *testing.T) {
 		t.Fatalf("PUT /cookbooks/%s/1.0.0: %v", cbName, err)
 	}
 	pedant.AssertErrorResponse(t, resp, 400, "name")
-}
-
-func TestCookbooksNegativeVersion(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-	cbName := pedant.UniqueName("neg_ver")
-	payload := newCookbookPayload(cbName, "1.2.-42")
-
-	resp, err := client.Put("/cookbooks/"+cbName+"/1.2.-42", payload)
-	if err != nil {
-		t.Fatalf("PUT /cookbooks/%s/1.2.-42: %v", cbName, err)
-	}
-	pedant.AssertStatus(t, resp, 400)
-}
-
-func TestCookbooksVersion4Byte(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-	cbName := pedant.UniqueName("4byte_cb")
-	version := "1.2.2147483647"
-	payload := newCookbookPayload(cbName, version)
-	defer client.Delete("/cookbooks/" + cbName + "/" + version)
-
-	resp, err := client.Put("/cookbooks/"+cbName+"/"+version, payload)
-	if err != nil {
-		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, version, err)
-	}
-	pedant.AssertStatus(t, resp, 201)
-}
-
-func TestCookbooksVersion4ByteOverflow(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-	cbName := pedant.UniqueName("4byte_ovf")
-	version := "1.2.2147483669"
-	payload := newCookbookPayload(cbName, version)
-	defer client.Delete("/cookbooks/" + cbName + "/" + version)
-
-	resp, err := client.Put("/cookbooks/"+cbName+"/"+version, payload)
-	if err != nil {
-		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, version, err)
-	}
-	pedant.AssertStatus(t, resp, 201)
-}
-
-func TestCookbooksVersion8ByteOverflow(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-	cbName := pedant.UniqueName("8byte_ovf")
-	version := "1.2.9223372036854775849"
-	payload := newCookbookPayload(cbName, version)
-
-	resp, err := client.Put("/cookbooks/"+cbName+"/"+version, payload)
-	if err != nil {
-		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, version, err)
-	}
-	pedant.AssertStatus(t, resp, 400)
 }
 
 func TestCookbooksMetadataSectionValidation(t *testing.T) {

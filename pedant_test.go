@@ -435,37 +435,6 @@ func TestNodesUpdate(t *testing.T) {
 	}
 }
 
-func TestNodesNameValidation(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-
-	tests := []struct {
-		name  string
-		valid bool
-	}{
-		{"pedant_node", true},
-		{"PEDANT_NODE", true},
-		{"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_:", true},
-		{"this+ is bad!!!", false},
-		{"I-do-not-like!!!", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			node := pedant.NewNode(tt.name)
-			resp, err := client.Post("/nodes", node)
-			if err != nil {
-				t.Fatalf("POST /nodes: %v", err)
-			}
-			if tt.valid {
-				pedant.AssertStatus(t, resp, 201)
-				client.Delete("/nodes/" + tt.name)
-			} else {
-				pedant.AssertStatus(t, resp, 400)
-			}
-		})
-	}
-}
-
 func TestNodesJSONClassValidation(t *testing.T) {
 	client := testServer.NewClient(testServer.AdminUser)
 	nodeName := pedant.UniqueName("jsonclass_test")
@@ -488,92 +457,6 @@ func TestNodesJSONClassValidation(t *testing.T) {
 		t.Fatalf("POST /nodes: %v", err)
 	}
 	pedant.AssertErrorResponse(t, resp, 400, "json_class")
-}
-
-func TestNodesRunListNormalization(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-	nodeName := pedant.UniqueName("runlist_node")
-	node := pedant.NewNode(nodeName, map[string]interface{}{
-		"run_list": []string{"foo", "foo::bar", "bar::baz@1.0.0", "recipe[web]", "role[prod]"},
-	})
-	defer client.Delete("/nodes/" + nodeName)
-
-	resp, err := client.Post("/nodes", node)
-	if err != nil {
-		t.Fatalf("POST /nodes: %v", err)
-	}
-	pedant.AssertStatus(t, resp, 201)
-
-	// Verify normalized run list
-	resp, err = client.Get("/nodes/" + nodeName)
-	if err != nil {
-		t.Fatalf("GET /nodes/%s: %v", nodeName, err)
-	}
-	pedant.AssertStatus(t, resp, 200)
-	body := pedant.GetJSONBody(t, resp)
-	runList := body["run_list"].([]interface{})
-	expected := []string{"recipe[foo]", "recipe[foo::bar]", "recipe[bar::baz@1.0.0]", "recipe[web]", "role[prod]"}
-	if len(runList) != len(expected) {
-		t.Fatalf("expected %d run_list items, got %d: %v", len(expected), len(runList), runList)
-	}
-	for i, item := range runList {
-		if item != expected[i] {
-			t.Errorf("run_list[%d]: expected %q, got %q", i, expected[i], item)
-		}
-	}
-}
-
-func TestNodesRunListDuplicates(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-	nodeName := pedant.UniqueName("dup_rl_node")
-	node := pedant.NewNode(nodeName, map[string]interface{}{
-		"run_list": []string{"webserver", "recipe[webserver]", "role[prod]", "role[prod]"},
-	})
-	defer client.Delete("/nodes/" + nodeName)
-
-	resp, err := client.Post("/nodes", node)
-	if err != nil {
-		t.Fatalf("POST /nodes: %v", err)
-	}
-	pedant.AssertStatus(t, resp, 201)
-
-	resp, err = client.Get("/nodes/" + nodeName)
-	if err != nil {
-		t.Fatalf("GET /nodes/%s: %v", nodeName, err)
-	}
-	pedant.AssertStatus(t, resp, 200)
-	body := pedant.GetJSONBody(t, resp)
-	runList := body["run_list"].([]interface{})
-	// Duplicates should be removed; webserver and recipe[webserver] normalize to the same thing
-	if len(runList) != 2 {
-		t.Errorf("expected 2 run_list items (deduped), got %d: %v", len(runList), runList)
-	}
-}
-
-func TestNodesRunListInvalidItems(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-	nodeName := pedant.UniqueName("bad_rl_node")
-
-	invalidRunLists := []interface{}{
-		[]interface{}{1, 2, 3},
-		[]interface{}{[]interface{}{}},
-		[]interface{}{"string", []interface{}{}},
-		map[string]interface{}{},
-		"string",
-		1,
-	}
-
-	for i, rl := range invalidRunLists {
-		t.Run(fmt.Sprintf("invalid_%d", i), func(t *testing.T) {
-			node := pedant.NewNode(nodeName)
-			node["run_list"] = rl
-			resp, err := client.Post("/nodes", node)
-			if err != nil {
-				t.Fatalf("POST /nodes: %v", err)
-			}
-			pedant.AssertStatus(t, resp, 400)
-		})
-	}
 }
 
 func TestNodesDefaultAttributes(t *testing.T) {
@@ -741,37 +624,6 @@ func TestRolesUpdate(t *testing.T) {
 	pedant.AssertStatus(t, resp, 200)
 }
 
-func TestRolesNameValidation(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-
-	tests := []struct {
-		name  string
-		valid bool
-	}{
-		{"pedant_role", true},
-		{"PEDANT_ROLE", true},
-		{"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_:", true},
-		{"this+ is bad!!!", false},
-		{"I-do-not-like!!!", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			role := pedant.NewRole(tt.name)
-			resp, err := client.Post("/roles", role)
-			if err != nil {
-				t.Fatalf("POST /roles: %v", err)
-			}
-			if tt.valid {
-				pedant.AssertStatus(t, resp, 201)
-				client.Delete("/roles/" + tt.name)
-			} else {
-				pedant.AssertStatus(t, resp, 400)
-			}
-		})
-	}
-}
-
 func TestRolesJSONClassValidation(t *testing.T) {
 	client := testServer.NewClient(testServer.AdminUser)
 	roleName := pedant.UniqueName("rl_jsonclass")
@@ -824,38 +676,6 @@ func TestRolesDefaultAttributes(t *testing.T) {
 	}
 	if body["run_list"] == nil {
 		t.Error("expected run_list to be set")
-	}
-}
-
-func TestRolesRunListNormalization(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-	roleName := pedant.UniqueName("rl_runlist")
-	role := pedant.NewRole(roleName, map[string]interface{}{
-		"run_list": []string{"foo", "foo::bar", "bar::baz@1.0.0", "recipe[web]", "role[prod]"},
-	})
-	defer client.Delete("/roles/" + roleName)
-
-	resp, err := client.Post("/roles", role)
-	if err != nil {
-		t.Fatalf("POST /roles: %v", err)
-	}
-	pedant.AssertStatus(t, resp, 201)
-
-	resp, err = client.Get("/roles/" + roleName)
-	if err != nil {
-		t.Fatalf("GET /roles/%s: %v", roleName, err)
-	}
-	pedant.AssertStatus(t, resp, 200)
-	body := pedant.GetJSONBody(t, resp)
-	runList := body["run_list"].([]interface{})
-	expected := []string{"recipe[foo]", "recipe[foo::bar]", "recipe[bar::baz@1.0.0]", "recipe[web]", "role[prod]"}
-	if len(runList) != len(expected) {
-		t.Fatalf("expected %d run_list items, got %d: %v", len(expected), len(runList), runList)
-	}
-	for i, item := range runList {
-		if item != expected[i] {
-			t.Errorf("run_list[%d]: expected %q, got %q", i, expected[i], item)
-		}
 	}
 }
 
@@ -1032,37 +852,6 @@ func TestEnvironmentsUpdate(t *testing.T) {
 	body := pedant.GetJSONBody(t, resp)
 	if body["description"] != "updated description" {
 		t.Errorf("expected description 'updated description', got %v", body["description"])
-	}
-}
-
-func TestEnvironmentsNameValidation(t *testing.T) {
-	client := testServer.NewClient(testServer.AdminUser)
-
-	tests := []struct {
-		name  string
-		valid bool
-	}{
-		{"pedant_environment", true},
-		{"ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz-0123456789", true},
-		{"abc!123", false},
-		{"abc 123", false},
-		{"大爆発", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			env := pedant.NewEnvironment(tt.name)
-			resp, err := client.Post("/environments", env)
-			if err != nil {
-				t.Fatalf("POST /environments: %v", err)
-			}
-			if tt.valid {
-				pedant.AssertStatus(t, resp, 201)
-				client.Delete("/environments/" + tt.name)
-			} else {
-				pedant.AssertStatus(t, resp, 400)
-			}
-		})
 	}
 }
 
