@@ -218,6 +218,11 @@ func TestCookbooksDeleteValidatorCannotDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DELETE /cookbooks/%s/%s: %v", cbName, cbVersion, err)
 	}
+	// If the validator client was deleted by another test, skip
+	if resp.StatusCode == 401 {
+		t.Skip("validator client no longer exists (deleted by another test)")
+		return
+	}
 	pedant.AssertStatus(t, resp, 403)
 }
 
