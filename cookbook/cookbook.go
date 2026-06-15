@@ -307,7 +307,9 @@ func (c *Cookbook) UpdateLatestVersion() {
 func (c *Cookbook) LatestVersion() *CookbookVersion {
 	if c.latest == nil {
 		sorted := c.sortedVersions()
-		c.latest = sorted[0]
+		if len(sorted) != 0 {
+			c.latest = sorted[0]
+		}
 		if c.latest != nil {
 			datastore.ChkNilArray(c.latest)
 		}
