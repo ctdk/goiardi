@@ -3,6 +3,7 @@ package queryutil
 import (
 	"encoding/base64"
 	"fmt"
+	"math"
 	"net/url"
 	"reflect"
 	"sort"
@@ -11,6 +12,12 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/private/protocol"
+)
+
+const (
+	floatNaN    = "NaN"
+	floatInf    = "Infinity"
+	floatNegInf = "-Infinity"
 )
 
 // Parse parses an object i and fills a url.Values object. The isEC2 flag
@@ -76,6 +83,9 @@ func (q *queryParser) parseStruct(v url.Values, value reflect.Value, prefix stri
 		if field.PkgPath != "" {
 			continue // ignore unexported fields
 		}
+		if field.Tag.Get("ignore") != "" {
+			continue
+		}
 
 		if protocol.CanSetIdempotencyToken(value.Field(i), field) {
 			token := protocol.GetIdempotencyToken()
@@ -112,15 +122,23 @@ func (q *queryParser) parseStruct(v url.Values, value reflect.Value, prefix stri
 }
 
 func (q *queryParser) parseList(v url.Values, value reflect.Value, prefix string, tag reflect.StructTag) error {
-	// If it's empty, generate an empty value
-	if !value.IsNil() && value.Len() == 0 {
+	// If it's empty, and not ec2, generate an empty value
+	if !value.IsNil() && value.Len() == 0 && !q.isEC2 {
 		v.Set(prefix, "")
 		return nil
 	}
 
+	if _, ok := value.Interface().([]byte); ok {
+		return q.parseScalar(v, value, prefix, tag)
+	}
+
 	// check for unflattened list member
 	if !q.isEC2 && tag.Get("flattened") == "" {
-		prefix += ".member"
+		if listName := tag.Get("locationNameList"); listName == "" {
+			prefix += ".member"
+		} else {
+			prefix += "." + listName
+		}
 	}
 
 	for i := 0; i < value.Len(); i++ {
@@ -217,12 +235,40 @@ func (q *queryParser) parseScalar(v url.Values, r reflect.Value, name string, ta
 	case int:
 		v.Set(name, strconv.Itoa(value))
 	case float64:
-		v.Set(name, strconv.FormatFloat(value, 'f', -1, 64))
+		var str string
+		switch {
+		case math.IsNaN(value):
+			str = floatNaN
+		case math.IsInf(value, 1):
+			str = floatInf
+		case math.IsInf(value, -1):
+			str = floatNegInf
+		default:
+			str = strconv.FormatFloat(value, 'f', -1, 64)
+		}
+		v.Set(name, str)
 	case float32:
-		v.Set(name, strconv.FormatFloat(float64(value), 'f', -1, 32))
+		asFloat64 := float64(value)
+		var str string
+		switch {
+		case math.IsNaN(asFloat64):
+			str = floatNaN
+		case math.IsInf(asFloat64, 1):
+			str = floatInf
+		case math.IsInf(asFloat64, -1):
+			str = floatNegInf
+		default:
+			str = strconv.FormatFloat(asFloat64, 'f', -1, 32)
+		}
+		v.Set(name, str)
 	case time.Time:
 		const ISO8601UTC = "2006-01-02T15:04:05Z"
-		v.Set(name, value.UTC().Format(ISO8601UTC))
+		format := tag.Get("timestampFormat")
+		if len(format) == 0 {
+			format = protocol.ISO8601TimeFormatName
+		}
+
+		v.Set(name, protocol.FormatTime(format, value))
 	default:
 		return fmt.Errorf("unsupported value for param %s: %v (%s)", name, r.Interface(), r.Type().Name())
 	}

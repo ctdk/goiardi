@@ -50,9 +50,19 @@ func prettify(v reflect.Value, indent int, buf *bytes.Buffer) {
 
 		for i, n := range names {
 			val := v.FieldByName(n)
+			ft, ok := v.Type().FieldByName(n)
+			if !ok {
+				panic(fmt.Sprintf("expected to find field %v on type %v, but was not found", n, v.Type()))
+			}
+
 			buf.WriteString(strings.Repeat(" ", indent+2))
 			buf.WriteString(n + ": ")
-			prettify(val, indent+2, buf)
+
+			if tag := ft.Tag.Get("sensitive"); tag == "true" {
+				buf.WriteString("<sensitive>")
+			} else {
+				prettify(val, indent+2, buf)
+			}
 
 			if i < len(names)-1 {
 				buf.WriteString(",\n")
@@ -61,6 +71,12 @@ func prettify(v reflect.Value, indent int, buf *bytes.Buffer) {
 
 		buf.WriteString("\n" + strings.Repeat(" ", indent) + "}")
 	case reflect.Slice:
+		strtype := v.Type().String()
+		if strtype == "[]uint8" {
+			fmt.Fprintf(buf, "<binary> len %d", v.Len())
+			break
+		}
+
 		nl, id, id2 := "", "", ""
 		if v.Len() > 3 {
 			nl, id, id2 = "\n", strings.Repeat(" ", indent), strings.Repeat(" ", indent+2)
