@@ -55,7 +55,7 @@ func Errorf(format string, a ...any) Error {
 
 // CastErr will easily cast a different kind of error to a goiardi Error.
 func CastErr(err error) Error {
-	return Errorf(err.Error())
+	return &gerror{msg: err.Error(), status: http.StatusBadRequest}
 }
 
 // Error returns the error message.

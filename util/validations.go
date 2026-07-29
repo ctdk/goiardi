@@ -102,7 +102,7 @@ func ValidateAsVersion(ver any) (string, Gerror) {
 				}
 				v, err := strconv.ParseInt(inspectVer[n], 10, 64)
 				if err != nil {
-					verr := Errorf(err.Error())
+					verr := CastErr(err)
 					return "", verr
 				}
 				if v < 0 {
@@ -213,7 +213,7 @@ func ValidateNumVersions(nr string) Gerror {
 		}
 		n, nerr := strconv.Atoi(nr)
 		if nerr != nil {
-			err := Errorf(nerr.Error())
+			err := CastErr(nerr)
 			return err
 		}
 		if n < 0 {

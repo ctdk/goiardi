@@ -30,7 +30,7 @@ func TestReportCreation(t *testing.T) {
 	invalidUUID := "12b8be8d-a2ef-4fc6-88b3-4c18103b88zz"
 	r, err := New(uuid, "node")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if r.RunID != uuid {
 		t.Errorf("run ids are not identical: %s :: %s", r.RunID, uuid)
@@ -51,11 +51,11 @@ func TestReportUpdating(t *testing.T) {
 	update["data"] = make(map[string]any)
 	r, err := NewFromJSON("node", create)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	err = r.UpdateFromJSON(update)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	r.Delete()
 }
@@ -85,7 +85,7 @@ func TestReportListing(t *testing.T) {
 	until := time.Now()
 	ns, nerr := GetNodeList(n.Name, from, until, 100, "")
 	if nerr != nil {
-		t.Errorf(nerr.Error())
+		t.Error(nerr.Error())
 	}
 	if len(ns) != 2 {
 		t.Errorf("expected 2 items from node 'node2', got %d", len(ns))
@@ -93,7 +93,7 @@ func TestReportListing(t *testing.T) {
 
 	zs, rerr := GetReportList(from, until, 100, "started")
 	if rerr != nil {
-		t.Errorf(rerr.Error())
+		t.Error(rerr.Error())
 	}
 	rs = GetList()
 	if len(zs) != len(rs) {
@@ -101,7 +101,7 @@ func TestReportListing(t *testing.T) {
 	}
 	zs, rerr = GetReportList(from, until, 100, "success")
 	if rerr != nil {
-		t.Errorf(rerr.Error())
+		t.Error(rerr.Error())
 	}
 	if len(zs) != 0 {
 		t.Errorf("Searching for successful runs should have returned zero results, but returned %d instead", len(zs))

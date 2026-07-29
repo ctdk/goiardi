@@ -216,7 +216,7 @@ func DoesExist(cookbookName string) (bool, util.Gerror) {
 		var cerr error
 		found, cerr = checkForCookbookSQL(datastore.Dbh, cookbookName)
 		if cerr != nil {
-			err := util.Errorf(cerr.Error())
+			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
 			return false, err
 		}
@@ -763,7 +763,7 @@ func (c *Cookbook) GetVersion(cbVersion string) (*CookbookVersion, util.Gerror) 
 				if err == sql.ErrNoRows {
 					found = false
 				} else {
-					gerr := util.Errorf(err.Error())
+					gerr := util.CastErr(err)
 					gerr.SetStatus(http.StatusInternalServerError)
 					return nil, gerr
 				}

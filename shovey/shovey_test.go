@@ -38,7 +38,7 @@ func TestShoveyCreation(t *testing.T) {
 		n.Save()
 		err := n.UpdateStatus("up")
 		if err != nil {
-			t.Errorf(err.Error())
+			t.Error(err.Error())
 		}
 		n.Save()
 		nodes[i] = n
@@ -50,17 +50,17 @@ func TestShoveyCreation(t *testing.T) {
 	gob.Register(zz)
 	s, err := New("/bin/ls", 300, "100%", nodeNames)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	s2, err := Get(s.RunID)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if s.RunID != s2.RunID {
 		t.Errorf("Run IDs should have been equal, but weren't. Got %s and %s", s.RunID, s2.RunID)
 	}
 	//err = s.Cancel()
 	//if err != nil {
-	//	t.Errorf(err.Error())
+	//	t.Error(err.Error())
 	//}
 }

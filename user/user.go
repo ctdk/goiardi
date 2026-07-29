@@ -72,7 +72,7 @@ func New(name string) (*User, util.Gerror) {
 		var uerr error
 		found, uerr = checkForUserSQL(datastore.Dbh, name)
 		if uerr != nil {
-			err = util.Errorf(uerr.Error())
+			err = util.CastErr(uerr)
 			err.SetStatus(http.StatusInternalServerError)
 			return nil, err
 		}
@@ -92,7 +92,7 @@ func New(name string) (*User, util.Gerror) {
 
 	salt, saltErr := chefcrypto.GenerateSalt()
 	if saltErr != nil {
-		err := util.Errorf(saltErr.Error())
+		err := util.CastErr(saltErr)
 		return nil, err
 	}
 	user := &User{
@@ -115,7 +115,7 @@ func Get(name string) (*User, util.Gerror) {
 		if err != nil {
 			var gerr util.Gerror
 			if err != sql.ErrNoRows {
-				gerr = util.Errorf(err.Error())
+				gerr = util.CastErr(err)
 				gerr.SetStatus(http.StatusInternalServerError)
 			} else {
 				gerr = util.Errorf("Client %s not found", name)
@@ -144,7 +144,7 @@ func DoesExist(userName string) (bool, util.Gerror) {
 		var cerr error
 		found, cerr = checkForUserSQL(datastore.Dbh, userName)
 		if cerr != nil {
-			err := util.Errorf(cerr.Error())
+			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
 			return false, err
 		}
@@ -169,7 +169,7 @@ func (u *User) Save() util.Gerror {
 		}
 	} else {
 		if err := chkInMemClient(u.Username); err != nil {
-			gerr := util.Errorf(err.Error())
+			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusConflict)
 			return gerr
 		}
@@ -247,7 +247,7 @@ func (u *User) Rename(newName string) util.Gerror {
 	} else {
 		ds := datastore.New()
 		if err := chkInMemClient(newName); err != nil {
-			gerr := util.Errorf(err.Error())
+			gerr := util.CastErr(err)
 			gerr.SetStatus(http.StatusConflict)
 			return gerr
 		}
@@ -542,7 +542,7 @@ func (u *User) SetPasswd(password string) util.Gerror {
 	/* If those validations pass, set the password */
 	pw, perr := chefcrypto.HashPasswd(password, u.salt)
 	if perr != nil {
-		err := util.Errorf(perr.Error())
+		err := util.CastErr(perr)
 		return err
 	}
 	if config.UsingExternalSecrets() {
@@ -561,7 +561,7 @@ func (u *User) SetPasswd(password string) util.Gerror {
 func (u *User) CheckPasswd(password string) util.Gerror {
 	h, perr := chefcrypto.HashPasswd(password, u.salt)
 	if perr != nil {
-		err := util.Errorf(perr.Error())
+		err := util.CastErr(perr)
 		return err
 	}
 	if subtle.ConstantTimeCompare([]byte(u.Passwd()), []byte(h)) != 1 {

@@ -27,7 +27,7 @@ import (
 func (u *User) saveMySQL() util.Gerror {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		gerr := util.Errorf(err.Error())
+		gerr := util.CastErr(err)
 		return gerr
 	}
 	// check for a client with this name first. If orgs are ever
@@ -35,7 +35,7 @@ func (u *User) saveMySQL() util.Gerror {
 	// in with this organization
 	err = chkForClient(tx, u.Username)
 	if err != nil {
-		gerr := util.Errorf(err.Error())
+		gerr := util.CastErr(err)
 		gerr.SetStatus(http.StatusConflict)
 		return gerr
 	}
@@ -52,12 +52,12 @@ func (u *User) saveMySQL() util.Gerror {
 func (u *User) renameMySQL(newName string) util.Gerror {
 	tx, err := datastore.Dbh.Begin()
 	if err != nil {
-		gerr := util.Errorf(err.Error())
+		gerr := util.CastErr(err)
 		return gerr
 	}
 	if err = chkForClient(tx, newName); err != nil {
 		tx.Rollback()
-		gerr := util.Errorf(err.Error())
+		gerr := util.CastErr(err)
 		return gerr
 	}
 	found, err := checkForUserSQL(datastore.Dbh, newName)
@@ -68,14 +68,14 @@ func (u *User) renameMySQL(newName string) util.Gerror {
 			gerr.SetStatus(http.StatusConflict)
 			return gerr
 		}
-		gerr := util.Errorf(err.Error())
+		gerr := util.CastErr(err)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}
 	_, err = tx.Exec("UPDATE users SET name = ? WHERE name = ?", newName, u.Username)
 	if err != nil {
 		tx.Rollback()
-		gerr := util.Errorf(err.Error())
+		gerr := util.CastErr(err)
 		gerr.SetStatus(http.StatusInternalServerError)
 		return gerr
 	}

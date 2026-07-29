@@ -184,7 +184,7 @@ func checkAuthHeaders(publicKey string, r *http.Request, headToCheck, signedHead
 	decHead, berr := chefcrypto.HeaderDecrypt(publicKey, signedHeaders)
 
 	if berr != nil {
-		gerr := util.Errorf(berr.Error())
+		gerr := util.CastErr(berr)
 		gerr.SetStatus(http.StatusUnauthorized)
 		return gerr
 	}
@@ -251,7 +251,7 @@ func checkTimeStamp(timestamp string, slew time.Duration) (bool, util.Gerror) {
 	timeNow := time.Now().UTC()
 	timeHeader, terr := time.Parse(time.RFC3339, timestamp)
 	if terr != nil {
-		err := util.Errorf(terr.Error())
+		err := util.CastErr(terr)
 		err.SetStatus(http.StatusUnauthorized)
 		return false, err
 	}

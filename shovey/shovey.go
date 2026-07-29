@@ -121,7 +121,7 @@ func (e *qerror) Error() string {
 
 // CastErr will easily cast a different kind of error to a Qerror.
 func CastErr(err error) Qerror {
-	return Errorf(err.Error())
+	return newQuerror(err.Error())
 }
 
 // String returns a string representation of a Qerror.

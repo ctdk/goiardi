@@ -252,7 +252,7 @@ func DoesExist(environmentName string) (bool, util.Gerror) {
 		var cerr error
 		found, cerr = checkForEnvironmentSQL(datastore.Dbh, environmentName)
 		if cerr != nil {
-			err := util.Errorf(cerr.Error())
+			err := util.CastErr(cerr)
 			err.SetStatus(http.StatusInternalServerError)
 			return false, err
 		}

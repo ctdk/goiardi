@@ -39,13 +39,13 @@ func TestGobEncodeDecode(t *testing.T) {
 	}()
 	err = enc.Encode(c)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	dec := gob.NewDecoder(saved)
 	c2 := new(Client)
 	err = dec.Decode(&c2)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 	if c2.Name != c.Name {
 		t.Errorf("saved user doesn't seem to be equal to original: %v vs %v", c2, c)
