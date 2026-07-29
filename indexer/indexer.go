@@ -25,7 +25,7 @@ import (
 	"sync"
 
 	"github.com/ctdk/goiardi/config"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 var riM *sync.Mutex

@@ -42,7 +42,7 @@ import (
 	"github.com/ctdk/goiardi/util"
 	serfclient "github.com/hashicorp/serf/client"
 	"github.com/pborman/uuid"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 // Shovey holds all the overall information for a shovey run common to all nodes
@@ -578,7 +578,7 @@ func AllShoveys() []*Shovey {
 	for _, s := range shoveList {
 		sh, err := Get(s)
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Critical(err.Error())
 			os.Exit(1)
 		}
 		shoveys = append(shoveys, sh)
@@ -593,7 +593,7 @@ func AllShoveyRuns() []*ShoveyRun {
 	for _, s := range shoveys {
 		runs, err := s.GetNodeRuns()
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Critical(err.Error())
 			os.Exit(1)
 		}
 		shoveyRuns = append(shoveyRuns, runs...)
@@ -609,7 +609,7 @@ func AllShoveyRunStreams() []*ShoveyRunStream {
 		for _, t := range outputTypes {
 			srs, err := sr.GetStreamOutput(t, 0)
 			if err != nil {
-				logger.Criticalf(err.Error())
+				logger.Critical(err.Error())
 				os.Exit(1)
 			}
 			streams = append(streams, srs...)

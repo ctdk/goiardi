@@ -37,7 +37,7 @@ import (
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/secret"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 	"net/http"
 )
 
@@ -573,7 +573,7 @@ func (c *Client) PublicKey() string {
 		if err != nil {
 			// pubKey's not goign to work very well if we can't get
 			// it....
-			logger.Errorf(err.Error())
+			logger.Error(err.Error())
 			return ""
 		}
 		return pk

@@ -29,7 +29,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 type PostgresSearch struct {
@@ -197,7 +197,7 @@ func (p *PostgresSearch) GetEndpoints() []string {
 	// TODO: deal with possible errors
 	endpoints, err := indexer.Endpoints()
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Error(err.Error())
 	}
 	return endpoints
 }
@@ -573,6 +573,6 @@ func craftAltQueryPath(a, b string) string {
 
 func searchQueryDebugf(format string, args ...any) {
 	if config.Config.SearchQueryDebug {
-		logger.Debugf(format, args...)
+		logger.Debug(fmt.Sprintf(format, args...))
 	}
 }

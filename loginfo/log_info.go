@@ -34,7 +34,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/serfin"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 // LogInfo holds log information about events.

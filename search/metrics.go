@@ -23,7 +23,7 @@ import (
 
 	"github.com/ctdk/goiardi/config"
 	"github.com/raintank/met"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 var inMemSearchTimings met.Timer

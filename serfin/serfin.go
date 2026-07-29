@@ -24,7 +24,7 @@ import (
 
 	"github.com/ctdk/goiardi/config"
 	serfclient "github.com/hashicorp/serf/client"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 	"sync"
 	"time"
 )
@@ -76,14 +76,14 @@ func StartSerfin() error {
 	var err error
 	Serfer, err = NewRPCClient(config.Config.SerfAddr)
 	if err != nil {
-		logger.Criticalf(err.Error())
+		logger.Critical(err.Error())
 		os.Exit(1)
 	}
 
 	if config.Config.SerfEventAnnounce {
 		err = Serfer.UserEvent("goiardi-join", []byte(config.Config.Hostname), true)
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Critical(err.Error())
 			os.Exit(1)
 		}
 	}
@@ -152,12 +152,12 @@ func CloseSerfClient(serfAddr string) {
 func SendEvent(eventName string, payload any) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Error(err.Error())
 		return
 	}
 	err = Serfer.UserEvent(eventName, jsonPayload, true)
 	if err != nil {
-		logger.Debugf(err.Error())
+		logger.Debug(err.Error())
 	}
 	return
 }
@@ -166,13 +166,13 @@ func SendEvent(eventName string, payload any) {
 func SendQuery(queryName string, payload any) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Error(err.Error())
 		return
 	}
 	q := &serfclient.QueryParam{Name: queryName, Payload: jsonPayload}
 	err = Serfer.Query(q)
 	if err != nil {
-		logger.Debugf(err.Error())
+		logger.Debug(err.Error())
 	}
 	return
 }

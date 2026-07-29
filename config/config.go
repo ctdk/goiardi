@@ -39,7 +39,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/jessevdk/go-flags"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 // Conf is the master struct for holding configuration options.
@@ -131,10 +131,6 @@ var Key = &SigningKeys{}
 var GitHash = "unknown"
 
 var pprofWhitelist []net.IP
-
-// LogLevelNames give convenient, easier to remember than number name for the
-// different levels of logging.
-var LogLevelNames = map[string]int{"debug": 5, "info": 4, "warning": 3, "error": 2, "critical": 1, "fatal": 0}
 
 // MySQLdb holds MySQL connection options.
 type MySQLdb struct {
@@ -448,45 +444,26 @@ func ParseConfigOptions() error {
 	if opts.SysLog {
 		Config.SysLog = opts.SysLog
 	}
-	if Config.LogFile != "" {
-		lfp, lerr := os.OpenFile(Config.LogFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModeAppend|0640)
-		if lerr != nil {
-			log.Println(err)
-			os.Exit(1)
-		}
-		log.SetOutput(lfp)
-	}
 	if dlev := len(opts.Verbose); dlev != 0 {
 		Config.DebugLevel = dlev
 	}
 	if opts.LogLevel != "" {
 		Config.LogLevel = opts.LogLevel
 	}
-	if Config.LogLevel != "" {
-		if lev, ok := LogLevelNames[strings.ToLower(Config.LogLevel)]; ok && Config.DebugLevel == 0 {
-			Config.DebugLevel = lev
-		}
-	}
-	if Config.DebugLevel > 5 {
-		Config.DebugLevel = 5
+	// convert DebugLevel to a LogLevel
+	if Config.DebugLevel != 0 {
+		Config.LogLevel = string(logger.VerboseFlagToLevel(Config.DebugLevel))
 	}
 
-	Config.DebugLevel = int(logger.LevelFatal) - Config.DebugLevel
-	logger.SetLevel(logger.LogLevel(Config.DebugLevel))
-	debugLevel := map[int]string{0: "debug", 1: "info", 2: "warning", 3: "error", 4: "critical", 5: "fatal"}
-	log.Printf("Logging at %s level", debugLevel[Config.DebugLevel])
-	// Tired of battling with syslog junk with the logger library. Deal
-	// with it ourselves.
-	lerr := setLogger(Config.SysLog)
-	if lerr != nil {
-		log.Println(lerr.Error())
-		os.Exit(1)
-	}
+	// configure the logger
+	logger.InitializeLogger(logger.LogLevelName(Config.LogLevel), Config.LogFile, false, Config.SysLog, "")
+
+	log.Printf("Logging at %s level", Config.LogLevel)
 
 	// This used to cause an error, but now will just cause a warning. Also
 	// moved it down so we can use the configured logger.
 	if Config.DataStoreFile != "" && (Config.UseMySQL || Config.UsePostgreSQL) {
-		logger.Errorf("The MySQL or Postgres and file data store options should not be specified together. Overriding the file data store.")
+		logger.Error("The MySQL or Postgres and file data store options should not be specified together. Overriding the file data store.")
 	}
 
 	/* Database options */
@@ -766,7 +743,7 @@ func ParseConfigOptions() error {
 			}
 			privPem, err := ioutil.ReadAll(privfp)
 			if err != nil {
-				logger.Fatalf(err.Error())
+				logger.Fatal(err.Error())
 				os.Exit(1)
 			}
 			privBlock, _ := pem.Decode(privPem)
@@ -776,7 +753,7 @@ func ParseConfigOptions() error {
 			}
 			privKey, err := x509.ParsePKCS1PrivateKey(privBlock.Bytes)
 			if err != nil {
-				logger.Fatalf(err.Error())
+				logger.Fatal(err.Error())
 				os.Exit(1)
 			}
 			Key.Lock()
@@ -856,7 +833,7 @@ func ParseConfigOptions() error {
 				os.Exit(1)
 			}
 			if verr := os.Setenv(env[0], env[1]); verr != nil {
-				logger.Fatalf(verr.Error())
+				logger.Fatal(verr.Error())
 				os.Exit(1)
 			}
 		}
@@ -867,9 +844,9 @@ func ParseConfigOptions() error {
 		Config.SearchQueryDebug = opts.SearchQueryDebug
 	}
 	if Config.SearchQueryDebug {
-		if logger.LogLevel(Config.DebugLevel) != logger.LevelDebug {
+		if logger.CurrentLogLevel != logger.LevelDebug {
 			logger.Warningf("postgres search query debugging enabled -- overriding log level and setting it to 'debug'.")
-			logger.SetLevel(logger.LevelDebug)
+			logger.SetLevel(logger.DebugLevel)
 		}
 		logger.Debugf("Logging search query debug statements")
 	}

@@ -20,7 +20,7 @@ import (
 	"github.com/ctdk/goiardi/actor"
 	"github.com/ctdk/goiardi/gerror"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 	"net/http"
 )
 

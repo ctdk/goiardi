@@ -32,7 +32,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 // Searcher is an interface that any search backend needs to implement. It's

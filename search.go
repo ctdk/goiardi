@@ -31,7 +31,7 @@ import (
 	"github.com/ctdk/goiardi/role"
 	"github.com/ctdk/goiardi/search"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 	"net/http"
 	"net/url"
 	"os"
@@ -301,7 +301,7 @@ func reindexAll() {
 		i := 0
 		allDBItems, derr := dbag.AllDBItems()
 		if derr != nil {
-			logger.Errorf(derr.Error())
+			logger.Error(derr.Error())
 			continue
 		}
 		for _, k := range allDBItems {

@@ -1,7 +1,7 @@
-// +build !windows
+//go:build !windows && !plan9
 
 /*
- * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2026, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,15 @@
  * limitations under the License.
  */
 
-package config
+package logger
 
 import (
-	"github.com/tideland/golib/logger"
+	"log"
 )
 
-func setLogger(useSyslog bool) error {
-	if useSyslog {
-		sl, err := logger.NewSysLogger("goiardi")
-		if err != nil {
-			return err
-		}
-		logger.SetLogger(sl)
-	} else {
-		logger.SetLogger(logger.NewGoLogger())
-	}
-	return nil
+// initSyslog will eventually set up using syslog, but for the moment it's a
+// no-op until the rest of it is sorted out. Everything about this is subject to
+// change.
+func initSyslog(useSyslog bool, syslogAddr string) (*log.Logger, error) {
+	return nil, nil
 }

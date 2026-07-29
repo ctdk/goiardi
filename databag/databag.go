@@ -32,7 +32,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 // DataBag is the overall data bag.

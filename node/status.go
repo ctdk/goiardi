@@ -27,7 +27,7 @@ import (
 
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 // NodeStatus records a node's status at a particular time.
@@ -128,7 +128,7 @@ func AllNodeStatuses() []*NodeStatus {
 	for _, n := range nodes {
 		ns, err := n.AllStatuses()
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Critical(err.Error())
 			os.Exit(1)
 		}
 		allStatus = append(allStatus, ns...)

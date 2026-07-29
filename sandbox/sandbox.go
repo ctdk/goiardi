@@ -34,7 +34,7 @@ import (
 	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 /* The structure of the sandbox responses is... inconsistent. */
@@ -223,7 +223,7 @@ func (s *Sandbox) UploadChkList() map[string]map[string]any {
 				var err error
 				chksumStats[chk]["url"], err = util.S3PutURL("default", chk)
 				if err != nil {
-					logger.Errorf(err.Error())
+					logger.Error(err.Error())
 				}
 			} else {
 				itemURL := fmt.Sprintf("/file_store/%s", chk)

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/depgraph"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 	"sort"
 	"strings"
 )

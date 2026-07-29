@@ -45,7 +45,7 @@ import (
 	"github.com/ctdk/goiardi/pedant"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/user"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 // testServer is the global test server instance.
@@ -69,7 +69,7 @@ func TestMain(m *testing.M) {
 		LogLevel:        "fatal",
 		DebugLevel:      5,
 	}
-	logger.SetLevel(logger.LevelFatal)
+	logger.SetLevel(logger.FatalLevel)
 
 	// Detect backend from environment
 	backend, dbParams, err := pedant.BackendFromEnv()

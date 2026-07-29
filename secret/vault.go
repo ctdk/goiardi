@@ -29,7 +29,7 @@ import (
 	"fmt"
 	"github.com/ctdk/goiardi/config"
 	vault "github.com/hashicorp/vault/api"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 	"sync"
 	"time"
 )

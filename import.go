@@ -37,7 +37,7 @@ import (
 	"github.com/ctdk/goiardi/sandbox"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/user"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 func importAll(fileName string) error {

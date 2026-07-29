@@ -29,7 +29,7 @@ import (
 	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/util"
 	gversion "github.com/hashicorp/go-version"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 	"net/http"
 	"regexp"
 	"sort"
@@ -161,7 +161,7 @@ func AllCookbooks() (cookbooks []*Cookbook) {
 			// todo: this needs to be handled in a much better way.
 			// AllCookbooks() should return an err which should be
 			// checked above. Leaving this for another day
-			logger.Errorf(err.Error())
+			logger.Error(err.Error())
 			continue
 		}
 		cookbooks = append(cookbooks, cb)
@@ -1131,7 +1131,7 @@ func methodize(method string, cbThing []map[string]any) []map[string]any {
 					var err error
 					retHash[i][k], err = util.S3GetURL("default", chkSum)
 					if err != nil {
-						logger.Errorf(err.Error())
+						logger.Error(err.Error())
 					}
 				} else {
 					retHash[i][k] = baseURL + "/file_store/" + chkSum

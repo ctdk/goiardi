@@ -42,7 +42,7 @@ import (
 
 	"github.com/ctdk/goiardi/config"
 	"github.com/pmylund/go-cache"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 // ErrorNodeStatus is for errors specific to the absence of node statuses in the

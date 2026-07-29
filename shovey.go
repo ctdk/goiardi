@@ -23,7 +23,7 @@ import (
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/shovey"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 	"net/http"
 	"strconv"
 )

@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 
 	"github.com/ctdk/goiardi/depgraph"
 	"github.com/ctdk/goiardi/util"

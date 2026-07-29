@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/ctdk/goiardi/datastore"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 func (f *FileStore) saveMySQL() error {

@@ -32,7 +32,7 @@ import (
 
 	"github.com/ctdk/go-trie/gtrie"
 	"github.com/ctdk/goiardi/util"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 	"github.com/tinylib/msgp/msgp"
 )
 
@@ -438,7 +438,7 @@ func (idoc *IdxDoc) update(object Indexable) {
 	}()
 	trie, err := gtrie.Create(flattened)
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Error(err.Error())
 	} else {
 		var err error
 		idoc.trie, err = compressTrie(trie)

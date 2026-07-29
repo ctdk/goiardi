@@ -1,7 +1,7 @@
-// +build windows
+//go:build windows || plan9
 
 /*
- * Copyright (c) 2013-2017, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2026, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,15 @@
  * limitations under the License.
  */
 
-package config
+package logger
 
 import (
-	"github.com/tideland/golib/logger"
 	"log"
 )
 
-func setLogger(useSyslog bool) error {
-	if useSyslog {
-		log.Println("Syslog isn't actually supported in Windows - using regular logging.")
-	}
-	logger.SetLogger(logger.NewGoLogger())
-	return nil
+// initSyslog, for platforms that do not use syslog at all, will always be a
+// no-op. Even so, this is even more of a dummy function than it would be until
+// syslog is sorted out where it's available.
+func initSyslog(useSyslog bool, syslogAddr string) (*log.Logger, error) {
+	return nil, nil
 }

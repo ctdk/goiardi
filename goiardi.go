@@ -65,7 +65,7 @@ import (
 	serfclient "github.com/hashicorp/serf/client"
 	"github.com/raintank/met"
 	"github.com/raintank/met/helper"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 type interceptHandler struct{} // Doesn't need to do anything, just sit there.
@@ -98,7 +98,7 @@ func main() {
 			datastore.Dbh, derr = datastore.ConnectDB("postgres", config.Config.PostgreSQL)
 		}
 		if derr != nil {
-			logger.Fatalf(derr.Error())
+			logger.Fatal(derr.Error())
 			os.Exit(1)
 		}
 	}
@@ -107,7 +107,7 @@ func main() {
 	if config.UsingExternalSecrets() {
 		secerr := secret.ConfigureSecretStore()
 		if secerr != nil {
-			logger.Fatalf(secerr.Error())
+			logger.Fatal(secerr.Error())
 			os.Exit(1)
 		}
 	}
@@ -119,20 +119,20 @@ func main() {
 		if config.Config.DataStoreFile != "" {
 			uerr := ds.Load(config.Config.DataStoreFile)
 			if uerr != nil {
-				logger.Fatalf(uerr.Error())
+				logger.Fatal(uerr.Error())
 				os.Exit(1)
 			}
 		}
 		ierr := indexer.LoadIndex()
 		if ierr != nil {
-			logger.Fatalf(ierr.Error())
+			logger.Fatal(ierr.Error())
 			os.Exit(1)
 		}
 	}
 
 	metricsBackend, merr := helper.New(config.Config.UseStatsd, config.Config.StatsdAddr, config.Config.StatsdType, "goiardi", config.Config.StatsdInstance)
 	if merr != nil {
-		logger.Fatalf(merr.Error())
+		logger.Fatal(merr.Error())
 		os.Exit(1)
 	}
 	if config.Config.UseS3Upload {
@@ -173,11 +173,11 @@ func main() {
 			if config.Config.DataStoreFile != "" {
 				ds := datastore.New()
 				if err := ds.Save(config.Config.DataStoreFile); err != nil {
-					logger.Errorf(err.Error())
+					logger.Error(err.Error())
 				}
 			}
 			if err := indexer.SaveIndex(); err != nil {
-				logger.Errorf(err.Error())
+				logger.Error(err.Error())
 			}
 		}
 		if config.UsingDB() {
@@ -191,14 +191,14 @@ func main() {
 	if config.Config.UseSerf {
 		serferr := serfin.StartSerfin()
 		if serferr != nil {
-			logger.Fatalf(serferr.Error())
+			logger.Fatal(serferr.Error())
 			os.Exit(1)
 		}
 		errch := make(chan error)
 		go startEventMonitor(config.Config.SerfAddr, errch)
 		err := <-errch
 		if err != nil {
-			logger.Criticalf(err.Error())
+			logger.Critical(err.Error())
 			os.Exit(1)
 		}
 		startNodeMonitor()
@@ -514,13 +514,13 @@ func cleanPath(p string) string {
 func createDefaultActors() {
 	if cwebui, _ := client.Get("chef-webui"); cwebui == nil {
 		if webui, nerr := client.New("chef-webui"); nerr != nil {
-			logger.Criticalf(nerr.Error())
+			logger.Critical(nerr.Error())
 			os.Exit(1)
 		} else {
 			webui.Admin = true
 			pem, err := webui.GenerateKeys()
 			if err != nil {
-				logger.Criticalf(err.Error())
+				logger.Critical(err.Error())
 				os.Exit(1)
 			}
 			if config.Config.UseAuth {
@@ -529,7 +529,7 @@ func createDefaultActors() {
 					fp.WriteString(pem)
 					fp.Close()
 				} else {
-					logger.Criticalf(ferr.Error())
+					logger.Critical(ferr.Error())
 					os.Exit(1)
 				}
 			}
@@ -540,13 +540,13 @@ func createDefaultActors() {
 
 	if cvalid, _ := client.Get("chef-validator"); cvalid == nil {
 		if validator, verr := client.New("chef-validator"); verr != nil {
-			logger.Criticalf(verr.Error())
+			logger.Critical(verr.Error())
 			os.Exit(1)
 		} else {
 			validator.Validator = true
 			pem, err := validator.GenerateKeys()
 			if err != nil {
-				logger.Criticalf(err.Error())
+				logger.Critical(err.Error())
 				os.Exit(1)
 			}
 			if config.Config.UseAuth {
@@ -555,7 +555,7 @@ func createDefaultActors() {
 					fp.WriteString(pem)
 					fp.Close()
 				} else {
-					logger.Criticalf(ferr.Error())
+					logger.Critical(ferr.Error())
 					os.Exit(1)
 				}
 			}
@@ -565,13 +565,13 @@ func createDefaultActors() {
 
 	if uadmin, _ := user.Get("admin"); uadmin == nil {
 		if admin, aerr := user.New("admin"); aerr != nil {
-			logger.Criticalf(aerr.Error())
+			logger.Critical(aerr.Error())
 			os.Exit(1)
 		} else {
 			admin.Admin = true
 			pem, err := admin.GenerateKeys()
 			if err != nil {
-				logger.Criticalf(err.Error())
+				logger.Critical(err.Error())
 				os.Exit(1)
 			}
 			if config.Config.UseAuth {
@@ -580,12 +580,12 @@ func createDefaultActors() {
 					fp.WriteString(pem)
 					fp.Close()
 				} else {
-					logger.Criticalf(ferr.Error())
+					logger.Critical(ferr.Error())
 					os.Exit(1)
 				}
 			}
 			if aerr := admin.Save(); aerr != nil {
-				logger.Criticalf(aerr.Error())
+				logger.Critical(aerr.Error())
 				os.Exit(1)
 			}
 		}
@@ -612,11 +612,11 @@ func handleSignals() {
 					if config.Config.DataStoreFile != "" {
 						ds := datastore.New()
 						if err := ds.Save(config.Config.DataStoreFile); err != nil {
-							logger.Errorf(err.Error())
+							logger.Error(err.Error())
 						}
 					}
 					if err := indexer.SaveIndex(); err != nil {
-						logger.Errorf(err.Error())
+						logger.Error(err.Error())
 					}
 				}
 				if config.UsingDB() {
@@ -698,12 +698,12 @@ func setSaveTicker() {
 				if config.Config.DataStoreFile != "" {
 					uerr := ds.Save(config.Config.DataStoreFile)
 					if uerr != nil {
-						logger.Errorf(uerr.Error())
+						logger.Error(uerr.Error())
 					}
 				}
 				ierr := indexer.SaveIndex()
 				if ierr != nil {
-					logger.Errorf(ierr.Error())
+					logger.Error(ierr.Error())
 				}
 			}
 		}()
@@ -719,7 +719,7 @@ func setLogEventPurgeTicker() {
 				if len(les) != 0 {
 					p, err := loginfo.PurgeLogInfos(les[0].ID - config.Config.LogEventKeep)
 					if err != nil {
-						logger.Errorf(err.Error())
+						logger.Error(err.Error())
 					}
 					logger.Debugf("Purged %d events automatically", p)
 				}
@@ -797,7 +797,7 @@ func runEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 				jsonPayload := make(map[string]string)
 				err = json.Unmarshal(e["Payload"].([]byte), &jsonPayload)
 				if err != nil {
-					logger.Errorf(err.Error())
+					logger.Error(err.Error())
 					continue
 				}
 				n, _ := node.Get(jsonPayload["node"])
@@ -807,7 +807,7 @@ func runEventMonitor(sc *serfclient.RPCClient, errch chan<- error) {
 				}
 				err = n.UpdateStatus(jsonPayload["status"])
 				if err != nil {
-					logger.Errorf(err.Error())
+					logger.Error(err.Error())
 					continue
 				}
 				r := map[string]string{"response": "ok"}
@@ -846,14 +846,14 @@ func startNodeMonitor() {
 		for _ = range ticker.C {
 			unseen, err := node.UnseenNodes()
 			if err != nil {
-				logger.Errorf(err.Error())
+				logger.Error(err.Error())
 				continue
 			}
 			for _, n := range unseen {
 				logger.Infof("Haven't seen %s for a while, marking as down", n.Name)
 				err = n.UpdateStatus("down")
 				if err != nil {
-					logger.Errorf(err.Error())
+					logger.Error(err.Error())
 					continue
 				}
 			}

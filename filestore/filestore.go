@@ -37,7 +37,7 @@ import (
 
 	"github.com/ctdk/goiardi/config"
 	"github.com/ctdk/goiardi/datastore"
-	"github.com/tideland/golib/logger"
+	"github.com/ctdk/goiardi/logger"
 )
 
 /* Local filestorage struct. Add fields as needed. */
@@ -232,7 +232,7 @@ func DeleteHashes(fileHashes []string) {
 			delFile, err := Get(ff)
 			if err != nil {
 				logger.Debugf("Strange, we got an error trying to get %s to delete it.\n", ff)
-				logger.Debugf(err.Error())
+				logger.Debug(err.Error())
 			} else {
 				_ = delFile.Delete()
 			}
@@ -247,7 +247,7 @@ func DeleteHashes(fileHashes []string) {
 		for _, fh := range fileHashes {
 			err := os.Remove(path.Join(config.Config.LocalFstoreDir, fh))
 			if err != nil {
-				logger.Errorf(err.Error())
+				logger.Error(err.Error())
 			}
 		}
 	}
