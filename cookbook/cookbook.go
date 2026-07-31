@@ -328,6 +328,9 @@ func (c *Cookbook) UpdateLatestVersion() {
 func (c *Cookbook) LatestVersion() *CookbookVersion {
 	if c.latest == nil {
 		sorted := c.sortedVersions()
+		if len(sorted) == 0 {
+			return nil
+		}
 		c.latest = sorted[0]
 		if c.latest != nil {
 			datastore.ChkNilArray(c.latest)
@@ -362,7 +365,11 @@ func CookbookLatest(org *organization.Organization) map[string]interface{} {
 		}
 	} else {
 		for _, cb := range AllCookbooks(org) {
-			latest[cb.Name] = util.CustomObjURL(cb, cb.LatestVersion().Version)
+			latestVer := cb.LatestVersion()
+			if latestVer == nil {
+				continue
+			}
+			latest[cb.Name] = util.CustomObjURL(cb, latestVer.Version)
 		}
 	}
 	return latest
@@ -383,7 +390,11 @@ func CookbookRecipes(org *organization.Organization) ([]string, util.Gerror) {
 		/* Damn it, this sends back an array of
 		 * all the recipes. Fill it in, and send
 		 * back the JSON ourselves. */
-		rlistTmp, err := cb.LatestVersion().RecipeList()
+		latestVer := cb.LatestVersion()
+		if latestVer == nil {
+			continue
+		}
+		rlistTmp, err := latestVer.RecipeList()
 		if err != nil {
 			return nil, err
 		}

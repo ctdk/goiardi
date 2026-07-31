@@ -242,6 +242,27 @@ func main() {
 	createDefaultActors(cworg)
 	handleSignals()
 
+	muxer := createRouter()
+	h := &interceptHandler{router: muxer}
+
+	listenAddr := config.ListenAddr()
+	var err error
+	srv := &http.Server{Addr: listenAddr, Handler: h}
+	if config.Config.UseSSL {
+		srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS10}
+		err = srv.ListenAndServeTLS(config.Config.SSLCert, config.Config.SSLKey)
+	} else {
+		err = srv.ListenAndServe()
+	}
+	if err != nil {
+		logger.Fatalf("ListenAndServe: %s", err.Error())
+	}
+}
+
+// createRouter builds and returns the gorilla/mux router with all goiardi
+// API handlers registered. It is used by main() and by the integration test
+// server.
+func createRouter() *mux.Router {
 	muxer := mux.NewRouter()
 	muxer.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 	// may need to set mux.StrictSlash(true)
@@ -365,20 +386,7 @@ func main() {
 	/* TODO: figure out how to handle the root & not found pages */
 	muxer.HandleFunc("/", rootHandler)
 
-	h := &interceptHandler{router: muxer}
-
-	listenAddr := config.ListenAddr()
-	var err error
-	srv := &http.Server{Addr: listenAddr, Handler: h}
-	if config.Config.UseSSL {
-		srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS10}
-		err = srv.ListenAndServeTLS(config.Config.SSLCert, config.Config.SSLKey)
-	} else {
-		err = srv.ListenAndServe()
-	}
-	if err != nil {
-		logger.Fatalf("ListenAndServe: %s", err.Error())
-	}
+	return muxer
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
