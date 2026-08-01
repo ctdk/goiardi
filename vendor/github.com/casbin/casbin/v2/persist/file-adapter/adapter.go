@@ -104,7 +104,10 @@ func (a *Adapter) loadPolicyFile(model model.Model, handler func(string, model.M
 }
 
 func (a *Adapter) savePolicyFile(text string) error {
-	f, err := os.Create(a.filePath)
+	// Write to a temp file and rename for atomicity, preventing
+	// concurrent readers from seeing partial writes.
+	tmpPath := a.filePath + ".tmp"
+	f, err := os.Create(tmpPath)
 	if err != nil {
 		return err
 	}
@@ -112,15 +115,25 @@ func (a *Adapter) savePolicyFile(text string) error {
 
 	_, err = w.WriteString(text)
 	if err != nil {
+		f.Close()
+		os.Remove(tmpPath)
 		return err
 	}
 
 	err = w.Flush()
 	if err != nil {
+		f.Close()
+		os.Remove(tmpPath)
 		return err
 	}
 
-	return f.Close()
+	err = f.Close()
+	if err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+
+	return os.Rename(tmpPath, a.filePath)
 }
 
 // AddPolicy adds a policy rule to the storage.

@@ -84,6 +84,11 @@ func init() {
 }
 
 func LoadACL(org *organization.Organization) error {
+	// Serialize with all other ACL operations to prevent reading a
+	// partially-written policy file while SavePolicy is in progress.
+	ACLCoordinator <- struct{}{}
+	defer func() { _ = <-ACLCoordinator }()
+
 	m, err := model.NewModelFromString(modelDefinition)
 	if err != nil {
 		return err
@@ -260,7 +265,7 @@ func (c *Checker) checkItemPerm(testFunc func(aclhelper.Item, aclhelper.Member, 
 	defer c.m.RUnlock()
 
 	// grrr. Try reloading the policy every frickin' time we do anything.
-	if polErr := c.e.LoadPolicy(); polErr != nil {
+	if polErr := c.loadPolicy(); polErr != nil {
 		return false, util.CastErr(polErr)
 	}
 
@@ -402,12 +407,77 @@ func testAssociationSQL(u actor.Actor, org *organization.Organization) (bool, ut
 	return false, nil
 }
 
+func (c *Checker) addPolicy(rule ...interface{}) (bool, error) {
+	if err := validateRule(rule, "AddPolicy"); err != nil {
+		return false, err
+	}
+	return c.e.AddPolicy(rule...)
+}
+
+func (c *Checker) loadPolicy() error {
+	if polErr := c.e.LoadPolicy(); polErr != nil {
+		return util.CastErr(polErr)
+	}
+	if err := c.validateModelPolicies(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Checker) removePolicy(rule ...interface{}) (bool, error) {
+	if err := validateRule(rule, "RemovePolicy"); err != nil {
+		return false, err
+	}
+	return c.e.RemovePolicy(rule...)
+}
+
+func validateRule(rule []interface{}, op string) error {
+	if len(rule) != 6 {
+		return fmt.Errorf("ACL wrapper rejected %s: expected 6, got %d, rule: %v", op, len(rule), rule)
+	}
+	for i, f := range rule {
+		s, ok := f.(string)
+		if !ok {
+			return fmt.Errorf("ACL wrapper rejected %s field %d: not a string (%T), rule: %v", op, i, f, rule)
+		}
+		if strings.ContainsAny(s, " \t\r\n") {
+			return fmt.Errorf("ACL wrapper rejected %s field %d: contains whitespace, rule: %v", op, i, rule)
+		}
+	}
+	return nil
+}
+
+func (c *Checker) savePolicy() error {
+	if err := c.validateModelPolicies(); err != nil {
+		return err
+	}
+	return c.e.SavePolicy()
+}
+
+func (c *Checker) validateModelPolicies() error {
+	policies, err := c.e.GetPolicy()
+	if err != nil {
+		return err
+	}
+	for _, p := range policies {
+		if len(p) != 6 {
+			return fmt.Errorf("invalid p policy length: expected 6, got %d, rule: %v", len(p), p)
+		}
+		for i, f := range p {
+			if strings.ContainsAny(f, " \t\r\n") {
+				return fmt.Errorf("invalid p policy field %d: contains whitespace, rule: %v", i, p)
+			}
+		}
+	}
+	return nil
+}
+
 func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, perms []string, action string) util.Gerror {
 	c.waitForChanLock()
 	defer c.releaseChanLock()
 	c.m.Lock()
 	defer c.m.Unlock()
-	if polErr := c.e.LoadPolicy(); polErr != nil {
+	if polErr := c.loadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
 
@@ -415,9 +485,9 @@ func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, per
 
 	switch action {
 	case addPerm:
-		policyFunc = c.e.AddPolicy
+		policyFunc = c.addPolicy
 	case removePerm:
-		policyFunc = c.e.RemovePolicy
+		policyFunc = c.removePolicy
 	default:
 		return util.Errorf("invalid edit perm action '%s'", action)
 	}
@@ -433,7 +503,7 @@ func (c *Checker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, per
 		policyFunc(pcondition...)
 	}
 
-	if err := c.e.SavePolicy(); err != nil {
+	if err := c.savePolicy(); err != nil {
 		return util.CastErr(err)
 	}
 
@@ -456,7 +526,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 			// Implementation note: for each doer already in the
 			// ACL, we'll need to check and see if they're present
 			// in the new list. If not, they'll need to be removed.
-			if polErr := c.e.LoadPolicy(); polErr != nil {
+			if polErr := c.loadPolicy(); polErr != nil {
 				return util.CastErr(polErr)
 			}
 
@@ -495,7 +565,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 							for i, v := range p {
 								pi[i] = v
 							}
-							c.e.RemovePolicy(pi...)
+							c.removePolicy(pi...)
 						}
 					} else {
 						if !util.StringPresentInSlice(subj, newActors) {
@@ -503,7 +573,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 							for i, v := range p {
 								pi[i] = v
 							}
-							c.e.RemovePolicy(pi...)
+							c.removePolicy(pi...)
 						}
 					}
 				}
@@ -522,7 +592,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 					return err
 				}
 				p := buildEnforcingSlice(item, a, perm)
-				c.e.AddPolicy(p...)
+				c.addPolicy(p...)
 			}
 
 			// Here comes the science^W special case code! Alas,
@@ -538,18 +608,18 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 						return err
 					}
 					p := buildEnforcingSlice(item, g, perm)
-					c.e.AddPolicy(p...)
+					c.addPolicy(p...)
 				}
 				// remove "denyall##groups" if it's present and
 				// this is a group. (It *appears* that this is
 				// only proper for groups, but I could be
 				// reading the tests wrong.)
 				if item.ContainerKind() == "groups" {
-					c.e.RemovePolicy(denyallp...)
+					c.removePolicy(denyallp...)
 				}
 			} else if item.ContainerKind() == "groups" {
 				// No groups, so we add the denyall
-				c.e.AddPolicy(denyallp...)
+				c.addPolicy(denyallp...)
 			}
 		default:
 			return util.Errorf("invalid acl %s data", perm)
@@ -557,7 +627,7 @@ func (c *Checker) EditFromJSON(item aclhelper.Item, perm string, data interface{
 	default:
 		return util.Errorf("invalid acl data")
 	}
-	if err := c.e.SavePolicy(); err != nil {
+	if err := c.savePolicy(); err != nil {
 		return util.CastErr(err)
 	}
 	return nil
@@ -640,7 +710,7 @@ func (c *Checker) AddACLRole(gRole aclhelper.Role) error {
 		c.inTransaction = false
 	}()
 
-	if polErr := c.e.LoadPolicy(); polErr != nil {
+	if polErr := c.loadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
 	return c.AddMembers(gRole, gRole.AllMembers())
@@ -656,11 +726,11 @@ func (c *Checker) RemoveACLRole(gRole aclhelper.Role) error {
 		c.inTransaction = false
 	}()
 
-	if polErr := c.e.LoadPolicy(); polErr != nil {
+	if polErr := c.loadPolicy(); polErr != nil {
 		return polErr
 	}
 	c.e.DeleteRole(gRole.ACLName())
-	return c.e.SavePolicy()
+	return c.savePolicy()
 }
 
 func (c *Checker) AddMembers(gRole aclhelper.Role, adding []aclhelper.Member) error {
@@ -671,14 +741,14 @@ func (c *Checker) AddMembers(gRole aclhelper.Role, adding []aclhelper.Member) er
 		defer c.m.Unlock()
 	}
 
-	if polErr := c.e.LoadPolicy(); polErr != nil {
+	if polErr := c.loadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
 	for _, m := range adding {
 		c.e.AddRoleForUser(m.ACLName(), gRole.ACLName())
 	}
 
-	return c.e.SavePolicy()
+	return c.savePolicy()
 }
 
 func (c *Checker) RemoveMembers(gRole aclhelper.Role, removing []aclhelper.Member) error {
@@ -689,26 +759,28 @@ func (c *Checker) RemoveMembers(gRole aclhelper.Role, removing []aclhelper.Membe
 		defer c.m.Unlock()
 	}
 
-	if polErr := c.e.LoadPolicy(); polErr != nil {
+	if polErr := c.loadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
 	for _, m := range removing {
 		c.e.DeleteRoleForUser(m.ACLName(), gRole.ACLName())
 	}
 
-	return c.e.SavePolicy()
+	return c.savePolicy()
 }
 
 func (c *Checker) RemoveUser(u aclhelper.Member) error {
+	c.waitForChanLock()
+	defer c.releaseChanLock()
 	c.m.Lock()
 	defer c.m.Unlock()
 
-	if polErr := c.e.LoadPolicy(); polErr != nil {
+	if polErr := c.loadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
 	c.e.DeleteRolesForUser(u.ACLName())
 	logger.Debugf("deleted all ACL perms for %s", u.ACLName())
-	return c.e.SavePolicy()
+	return c.savePolicy()
 }
 
 func (c *Checker) RemoveItemACL(item aclhelper.Item) util.Gerror {
@@ -725,7 +797,7 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
-	if polErr := c.e.LoadPolicy(); polErr != nil {
+	if polErr := c.loadPolicy(); polErr != nil {
 		return nil, util.CastErr(polErr)
 	}
 	// Hrmph, it'd be nice if this was a little easier. At least here we
@@ -801,7 +873,7 @@ func (c *Checker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
 }
 
 func (c *Checker) GetItemPolicies(itemName string, itemKind string, itemType string) [][]interface{} {
-	c.e.LoadPolicy() // maybe handle errs later
+	c.loadPolicy() // maybe handle errs later
 	filteredItem, ferr := c.e.GetFilteredPolicy(condNamePos, itemName)
 	if filteredItem == nil || len(filteredItem) == 0 || ferr != nil {
 		return nil
@@ -825,7 +897,7 @@ func (c *Checker) RenameItemACL(item aclhelper.Item, oldName string) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 
-	if polErr := c.e.LoadPolicy(); polErr != nil {
+	if polErr := c.loadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
 	oldPolicies := c.GetItemPolicies(oldName, item.ContainerKind(), item.ContainerType())
@@ -836,16 +908,16 @@ func (c *Checker) RenameItemACL(item aclhelper.Item, oldName string) error {
 		newPolicy := make([]interface{}, len(p))
 		copy(newPolicy, p)
 		newPolicy[condNamePos] = item.GetName()
-		c.e.AddPolicy(newPolicy...)
+		c.addPolicy(newPolicy...)
 	}
 	// Wait until all new policies have been added before deleting the old
 	// ones.
 	for _, p := range oldPolicies {
-		if _, err := c.e.RemovePolicy(p...); err != nil {
+		if _, err := c.removePolicy(p...); err != nil {
 			return err
 		}
 	}
-	return c.e.SavePolicy()
+	return c.savePolicy()
 }
 
 func (c *Checker) RenameMember(member aclhelper.Member, oldName string) error {
@@ -854,7 +926,7 @@ func (c *Checker) RenameMember(member aclhelper.Member, oldName string) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 
-	if polErr := c.e.LoadPolicy(); polErr != nil {
+	if polErr := c.loadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
 	oldPol, perr := c.e.GetPermissionsForUser(oldName)
@@ -878,14 +950,14 @@ func (c *Checker) RenameMember(member aclhelper.Member, oldName string) error {
 		newPolicy := make([]interface{}, len(p))
 		copy(newPolicy, p)
 		newPolicy[condGroupPos] = member.ACLName()
-		c.e.AddPolicy(newPolicy...)
+		c.addPolicy(newPolicy...)
 	}
 	for _, p := range oldPolicies {
-		if _, err := c.e.RemovePolicy(p...); err != nil {
+		if _, err := c.removePolicy(p...); err != nil {
 			return err
 		}
 	}
-	return c.e.SavePolicy()
+	return c.savePolicy()
 }
 
 func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
@@ -894,7 +966,7 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 	c.m.Lock()
 	defer c.m.Unlock()
 
-	if polErr := c.e.LoadPolicy(); polErr != nil {
+	if polErr := c.loadPolicy(); polErr != nil {
 		return false, util.CastErr(polErr)
 	}
 
@@ -904,12 +976,12 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 	var err error
 
 	for _, p := range policies {
-		if rmok, err = c.e.RemovePolicy(p...); err != nil {
+		if rmok, err = c.removePolicy(p...); err != nil {
 			return false, err
 		}
 	}
 
-	if err := c.e.SavePolicy(); err != nil {
+	if err := c.savePolicy(); err != nil {
 		return false, err
 	}
 
@@ -917,7 +989,7 @@ func (c *Checker) DeleteItemACL(item aclhelper.Item) (bool, error) {
 }
 
 func (c *Checker) CreatorOnly(item aclhelper.Item, creator aclhelper.Actor) util.Gerror {
-	if polErr := c.e.LoadPolicy(); polErr != nil {
+	if polErr := c.loadPolicy(); polErr != nil {
 		return util.CastErr(polErr)
 	}
 	// hmm?
