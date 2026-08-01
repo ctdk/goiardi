@@ -12,3 +12,4 @@ And there's more...
 * Oh, update the CHANGELOG (dur)
 * Once the dust settles, don't forget to update the contents of `sql-files`. As
   part of this, double check that it's all exported correctly.
+* The RBAC code feels delicate still. It needs to be reviewed and strengthened.
