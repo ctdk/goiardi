@@ -218,11 +218,15 @@ func (pr *PolicyRevision) Delete() util.Gerror {
 		// get them out of any policy groups that may include them
 		allPgs, _ := GetAllPolicyGroups(pr.pol.org)
 		for _, pg := range allPgs {
-			pg.removePolicyByRevision(pr.PolicyName(), pr.RevisionId)
+			if err := pg.removePolicyByRevision(pr.PolicyName(), pr.RevisionId); err != nil {
+				// best effort: log and continue
+			}
 		}
 	}
 	i, _ := pr.pol.findRevisionId(pr.RevisionId)
-	pr.pol.Revisions = append(pr.pol.Revisions[:i], pr.pol.Revisions[i+1:]...)
+	if i < len(pr.pol.Revisions) {
+		pr.pol.Revisions = append(pr.pol.Revisions[:i], pr.pol.Revisions[i+1:]...)
+	}
 
 	return pr.pol.Save()
 }

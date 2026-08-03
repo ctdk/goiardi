@@ -51,7 +51,7 @@ func policyGroupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pathArray := splitPath(r.URL.Path)[2:]
-	pgName := vars["name"]
+	pgName := vars["policy_group"]
 	policyName := vars["policy"]
 
 	// cause I would rather switch.......
@@ -196,7 +196,18 @@ func policyGroupPolicyDetail(w http.ResponseWriter, r *http.Request, org *organi
 
 	pg, err := policy.GetPolicyGroup(org, pgName)
 	if err != nil {
-		return err
+		// For PUT, implicitly create the policy group if it doesn't exist,
+		// matching Chef Server behavior when associating a policy revision.
+		if r.Method != http.MethodPut {
+			return err
+		}
+		pg, err = policy.NewPolicyGroup(org, pgName)
+		if err != nil {
+			return err
+		}
+		if err = pg.Save(); err != nil {
+			return err
+		}
 	}
 
 	var pr *policy.PolicyRevision
@@ -217,12 +228,13 @@ func policyGroupPolicyDetail(w http.ResponseWriter, r *http.Request, org *organi
 	case http.MethodGet, http.MethodDelete:
 		pr, err = pg.GetPolicy(policyName)
 		if err != nil {
-			return nil
+			return err
 		}
 		if r.Method == http.MethodDelete {
 			if err = pg.RemovePolicy(policyName); err != nil {
 				return err
 			}
+			pr = nil
 		}
 	case http.MethodPut:
 		// if this policy revision is already associated, it's super
@@ -250,19 +262,25 @@ func policyGroupPolicyDetail(w http.ResponseWriter, r *http.Request, org *organi
 				return err
 			}
 
-			if found {
+			if !found {
 				pr, err = p.NewPolicyRevisionFromJSON(revData)
+				if err != nil {
+					return err
+				}
+				if err = pr.Save(); err != nil {
+					return err
+				}
 			} else {
 				pr, err = p.GetPolicyRevision(revId)
-			}
-
-			if err != nil {
-				return err
+				if err != nil {
+					return err
+				}
 			}
 			if err = pg.AddPolicy(pr); err != nil {
-				return nil
+				return err
 			}
 		}
+		w.WriteHeader(http.StatusCreated)
 	default:
 		err := util.Errorf("Method not allowed")
 		err.SetStatus(http.StatusMethodNotAllowed)

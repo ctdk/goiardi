@@ -72,7 +72,7 @@ func getPolicyGroupSQL(org *organization.Organization, name string) (*PolicyGrou
 
 func (pg *PolicyGroup) fillPolicyGroupFromSQL(row datastore.ResRow) error {
 	var pgp []byte
-	var revJSON []*pgRevisionInfo
+	var revJSON []*PgRevisionInfo
 
 	err := row.Scan(&pg.id, &pg.Name, &pgp)
 	if err != nil {
@@ -84,7 +84,7 @@ func (pg *PolicyGroup) fillPolicyGroupFromSQL(row datastore.ResRow) error {
 		return err
 	}
 	// if that worked...
-	rm := make(map[string]*pgRevisionInfo, len(revJSON))
+	rm := make(map[string]*PgRevisionInfo, len(revJSON))
 	for _, v := range revJSON {
 		rm[v.PolicyName] = v
 	}

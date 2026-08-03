@@ -60,6 +60,7 @@ import (
 	"github.com/ctdk/goiardi/node"
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
+	"github.com/ctdk/goiardi/policy"
 	"github.com/ctdk/goiardi/report"
 	"github.com/ctdk/goiardi/reqctx"
 	"github.com/ctdk/goiardi/role"
@@ -903,6 +904,12 @@ func gobRegister() {
 	gob.Register(new(container.Container))
 	gob.Register(new(aclhelper.ACL))
 	gob.Register(new(aclhelper.ACLItem))
+	gob.Register(new(policy.Policy))
+	gob.Register(new(policy.PolicyGroup))
+	gob.Register(new(policy.PolicyRevision))
+	gob.Register(make(map[string]*policy.PolicyRevision))
+	gob.Register(new(policy.PgRevisionInfo))
+	gob.Register(make(map[string]*policy.PgRevisionInfo))
 	var jn json.Number
 	gob.Register(jn)
 	gob.Register(new(client.Key))

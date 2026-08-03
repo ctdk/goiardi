@@ -192,9 +192,13 @@ func policyRevisionCreationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pr, err := p.NewPolicyRevisionFromJSON(revData)
-	if err.Status() != http.StatusNotFound {
-		jsonErrorReport(w, r, err.Error(), err.Status())
-		return
+	if err != nil {
+		if err.Status() != http.StatusNotFound {
+			jsonErrorReport(w, r, err.Error(), err.Status())
+			return
+		}
+		// StatusNotFound from NewPolicyRevisionFromJSON means the revision
+		// doesn't exist yet, which is expected for a create. Continue.
 	}
 
 	// save this bad boy

@@ -32,7 +32,9 @@ import (
 
 // It may be better to only use this for policy_group -> policy/policy rev links
 // now that I've been thinking about it.
-type pgRevisionInfo struct {
+// PgRevisionInfo links a policy group to a policy revision. It is exported
+// because gob requires exported fields for encoding.
+type PgRevisionInfo struct {
 	PolicyId    int64  `json:"policy_id"`
 	PolicyRevId int64  `json:"policy_rev_id"`
 	PolicyName  string `json:"name"`
@@ -41,7 +43,7 @@ type pgRevisionInfo struct {
 
 type PolicyGroup struct {
 	Name       string
-	PolicyInfo map[string]*pgRevisionInfo
+	PolicyInfo map[string]*PgRevisionInfo
 	org        *organization.Organization
 	id         int64
 }
@@ -58,7 +60,7 @@ func NewPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, 
 		return nil, err
 	}
 
-	m := make(map[string]*pgRevisionInfo)
+	m := make(map[string]*PgRevisionInfo)
 	pg := &PolicyGroup{Name: name, PolicyInfo: m, org: org}
 	return pg, nil
 }
@@ -88,6 +90,15 @@ func GetPolicyGroup(org *organization.Organization, name string) (*PolicyGroup, 
 		if p != nil {
 			pg = p.(*PolicyGroup)
 			pg.org = org
+			// Rebuild the map keyed by PolicyName in case the stored
+			// map was keyed differently after gob decode.
+			if len(pg.PolicyInfo) > 0 {
+				fixed := make(map[string]*PgRevisionInfo, len(pg.PolicyInfo))
+				for _, pi := range pg.PolicyInfo {
+					fixed[pi.PolicyName] = pi
+				}
+				pg.PolicyInfo = fixed
+			}
 		}
 	}
 	if !found {
@@ -136,9 +147,9 @@ func (pg *PolicyGroup) AddPolicy(pr *PolicyRevision) util.Gerror {
 		}
 	}
 
-	pi := &pgRevisionInfo{PolicyName: pr.PolicyName(), RevisionId: pr.RevisionId}
+	pi := &PgRevisionInfo{PolicyName: pr.PolicyName(), RevisionId: pr.RevisionId}
 	pg.PolicyInfo[pr.PolicyName()] = pi
-	return nil
+	return pg.Save()
 }
 
 func (pg *PolicyGroup) RemovePolicy(policyName string) util.Gerror {
@@ -152,7 +163,7 @@ func (pg *PolicyGroup) RemovePolicy(policyName string) util.Gerror {
 
 	delete(pg.PolicyInfo, policyName)
 
-	return nil
+	return pg.Save()
 }
 
 func (pg *PolicyGroup) NumPolicies() int {
@@ -189,7 +200,10 @@ func (pg *PolicyGroup) GetPolicy(name string) (*PolicyRevision, util.Gerror) {
 
 	pr, err := p.GetPolicyRevision(pi.RevisionId)
 	if err != nil {
-		return nil, err
+		// If the policy revision has been deleted but the association
+		// remains, report the association as a 404 rather than bubbling the
+		// internal revision error up to the client.
+		return nil, util.Errorf("Policy %s not associated with policy group %s", name, pg.Name)
 	}
 
 	return pr, nil
@@ -248,7 +262,17 @@ func GetAllPolicyGroups(org *organization.Organization) ([]*PolicyGroup, util.Ge
 		return allPgs, nil
 	}
 
-	return nil, nil
+	ds := datastore.New()
+	pgList := ds.GetList(org.DataKey("policy_group"))
+	allPgs := make([]*PolicyGroup, 0, len(pgList))
+	for _, pgName := range pgList {
+		pg, err := GetPolicyGroup(org, pgName)
+		if err != nil {
+			continue
+		}
+		allPgs = append(allPgs, pg)
+	}
+	return allPgs, nil
 }
 
 func DoesPolicyGroupExist(org *organization.Organization, name string) (bool, util.Gerror) {
