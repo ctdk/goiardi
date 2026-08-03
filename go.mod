@@ -1,6 +1,6 @@
 module github.com/ctdk/goiardi
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/BurntSushi/toml v0.3.1
@@ -16,7 +16,6 @@ require (
 	github.com/pborman/uuid v0.0.0-20160216163710-c55201b03606
 	github.com/pmylund/go-cache v2.0.0+incompatible
 	github.com/raintank/met v0.0.0-20160323095204-22adb0848570
-	github.com/tideland/golib v4.2.1-0.20160624201112-2938f1706f66+incompatible
 	github.com/tinylib/msgp v0.0.0-20150805042339-cd4fb1548c31
 )
 
