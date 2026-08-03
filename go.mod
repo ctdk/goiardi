@@ -16,7 +16,6 @@ require (
 	github.com/pborman/uuid v0.0.0-20160216163710-c55201b03606
 	github.com/pmylund/go-cache v2.0.0+incompatible
 	github.com/raintank/met v0.0.0-20160323095204-22adb0848570
-	github.com/tideland/golib v4.2.1-0.20160624201112-2938f1706f66+incompatible
 	github.com/tinylib/msgp v0.0.0-20150805042339-cd4fb1548c31
 )
 
@@ -26,7 +25,7 @@ require (
 	github.com/alexcesaro/statsd v2.0.0+incompatible // indirect
 	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.1 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
