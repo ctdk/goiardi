@@ -94,6 +94,12 @@ func (c *ChefSigningClient) GetOrg(path string) (*Response, error) {
 	return c.Get("/organizations/default" + path)
 }
 
+// GetOrgWithHeader performs a signed GET request under /organizations/default
+// with additional request headers.
+func (c *ChefSigningClient) GetOrgWithHeader(path string, headers map[string]string) (*Response, error) {
+	return c.doRequestWithHeaders("GET", "/organizations/default"+path, nil, headers)
+}
+
 // Post performs a signed POST request with the given body.
 func (c *ChefSigningClient) Post(path string, body interface{}) (*Response, error) {
 	var bodyBytes []byte
@@ -130,6 +136,20 @@ func (c *ChefSigningClient) PutOrg(path string, body interface{}) (*Response, er
 	return c.Put("/organizations/default"+path, body)
 }
 
+// PutOrgWithHeader performs a signed PUT request under /organizations/default
+// with additional request headers.
+func (c *ChefSigningClient) PutOrgWithHeader(path string, body interface{}, headers map[string]string) (*Response, error) {
+	var bodyBytes []byte
+	if body != nil {
+		var err error
+		bodyBytes, err = json.Marshal(body)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling body: %w", err)
+		}
+	}
+	return c.doRequestWithHeaders("PUT", "/organizations/default"+path, bodyBytes, headers)
+}
+
 // Delete performs a signed DELETE request.
 func (c *ChefSigningClient) Delete(path string) (*Response, error) {
 	return c.doRequest("DELETE", path, nil)
@@ -141,6 +161,10 @@ func (c *ChefSigningClient) DeleteOrg(path string) (*Response, error) {
 }
 
 func (c *ChefSigningClient) doRequest(method, path string, body []byte) (*Response, error) {
+	return c.doRequestWithHeaders(method, path, body, nil)
+}
+
+func (c *ChefSigningClient) doRequestWithHeaders(method, path string, body []byte, headers map[string]string) (*Response, error) {
 	u := c.BaseURL + path
 
 	var bodyReader io.Reader
@@ -151,6 +175,10 @@ func (c *ChefSigningClient) doRequest(method, path string, body []byte) (*Respon
 	req, err := http.NewRequest(method, u, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
+	}
+
+	for k, v := range headers {
+		req.Header.Set(k, v)
 	}
 
 	// Sign the request
