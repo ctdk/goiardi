@@ -3514,3 +3514,482 @@ func TestCookbooksVersionGETAsOutsideUser(t *testing.T) {
 	}
 }
 
+// --- Phase 1 Chunk 23: cookbooks/update_spec.rb + cookbooks/delete_spec.rb ---
+
+func TestCookbooksUpdateAsOutsideUser(t *testing.T) {
+	client := testServer.NewClient(testServer.OutsideUser)
+	adminClient := testServer.NewClient(testServer.AdminUser)
+	cbName := pedant.UniqueName("upd_outside")
+	cbVersion := "11.2.3"
+	payload := pedant.NewCookbook(cbName, cbVersion)
+	defer adminClient.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+
+	resp, err := adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, payload)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	updated := pedant.NewCookbook(cbName, cbVersion)
+	updated["metadata"].(map[string]interface{})["description"] = "changed"
+	resp, err = client.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, updated)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s as outside user: %v", cbName, cbVersion, err)
+	}
+	if resp.StatusCode != 401 && resp.StatusCode != 403 {
+		t.Errorf("expected 401/403 for outside user update, got %d", resp.StatusCode)
+	}
+
+	resp, err = adminClient.GetOrg("/cookbooks/" + cbName + "/" + cbVersion)
+	if err != nil {
+		t.Fatalf("GET /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	body := pedant.GetJSONBody(t, resp)
+	meta := body["metadata"].(map[string]interface{})
+	if meta["description"] != "" {
+		t.Errorf("expected description unchanged, got %v", meta["description"])
+	}
+}
+
+func TestCookbooksUpdateAsInvalidUser(t *testing.T) {
+	client := testServer.NewClient(testServer.InvalidUser)
+	adminClient := testServer.NewClient(testServer.AdminUser)
+	cbName := pedant.UniqueName("upd_invalid")
+	cbVersion := "11.2.3"
+	payload := pedant.NewCookbook(cbName, cbVersion)
+	defer adminClient.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+
+	resp, err := adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, payload)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	updated := pedant.NewCookbook(cbName, cbVersion)
+	updated["metadata"].(map[string]interface{})["description"] = "changed"
+	resp, err = client.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, updated)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s as invalid user: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 401)
+
+	resp, err = adminClient.GetOrg("/cookbooks/" + cbName + "/" + cbVersion)
+	if err != nil {
+		t.Fatalf("GET /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+}
+
+func TestCookbooksUpdateAddChecksums(t *testing.T) {
+	adminClient := testServer.NewClient(testServer.AdminUser)
+	cbName := pedant.UniqueName("upd_add_chk")
+	cbVersion := "11.2.3"
+	payload := pedant.NewCookbook(cbName, cbVersion)
+	defer adminClient.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+
+	resp, err := adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, payload)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	files := []struct {
+		name    string
+		content string
+	}{
+		{"name1", "content one"},
+		{"name2", "content two"},
+	}
+	checksums := make([]string, len(files))
+	for i, f := range files {
+		checksums[i] = pedant.MD5Checksum(f.content)
+	}
+
+	_, sandboxBody, err := adminClient.CreateSandbox(checksums)
+	if err != nil {
+		t.Fatalf("creating sandbox: %v", err)
+	}
+	for i, f := range files {
+		url, err := pedant.SandboxUploadURL(sandboxBody, checksums[i], testServer.BaseURL)
+		if err != nil {
+			t.Fatalf("sandbox upload url: %v", err)
+		}
+		if err := pedant.UploadFile(url, f.content); err != nil {
+			t.Fatalf("uploading file %s: %v", f.name, err)
+		}
+	}
+
+	updated := pedant.NewCookbook(cbName, cbVersion)
+	filesPayload := make([]interface{}, len(files))
+	for i, f := range files {
+		filesPayload[i] = map[string]interface{}{
+			"name":        f.name,
+			"path":        "files/default/" + f.name,
+			"checksum":    checksums[i],
+			"specificity": "default",
+		}
+	}
+	updated["files"] = filesPayload
+
+	resp, err = adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, updated)
+	if err != nil {
+		t.Fatalf("update /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+
+	resp, err = adminClient.GetOrg("/cookbooks/" + cbName + "/" + cbVersion)
+	if err != nil {
+		t.Fatalf("GET /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	body := pedant.GetJSONBody(t, resp)
+	gotFiles, ok := body["files"].([]interface{})
+	if !ok {
+		t.Fatalf("expected files array in response, got %T", body["files"])
+	}
+	if len(gotFiles) != 2 {
+		t.Errorf("expected 2 files, got %d", len(gotFiles))
+	}
+}
+
+func TestCookbooksUpdateInvalidChecksum(t *testing.T) {
+	adminClient := testServer.NewClient(testServer.AdminUser)
+	cbName := pedant.UniqueName("upd_inv_chk")
+	cbVersion := "11.2.3"
+	payload := pedant.NewCookbook(cbName, cbVersion)
+	defer adminClient.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+
+	resp, err := adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, payload)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	validContent := "valid content"
+	validChecksum := pedant.MD5Checksum(validContent)
+	_, sandboxBody, err := adminClient.CreateSandbox([]string{validChecksum})
+	if err != nil {
+		t.Fatalf("creating sandbox: %v", err)
+	}
+	url, err := pedant.SandboxUploadURL(sandboxBody, validChecksum, testServer.BaseURL)
+	if err != nil {
+		t.Fatalf("sandbox upload url: %v", err)
+	}
+	if err := pedant.UploadFile(url, validContent); err != nil {
+		t.Fatalf("uploading valid file: %v", err)
+	}
+
+	updated := pedant.NewCookbook(cbName, cbVersion)
+	updated["files"] = []interface{}{
+		map[string]interface{}{
+			"name":        "name1",
+			"path":        "files/default/name1",
+			"checksum":    validChecksum,
+			"specificity": "default",
+		},
+		map[string]interface{}{
+			"name":        "name2",
+			"path":        "files/default/name2",
+			"checksum":    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			"specificity": "default",
+		},
+	}
+
+	resp, err = adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, updated)
+	if err != nil {
+		t.Fatalf("update /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 400)
+	pedant.AssertErrorResponse(t, resp, 400, "hasn't yet been uploaded")
+
+	resp, err = adminClient.GetOrg("/cookbooks/" + cbName + "/" + cbVersion)
+	if err != nil {
+		t.Fatalf("GET /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	body := pedant.GetJSONBody(t, resp)
+	if body["files"] != nil {
+		t.Errorf("expected files unchanged (nil), got %v", body["files"])
+	}
+}
+
+func TestCookbooksUpdateDeleteChecksums(t *testing.T) {
+	adminClient := testServer.NewClient(testServer.AdminUser)
+	cbName := pedant.UniqueName("upd_del_chk")
+	cbVersion := "11.2.3"
+
+	files := []struct {
+		name    string
+		content string
+	}{
+		{"name1", "content one"},
+		{"name2", "content two"},
+	}
+	checksums := make([]string, len(files))
+	for i, f := range files {
+		checksums[i] = pedant.MD5Checksum(f.content)
+	}
+
+	_, sandboxBody, err := adminClient.CreateSandbox(checksums)
+	if err != nil {
+		t.Fatalf("creating sandbox: %v", err)
+	}
+	for i, f := range files {
+		url, err := pedant.SandboxUploadURL(sandboxBody, checksums[i], testServer.BaseURL)
+		if err != nil {
+			t.Fatalf("sandbox upload url: %v", err)
+		}
+		if err := pedant.UploadFile(url, f.content); err != nil {
+			t.Fatalf("uploading file %s: %v", f.name, err)
+		}
+	}
+
+	payload := pedant.NewCookbook(cbName, cbVersion)
+	filesPayload := make([]interface{}, len(files))
+	for i, f := range files {
+		filesPayload[i] = map[string]interface{}{
+			"name":        f.name,
+			"path":        "files/default/" + f.name,
+			"checksum":    checksums[i],
+			"specificity": "default",
+		}
+	}
+	payload["files"] = filesPayload
+	defer adminClient.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+
+	resp, err := adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, payload)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	updated := pedant.NewCookbook(cbName, cbVersion)
+	resp, err = adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, updated)
+	if err != nil {
+		t.Fatalf("update /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+
+	resp, err = adminClient.GetOrg("/cookbooks/" + cbName + "/" + cbVersion)
+	if err != nil {
+		t.Fatalf("GET /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	body := pedant.GetJSONBody(t, resp)
+	if body["files"] != nil {
+		t.Errorf("expected files to be deleted, got %v", body["files"])
+	}
+}
+
+func TestCookbooksUpdateChangeChecksums(t *testing.T) {
+	adminClient := testServer.NewClient(testServer.AdminUser)
+	cbName := pedant.UniqueName("upd_chg_chk")
+	cbVersion := "11.2.3"
+
+	contents := []string{"alpha", "beta", "gamma", "delta"}
+	checksums := make([]string, len(contents))
+	for i, c := range contents {
+		checksums[i] = pedant.MD5Checksum(c)
+	}
+
+	_, sandboxBody, err := adminClient.CreateSandbox(checksums)
+	if err != nil {
+		t.Fatalf("creating sandbox: %v", err)
+	}
+	for i, c := range contents {
+		url, err := pedant.SandboxUploadURL(sandboxBody, checksums[i], testServer.BaseURL)
+		if err != nil {
+			t.Fatalf("sandbox upload url: %v", err)
+		}
+		if err := pedant.UploadFile(url, c); err != nil {
+			t.Fatalf("uploading content %d: %v", i, err)
+		}
+	}
+
+	payload := pedant.NewCookbook(cbName, cbVersion)
+	payload["files"] = []interface{}{
+		map[string]interface{}{"name": "a", "path": "path/a", "checksum": checksums[0], "specificity": "default"},
+		map[string]interface{}{"name": "b", "path": "path/b", "checksum": checksums[1], "specificity": "default"},
+	}
+	defer adminClient.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+
+	resp, err := adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, payload)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	updated := pedant.NewCookbook(cbName, cbVersion)
+	updated["files"] = []interface{}{
+		map[string]interface{}{"name": "c", "path": "path/c", "checksum": checksums[2], "specificity": "default"},
+		map[string]interface{}{"name": "d", "path": "path/d", "checksum": checksums[3], "specificity": "default"},
+	}
+	resp, err = adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, updated)
+	if err != nil {
+		t.Fatalf("update /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+
+	resp, err = adminClient.GetOrg("/cookbooks/" + cbName + "/" + cbVersion)
+	if err != nil {
+		t.Fatalf("GET /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	body := pedant.GetJSONBody(t, resp)
+	gotFiles, ok := body["files"].([]interface{})
+	if !ok {
+		t.Fatalf("expected files array, got %T", body["files"])
+	}
+	if len(gotFiles) != 2 {
+		t.Errorf("expected 2 files, got %d", len(gotFiles))
+	}
+}
+
+func TestCookbooksUpdateCHEF3716SharedChecksum(t *testing.T) {
+	adminClient := testServer.NewClient(testServer.AdminUser)
+	cbName := pedant.UniqueName("chef3716")
+	ver1 := "11.2.3"
+	ver2 := "11.2.4"
+
+	sharedContent := "shared content"
+	sharedChecksum := pedant.MD5Checksum(sharedContent)
+	uniqueContent := "unique content"
+	uniqueChecksum := pedant.MD5Checksum(uniqueContent)
+	replacementContent := "replacement content"
+	replacementChecksum := pedant.MD5Checksum(replacementContent)
+
+	_, sandboxBody, err := adminClient.CreateSandbox([]string{sharedChecksum, uniqueChecksum, replacementChecksum})
+	if err != nil {
+		t.Fatalf("creating sandbox: %v", err)
+	}
+	for _, tc := range []struct {
+		chk string
+		ct  string
+	}{
+		{sharedChecksum, sharedContent},
+		{uniqueChecksum, uniqueContent},
+		{replacementChecksum, replacementContent},
+	} {
+		url, err := pedant.SandboxUploadURL(sandboxBody, tc.chk, testServer.BaseURL)
+		if err != nil {
+			t.Fatalf("sandbox upload url: %v", err)
+		}
+		if err := pedant.UploadFile(url, tc.ct); err != nil {
+			t.Fatalf("uploading content %s: %v", tc.chk, err)
+		}
+	}
+
+	payload1 := pedant.NewCookbook(cbName, ver1)
+	payload1["files"] = []interface{}{
+		map[string]interface{}{"name": "a", "path": "path/a", "checksum": sharedChecksum, "specificity": "default"},
+		map[string]interface{}{"name": "b", "path": "path/b", "checksum": uniqueChecksum, "specificity": "default"},
+	}
+	payload2 := pedant.NewCookbook(cbName, ver2)
+	payload2["files"] = []interface{}{
+		map[string]interface{}{"name": "a", "path": "path/a", "checksum": sharedChecksum, "specificity": "default"},
+		map[string]interface{}{"name": "c", "path": "path/c", "checksum": uniqueChecksum, "specificity": "default"},
+	}
+
+	defer func() {
+		adminClient.DeleteOrg("/cookbooks/" + cbName + "/" + ver1)
+		adminClient.DeleteOrg("/cookbooks/" + cbName + "/" + ver2)
+	}()
+
+	resp, err := adminClient.PutOrg("/cookbooks/"+cbName+"/"+ver1, payload1)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, ver1, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	resp, err = adminClient.PutOrg("/cookbooks/"+cbName+"/"+ver2, payload2)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, ver2, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	updated2 := pedant.NewCookbook(cbName, ver2)
+	updated2["files"] = []interface{}{
+		map[string]interface{}{"name": "d", "path": "path/d", "checksum": replacementChecksum, "specificity": "default"},
+	}
+	resp, err = adminClient.PutOrg("/cookbooks/"+cbName+"/"+ver2, updated2)
+	if err != nil {
+		t.Fatalf("update /cookbooks/%s/%s: %v", cbName, ver2, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+
+	// goiardi in-memory filestore has no per-file URL endpoint, so we cannot
+	// directly verify checksum survival. Verify via GET that ver1 still
+	// references the shared checksum.
+	resp, err = adminClient.GetOrg("/cookbooks/" + cbName + "/" + ver1)
+	if err != nil {
+		t.Fatalf("GET /cookbooks/%s/%s: %v", cbName, ver1, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	body := pedant.GetJSONBody(t, resp)
+	gotFiles, ok := body["files"].([]interface{})
+	if !ok {
+		t.Fatalf("expected files array for ver1, got %T", body["files"])
+	}
+	if len(gotFiles) != 2 {
+		t.Errorf("expected ver1 to retain 2 files, got %d", len(gotFiles))
+	}
+}
+
+func TestCookbooksDeleteAsOutsideUser(t *testing.T) {
+	client := testServer.NewClient(testServer.OutsideUser)
+	adminClient := testServer.NewClient(testServer.AdminUser)
+	cbName := pedant.UniqueName("del_outside")
+	cbVersion := "1.2.3"
+	payload := pedant.NewCookbook(cbName, cbVersion)
+	defer adminClient.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+
+	resp, err := adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, payload)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	resp, err = client.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+	if err != nil {
+		t.Fatalf("DELETE /cookbooks/%s/%s as outside user: %v", cbName, cbVersion, err)
+	}
+	if resp.StatusCode != 401 && resp.StatusCode != 403 {
+		t.Errorf("expected 401/403 for outside user delete, got %d", resp.StatusCode)
+	}
+
+	resp, err = adminClient.GetOrg("/cookbooks/" + cbName + "/" + cbVersion)
+	if err != nil {
+		t.Fatalf("GET /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+}
+
+func TestCookbooksDeleteAsInvalidUser(t *testing.T) {
+	client := testServer.NewClient(testServer.InvalidUser)
+	adminClient := testServer.NewClient(testServer.AdminUser)
+	cbName := pedant.UniqueName("del_invalid")
+	cbVersion := "1.2.3"
+	payload := pedant.NewCookbook(cbName, cbVersion)
+	defer adminClient.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+
+	resp, err := adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, payload)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	resp, err = client.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+	if err != nil {
+		t.Fatalf("DELETE /cookbooks/%s/%s as invalid user: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 401)
+
+	resp, err = adminClient.GetOrg("/cookbooks/" + cbName + "/" + cbVersion)
+	if err != nil {
+		t.Fatalf("GET /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+}
+
+

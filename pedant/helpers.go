@@ -5,6 +5,7 @@ package pedant
 
 import (
 	"bytes"
+	"crypto/md5"
 	"crypto/rsa"
 	"crypto/sha1"
 	"encoding/base64"
@@ -30,6 +31,7 @@ type TestServer struct {
 	NormalClient    *TestRequestor
 	ValidatorClient *TestRequestor
 	OutsideUser     *TestRequestor
+	InvalidUser     *TestRequestor
 	Superuser       *TestRequestor
 }
 
@@ -531,6 +533,75 @@ func NewSandbox(checksums []string) map[string]interface{} {
 	return map[string]interface{}{
 		"checksums": cksumMap,
 	}
+}
+
+// CreateSandbox creates a sandbox under /organizations/default/sandboxes and
+// returns the sandbox id and parsed response body.
+func (c *ChefSigningClient) CreateSandbox(checksums []string) (string, map[string]interface{}, error) {
+	resp, err := c.PostOrg("/sandboxes", NewSandbox(checksums))
+	if err != nil {
+		return "", nil, err
+	}
+	if resp.StatusCode != 201 {
+		return "", nil, fmt.Errorf("expected status 201 creating sandbox, got %d: %s", resp.StatusCode, string(resp.Body))
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(resp.Body, &body); err != nil {
+		return "", nil, fmt.Errorf("unmarshaling sandbox response: %w", err)
+	}
+	id, ok := body["sandbox_id"].(string)
+	if !ok {
+		return "", nil, fmt.Errorf("sandbox response missing sandbox_id: %s", string(resp.Body))
+	}
+	return id, body, nil
+}
+
+// SandboxUploadURL extracts the plain HTTP PUT URL for a checksum from a
+// sandbox creation response. goiardi returns host ":0" in single-org mode,
+// so baseURL is substituted.
+func SandboxUploadURL(body map[string]interface{}, checksum, baseURL string) (string, error) {
+	checksums, ok := body["checksums"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("sandbox response missing checksums")
+	}
+	csDataRaw, ok := checksums[checksum]
+	if !ok {
+		return "", fmt.Errorf("checksum %q not found in sandbox", checksum)
+	}
+	csData, ok := csDataRaw.(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("checksum %q has unexpected type %T", checksum, csDataRaw)
+	}
+	url, ok := csData["url"].(string)
+	if !ok {
+		return "", fmt.Errorf("checksum %q missing url", checksum)
+	}
+	return strings.Replace(url, "http://:0", baseURL, 1), nil
+}
+
+// UploadFile PUTs raw content to a sandbox filestore URL.
+func UploadFile(url, content string) error {
+	req, err := http.NewRequest("PUT", url, strings.NewReader(content))
+	if err != nil {
+		return fmt.Errorf("creating upload request: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("uploading file: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("expected status 200 uploading file, got %d: %s", resp.StatusCode, string(body))
+	}
+	return nil
+}
+
+// MD5Checksum computes the hex MD5 sum of content.
+func MD5Checksum(content string) string {
+	h := md5.New()
+	h.Write([]byte(content))
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 // --- Additional helpers for test assertions ---

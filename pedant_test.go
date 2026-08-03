@@ -139,6 +139,7 @@ func TestMain(m *testing.M) {
 	testServer.AdminClient = createTestRequestor(config.DefaultWebui, true, false)
 	testServer.ValidatorClient = createTestRequestor(config.DefaultValidator, false, false)
 	testServer.OutsideUser = createTestRequestor("outside_user", false, false)
+	testServer.InvalidUser = createTestRequestor("invalid_user", false, true)
 
 	// Create a normal user and client for tests.
 	createNormalTestActor()
