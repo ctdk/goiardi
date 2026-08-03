@@ -23,12 +23,13 @@ import (
 //     "cookbook_artifacts" exists, but there is no route handler for
 //     /cookbook_artifacts. Any request to the endpoint falls through to the
 //     notFoundHandler and returns 404 with body {"error":["not found 12345"]}.
-//   * Because the route is missing, the create, list, and read specs from
-//     chef-pedant cannot be exercised against real artifact objects. We therefore
-//     assert the current 404 behavior and skip the detailed positive tests.
+//   * Because the route is missing, the create, list, read, update, and delete
+//     specs from chef-pedant cannot be exercised against real artifact
+//     objects. We therefore assert the current 404 behavior and skip the
+//     detailed positive tests.
 //   * Authorization also cannot be tested: goiardi returns 404 before any
-//     permission check. Chef Server would allow admin/superuser create and
-//     read, normal user/client read (container ACL defaults), and reject
+//     permission check. Chef Server would allow admin/superuser create, update,
+//     and delete; normal user/client read (container ACL defaults); and reject
 //     invalid/outside users with 401/403.
 //
 // When goiardi later adds cookbook artifact support, remove the t.Skip calls
@@ -156,4 +157,62 @@ func TestCookbookArtifactReadNonExistent(t *testing.T) {
 
 func TestCookbookArtifactReadResponseBodyShape(t *testing.T) {
 	t.Skip("goiardi does not implement cookbook_artifacts routes; cannot test read response body shape")
+}
+
+// --- Update (PUT /cookbook_artifacts/<name>/<identifier>) ---
+// oc-chef-pedant update_spec.rb expects that updating an existing cookbook
+// artifact is rejected with 409 Conflict ("Cookbook artifact already exists")
+// and that the artifact remains unchanged. goiardi has no route handler for
+// /cookbook_artifacts, so we can only document the current 404 behavior.
+
+func TestCookbookArtifactUpdateRouteNotImplemented(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	name := pedant.UniqueName("cba")
+
+	resp, err := client.PutOrg("/cookbook_artifacts/"+name+"/"+defaultCookbookArtifactID, artifactPayload(name, defaultCookbookArtifactID))
+	if err != nil {
+		t.Fatalf("PUT /cookbook_artifacts/%s/%s: %v", name, defaultCookbookArtifactID, err)
+	}
+	if resp.StatusCode != 404 {
+		t.Errorf("expected 404 (route missing), got %d: %s", resp.StatusCode, resp.Body)
+	}
+}
+
+func TestCookbookArtifactUpdateConflict(t *testing.T) {
+	t.Skip("goiardi does not implement cookbook_artifacts routes; cannot test update conflict behavior")
+}
+
+func TestCookbookArtifactUpdateRequestorMatrix(t *testing.T) {
+	t.Skip("goiardi does not implement cookbook_artifacts routes; cannot test update requestor matrix")
+}
+
+// --- Delete (DELETE /cookbook_artifacts/<name>/<identifier>) ---
+// oc-chef-pedant delete_spec.rb tests deleting existing and non-existing
+// cookbook artifacts, bad identifiers, and requestor permissions. goiardi
+// has no route handler for /cookbook_artifacts, so we can only document the
+// current 404 behavior.
+
+func TestCookbookArtifactDeleteRouteNotImplemented(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	name := pedant.UniqueName("cba")
+
+	resp, err := client.DeleteOrg("/cookbook_artifacts/" + name + "/" + defaultCookbookArtifactID)
+	if err != nil {
+		t.Fatalf("DELETE /cookbook_artifacts/%s/%s: %v", name, defaultCookbookArtifactID, err)
+	}
+	if resp.StatusCode != 404 {
+		t.Errorf("expected 404 (route missing), got %d: %s", resp.StatusCode, resp.Body)
+	}
+}
+
+func TestCookbookArtifactDeleteRequestorMatrix(t *testing.T) {
+	t.Skip("goiardi does not implement cookbook_artifacts routes; cannot test delete requestor matrix")
+}
+
+func TestCookbookArtifactDeleteNonExistent(t *testing.T) {
+	t.Skip("goiardi does not implement cookbook_artifacts routes; cannot test delete non-existent artifact")
+}
+
+func TestCookbookArtifactDeleteExisting(t *testing.T) {
+	t.Skip("goiardi does not implement cookbook_artifacts routes; cannot test delete existing artifact")
 }
