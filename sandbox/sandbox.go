@@ -95,11 +95,12 @@ func New(org *organization.Organization, checksumHash map[string]interface{}) (*
 		err = fmt.Errorf("Somehow every attempt to create a unique sandbox id failed. Bailing.")
 		return nil, err
 	}
-	checksums := make([]string, len(checksumHash))
-	j := 0
+	checksums := make([]string, 0, len(checksumHash))
 	for k := range checksumHash {
-		checksums[j] = k
-		j++
+		if !validChecksum(k) {
+			return nil, fmt.Errorf("Invalid checksum %s", k)
+		}
+		checksums = append(checksums, k)
 	}
 
 	sbox := &Sandbox{
@@ -110,6 +111,21 @@ func New(org *organization.Organization, checksumHash map[string]interface{}) (*
 		org:          org,
 	}
 	return sbox, nil
+}
+
+// validChecksum returns true if s looks like a hex digest.
+// goiardi stores SHA-1 digests (40 hex chars) for sandbox checksums.
+func validChecksum(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') && (c < 'A' || c > 'F') {
+			return false
+		}
+	}
+	return true
 }
 
 func generateSandboxID() (string, error) {
