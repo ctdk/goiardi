@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"github.com/ctdk/goiardi/pedant"
 	"strings"
 	"testing"
@@ -3990,6 +3993,172 @@ func TestCookbooksDeleteAsInvalidUser(t *testing.T) {
 		t.Fatalf("GET /cookbooks/%s/%s: %v", cbName, cbVersion, err)
 	}
 	pedant.AssertStatus(t, resp, 200)
+}
+
+// --- Phase 1 Chunk 24: cookbooks/read_spec.rb + cookbooks/named_filters_spec.rb ---
+
+func TestCookbooksReadCollectionNumVersionsValidation(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+
+	cases := []struct {
+		name  string
+		query string
+	}{
+		{"negative", "?num_versions=-1"},
+		{"missing", "?num_versions="},
+		{"invalid", "?num_versions=foo"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := client.GetOrg("/cookbooks" + tc.query)
+			if err != nil {
+				t.Fatalf("GET /cookbooks%s: %v", tc.query, err)
+			}
+			pedant.AssertStatus(t, resp, 400)
+		})
+	}
+}
+
+func TestCookbooksReadVersionAsInvalidUser(t *testing.T) {
+	client := testServer.NewClient(testServer.InvalidUser)
+	adminClient := testServer.NewClient(testServer.AdminUser)
+	cbName := pedant.UniqueName("read_inv")
+	cbVersion := "1.2.3"
+	payload := pedant.NewCookbook(cbName, cbVersion)
+	defer adminClient.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+
+	resp, err := adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, payload)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	resp, err = client.GetOrg("/cookbooks/" + cbName + "/" + cbVersion)
+	if err != nil {
+		t.Fatalf("GET /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 401)
+}
+
+func TestCookbooksReadRecipeURLContent(t *testing.T) {
+	adminClient := testServer.NewClient(testServer.AdminUser)
+	cbName := pedant.UniqueName("read_recipe_url")
+	cbVersion := "1.2.3"
+	recipeContent := "package 'apache2'\n\nservice 'apache2'\n"
+	recipeChecksum := pedant.MD5Checksum(recipeContent)
+
+	_, sandboxBody, err := adminClient.CreateSandbox([]string{recipeChecksum})
+	if err != nil {
+		t.Fatalf("creating sandbox: %v", err)
+	}
+	url, err := pedant.SandboxUploadURL(sandboxBody, recipeChecksum, testServer.BaseURL)
+	if err != nil {
+		t.Fatalf("sandbox upload url: %v", err)
+	}
+	if err := pedant.UploadFile(url, recipeContent); err != nil {
+		t.Fatalf("uploading recipe: %v", err)
+	}
+
+	payload := pedant.NewCookbook(cbName, cbVersion)
+	payload["recipes"] = []interface{}{
+		map[string]interface{}{
+			"name":        "default.rb",
+			"path":        "recipes/default.rb",
+			"checksum":    recipeChecksum,
+			"specificity": "default",
+		},
+	}
+	defer adminClient.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+
+	resp, err := adminClient.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, payload)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	resp, err = adminClient.GetOrg("/cookbooks/" + cbName + "/" + cbVersion)
+	if err != nil {
+		t.Fatalf("GET /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	body := pedant.GetJSONBody(t, resp)
+	recipes, ok := body["recipes"].([]interface{})
+	if !ok || len(recipes) == 0 {
+		t.Fatalf("expected recipes array with at least one entry, got %v", body["recipes"])
+	}
+	recipe := recipes[0].(map[string]interface{})
+	recipeURL, ok := recipe["url"].(string)
+	if !ok || recipeURL == "" {
+		t.Fatalf("expected recipe url, got %v", recipe["url"])
+	}
+
+	// Fetch the actual recipe content via the returned URL.
+	httpResp, err := http.DefaultClient.Get(recipeURL)
+	if err != nil {
+		t.Fatalf("GET %s: %v", recipeURL, err)
+	}
+	defer httpResp.Body.Close()
+	gotContent, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		t.Fatalf("reading recipe content: %v", err)
+	}
+	if string(gotContent) != recipeContent {
+		t.Errorf("expected recipe content %q, got %q", recipeContent, string(gotContent))
+	}
+}
+
+func TestCookbooksNamedFiltersAPIV2(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	cbName := pedant.UniqueName("named_v2")
+	cbVersion := "1.0.0"
+	payload := pedant.NewCookbook(cbName, cbVersion)
+	defer client.DeleteOrg("/cookbooks/" + cbName + "/" + cbVersion)
+
+	resp, err := client.PutOrg("/cookbooks/"+cbName+"/"+cbVersion, payload)
+	if err != nil {
+		t.Fatalf("PUT /cookbooks/%s/%s: %v", cbName, cbVersion, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	headers := map[string]string{"X-Ops-Server-API-Version": "2"}
+
+	t.Run("_latest", func(t *testing.T) {
+		resp, err := client.GetOrgWithHeader("/cookbooks/_latest", headers)
+		if err != nil {
+			t.Fatalf("GET /cookbooks/_latest v2: %v", err)
+		}
+		pedant.AssertStatus(t, resp, 200)
+		body := pedant.GetJSONBody(t, resp)
+		if _, ok := body[cbName]; !ok {
+			t.Errorf("expected cookbook %q in _latest response, got %v", cbName, body)
+		}
+	})
+
+	t.Run("_recipes", func(t *testing.T) {
+		resp, err := client.GetOrgWithHeader("/cookbooks/_recipes", headers)
+		if err != nil {
+			t.Fatalf("GET /cookbooks/_recipes v2: %v", err)
+		}
+		pedant.AssertStatus(t, resp, 200)
+		// Response is an array, not a JSON object.
+		var recipes []interface{}
+		if err := json.Unmarshal(resp.Body, &recipes); err != nil {
+			t.Fatalf("parsing _recipes response as array: %v", err)
+		}
+	})
+
+	t.Run("named_cookbook", func(t *testing.T) {
+		resp, err := client.GetOrgWithHeader("/cookbooks/"+cbName, headers)
+		if err != nil {
+			t.Fatalf("GET /cookbooks/%s v2: %v", cbName, err)
+		}
+		pedant.AssertStatus(t, resp, 200)
+		body := pedant.GetJSONBody(t, resp)
+		if _, ok := body[cbName]; !ok {
+			t.Errorf("expected cookbook %q in named response, got %v", cbName, body)
+		}
+	})
 }
 
 
