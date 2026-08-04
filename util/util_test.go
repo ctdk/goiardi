@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2026, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,6 +118,9 @@ func TestFlatten(t *testing.T) {
 		t.Errorf("The 'normal' field was set, but shouldn't have been.")
 	}
 	if _, ok := flattened["map_first"]; !ok {
+		t.Errorf("normal -> map -> first should have been flattened to map_first, but it wasn't")
+	}
+	if _, ok := flattened["map_second"]; !ok {
 		t.Errorf("normal -> map -> second should have been flattened to map_second, but it wasn't")
 	}
 	if r, ok := flattened["recipe"]; ok {
@@ -244,5 +247,124 @@ func TestValidateAsVersion(t *testing.T) {
 		t.Errorf("nil should have passed version validation, but did")
 	} else if v != "0.0.0" {
 		t.Errorf("Should have come back as 0.0.0, but it came back as %v", v)
+	}
+}
+
+func TestValidateAsString(t *testing.T) {
+	if s, err := ValidateAsString("foo"); err != nil || s != "foo" {
+		t.Errorf("expected foo, got %s err %v", s, err)
+	}
+	if _, err := ValidateAsString(nil); err == nil {
+		t.Error("expected error for nil string")
+	}
+	if _, err := ValidateAsString(123); err == nil {
+		t.Error("expected error for non-string")
+	}
+}
+
+func TestValidateAsBool(t *testing.T) {
+	if b, err := ValidateAsBool(true); err != nil || !b {
+		t.Errorf("expected true, got %v err %v", b, err)
+	}
+	if _, err := ValidateAsBool("yes"); err == nil {
+		t.Error("expected error for non-bool")
+	}
+}
+
+func TestValidateAsFieldString(t *testing.T) {
+	if s, err := ValidateAsFieldString("foo"); err != nil || s != "foo" {
+		t.Errorf("expected foo, got %s err %v", s, err)
+	}
+	if s, err := ValidateAsFieldString(nil); err == nil || err.Error() != "Field 'name' nil" {
+		t.Errorf("expected Field 'name' nil error, got %s err %v", s, err)
+	}
+	if _, err := ValidateAsFieldString(123); err == nil {
+		t.Error("expected error for non-string")
+	}
+}
+
+func TestValidateEmail(t *testing.T) {
+	if email, err := ValidateEmail("test@example.com"); err != nil || email.Address != "test@example.com" {
+		t.Errorf("expected valid email, got %v err %v", email, err)
+	}
+	if _, err := ValidateEmail("not-an-email"); err == nil {
+		t.Error("expected error for invalid email")
+	}
+}
+
+func TestValidateNumVersions(t *testing.T) {
+	if err := ValidateNumVersions("5"); err != nil {
+		t.Errorf("expected 5 to pass: %s", err.Error())
+	}
+	if err := ValidateNumVersions("all"); err != nil {
+		t.Errorf("expected 'all' to pass: %s", err.Error())
+	}
+	if err := ValidateNumVersions("-1"); err == nil {
+		t.Error("expected error for negative num_versions")
+	}
+	if err := ValidateNumVersions(""); err == nil {
+		t.Error("expected error for empty num_versions")
+	}
+}
+
+func TestValidateAttributes(t *testing.T) {
+	attrs := map[string]interface{}{"foo": "bar"}
+	out, err := ValidateAttributes("normal", attrs)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+	if out["foo"] != "bar" {
+		t.Errorf("expected bar, got %v", out["foo"])
+	}
+	out, err = ValidateAttributes("normal", nil)
+	if err != nil {
+		t.Fatalf("nil attrs should pass: %s", err.Error())
+	}
+	if out == nil || len(out) != 0 {
+		t.Errorf("expected empty map, got %v", out)
+	}
+}
+
+func TestValidateCookbookMetadata(t *testing.T) {
+	m := map[string]interface{}{
+		"version":           "1.0.0",
+		"name":              "cb",
+		"maintainer":        "test",
+		"maintainer_email":  "test@example.com",
+		"description":       "desc",
+		"long_description":  "",
+		"license":           "Apache-2.0",
+	}
+	if _, err := ValidateCookbookMetadata(m); err != nil {
+		t.Fatalf("expected valid metadata, got %s", err.Error())
+	}
+	if _, err := ValidateCookbookMetadata(map[string]interface{}{}); err == nil {
+		t.Error("expected error for empty metadata")
+	}
+}
+
+func TestIndexEscapeStr(t *testing.T) {
+	in := "[foo::bar]"
+	out := IndexEscapeStr(in)
+	if out == "" || out == in {
+		t.Errorf("expected escaped string, got %s", out)
+	}
+}
+
+func TestDeepMergeNested(t *testing.T) {
+	src := map[string]interface{}{
+		"level1": map[string]interface{}{
+			"level2": "value",
+		},
+	}
+	merged := DeepMerge("", src)
+	if merged["level1_level2"] != "value" {
+		t.Errorf("expected level1_level2=value, got %v", merged["level1_level2"])
+	}
+}
+
+func TestJoinStr(t *testing.T) {
+	if s := JoinStr("a", "b", "c"); s != "abc" {
+		t.Errorf("expected abc, got %s", s)
 	}
 }
