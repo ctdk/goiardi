@@ -17,8 +17,11 @@
 package databag
 
 import (
+	"bytes"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 
@@ -31,6 +34,8 @@ import (
 func init() {
 	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 	gob.Register(new(DataBag))
+	gob.Register(map[string]interface{}{})
+	gob.Register([]interface{}{})
 }
 
 var orgCounter int
@@ -221,5 +226,270 @@ func TestDataBagGetNameURLType(t *testing.T) {
 	}
 	if db.ContainerKind() != "containers" {
 		t.Errorf("expected ContainerKind() 'containers', got %s", db.ContainerKind())
+	}
+}
+
+func makeJSONReader(v interface{}) io.Reader {
+	b, _ := json.Marshal(v)
+	return bytes.NewReader(b)
+}
+
+func makeDBItem(name string, data map[string]interface{}) map[string]interface{} {
+	if data == nil {
+		data = map[string]interface{}{"key": "value"}
+	}
+	data["id"] = name
+	return data
+}
+
+func TestDataBagItemNew(t *testing.T) {
+	org := setupTestOrg(t)
+	db, _ := New(org, "itembag")
+	if err := db.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+
+	dbi, err := db.NewDBItem(makeDBItem("item1", map[string]interface{}{"foo": "bar"}))
+	if err != nil {
+		t.Fatalf("NewDBItem() failed: %s", err.Error())
+	}
+	if dbi == nil {
+		t.Fatal("NewDBItem() returned nil")
+	}
+	if dbi.DocID() != "item1" {
+		t.Errorf("expected DocID 'item1', got %s", dbi.DocID())
+	}
+	if dbi.DataBagName != "itembag" {
+		t.Errorf("expected DataBagName 'itembag', got %s", dbi.DataBagName)
+	}
+	if dbi.GetName() != "item1" {
+		t.Errorf("expected GetName 'item1', got %s", dbi.GetName())
+	}
+	if dbi.Index() != "itembag" {
+		t.Errorf("expected Index 'itembag', got %s", dbi.Index())
+	}
+	if dbi.RawData["foo"] != "bar" {
+		t.Errorf("expected raw_data.foo 'bar', got %v", dbi.RawData["foo"])
+	}
+	if db.NumDBItems() != 1 {
+		t.Errorf("expected 1 item, got %d", db.NumDBItems())
+	}
+}
+
+func TestDataBagItemNewDuplicate(t *testing.T) {
+	org := setupTestOrg(t)
+	db, _ := New(org, "dupitembag")
+	if err := db.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+	if _, err := db.NewDBItem(makeDBItem("dup", nil)); err != nil {
+		t.Fatalf("first NewDBItem() failed: %s", err.Error())
+	}
+	_, err := db.NewDBItem(makeDBItem("dup", nil))
+	if err == nil {
+		t.Fatal("expected error creating duplicate data bag item")
+	}
+	if err.Status() != http.StatusConflict {
+		t.Errorf("expected status %d for duplicate item, got %d", http.StatusConflict, err.Status())
+	}
+}
+
+func TestDataBagItemNewMissingID(t *testing.T) {
+	org := setupTestOrg(t)
+	db, _ := New(org, "missingidbag")
+	if err := db.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+	_, err := db.NewDBItem(map[string]interface{}{"foo": "bar"})
+	if err == nil {
+		t.Fatal("expected error for missing item id")
+	}
+}
+
+func TestDataBagItemNewInvalidName(t *testing.T) {
+	org := setupTestOrg(t)
+	db, _ := New(org, "invaliditembag")
+	if err := db.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+	_, err := db.NewDBItem(makeDBItem("bad name!", nil))
+	if err == nil {
+		t.Fatal("expected error for invalid item id")
+	}
+	if err.Status() != http.StatusBadRequest {
+		t.Errorf("expected status %d for invalid item name, got %d", http.StatusBadRequest, err.Status())
+	}
+}
+
+func TestDataBagItemGet(t *testing.T) {
+	org := setupTestOrg(t)
+	db, _ := New(org, "getitembag")
+	if err := db.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+	if _, err := db.NewDBItem(makeDBItem("getme", map[string]interface{}{"a": "one"})); err != nil {
+		t.Fatalf("NewDBItem() failed: %s", err.Error())
+	}
+
+	db2, _ := Get(org, "getitembag")
+	dbi, err := db2.GetDBItem("getme")
+	if err != nil {
+		t.Fatalf("GetDBItem() failed: %s", err.Error())
+	}
+	if dbi.DocID() != "getme" {
+		t.Errorf("expected DocID 'getme', got %s", dbi.DocID())
+	}
+	if dbi.RawData["a"] != "one" {
+		t.Errorf("expected raw_data.a 'one', got %v", dbi.RawData["a"])
+	}
+}
+
+func TestDataBagItemUpdate(t *testing.T) {
+	org := setupTestOrg(t)
+	db, _ := New(org, "updateitembag")
+	if err := db.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+	dbi, _ := db.NewDBItem(makeDBItem("updateme", map[string]interface{}{"a": "original"}))
+	if dbi.RawData["a"] != "original" {
+		t.Errorf("expected original value 'original', got %v", dbi.RawData["a"])
+	}
+
+	db2, _ := Get(org, "updateitembag")
+	dbi2, err := db2.UpdateDBItem("updateme", map[string]interface{}{"id": "updateme", "b": "updated"})
+	if err != nil {
+		t.Fatalf("UpdateDBItem() failed: %s", err.Error())
+	}
+	if dbi2.RawData["b"] != "updated" {
+		t.Errorf("expected updated value 'updated', got %v", dbi2.RawData["b"])
+	}
+	if _, ok := dbi2.RawData["a"]; ok {
+		t.Errorf("expected old key 'a' to be gone after update")
+	}
+}
+
+func TestDataBagItemDelete(t *testing.T) {
+	org := setupTestOrg(t)
+	db, _ := New(org, "delitembag")
+	if err := db.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+	db.NewDBItem(makeDBItem("delme", nil))
+
+	db2, _ := Get(org, "delitembag")
+	if err := db2.DeleteDBItem("delme"); err != nil {
+		t.Fatalf("DeleteDBItem() failed: %s", err.Error())
+	}
+	if _, err := db2.GetDBItem("delme"); err == nil {
+		t.Fatal("expected error getting deleted data bag item")
+	}
+	if n := db2.NumDBItems(); n != 0 {
+		t.Errorf("expected 0 items after delete, got %d", n)
+	}
+}
+
+func TestDataBagItemDoesExist(t *testing.T) {
+	org := setupTestOrg(t)
+	db, _ := New(org, "existitembag")
+	if err := db.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+	found, err := db.DoesItemExist(org, "missing")
+	if err != nil {
+		t.Fatalf("DoesItemExist() returned error: %s", err.Error())
+	}
+	if found {
+		t.Error("expected DoesItemExist false for missing item")
+	}
+	db.NewDBItem(makeDBItem("present", nil))
+	found, err = db.DoesItemExist(org, "present")
+	if err != nil {
+		t.Fatalf("DoesItemExist() returned error: %s", err.Error())
+	}
+	if !found {
+		t.Error("expected DoesItemExist true for existing item")
+	}
+}
+
+func TestDataBagItemGetMultiAllList(t *testing.T) {
+	org := setupTestOrg(t)
+	db, _ := New(org, "multiitembag")
+	if err := db.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+	for _, name := range []string{"one", "two", "three"} {
+		if _, err := db.NewDBItem(makeDBItem(name, nil)); err != nil {
+			t.Fatalf("NewDBItem(%s) failed: %s", name, err.Error())
+		}
+	}
+
+	db2, _ := Get(org, "multiitembag")
+	multi, err := db2.GetMultiDBItems([]string{"one", "three"})
+	if err != nil {
+		t.Fatalf("GetMultiDBItems() failed: %s", err.Error())
+	}
+	if len(multi) != 2 {
+		t.Errorf("expected 2 items from multi-get, got %d", len(multi))
+	}
+
+	all, aerr := db2.AllDBItems()
+	if aerr != nil {
+		t.Fatalf("AllDBItems() failed: %s", aerr.Error())
+	}
+	if len(all) != 3 {
+		t.Errorf("expected 3 items from AllDBItems, got %d", len(all))
+	}
+
+	list := db2.ListDBItems()
+	if len(list) != 3 {
+		t.Errorf("expected 3 items from ListDBItems, got %d", len(list))
+	}
+	for _, name := range []string{"one", "two", "three"} {
+		found := false
+		for _, n := range list {
+			if n == name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected %s in ListDBItems, got %v", name, list)
+		}
+	}
+}
+
+func TestDataBagItemFlatten(t *testing.T) {
+	org := setupTestOrg(t)
+	db, _ := New(org, "flatitembag")
+	if err := db.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+	dbi, _ := db.NewDBItem(map[string]interface{}{
+		"id": "flat",
+		"nested": map[string]interface{}{
+			"key": "val",
+		},
+	})
+
+	flat := dbi.Flatten()
+	if flat["nested_key"] != "val" {
+		t.Errorf("expected flattened nested_key 'val', got %v", flat["nested_key"])
+	}
+}
+
+func TestDataBagItemRawDataBagJSON(t *testing.T) {
+	raw := map[string]interface{}{
+		"id":       "jsonitem",
+		"raw_data": map[string]interface{}{"a": 1},
+	}
+	data := RawDataBagJSON(io.NopCloser(makeJSONReader(raw)))
+	if data["a"] != json.Number("1") {
+		t.Errorf("expected raw_data.a 1, got %v (type %T)", data["a"], data["a"])
+	}
+
+	raw2 := map[string]interface{}{"b": 2}
+	data2 := RawDataBagJSON(io.NopCloser(makeJSONReader(raw2)))
+	if data2["b"] != json.Number("2") {
+		t.Errorf("expected b 2, got %v (type %T)", data2["b"], data2["b"])
 	}
 }
