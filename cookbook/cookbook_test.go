@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2026, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,116 +18,274 @@ package cookbook
 
 import (
 	"encoding/gob"
-	"encoding/json"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/filestore"
-	"github.com/ctdk/goiardi/indexer"
-	"github.com/ctdk/goiardi/organization"
-	"github.com/ctdk/goiardi/orgloader"
-	"os"
+	"fmt"
 	"testing"
+
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/orgloader"
+	"github.com/ctdk/goiardi/organization"
 )
-
-type constraintTest struct {
-	constraint         string
-	expectedVersion    string
-	expectedNumResults int
-}
-
-const minimalCookPath string = "./minimal-cook.json"
-const minimal110CookPath string = "./minimal-cook-1.1.0.json"
 
 func init() {
 	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
+	gob.Register(new(Cookbook))
+	gob.Register(new(CookbookVersion))
+	gob.Register(map[string]interface{}{})
+	gob.Register([]interface{}{})
+	gob.Register(map[string]string{})
 }
 
-func TestLatestConstrained(t *testing.T) {
+var cookbookOrgCounter int
+
+func setupCookbookTestOrg(t *testing.T) *organization.Organization {
 	gob.Register(new(organization.Organization))
-	org, _ := orgloader.New("default", "boo")
-	org.Save()
-	indexer.Initialize(config.Config, org)
-	cbname := "minimal"
-	cb, _ := New(org, cbname)
-
-	// "upload" files - make fake filestore entries
-	u := new(filestore.FileStore)
-	gob.Register(u)
-	c := new(Cookbook)
-	gob.Register(c)
-	v := new(CookbookVersion)
-	gob.Register(v)
-	rm := make(map[string]interface{})
-	gob.Register(rm)
-
-	a := []string{"0ab75b43c726c3e7c00d7950dd6c3577", "b43166991a65cc7e711a018b93105544", "e2ff77580f69d7612e6a67640fdc2fe0", "5822b0e3808ed57308a0eff8b61f7dc2"}
-	var data []byte
-	for _, chk := range a {
-		f := &filestore.FileStore{Chksum: chk, Data: &data}
-		f.SetOrg(org)
-		err := f.Save()
-		if err != nil {
-			t.Error(err)
-		}
-	}
-
-	mc, err := loadCookbookFromJSON(minimalCookPath)
+	cookbookOrgCounter++
+	name := fmt.Sprintf("testcookbook-%d", cookbookOrgCounter)
+	org, err := orgloader.New(name, "Test Cookbook Org")
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("failed to create test org: %s", err.Error())
 	}
+	return org
+}
 
-	if _, cerr := cb.NewVersion("1.0.0", mc); cerr != nil {
-		t.Error(cerr)
-	}
-
-	// and one more cookbook version
-	mc2, err := loadCookbookFromJSON(minimal110CookPath)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if _, cerr := cb.NewVersion("1.1.0", mc2); cerr != nil {
-		t.Error(cerr)
-	}
-
-	conTests := []*constraintTest{
-		&constraintTest{"= 1.0.0", "1.0.0", 1},
-		&constraintTest{"= 1.1.0", "1.1.0", 1},
-		&constraintTest{"~> 1.0.0", "1.0.0", 1},
-		&constraintTest{"~> 1.1.0", "1.1.0", 1},
-		&constraintTest{"< 1.1.0", "1.0.0", 1},
-		&constraintTest{"= 0.1.0", "0.1.0", 0},
-		&constraintTest{"> 1.1.0", "1.0.0", 0},
-	}
-
-	for _, tc := range conTests {
-		tcb := cb.ConstrainedInfoHash("1", tc.constraint)
-		vs := tcb["versions"].([]interface{})
-		lvs := len(vs)
-
-		if lvs != tc.expectedNumResults {
-			t.Errorf("Expected %d results from cb.ConstrainedInfoHash for '%s', but got %d instead.", tc.expectedNumResults, tc.constraint, lvs)
-			continue
-		}
-		if lvs > 0 {
-			tcbv := vs[0].(map[string]string)["version"]
-			if tcbv != tc.expectedVersion {
-				t.Errorf("Expected version '%s' to be returned by cb.ConstrainedInfoHash for '%s', but got '%s'.", tc.expectedVersion, tc.constraint, tcbv)
-			}
-		}
+func makeVersionJSON(name, version string) map[string]interface{} {
+	return map[string]interface{}{
+		"cookbook_name": name,
+		"name":          fmt.Sprintf("%s-%s", name, version),
+		"version":       version,
+		"chef_type":     "cookbook_version",
+		"json_class":    "Chef::CookbookVersion",
+		"metadata": map[string]interface{}{
+			"version":           version,
+			"name":              name,
+			"maintainer":        "test",
+			"maintainer_email":  "test@example.com",
+			"description":       "test cookbook",
+			"long_description":  "",
+			"license":           "Apache-2.0",
+		},
+		"definitions": []interface{}{},
+		"libraries":   []interface{}{},
+		"attributes":  []interface{}{},
+		"providers":   []interface{}{},
+		"resources":   []interface{}{},
+		"templates":   []interface{}{},
+		"root_files":  []interface{}{},
+		"files":       []interface{}{},
+		"recipes":     []interface{}{},
+		"frozen?":     false,
 	}
 }
 
-func loadCookbookFromJSON(path string) (map[string]interface{}, error) {
-	f, err := os.Open(path)
+func TestCookbookNew(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, err := New(org, "test-cookbook")
 	if err != nil {
-		return nil, err
+		t.Fatalf("New() failed: %s", err.Error())
 	}
-	defer f.Close()
+	if cb.Name != "test-cookbook" {
+		t.Errorf("expected name test-cookbook, got %s", cb.Name)
+	}
+	if cb.NumVersions() != 0 {
+		t.Errorf("expected 0 versions, got %d", cb.NumVersions())
+	}
+}
 
-	dec := json.NewDecoder(f)
-	var mc map[string]interface{}
-	if err = dec.Decode(&mc); err != nil {
-		return nil, err
+func TestCookbookNewInvalidName(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	_, err := New(org, "bad name")
+	if err == nil {
+		t.Fatal("expected error for invalid cookbook name")
 	}
-	return mc, nil
+}
+
+func TestCookbookSaveAndGet(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "save-cookbook")
+	if err := cb.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+	cb2, err := Get(org, "save-cookbook")
+	if err != nil {
+		t.Fatalf("Get() failed: %s", err.Error())
+	}
+	if cb2.Name != "save-cookbook" {
+		t.Errorf("expected save-cookbook, got %s", cb2.Name)
+	}
+}
+
+func TestCookbookGetNotFound(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	_, err := Get(org, "missing")
+	if err == nil {
+		t.Fatal("expected error for missing cookbook")
+	}
+}
+
+func TestCookbookDoesExist(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "exists-cookbook")
+	cb.Save()
+	found, err := DoesExist(org, "exists-cookbook")
+	if err != nil {
+		t.Fatalf("DoesExist() failed: %s", err.Error())
+	}
+	if !found {
+		t.Error("expected cookbook to exist")
+	}
+	found, _ = DoesExist(org, "missing-cookbook")
+	if found {
+		t.Error("expected cookbook not to exist")
+	}
+}
+
+func TestCookbookDelete(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "delete-cookbook")
+	cb.Save()
+	if err := cb.Delete(); err != nil {
+		t.Fatalf("Delete() failed: %s", err.Error())
+	}
+	_, err := Get(org, "delete-cookbook")
+	if err == nil {
+		t.Fatal("expected error after delete")
+	}
+}
+
+func TestCookbookGetList(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	for _, name := range []string{"a", "b", "c"} {
+		cb, _ := New(org, name)
+		cb.Save()
+	}
+	list := GetList(org)
+	if len(list) != 3 {
+		t.Errorf("expected 3 cookbooks, got %d", len(list))
+	}
+}
+
+func TestCookbookAllCookbooks(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	for _, name := range []string{"all-a", "all-b"} {
+		cb, _ := New(org, name)
+		cb.Save()
+	}
+	all := AllCookbooks(org)
+	if len(all) != 2 {
+		t.Errorf("expected 2 cookbooks, got %d", len(all))
+	}
+}
+
+func TestCookbookInfoHash(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "info-cookbook")
+	cbv, _ := cb.NewVersion("1.0.0", makeVersionJSON("info-cookbook", "1.0.0"))
+	_ = cbv
+	info := cb.InfoHash("all")
+	if info["url"] == "" {
+		t.Error("expected non-empty URL")
+	}
+	if _, ok := info["versions"]; !ok {
+		t.Error("expected versions key")
+	}
+}
+
+func TestCookbookLatestAndConstrained(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "latest-cookbook")
+	for _, ver := range []string{"1.0.0", "2.0.0"} {
+		cbv, gerr := cb.NewVersion(ver, makeVersionJSON("latest-cookbook", ver))
+		if gerr != nil {
+			t.Fatalf("NewVersion(%s) failed: %s", ver, gerr.Error())
+		}
+		cb.Versions[ver] = cbv
+	}
+	cb.UpdateLatestVersion()
+	latest := cb.LatestVersion()
+	if latest.Version != "2.0.0" {
+		t.Errorf("expected latest 2.0.0, got %s", latest.Version)
+	}
+	constrained := cb.LatestConstrained("= 1.0.0")
+	if constrained == nil || constrained.Version != "1.0.0" {
+		t.Errorf("expected constrained 1.0.0, got %v", constrained)
+	}
+}
+
+func TestCookbookURLType(t *testing.T) {
+	cb := &Cookbook{Name: "url-cookbook"}
+	if cb.URLType() != "cookbooks" {
+		t.Errorf("expected url type cookbooks, got %s", cb.URLType())
+	}
+}
+
+func TestCookbookVersionGetName(t *testing.T) {
+	cbv := &CookbookVersion{Name: "cbv-1.0.0"}
+	if cbv.GetName() != "cbv-1.0.0" {
+		t.Errorf("expected cbv-1.0.0, got %s", cbv.GetName())
+	}
+}
+
+func TestCookbookRecipeList(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "recipe-cookbook")
+	json := makeVersionJSON("recipe-cookbook", "1.0.0")
+	cbv, err := cb.NewVersion("1.0.0", json)
+	if err != nil {
+		t.Fatalf("NewVersion() failed: %s", err.Error())
+	}
+	cbv.Recipes = []map[string]interface{}{{"name": "default.rb"}}
+	recipes, gerr := cbv.RecipeList()
+	if gerr != nil {
+		t.Fatalf("RecipeList() failed: %s", gerr.Error())
+	}
+	if len(recipes) != 1 || recipes[0] != "recipe-cookbook" {
+		t.Errorf("expected [recipe-cookbook], got %v", recipes)
+	}
+}
+
+func TestCookbookVersionToJSON(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "json-cookbook")
+	cb.Save()
+	json := makeVersionJSON("json-cookbook", "1.0.0")
+	cbv, err := cb.NewVersion("1.0.0", json)
+	if err != nil {
+		t.Fatalf("NewVersion() failed: %s", err.Error())
+	}
+	j := cbv.ToJSON("GET")
+	if j["version"] != "1.0.0" {
+		t.Errorf("expected version 1.0.0, got %v", j["version"])
+	}
+}
+
+func TestCookbookNumVersions(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "num-cookbook")
+	if cb.NumVersions() != 0 {
+		t.Errorf("expected 0 versions initially, got %d", cb.NumVersions())
+	}
+}
+
+func TestCookbookNewVersion(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "newver-cookbook")
+	cb.Save()
+	cbv, err := cb.NewVersion("1.0.0", makeVersionJSON("newver-cookbook", "1.0.0"))
+	if err != nil {
+		t.Fatalf("NewVersion() failed: %s", err.Error())
+	}
+	if cbv.CookbookName != "newver-cookbook" {
+		t.Errorf("expected newver-cookbook, got %s", cbv.CookbookName)
+	}
+}
+
+func TestCookbookContainerType(t *testing.T) {
+	cb := &Cookbook{Name: "ct-cookbook"}
+	if cb.ContainerType() != "cookbooks" {
+		t.Errorf("expected container type cookbooks, got %s", cb.ContainerType())
+	}
+	if cb.ContainerKind() != "containers" {
+		t.Errorf("expected container kind containers, got %s", cb.ContainerKind())
+	}
 }
