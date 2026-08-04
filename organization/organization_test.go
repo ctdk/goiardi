@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2026, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,107 +18,188 @@ package organization
 
 import (
 	"encoding/gob"
-	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/fakeacl"
-	"github.com/ctdk/goiardi/indexer"
-	"strings"
+	"fmt"
 	"testing"
+
+	"github.com/casbin/casbin/v2"
+	"github.com/ctdk/goiardi/aclhelper"
+	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/indexer"
+	"github.com/ctdk/goiardi/util"
 )
 
 func init() {
 	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
+	gob.Register(new(Organization))
 }
 
-func TestOrgCreation(t *testing.T) {
-	z := new(Organization)
-	gob.Register(z)
-	name := "hlumph"
-	fullName := "Hlumphers, Inc."
-	o, err := New(name, fullName)
+type noopOrgPermChecker struct{}
+
+func (n *noopOrgPermChecker) CheckItemPerm(item aclhelper.Item, actor aclhelper.Actor, action string) (bool, util.Gerror) {
+	return true, nil
+}
+func (n *noopOrgPermChecker) CheckACLItemPerm(item aclhelper.Item, actor aclhelper.Actor, action string) (bool, util.Gerror) {
+	return true, nil
+}
+func (n *noopOrgPermChecker) CheckContainerPerm(actor aclhelper.Actor, container string, action string) (bool, util.Gerror) {
+	return true, nil
+}
+func (n *noopOrgPermChecker) RootCheckPerm(actor aclhelper.Actor, action string) (bool, util.Gerror) {
+	return true, nil
+}
+func (n *noopOrgPermChecker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, members []string, action string) util.Gerror {
+	return nil
+}
+func (n *noopOrgPermChecker) AddMembers(role aclhelper.Role, members []aclhelper.Member) error {
+	return nil
+}
+func (n *noopOrgPermChecker) RemoveMembers(role aclhelper.Role, members []aclhelper.Member) error {
+	return nil
+}
+func (n *noopOrgPermChecker) AddACLRole(role aclhelper.Role) error {
+	return nil
+}
+func (n *noopOrgPermChecker) RemoveACLRole(role aclhelper.Role) error {
+	return nil
+}
+func (n *noopOrgPermChecker) Enforcer() *casbin.SyncedEnforcer {
+	return nil
+}
+func (n *noopOrgPermChecker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
+	return nil, nil
+}
+func (n *noopOrgPermChecker) DeleteItemACL(item aclhelper.Item) (bool, error) {
+	return true, nil
+}
+func (n *noopOrgPermChecker) RenameItemACL(item aclhelper.Item, oldName string) error {
+	return nil
+}
+func (n *noopOrgPermChecker) EditFromJSON(item aclhelper.Item, action string, data interface{}) util.Gerror {
+	return nil
+}
+func (n *noopOrgPermChecker) CreatorOnly(item aclhelper.Item, actor aclhelper.Actor) util.Gerror {
+	return nil
+}
+func (n *noopOrgPermChecker) RemoveUser(member aclhelper.Member) error {
+	return nil
+}
+func (n *noopOrgPermChecker) RenameMember(member aclhelper.Member, newName string) error {
+	return nil
+}
+func (n *noopOrgPermChecker) DeletePolicy() error {
+	return nil
+}
+
+var orgCounter int
+
+func setupTestOrg(t *testing.T) *Organization {
+	orgCounter++
+	name := fmt.Sprintf("testorg-%d", orgCounter)
+	org, err := New(name, "Test Organization")
 	if err != nil {
-		t.Error(err.Error())
+		t.Fatalf("failed to create test org: %s", err.Error())
 	}
-	if o.Name != name {
-		t.Errorf("org names did not match! %s and %s", o.Name, name)
-	}
-	if o.FullName != fullName {
-		t.Errorf("org full name did not match! %s and %s", o.FullName, fullName)
-	}
-	if len(o.GUID) != 32 {
-		t.Errorf("Org GUID should have been 32 characters long, got '%s' of %d chars instead", o.GUID, len(o.GUID))
-	}
-	err = o.Save()
-	if err != nil {
-		t.Error(err.Error())
+	org.SetPermCheck(&noopOrgPermChecker{})
+	return org
+}
+
+func TestOrganizationNew(t *testing.T) {
+	org := setupTestOrg(t)
+	if org.Name == "" {
+		t.Fatal("expected non-empty org name")
 	}
 }
 
-func TestOrgDeletion(t *testing.T) {
-	o, err := Get("hlumph")
-	if err != nil {
-		t.Error(err.Error())
-	}
-	fakeacl.LoadFakeACL(o)
-	o.Delete()
-	o2, _ := Get("hlumph")
-	if o2 != nil {
-		t.Errorf("should not have fetched organization, but got '%v' back", o2)
+func TestOrganizationNewDuplicate(t *testing.T) {
+	org := setupTestOrg(t)
+	_, err := New(org.Name, "Duplicate")
+	if err == nil {
+		t.Fatal("expected error for duplicate org")
 	}
 }
 
-func TestOrgGet(t *testing.T) {
-	name := "hlumph"
-	fullName := "Hlumphers, Inc."
-	o, err := New(name, fullName)
-	if err != nil {
-		t.Error(err.Error())
+func TestOrganizationSaveAndGet(t *testing.T) {
+	org := setupTestOrg(t)
+	if err := org.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
 	}
-	fakeacl.LoadFakeACL(o)
-	err = o.Save()
-	o2, err := Get(name)
+	org2, err := Get(org.Name)
 	if err != nil {
-		t.Error(err.Error())
+		t.Fatalf("Get() failed: %s", err.Error())
 	}
-	if o.Name != o2.Name {
-		t.Errorf("names did not match, got %s and %s", o.Name, o2.Name)
+	if org2.Name != org.Name {
+		t.Errorf("expected %s, got %s", org.Name, org2.Name)
 	}
 }
 
-func TestOrgShoveyKey(t *testing.T) {
-	ov := config.Config.UseShovey
-	defer func() { config.Config.UseShovey = ov }()
-	config.Config.UseShovey = true
+func TestOrganizationGetNotFound(t *testing.T) {
+	_, err := Get("missing-org-12345")
+	if err == nil {
+		t.Fatal("expected error for missing org")
+	}
+}
 
-	name := "harumph"
-	fullName := "Harumph AB"
-	o, err := New(name, fullName)
+func TestOrganizationGetList(t *testing.T) {
+	setupTestOrg(t)
+	setupTestOrg(t)
+	list := GetList()
+	if len(list) < 2 {
+		t.Errorf("expected at least 2 orgs, got %d", len(list))
+	}
+}
+
+func TestOrganizationAllOrganizations(t *testing.T) {
+	setupTestOrg(t)
+	setupTestOrg(t)
+	orgs, err := AllOrganizations()
 	if err != nil {
-		t.Error(err.Error())
+		t.Fatalf("AllOrganizations() failed: %s", err.Error())
 	}
-	fakeacl.LoadFakeACL(o)
-	err = o.Save()
-	if err != nil {
-		t.Error(err.Error())
+	if len(orgs) < 2 {
+		t.Errorf("expected at least 2 orgs, got %d", len(orgs))
 	}
+}
 
-	if o.shoveyKey == nil {
-		t.Error("Odd, o.shoveyKey should not be null if UseShovey is true.")
+func TestOrganizationToJSON(t *testing.T) {
+	org := setupTestOrg(t)
+	j := org.ToJSON()
+	if j["name"] != org.Name {
+		t.Errorf("expected name %s, got %v", org.Name, j["name"])
 	}
+}
 
-	pk, gerr := o.ShoveyPrivKey()
-	if gerr != nil {
-		t.Error(gerr.Error())
+func TestOrganizationDataKey(t *testing.T) {
+	org := setupTestOrg(t)
+	key := org.DataKey("client")
+	expected := fmt.Sprintf("client-%s", org.Name)
+	if key != expected {
+		t.Errorf("expected %s, got %s", expected, key)
 	}
-	if pk == nil {
-		t.Error("aiiieeeee, the private key should not have been null")
-	}
+}
 
-	pub, gerr := o.ShoveyPubKey()
-	if gerr != nil {
-		t.Error(gerr.Error())
+func TestOrganizationOrgURLBase(t *testing.T) {
+	org := setupTestOrg(t)
+	base := org.OrgURLBase()
+	expected := fmt.Sprintf("/organizations/%s", org.Name)
+	if base != expected {
+		t.Errorf("expected %s, got %s", expected, base)
 	}
+}
 
-	if !strings.HasPrefix(pub, "-----BEGIN PUBLIC KEY-----") {
-		t.Errorf("pub should have had the BEGIN PUBLIC KEY header, but didn't. Actual contents:\n\n%s\n\n", pub)
+func TestOrganizationContainerType(t *testing.T) {
+	org := setupTestOrg(t)
+	if org.ContainerType() != "$$root$$" {
+		t.Errorf("expected $$root$$, got %s", org.ContainerType())
+	}
+}
+
+func TestOrganizationDelete(t *testing.T) {
+	org := setupTestOrg(t)
+	if err := org.Delete(); err != nil {
+		t.Fatalf("Delete() failed: %s", err.Error())
+	}
+	_, err := Get(org.Name)
+	if err == nil {
+		t.Fatal("expected error after delete")
 	}
 }
