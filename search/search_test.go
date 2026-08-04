@@ -397,3 +397,86 @@ func TestEmbiggenSearch(t *testing.T) {
 	}
 }
 */
+
+func TestSearchGetEndpoints(t *testing.T) {
+	endpoints := searcher.GetEndpoints(org)
+	expected := map[string]bool{"node": true, "role": true, "client": true, "environment": true, "databag1": true, "databag2": true, "databag3": true, "unicode": true}
+	for name := range expected {
+		found := false
+		for _, e := range endpoints {
+			if e == name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected endpoint %s in %v", name, endpoints)
+		}
+	}
+}
+
+func TestSearchPartialSearch(t *testing.T) {
+	partial := map[string]interface{}{
+		"name": []interface{}{"name"},
+		"baz":  []interface{}{"baz"},
+	}
+	r, err := searcher.Search(org, "node", "name:node1", 1000, "id ASC", 0, partial)
+	if err != nil {
+		t.Fatalf("partial search failed: %s", err.Error())
+	}
+	if len(r) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(r))
+	}
+	data, ok := r[0]["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected data map in partial search result, got %T", r[0]["data"])
+	}
+	if data["name"] != "node1" {
+		t.Errorf("expected name node1 in partial result, got %v", data["name"])
+	}
+	if data["baz"] != "borb" {
+		t.Errorf("expected baz borb in partial result, got %v", data["baz"])
+	}
+	if _, ok := r[0]["url"]; !ok {
+		t.Error("expected url field in partial search result")
+	}
+}
+
+func TestPartialSearchFormat(t *testing.T) {
+	results := []map[string]interface{}{
+		{"name": "node1", "default": map[string]interface{}{"baz": "borb"}},
+	}
+	format := map[string]interface{}{
+		"name": []string{"name"},
+		"baz":  []string{"default", "baz"},
+	}
+	out, err := partialSearchFormat(results, format)
+	if err != nil {
+		t.Fatalf("partialSearchFormat failed: %s", err.Error())
+	}
+	if out[0]["name"] != "node1" {
+		t.Errorf("expected node1, got %v", out[0]["name"])
+	}
+	if out[0]["baz"] != "borb" {
+		t.Errorf("expected borb, got %v", out[0]["baz"])
+	}
+
+	badFormat := map[string]interface{}{"x": "y"}
+	if _, err := partialSearchFormat(results, badFormat); err == nil {
+		t.Error("expected error for bad partial format")
+	}
+}
+
+func TestWalk(t *testing.T) {
+	m := map[string]interface{}{
+		"a": map[string]interface{}{
+			"b": "c",
+		},
+	}
+	if v := walk(m, []string{"a", "b"}); v != "c" {
+		t.Errorf("expected c, got %v", v)
+	}
+	if v := walk(m, []string{"a", "missing"}); v != nil {
+		t.Errorf("expected nil, got %v", v)
+	}
+}

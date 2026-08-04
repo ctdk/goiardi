@@ -159,3 +159,50 @@ func TestIndexObjAndSearch(t *testing.T) {
 		t.Errorf("expected foo in all results %v", all)
 	}
 }
+
+func TestDeleteItemFromCollection(t *testing.T) {
+	resetIndexer()
+	org := &fakeOrg{name: "del-item-org", id: 48, schemaName: "goiardi_search_org_48"}
+	CreateOrgDex(org)
+	obj := &fakeIndexable{name: "delete-me", idx: "node", org: org.name}
+	objIndex.SaveItem(org, obj)
+	results, err := GetIndex().Search(org, "node", "delete-me", true)
+	if err != nil {
+		t.Fatalf("Search failed: %s", err.Error())
+	}
+	if _, ok := results["delete-me"]; !ok {
+		t.Fatalf("expected delete-me in results before deletion")
+	}
+	if err := DeleteItemFromCollection(org, "node", "delete-me"); err != nil {
+		t.Fatalf("DeleteItemFromCollection failed: %s", err.Error())
+	}
+	results, err = GetIndex().Search(org, "node", "delete-me", true)
+	if err != nil {
+		t.Fatalf("Search after delete failed: %s", err.Error())
+	}
+	if _, ok := results["delete-me"]; ok {
+		t.Error("expected delete-me to be removed from index")
+	}
+}
+
+func TestReIndex(t *testing.T) {
+	resetIndexer()
+	org := &fakeOrg{name: "reindex-org", id: 49, schemaName: "goiardi_search_org_49"}
+	CreateOrgDex(org)
+	objects := []Indexable{
+		&fakeIndexable{name: "reindex-1", idx: "node", org: org.name},
+		&fakeIndexable{name: "reindex-2", idx: "node", org: org.name},
+	}
+	rCh := make(chan struct{})
+	if err := ReIndex(org, objects, rCh); err != nil {
+		t.Fatalf("ReIndex failed: %s", err.Error())
+	}
+	<-rCh
+	results, err := GetIndex().Search(org, "node", "reindex", true)
+	if err != nil {
+		t.Fatalf("Search after reindex failed: %s", err.Error())
+	}
+	if len(results) != 2 {
+		t.Errorf("expected 2 reindexed items, got %d", len(results))
+	}
+}
