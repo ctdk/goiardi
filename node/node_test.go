@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2026, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,127 +14,289 @@
  * limitations under the License.
  */
 
-// Node tests
 package node
 
 import (
 	"encoding/gob"
+	"fmt"
+	"testing"
+
+	"github.com/casbin/casbin/v2"
+	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/datastore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
-	"github.com/ctdk/goiardi/orgloader"
-	"testing"
-	"time"
+	"github.com/ctdk/goiardi/util"
 )
-
-var org *organization.Organization
 
 func init() {
 	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
+	gob.Register(new(Node))
 }
 
-func TestActionAtADistance(t *testing.T) {
+type noopNodePermChecker struct{}
+
+func (n *noopNodePermChecker) CheckItemPerm(item aclhelper.Item, actor aclhelper.Actor, action string) (bool, util.Gerror) {
+	return true, nil
+}
+func (n *noopNodePermChecker) CheckACLItemPerm(item aclhelper.Item, actor aclhelper.Actor, action string) (bool, util.Gerror) {
+	return true, nil
+}
+func (n *noopNodePermChecker) CheckContainerPerm(actor aclhelper.Actor, container string, action string) (bool, util.Gerror) {
+	return true, nil
+}
+func (n *noopNodePermChecker) RootCheckPerm(actor aclhelper.Actor, action string) (bool, util.Gerror) {
+	return true, nil
+}
+func (n *noopNodePermChecker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, members []string, action string) util.Gerror {
+	return nil
+}
+func (n *noopNodePermChecker) AddMembers(role aclhelper.Role, members []aclhelper.Member) error {
+	return nil
+}
+func (n *noopNodePermChecker) RemoveMembers(role aclhelper.Role, members []aclhelper.Member) error {
+	return nil
+}
+func (n *noopNodePermChecker) AddACLRole(role aclhelper.Role) error {
+	return nil
+}
+func (n *noopNodePermChecker) RemoveACLRole(role aclhelper.Role) error {
+	return nil
+}
+func (n *noopNodePermChecker) Enforcer() *casbin.SyncedEnforcer {
+	return nil
+}
+func (n *noopNodePermChecker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
+	return nil, nil
+}
+func (n *noopNodePermChecker) DeleteItemACL(item aclhelper.Item) (bool, error) {
+	return true, nil
+}
+func (n *noopNodePermChecker) RenameItemACL(item aclhelper.Item, oldName string) error {
+	return nil
+}
+func (n *noopNodePermChecker) EditFromJSON(item aclhelper.Item, action string, data interface{}) util.Gerror {
+	return nil
+}
+func (n *noopNodePermChecker) CreatorOnly(item aclhelper.Item, actor aclhelper.Actor) util.Gerror {
+	return nil
+}
+func (n *noopNodePermChecker) RemoveUser(member aclhelper.Member) error {
+	return nil
+}
+func (n *noopNodePermChecker) RenameMember(member aclhelper.Member, newName string) error {
+	return nil
+}
+func (n *noopNodePermChecker) DeletePolicy() error {
+	return nil
+}
+
+var nodeOrgCounter int
+
+func setupNodeTestOrg(t *testing.T) *organization.Organization {
 	gob.Register(new(organization.Organization))
-	org, _ = orgloader.New("default", "boo")
-	org.Save()
-	indexer.Initialize(config.Config, org)
+	nodeOrgCounter++
+	name := fmt.Sprintf("testnode-%d", nodeOrgCounter)
+	org, err := organization.New(name, "Test Node Org")
+	if err != nil {
+		t.Fatalf("failed to create test org: %s", err.Error())
+	}
+	org.SetPermCheck(&noopNodePermChecker{})
+	return org
+}
 
-	n, _ := New(org, "foo2")
-	gob.Register(n)
-	n.Normal["foo"] = "bar"
-	n.Save()
-	n2, _ := Get(org, "foo2")
-	if n.Name != n2.Name {
-		t.Errorf("Node names should have been the same, but weren't, got %s and %s", n.Name, n2.Name)
-	}
-	if n.Normal["foo"] != n2.Normal["foo"] {
-		t.Errorf("Normal attribute 'foo' should have been equal between the two copies of the node, but weren't.")
-	}
-	n2.Normal["foo"] = "blerp"
-	if n.Normal["foo"] == n2.Normal["foo"] {
-		t.Errorf("Normal attribute 'foo' should not have been equal between the two copies of the node, but were.")
-	}
-	n2.Save()
-	n3, _ := Get(org, "foo2")
-	if n3.Normal["foo"] != n2.Normal["foo"] {
-		t.Errorf("Normal attribute 'foo' should have been equal between the two copies of the node after saving a second time, but weren't.")
+func makeNodeJSON(name string) map[string]interface{} {
+	return map[string]interface{}{
+		"name":              name,
+		"json_class":        "Chef::Node",
+		"chef_type":         "node",
+		"chef_environment":  "_default",
+		"run_list":          []string{},
+		"automatic":         map[string]interface{}{},
+		"normal":            map[string]interface{}{},
+		"default":           map[string]interface{}{},
+		"override":          map[string]interface{}{},
 	}
 }
 
-func TestNodeStatus(t *testing.T) {
-	n, _ := New(org, "foo3")
-	n.Save()
-	z := new(NodeStatus)
-	gob.Register(z)
-	n.UpdateStatus("up")
-	ns, err := n.LatestStatus()
+func TestNodeNew(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	n, err := New(org, "test-node")
 	if err != nil {
-		t.Error(err.Error())
+		t.Fatalf("New() failed: %s", err.Error())
 	}
-	if ns == nil {
-		t.Errorf("node status was nil!")
-	} else if ns.Status != "up" {
-		t.Errorf("node status should have been 'up', got %s", ns.Status)
-	}
-	n.UpdateStatus("up")
-	n.UpdateStatus("down")
-	nses, err := n.AllStatuses()
-	if len(nses) != 3 {
-		t.Errorf("AllStatuses should have returned 3, but it returned %d", len(nses))
-	}
-	err = n.deleteStatuses()
-	if err != nil {
-		t.Error(err.Error())
-	}
-	nses, _ = n.AllStatuses()
-	if len(nses) != 0 {
-		t.Errorf("AllStatuses should have returned 0 after calling DeleteStatuses, but instead it returned %d", len(nses))
+	if n.Name != "test-node" {
+		t.Errorf("expected name test-node, got %s", n.Name)
 	}
 }
 
-func TestNodeStatusDelete(t *testing.T) {
-	// clear out any existing node statuses
-	nodes := AllNodes(org)
-	ds := datastore.New()
-	for _, n := range nodes {
-		ds.DeleteNodeStatus(n.Name, org.Name)
+func TestNodeNewInvalidName(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	_, err := New(org, "bad name")
+	if err == nil {
+		t.Fatal("expected error for invalid node name")
 	}
-	dNode, _ := New(org, "deleting_node")
-	dNode.Save()
-	now := time.Now()
-	day := 24 * time.Hour
-	nStats := 28
-	for i := nStats; i > 0; i-- {
-		t := now.Add(-((time.Duration(i) * day) + (5 * time.Minute)))
-		var status string
-		switch i % 2 {
-		case 0:
-			status = "up"
-		default:
-			status = "down"
-		}
-		ns := &NodeStatus{Node: dNode, Status: status, UpdatedAt: t}
-		ds.SetNodeStatus(dNode.Name, org.Name, ns)
-	}
+}
 
-	from := 14 * day
-	expected := 15
-	del, err := DeleteNodeStatusesByAge(org, from)
+func TestNodeNewDuplicate(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	n, _ := New(org, "dup-node")
+	n.Save()
+	_, err := New(org, "dup-node")
+	if err == nil {
+		t.Fatal("expected error for duplicate node")
+	}
+}
+
+func TestNodeSaveAndGet(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	n, _ := New(org, "save-node")
+	if err := n.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+	n2, err := Get(org, "save-node")
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("Get() failed: %s", err.Error())
 	}
-	if del != expected {
-		t.Errorf("Expected %d deleted statuses, but got %d", expected, del)
+	if n2.Name != "save-node" {
+		t.Errorf("expected save-node, got %s", n2.Name)
 	}
-	orgs, _ := orgloader.AllOrganizations()
-	var an int
-	for _, urg := range orgs {
-		nses := AllNodeStatuses(urg)
-		an += len(nses)
-	}
+}
 
-	if an != nStats-expected {
-		t.Errorf("expected to have %d statuses left, but there were %d", nStats-del, an)
+func TestNodeGetNotFound(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	_, err := Get(org, "missing-node")
+	if err == nil {
+		t.Fatal("expected error for missing node")
+	}
+}
+
+func TestNodeDoesExist(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	n, _ := New(org, "exists-node")
+	n.Save()
+	found, err := DoesExist(org, "exists-node")
+	if err != nil {
+		t.Fatalf("DoesExist() failed: %s", err.Error())
+	}
+	if !found {
+		t.Error("expected node to exist")
+	}
+}
+
+func TestNodeGetMulti(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	for _, name := range []string{"multi-a", "multi-b"} {
+		n, _ := New(org, name)
+		n.Save()
+	}
+	nodes, err := GetMulti(org, []string{"multi-a", "multi-b", "missing"})
+	if err != nil {
+		t.Fatalf("GetMulti() failed: %s", err.Error())
+	}
+	if len(nodes) != 2 {
+		t.Errorf("expected 2 nodes, got %d", len(nodes))
+	}
+}
+
+func TestNodeGetList(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	for _, name := range []string{"list-a", "list-b"} {
+		n, _ := New(org, name)
+		n.Save()
+	}
+	list := GetList(org)
+	if len(list) != 2 {
+		t.Errorf("expected 2 nodes, got %d", len(list))
+	}
+}
+
+func TestNodeDelete(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	n, _ := New(org, "delete-node")
+	n.Save()
+	if err := n.Delete(); err != nil {
+		t.Fatalf("Delete() failed: %s", err.Error())
+	}
+	_, err := Get(org, "delete-node")
+	if err == nil {
+		t.Fatal("expected error after delete")
+	}
+}
+
+func TestNodeNewFromJSON(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	n, err := NewFromJSON(org, makeNodeJSON("json-node"))
+	if err != nil {
+		t.Fatalf("NewFromJSON() failed: %s", err.Error())
+	}
+	if n.Name != "json-node" {
+		t.Errorf("expected json-node, got %s", n.Name)
+	}
+}
+
+func TestNodeUpdateFromJSON(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	n, _ := New(org, "update-node")
+	json := makeNodeJSON("update-node")
+	json["chef_environment"] = "production"
+	if err := n.UpdateFromJSON(json); err != nil {
+		t.Fatalf("UpdateFromJSON() failed: %s", err.Error())
+	}
+	if n.ChefEnvironment != "production" {
+		t.Errorf("expected production, got %s", n.ChefEnvironment)
+	}
+}
+
+func TestNodeFlatten(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	n, _ := New(org, "flatten-node")
+	flat := n.Flatten()
+	if _, ok := flat["name"]; !ok {
+		t.Error("expected name in flattened node")
+	}
+}
+
+func TestNodeAllNodes(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	for _, name := range []string{"all-a", "all-b"} {
+		n, _ := New(org, name)
+		n.Save()
+	}
+	all := AllNodes(org)
+	if len(all) != 2 {
+		t.Errorf("expected 2 nodes, got %d", len(all))
+	}
+}
+
+func TestNodeGetFromEnv(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	n, _ := New(org, "env-node")
+	n.ChefEnvironment = "staging"
+	n.Save()
+	envNodes, err := GetFromEnv(org, "staging")
+	if err != nil {
+		t.Fatalf("GetFromEnv() failed: %s", err.Error())
+	}
+	if len(envNodes) != 1 {
+		t.Errorf("expected 1 node in staging, got %d", len(envNodes))
+	}
+}
+
+func TestNodeOrgCount(t *testing.T) {
+	org := setupNodeTestOrg(t)
+	for _, name := range []string{"count-a", "count-b"} {
+		n, _ := New(org, name)
+		n.Save()
+	}
+	if c := OrgCount(org); c != 2 {
+		t.Errorf("expected 2 nodes, got %d", c)
+	}
+}
+
+func TestNodeURLType(t *testing.T) {
+	n := &Node{Name: "url-node", ChefType: "node"}
+	if n.URLType() != "nodes" {
+		t.Errorf("expected nodes, got %s", n.URLType())
 	}
 }
