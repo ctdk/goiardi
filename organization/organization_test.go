@@ -203,3 +203,27 @@ func TestOrganizationDelete(t *testing.T) {
 		t.Fatal("expected error after delete")
 	}
 }
+
+func TestOrganizationExportAllOrgs(t *testing.T) {
+	orgs := ExportAllOrgs()
+	if orgs != nil {
+		t.Errorf("ExportAllOrgs is a stub and should return nil, got %v", orgs)
+	}
+}
+
+func TestOrganizationImport(t *testing.T) {
+	org, err := Import(map[string]interface{}{"name": "imported"})
+	if org != nil || err != nil {
+		t.Errorf("Import is a stub and should return nil, nil; got org=%v err=%v", org, err)
+	}
+}
+
+func TestOrganizationOrgsByIdSQLError(t *testing.T) {
+	_, err := OrgsByIdSQL([]int64{1})
+	if err == nil {
+		t.Fatal("expected error from OrgsByIdSQL without DB backend")
+	}
+	if err.Error() != "OrgsByIdSQL only works if you're using a database storage backend." {
+		t.Errorf("unexpected error message: %s", err.Error())
+	}
+}
