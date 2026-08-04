@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, Jeremy Bingham (<jeremy@goiardi.gl>)
+ * Copyright (c) 2013-2026, Jeremy Bingham (<jeremy@goiardi.gl>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,70 +14,261 @@
  * limitations under the License.
  */
 
-// Some client tests, for now.
 package client
 
 import (
-	"bytes"
 	"encoding/gob"
 	"fmt"
+	"testing"
+
+	"github.com/casbin/casbin/v2"
+	"github.com/ctdk/goiardi/aclhelper"
 	"github.com/ctdk/goiardi/config"
-	"github.com/ctdk/goiardi/fakeacl"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/organization"
-	"testing"
+	"github.com/ctdk/goiardi/util"
 )
-
-var org *organization.Organization
 
 func init() {
 	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
+	gob.Register(new(Client))
 }
 
-func TestGobEncodeDecode(t *testing.T) {
+var clientOrgCounter int
+
+type noopPermChecker struct{}
+
+func (n *noopPermChecker) CheckItemPerm(item aclhelper.Item, actor aclhelper.Actor, action string) (bool, util.Gerror) {
+	return true, nil
+}
+func (n *noopPermChecker) CheckACLItemPerm(item aclhelper.Item, actor aclhelper.Actor, action string) (bool, util.Gerror) {
+	return true, nil
+}
+func (n *noopPermChecker) CheckContainerPerm(actor aclhelper.Actor, container string, action string) (bool, util.Gerror) {
+	return true, nil
+}
+func (n *noopPermChecker) RootCheckPerm(actor aclhelper.Actor, action string) (bool, util.Gerror) {
+	return true, nil
+}
+func (n *noopPermChecker) EditItemPerm(item aclhelper.Item, member aclhelper.Member, members []string, action string) util.Gerror {
+	return nil
+}
+func (n *noopPermChecker) AddMembers(role aclhelper.Role, members []aclhelper.Member) error {
+	return nil
+}
+func (n *noopPermChecker) RemoveMembers(role aclhelper.Role, members []aclhelper.Member) error {
+	return nil
+}
+func (n *noopPermChecker) AddACLRole(role aclhelper.Role) error {
+	return nil
+}
+func (n *noopPermChecker) RemoveACLRole(role aclhelper.Role) error {
+	return nil
+}
+func (n *noopPermChecker) Enforcer() *casbin.SyncedEnforcer {
+	return nil
+}
+func (n *noopPermChecker) GetItemACL(item aclhelper.Item) (*aclhelper.ACL, error) {
+	return nil, nil
+}
+func (n *noopPermChecker) DeleteItemACL(item aclhelper.Item) (bool, error) {
+	return true, nil
+}
+func (n *noopPermChecker) RenameItemACL(item aclhelper.Item, oldName string) error {
+	return nil
+}
+func (n *noopPermChecker) EditFromJSON(item aclhelper.Item, action string, data interface{}) util.Gerror {
+	return nil
+}
+func (n *noopPermChecker) CreatorOnly(item aclhelper.Item, actor aclhelper.Actor) util.Gerror {
+	return nil
+}
+func (n *noopPermChecker) RemoveUser(member aclhelper.Member) error {
+	return nil
+}
+func (n *noopPermChecker) RenameMember(member aclhelper.Member, newName string) error {
+	return nil
+}
+func (n *noopPermChecker) DeletePolicy() error {
+	return nil
+}
+
+func setupClientTestOrg(t *testing.T) *organization.Organization {
 	gob.Register(new(organization.Organization))
-	org, _ = organization.New("default", "boo")
-	fakeacl.LoadFakeACL(org)
-	org.Save()
-	indexer.Initialize(config.Config, org)
-	c, _ := New(org, "foo")
+	clientOrgCounter++
+	name := fmt.Sprintf("testclient-%d", clientOrgCounter)
+	org, err := organization.New(name, "Test Client Org")
+	if err != nil {
+		t.Fatalf("failed to create test org: %s", err.Error())
+	}
+	org.SetPermCheck(&noopPermChecker{})
+	return org
+}
 
-	saved := new(bytes.Buffer)
-	var err error
-	enc := gob.NewEncoder(saved)
-	defer func() {
-		if x := recover(); x != nil {
-			err = fmt.Errorf("Something went wrong encoding the data store with Gob")
-		}
-	}()
-	err = enc.Encode(c)
+func TestClientNew(t *testing.T) {
+	org := setupClientTestOrg(t)
+	c, err := New(org, "test-client")
 	if err != nil {
-		t.Error(err.Error())
+		t.Fatalf("New() failed: %s", err.Error())
 	}
-	dec := gob.NewDecoder(saved)
-	c2 := new(Client)
-	err = dec.Decode(&c2)
-	if err != nil {
-		t.Error(err.Error())
-	}
-	if c2.Name != c.Name {
-		t.Errorf("saved user doesn't seem to be equal to original: %v vs %v", c2, c)
+	if c.Name != "test-client" {
+		t.Errorf("expected name test-client, got %s", c.Name)
 	}
 }
 
-func TestActionAtADistance(t *testing.T) {
-	c, _ := New(org, "foo2")
-	gob.Register(c)
+func TestClientNewDuplicate(t *testing.T) {
+	org := setupClientTestOrg(t)
+	c, _ := New(org, "dup-client")
 	c.Save()
-	c2, _ := Get(org, "foo2")
-	if c.Name != c2.Name {
-		t.Errorf("Client names should have been the same, but weren't, got %s and %s", c.Name, c2.Name)
+	_, err := New(org, "dup-client")
+	if err == nil {
+		t.Fatal("expected error for duplicate client")
 	}
-	c2.Validator = true
-	if c.Validator == c2.Validator {
-		t.Errorf("Changing the value of validator on one client improperly changed it on the other")
+}
+
+func TestClientNewInvalidName(t *testing.T) {
+	org := setupClientTestOrg(t)
+	_, err := New(org, "bad name")
+	if err == nil {
+		t.Fatal("expected error for invalid client name")
 	}
-	if c2.org.Name != org.Name {
-		t.Errorf("Org names did not match! Expected %s, got %s", c2.org.Name, org.Name)
+}
+
+func TestClientSaveAndGet(t *testing.T) {
+	org := setupClientTestOrg(t)
+	c, _ := New(org, "save-client")
+	if err := c.Save(); err != nil {
+		t.Fatalf("Save() failed: %s", err.Error())
+	}
+	c2, err := Get(org, "save-client")
+	if err != nil {
+		t.Fatalf("Get() failed: %s", err.Error())
+	}
+	if c2.Name != "save-client" {
+		t.Errorf("expected save-client, got %s", c2.Name)
+	}
+}
+
+func TestClientGetNotFound(t *testing.T) {
+	org := setupClientTestOrg(t)
+	_, err := Get(org, "missing-client")
+	if err == nil {
+		t.Fatal("expected error for missing client")
+	}
+}
+
+func TestClientDoesExist(t *testing.T) {
+	org := setupClientTestOrg(t)
+	c, _ := New(org, "exists-client")
+	c.Save()
+	found, err := DoesExist(org, "exists-client")
+	if err != nil {
+		t.Fatalf("DoesExist() failed: %s", err.Error())
+	}
+	if !found {
+		t.Error("expected client to exist")
+	}
+}
+
+func TestClientGetMulti(t *testing.T) {
+	org := setupClientTestOrg(t)
+	for _, name := range []string{"multi-a", "multi-b"} {
+		c, _ := New(org, name)
+		c.Save()
+	}
+	clients, err := GetMulti(org, []string{"multi-a", "multi-b", "missing"})
+	if err != nil {
+		t.Fatalf("GetMulti() failed: %s", err.Error())
+	}
+	if len(clients) != 2 {
+		t.Errorf("expected 2 clients, got %d", len(clients))
+	}
+}
+
+func TestClientGetList(t *testing.T) {
+	org := setupClientTestOrg(t)
+	for _, name := range []string{"list-a", "list-b"} {
+		c, _ := New(org, name)
+		c.Save()
+	}
+	list := GetList(org)
+	if len(list) != 2 {
+		t.Errorf("expected 2 clients, got %d", len(list))
+	}
+}
+
+func TestClientDelete(t *testing.T) {
+	org := setupClientTestOrg(t)
+	c, _ := New(org, "delete-client")
+	c.Save()
+	if err := c.Delete(); err != nil {
+		t.Fatalf("Delete() failed: %s", err.Error())
+	}
+	_, err := Get(org, "delete-client")
+	if err == nil {
+		t.Fatal("expected error after delete")
+	}
+}
+
+func TestClientNewFromJSON(t *testing.T) {
+	org := setupClientTestOrg(t)
+	json := map[string]interface{}{
+		"name":       "json-client",
+		"json_class": "Chef::ApiClient",
+		"chef_type":  "client",
+		"admin":      false,
+		"validator":  false,
+	}
+	c, err := NewFromJSON(org, json)
+	if err != nil {
+		t.Fatalf("NewFromJSON() failed: %s", err.Error())
+	}
+	if c.Name != "json-client" {
+		t.Errorf("expected json-client, got %s", c.Name)
+	}
+}
+
+func TestClientUpdateFromJSON(t *testing.T) {
+	org := setupClientTestOrg(t)
+	c, _ := New(org, "update-client")
+	json := map[string]interface{}{
+		"name":       "update-client",
+		"json_class": "Chef::ApiClient",
+		"chef_type":  "client",
+		"admin":      true,
+		"validator":  false,
+	}
+	if err := c.UpdateFromJSON(json); err != nil {
+		t.Fatalf("UpdateFromJSON() failed: %s", err.Error())
+	}
+	if !c.Admin {
+		t.Error("expected admin true after update")
+	}
+}
+
+func TestClientToJSON(t *testing.T) {
+	org := setupClientTestOrg(t)
+	c, _ := New(org, "jsonout-client")
+	j := c.ToJSON()
+	if j["name"] != "jsonout-client" {
+		t.Errorf("expected name jsonout-client, got %v", j["name"])
+	}
+}
+
+func TestClientIsUser(t *testing.T) {
+	org := setupClientTestOrg(t)
+	c, _ := New(org, "isuser-client")
+	if c.IsUser() {
+		t.Error("client IsUser should be false")
+	}
+	if !c.IsClient() {
+		t.Error("client IsClient should be true")
+	}
+}
+
+func TestClientURLType(t *testing.T) {
+	c := &Client{Name: "url-client", ChefType: "client"}
+	if c.URLType() != "clients" {
+		t.Errorf("expected clients, got %s", c.URLType())
 	}
 }
