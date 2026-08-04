@@ -1,12 +1,25 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/ctdk/goiardi/pedant"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/ctdk/goiardi/pedant"
 )
+
+func normalizeMap(v interface{}) interface{} {
+	if v == nil {
+		return nil
+	}
+	b, _ := json.Marshal(v)
+	var out interface{}
+	json.Unmarshal(b, &out)
+	return out
+}
 
 func createAndDeleteEnv(t *testing.T, name string) {
 	t.Helper()
@@ -1982,4 +1995,504 @@ func TestEnvironmentsInvalidKeys(t *testing.T) {
 		t.Fatalf("POST /environments: %v", err)
 	}
 	pedant.AssertStatus(t, resp, 400)
+}
+
+// --- Phase 1 Chunk 28: environments create/update OSS validation specs ---
+
+func TestEnvironmentsCreateBadPayloadTypes(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	for _, body := range []string{`["name","blah"]`, `"environment"`, `-1`, `9.9`, `true`, `null`} {
+		t.Run(body, func(t *testing.T) {
+			resp, err := client.RawRequest("POST", "/organizations/default/environments", []byte(body), nil)
+			if err != nil {
+				t.Fatalf("POST /environments: %v", err)
+			}
+			// Chef Server returns 400 for non-object JSON
+			if resp.StatusCode != 400 {
+				t.Errorf("expected 400 for %s, got %d", body, resp.StatusCode)
+			}
+		})
+	}
+}
+
+func TestEnvironmentsCreateUnparsableJSON(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	resp, err := client.RawRequest("POST", "/organizations/default/environments", []byte(`{"hi`), nil)
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 400)
+}
+
+func TestEnvironmentsCreateEmptyPayload(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	resp, err := client.RawRequest("POST", "/organizations/default/environments", []byte{}, nil)
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 400)
+}
+
+func TestEnvironmentsCreateDefaultConflict(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	resp, err := client.PostOrg("/environments", pedant.NewEnvironment("_default"))
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 409)
+}
+
+func TestEnvironmentsCreateLongName(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := "ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz-0123456789"
+	defer client.DeleteOrg("/environments/" + envName)
+
+	resp, err := client.PostOrg("/environments", pedant.NewEnvironment(envName))
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+}
+
+func TestEnvironmentsCreateWithoutJSONClass(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_no_json_class")
+	defer client.DeleteOrg("/environments/" + envName)
+
+	env := pedant.NewEnvironment(envName)
+	delete(env, "json_class")
+	resp, err := client.PostOrg("/environments", env)
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+}
+
+func TestEnvironmentsCreateDuplicateNonDefault(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_dup")
+	defer client.DeleteOrg("/environments/" + envName)
+
+	resp, err := client.PostOrg("/environments", pedant.NewEnvironment(envName))
+	if err != nil {
+		t.Fatalf("first POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	resp, err = client.PostOrg("/environments", pedant.NewEnvironment(envName))
+	if err != nil {
+		t.Fatalf("second POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 409)
+}
+
+func TestEnvironmentsCreateNameValidation(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	for _, name := range []string{"", "abc!123", "abc 123", "大爆発"} {
+		t.Run(name, func(t *testing.T) {
+			resp, err := client.PostOrg("/environments", pedant.NewEnvironment(name))
+			if err != nil {
+				t.Fatalf("POST /environments: %v", err)
+			}
+			pedant.AssertStatus(t, resp, 400)
+		})
+	}
+
+	// Missing name: start with empty env, remove name
+	env := pedant.NewEnvironment("x")
+	delete(env, "name")
+	resp, err := client.PostOrg("/environments", env)
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 400)
+
+	// Non-string names
+	for _, name := range []interface{}{nil, 1999, true, []interface{}{}, map[string]interface{}{}} {
+		t.Run(fmt.Sprintf("type_%T", name), func(t *testing.T) {
+			env := pedant.NewEnvironment("placeholder")
+			env["name"] = name
+			resp, err := client.PostOrg("/environments", env)
+			if err != nil {
+				t.Fatalf("POST /environments: %v", err)
+			}
+			pedant.AssertStatus(t, resp, 400)
+		})
+	}
+}
+
+func TestEnvironmentsCreateDescriptionValidation(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+
+	// Valid descriptions
+	for _, desc := range []interface{}{"", "normal text", "これは日本語だ"} {
+		t.Run(fmt.Sprintf("valid_%v", desc), func(t *testing.T) {
+			envName := pedant.UniqueName("env_desc_v")
+			defer client.DeleteOrg("/environments/" + envName)
+			env := pedant.NewEnvironment(envName)
+			env["description"] = desc
+			resp, err := client.PostOrg("/environments", env)
+			if err != nil {
+				t.Fatalf("POST /environments: %v", err)
+			}
+			if resp.StatusCode != 201 {
+				t.Errorf("expected 201 for description %v, got %d", desc, resp.StatusCode)
+			}
+		})
+	}
+
+	// Invalid description type
+	envName := pedant.UniqueName("env_desc_i")
+	defer client.DeleteOrg("/environments/" + envName)
+	env := pedant.NewEnvironment(envName)
+	env["description"] = 1999
+	resp, err := client.PostOrg("/environments", env)
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 400)
+}
+
+func TestEnvironmentsCreateJSONClassValidation(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_jclass")
+	defer client.DeleteOrg("/environments/" + envName)
+
+	// Valid
+	env := pedant.NewEnvironment(envName)
+	env["json_class"] = "Chef::Environment"
+	resp, err := client.PostOrg("/environments", env)
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	// Invalid
+	for _, val := range []interface{}{"", 1999, "notaclass"} {
+		t.Run(fmt.Sprintf("%v", val), func(t *testing.T) {
+			name := pedant.UniqueName("env_jclass_i")
+			defer client.DeleteOrg("/environments/" + name)
+			env := pedant.NewEnvironment(name)
+			env["json_class"] = val
+			resp, err := client.PostOrg("/environments", env)
+			if err != nil {
+				t.Fatalf("POST /environments: %v", err)
+			}
+			pedant.AssertStatus(t, resp, 400)
+		})
+	}
+}
+
+func TestEnvironmentsCreateChefTypeValidation(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_ctype")
+	defer client.DeleteOrg("/environments/" + envName)
+
+	// Valid
+	env := pedant.NewEnvironment(envName)
+	env["chef_type"] = "environment"
+	resp, err := client.PostOrg("/environments", env)
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	// Invalid
+	for _, val := range []interface{}{"", 1999, "notaclass"} {
+		t.Run(fmt.Sprintf("%v", val), func(t *testing.T) {
+			name := pedant.UniqueName("env_ctype_i")
+			defer client.DeleteOrg("/environments/" + name)
+			env := pedant.NewEnvironment(name)
+			env["chef_type"] = val
+			resp, err := client.PostOrg("/environments", env)
+			if err != nil {
+				t.Fatalf("POST /environments: %v", err)
+			}
+			pedant.AssertStatus(t, resp, 400)
+		})
+	}
+}
+
+func TestEnvironmentsCreateAttributesValidation(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+
+	// Valid defaults
+	for _, key := range []string{"default_attributes", "override_attributes"} {
+		t.Run(key+"_valid", func(t *testing.T) {
+			envName := pedant.UniqueName("env_attr_v")
+			defer client.DeleteOrg("/environments/" + envName)
+			env := pedant.NewEnvironment(envName)
+			env[key] = map[string]interface{}{"k": "v", "鍵": "値", "": "empty", "num": float64(99)}
+			resp, err := client.PostOrg("/environments", env)
+			if err != nil {
+				t.Fatalf("POST /environments: %v", err)
+			}
+			pedant.AssertStatus(t, resp, 201)
+		})
+	}
+
+	// Invalid types
+	for _, key := range []string{"default_attributes", "override_attributes"} {
+		t.Run(key+"_invalid_type", func(t *testing.T) {
+			envName := pedant.UniqueName("env_attr_i")
+			defer client.DeleteOrg("/environments/" + envName)
+			env := pedant.NewEnvironment(envName)
+			env[key] = "hello"
+			resp, err := client.PostOrg("/environments", env)
+			if err != nil {
+				t.Fatalf("POST /environments: %v", err)
+			}
+			pedant.AssertStatus(t, resp, 400)
+		})
+	}
+}
+
+func TestEnvironmentsCreateCookbookVersionsValidation(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+
+	// Valid versions
+	validVersions := []string{">= 1.0.0", ">= 1.0", "<= 1.0.0", "> 1.0.0", "< 1.0.0", "= 1.0.0", "~> 1.0.0", "1.0.0",
+		">= 1.2.20130730201745", ">= 1.2.2147483647", ">= 1.2.2147483669"}
+	for _, ver := range validVersions {
+		t.Run("valid_"+ver, func(t *testing.T) {
+			envName := pedant.UniqueName("env_cb_v")
+			defer client.DeleteOrg("/environments/" + envName)
+			env := pedant.NewEnvironment(envName)
+			env["cookbook_versions"] = map[string]string{"cookbook": ver}
+			resp, err := client.PostOrg("/environments", env)
+			if err != nil {
+				t.Fatalf("POST /environments: %v", err)
+			}
+			if resp.StatusCode != 201 {
+				t.Errorf("expected 201 for version %q, got %d", ver, resp.StatusCode)
+			}
+		})
+	}
+
+	// Invalid versions
+	invalidVersions := []string{">= 1.0.0.0", ">= 1,0,0", ">= 1.a.b", ">= 1.0rc1", ">=1.0.0", " >= 1.0.0", ">=  1.0.0", ">= 1.-2.3", ">= 1.2.9223372036854775849"}
+	for _, ver := range invalidVersions {
+		t.Run("invalid_"+ver, func(t *testing.T) {
+			envName := pedant.UniqueName("env_cb_i")
+			defer client.DeleteOrg("/environments/" + envName)
+			env := pedant.NewEnvironment(envName)
+			env["cookbook_versions"] = map[string]string{"cookbook": ver}
+			resp, err := client.PostOrg("/environments", env)
+			if err != nil {
+				t.Fatalf("POST /environments: %v", err)
+			}
+			if resp.StatusCode != 400 {
+				t.Errorf("expected 400 for version %q, got %d", ver, resp.StatusCode)
+			}
+		})
+	}
+
+	// Invalid cookbook names
+	invalidNames := []string{"the cookbook", "料理書", ""}
+	for _, name := range invalidNames {
+		t.Run("invalid_name_"+name, func(t *testing.T) {
+			envName := pedant.UniqueName("env_cb_n")
+			defer client.DeleteOrg("/environments/" + envName)
+			env := pedant.NewEnvironment(envName)
+			env["cookbook_versions"] = map[string]string{name: ">= 1.0.0"}
+			resp, err := client.PostOrg("/environments", env)
+			if err != nil {
+				t.Fatalf("POST /environments: %v", err)
+			}
+			if resp.StatusCode != 400 {
+				t.Errorf("expected 400 for cookbook name %q, got %d", name, resp.StatusCode)
+			}
+		})
+	}
+}
+
+func TestEnvironmentsUpdateCollectionNotAllowed(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	resp, err := client.PutOrg("/environments", pedant.NewEnvironment("x"))
+	if err != nil {
+		t.Fatalf("PUT /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 405)
+}
+
+func TestEnvironmentsUpdateNonExistentOSS(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	resp, err := client.PutOrg("/environments/no_such_env", pedant.NewEnvironment("no_such_env"))
+	if err != nil {
+		t.Fatalf("PUT /environments/no_such_env: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 404)
+}
+
+func TestEnvironmentsUpdateDefaultNotAllowed(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	resp, err := client.PutOrg("/environments/_default", pedant.NewEnvironment("_default"))
+	if err != nil {
+		t.Fatalf("PUT /environments/_default: %v", err)
+	}
+	// Chef Server returns 404; goiardi returns 405
+	if resp.StatusCode != 404 && resp.StatusCode != 405 {
+		t.Errorf("expected 404 or 405, got %d", resp.StatusCode)
+	}
+}
+
+func TestEnvironmentsUpdateBadPayloadTypes(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_upd_type")
+	defer client.DeleteOrg("/environments/" + envName)
+	_, _ = client.PostOrg("/environments", pedant.NewEnvironment(envName))
+
+	for _, body := range []string{`["name","blah"]`, `"environment"`, `-1`, `9.9`, `true`, `null`} {
+		t.Run(body, func(t *testing.T) {
+			resp, err := client.RawRequest("PUT", "/organizations/default/environments/"+envName, []byte(body), nil)
+			if err != nil {
+				t.Fatalf("PUT /environments/%s: %v", envName, err)
+			}
+			if resp.StatusCode != 400 {
+				t.Errorf("expected 400 for %s, got %d", body, resp.StatusCode)
+			}
+		})
+	}
+}
+
+func TestEnvironmentsUpdateUnparsableJSON(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_upd_unpar")
+	defer client.DeleteOrg("/environments/" + envName)
+	_, _ = client.PostOrg("/environments", pedant.NewEnvironment(envName))
+
+	resp, err := client.RawRequest("PUT", "/organizations/default/environments/"+envName, []byte(`{"hi`), nil)
+	if err != nil {
+		t.Fatalf("PUT /environments/%s: %v", envName, err)
+	}
+	pedant.AssertStatus(t, resp, 400)
+}
+
+func TestEnvironmentsUpdateEmptyPayload(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_upd_empty")
+	defer client.DeleteOrg("/environments/" + envName)
+	_, _ = client.PostOrg("/environments", pedant.NewEnvironment(envName))
+
+	resp, err := client.RawRequest("PUT", "/organizations/default/environments/"+envName, []byte{}, nil)
+	if err != nil {
+		t.Fatalf("PUT /environments/%s: %v", envName, err)
+	}
+	pedant.AssertStatus(t, resp, 400)
+}
+
+func TestEnvironmentsUpdatePatchiness(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_patch")
+	defer client.DeleteOrg("/environments/" + envName)
+
+	_, err := client.PostOrg("/environments", pedant.NewEnvironment(envName))
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+
+	patches := []struct {
+		key   string
+		value interface{}
+	}{
+		{"description", "whooooah"},
+		{"cookbook_versions", map[string]string{"fork": "= 2.2"}},
+		{"json_class", "Chef::Environment"},
+		{"chef_type", "environment"},
+		{"default_attributes", map[string]interface{}{"arr": "yarr"}},
+		{"override_attributes", map[string]interface{}{"frick": "frack"}},
+	}
+
+	for _, p := range patches {
+		t.Run(p.key, func(t *testing.T) {
+			env := pedant.NewEnvironment(envName)
+			env[p.key] = p.value
+			resp, err := client.PutOrg("/environments/"+envName, env)
+			if err != nil {
+				t.Fatalf("PUT /environments/%s: %v", envName, err)
+			}
+			pedant.AssertStatus(t, resp, 200)
+
+			resp, err = client.GetOrg("/environments/" + envName)
+			if err != nil {
+				t.Fatalf("GET /environments/%s: %v", envName, err)
+			}
+			pedant.AssertStatus(t, resp, 200)
+			body := pedant.GetJSONBody(t, resp)
+			if !reflect.DeepEqual(normalizeMap(body[p.key]), normalizeMap(p.value)) {
+				t.Errorf("expected %s=%v, got %v", p.key, p.value, body[p.key])
+			}
+		})
+	}
+}
+
+func TestEnvironmentsUpdateRename(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_rename")
+	newName := envName + "_new"
+	defer client.DeleteOrg("/environments/" + envName)
+	defer client.DeleteOrg("/environments/" + newName)
+
+	_, err := client.PostOrg("/environments", pedant.NewEnvironment(envName))
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+
+	resp, err := client.PutOrg("/environments/"+envName, pedant.NewEnvironment(newName))
+	if err != nil {
+		t.Fatalf("PUT /environments/%s: %v", envName, err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	resp, err = client.GetOrg("/environments/" + envName)
+	if err != nil {
+		t.Fatalf("GET /environments/%s: %v", envName, err)
+	}
+	pedant.AssertStatus(t, resp, 404)
+
+	resp, err = client.GetOrg("/environments/" + newName)
+	if err != nil {
+		t.Fatalf("GET /environments/%s: %v", newName, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+}
+
+func TestEnvironmentsUpdateRenameToExisting(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_rename_ex")
+	existingName := pedant.UniqueName("env_existing")
+	defer client.DeleteOrg("/environments/" + envName)
+	defer client.DeleteOrg("/environments/" + existingName)
+
+	_, err := client.PostOrg("/environments", pedant.NewEnvironment(envName))
+	if err != nil {
+		t.Fatalf("POST /environments %s: %v", envName, err)
+	}
+	_, err = client.PostOrg("/environments", pedant.NewEnvironment(existingName))
+	if err != nil {
+		t.Fatalf("POST /environments %s: %v", existingName, err)
+	}
+
+	resp, err := client.PutOrg("/environments/"+envName, pedant.NewEnvironment(existingName))
+	if err != nil {
+		t.Fatalf("PUT /environments/%s: %v", envName, err)
+	}
+	pedant.AssertStatus(t, resp, 409)
+}
+
+func TestEnvironmentsUpdateRenameToDefault(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_rename_default")
+	defer client.DeleteOrg("/environments/" + envName)
+
+	_, err := client.PostOrg("/environments", pedant.NewEnvironment(envName))
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+
+	resp, err := client.PutOrg("/environments/"+envName, pedant.NewEnvironment("_default"))
+	if err != nil {
+		t.Fatalf("PUT /environments/%s: %v", envName, err)
+	}
+	pedant.AssertStatus(t, resp, 409)
 }

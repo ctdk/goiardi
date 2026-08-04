@@ -162,6 +162,11 @@ func (c *ChefSigningClient) DeleteOrg(path string) (*Response, error) {
 	return c.Delete("/organizations/default" + path)
 }
 
+// RawRequest performs a signed request with the given raw body bytes and optional headers.
+func (c *ChefSigningClient) RawRequest(method, path string, body []byte, headers map[string]string) (*Response, error) {
+	return c.doRequestWithHeaders(method, path, body, headers)
+}
+
 func (c *ChefSigningClient) doRequest(method, path string, body []byte) (*Response, error) {
 	return c.doRequestWithHeaders(method, path, body, nil)
 }
