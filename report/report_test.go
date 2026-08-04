@@ -25,6 +25,7 @@ import (
 	"github.com/ctdk/goiardi/organization"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/pborman/uuid"
+	"github.com/raintank/met"
 	"testing"
 	"time"
 )
@@ -33,12 +34,19 @@ var org *organization.Organization
 
 func init() {
 	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
+	gob.Register(new(organization.Organization))
+	gob.Register(new(Report))
+	var err error
+	org, err = orgloader.New("default", "boo")
+	if err != nil {
+		panic(err)
+	}
+	if err := org.Save(); err != nil {
+		panic(err)
+	}
 }
 
 func TestReportCreation(t *testing.T) {
-	gob.Register(new(organization.Organization))
-	org, _ = orgloader.New("default", "boo")
-	org.Save()
 	uuid := "12b8be8d-a2ef-4fc6-88b3-4c18103b88df"
 	invalidUUID := "12b8be8d-a2ef-4fc6-88b3-4c18103b88zz"
 	r, err := New(org, uuid, "node")
@@ -160,3 +168,74 @@ func TestReportCleaning(t *testing.T) {
 		t.Errorf("should have had %d reports left after deleting ones older than two weeks, but had %d", len(durations)-gtTwoWeeks, len(z))
 	}
 }
+
+func TestReportAllReports(t *testing.T) {
+	dr := AllReports(org)
+	for _, r := range dr {
+		r.Delete()
+	}
+	for i := 0; i < 3; i++ {
+		u := uuid.New()
+		r, _ := New(org, u, "all-reports-node")
+		r.StartTime = time.Now()
+		r.Save()
+	}
+	reports := AllReports(org)
+	if len(reports) != 3 {
+		t.Errorf("expected 3 reports, got %d", len(reports))
+	}
+}
+
+func TestReportGet(t *testing.T) {
+	u := uuid.New()
+	r, _ := New(org, u, "get-node")
+	r.StartTime = time.Now()
+	r.Save()
+	got, err := Get(org, u)
+	if err != nil {
+		t.Fatalf("Get failed: %s", err.Error())
+	}
+	if got.RunID != u {
+		t.Errorf("expected %s, got %s", u, got.RunID)
+	}
+	_, err = Get(org, "00000000-0000-0000-0000-000000000000")
+	if err == nil {
+		t.Error("expected error for missing report")
+	}
+}
+
+func TestReportInitializeMetrics(t *testing.T) {
+	backend := &noopMetBackend{}
+	InitializeMetrics(backend)
+	if reportMetrics == nil {
+		t.Fatal("reportMetrics should be initialized")
+	}
+	if reportMetrics.backend != backend {
+		t.Error("reportMetrics backend mismatch")
+	}
+}
+
+type noopMetCount struct{}
+
+func (n *noopMetCount) Inc(val int64) {}
+
+type noopMetGauge struct{}
+
+func (n *noopMetGauge) Inc(val int64)  {}
+func (n *noopMetGauge) Dec(val int64)  {}
+func (n *noopMetGauge) Value(val int64) {}
+
+type noopMetMeter struct{}
+
+func (n *noopMetMeter) Value(val int64) {}
+
+type noopMetTimer struct{}
+
+func (n *noopMetTimer) Value(val time.Duration) {}
+
+type noopMetBackend struct{}
+
+func (n *noopMetBackend) NewCount(key string) met.Count     { return &noopMetCount{} }
+func (n *noopMetBackend) NewGauge(key string, val int64) met.Gauge { return &noopMetGauge{} }
+func (n *noopMetBackend) NewMeter(key string, val int64) met.Meter { return &noopMetMeter{} }
+func (n *noopMetBackend) NewTimer(key string, val time.Duration) met.Timer { return &noopMetTimer{} }

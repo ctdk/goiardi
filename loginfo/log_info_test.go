@@ -34,15 +34,21 @@ var org *organization.Organization
 
 func init() {
 	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
+	gob.Register(new(organization.Organization))
+	gob.Register(new(client.Client))
+	gob.Register(new(LogInfo))
+	gob.Register(make(map[int]interface{}))
+	var err error
+	org, err = orgloader.New("default", "boo")
+	if err != nil {
+		panic(err)
+	}
+	if err := org.Save(); err != nil {
+		panic(err)
+	}
 }
 
 func TestLogEvent(t *testing.T) {
-	gob.Register(new(organization.Organization))
-	gob.Register(make(map[int]interface{}))
-	gob.Register(new(LogInfo))
-	gob.Register(new(client.Client))
-	org, _ = orgloader.New("default", "boo")
-	org.Save()
 	config.Config.LogEvents = true
 	doer, _ := client.New(org, "doer")
 	obj, _ := client.New(org, "obj")
@@ -142,5 +148,76 @@ func TestSkipLogExtended(t *testing.T) {
 		if e.ExtendedInfo != "" {
 			t.Errorf("Event %d should have had no extended info, but had '%s'.", z, e.ExtendedInfo)
 		}
+	}
+}
+
+func TestLogInfoDoesExist(t *testing.T) {
+	config.Config.LogEvents = true
+	PurgeLogInfos(org, 999999)
+	doer, _ := client.New(org, "doer-exist")
+	obj, _ := client.New(org, "obj-exist")
+	if err := LogEvent(org, doer, obj, "create"); err != nil {
+		t.Fatalf("LogEvent failed: %s", err.Error())
+	}
+	found, err := DoesExist(org, "1")
+	if err != nil {
+		t.Fatalf("DoesExist failed: %s", err.Error())
+	}
+	if !found {
+		t.Error("expected log event 1 to exist")
+	}
+	found, err = DoesExist(org, "99999")
+	if err == nil {
+		t.Fatal("expected error for missing log event")
+	}
+	if found {
+		t.Error("expected log event 99999 to not exist")
+	}
+}
+
+func TestLogInfoImport(t *testing.T) {
+	logData := map[string]interface{}{
+		"action":        "create",
+		"actor_type":    "client",
+		"actor_info":    "{}",
+		"object_type":   "*client.Client",
+		"object_name":   "imported-obj",
+		"extended_info": "{}",
+		"id":            float64(42),
+		"time":          time.Now().Format(time.RFC3339),
+	}
+	if err := Import(org, logData); err != nil {
+		t.Fatalf("Import failed: %s", err.Error())
+	}
+	le, err := Get(org, 42)
+	if err != nil {
+		t.Fatalf("Get failed: %s", err.Error())
+	}
+	if le.ObjectName != "imported-obj" {
+		t.Errorf("expected imported-obj, got %s", le.ObjectName)
+	}
+	if le.Action != "create" {
+		t.Errorf("expected create, got %s", le.Action)
+	}
+}
+
+func TestLogInfoGetByID(t *testing.T) {
+	config.Config.LogEvents = true
+	PurgeLogInfos(org, 999999)
+	doer, _ := client.New(org, "doer-get")
+	obj, _ := client.New(org, "obj-get")
+	if err := LogEvent(org, doer, obj, "modify"); err != nil {
+		t.Fatalf("LogEvent failed: %s", err.Error())
+	}
+	le, err := Get(org, 1)
+	if err != nil {
+		t.Fatalf("Get failed: %s", err.Error())
+	}
+	if le.Action != "modify" {
+		t.Errorf("expected modify, got %s", le.Action)
+	}
+	_, err = Get(org, 99999)
+	if err == nil {
+		t.Error("expected error for missing log event")
 	}
 }
