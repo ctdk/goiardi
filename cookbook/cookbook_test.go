@@ -17,11 +17,15 @@
 package cookbook
 
 import (
+	"bytes"
+	"crypto/md5"
 	"encoding/gob"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/ctdk/goiardi/config"
+	"github.com/ctdk/goiardi/filestore"
 	"github.com/ctdk/goiardi/indexer"
 	"github.com/ctdk/goiardi/orgloader"
 	"github.com/ctdk/goiardi/organization"
@@ -34,6 +38,7 @@ func init() {
 	gob.Register(map[string]interface{}{})
 	gob.Register([]interface{}{})
 	gob.Register(map[string]string{})
+	gob.Register(new(filestore.FileStore))
 }
 
 var cookbookOrgCounter int
@@ -64,6 +69,7 @@ func makeVersionJSON(name, version string) map[string]interface{} {
 			"description":       "test cookbook",
 			"long_description":  "",
 			"license":           "Apache-2.0",
+			"dependencies":      map[string]interface{}{},
 		},
 		"definitions": []interface{}{},
 		"libraries":   []interface{}{},
@@ -77,6 +83,38 @@ func makeVersionJSON(name, version string) map[string]interface{} {
 		"frozen?":     false,
 	}
 }
+
+func makeRecipeDiv(name string) map[string]interface{} {
+	return map[string]interface{}{
+		"name":        name,
+		"path":        "recipes/" + name,
+		"checksum":    "",
+		"specificity": "default",
+	}
+}
+
+func checksum(data []byte) string {
+	h := md5.New()
+	h.Write(data)
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func makeReadCloser(data []byte) io.ReadCloser {
+	return io.NopCloser(bytes.NewReader(data))
+}
+
+func addRecipeFile(t *testing.T, org *organization.Organization, name string) string {
+	data := []byte(name)
+	chksum := checksum(data)
+	fs, err := filestore.New(org, chksum, makeReadCloser(data), int64(len(data)))
+	if err != nil {
+		t.Fatalf("failed to create filestore item: %s", err.Error())
+	}
+	fs.Save()
+	return chksum
+}
+
+
 
 func TestCookbookNew(t *testing.T) {
 	org := setupCookbookTestOrg(t)
@@ -287,5 +325,152 @@ func TestCookbookContainerType(t *testing.T) {
 	}
 	if cb.ContainerKind() != "containers" {
 		t.Errorf("expected container kind containers, got %s", cb.ContainerKind())
+	}
+}
+
+func TestCookbookDeleteVersion(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "delver-cookbook")
+	cby, _ := cb.NewVersion("1.0.0", makeVersionJSON("delver-cookbook", "1.0.0"))
+	_ = cby
+	if cb.NumVersions() != 1 {
+		t.Fatalf("expected 1 version, got %d", cb.NumVersions())
+	}
+	if err := cb.DeleteVersion("1.0.0"); err != nil {
+		t.Fatalf("DeleteVersion() failed: %s", err.Error())
+	}
+	if cb.NumVersions() != 0 {
+		t.Errorf("expected 0 versions after delete, got %d", cb.NumVersions())
+	}
+	_, err := cb.GetVersion("1.0.0")
+	if err == nil {
+		t.Fatal("expected error getting deleted version")
+	}
+}
+
+func TestCookbookDoesVersionExist(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "dvexist-cookbook")
+	cbv, _ := cb.NewVersion("1.0.0", makeVersionJSON("dvexist-cookbook", "1.0.0"))
+	_ = cbv
+	found, err := cb.DoesVersionExist(org, "1.0.0")
+	if err != nil {
+		t.Fatalf("DoesVersionExist() failed: %s", err.Error())
+	}
+	if !found {
+		t.Error("expected version to exist")
+	}
+	found = false
+	found, _ = cb.DoesVersionExist(org, "9.9.9")
+	if found {
+		t.Error("expected version not to exist")
+	}
+}
+
+func TestCookbookGetVersion(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "getver-cookbook")
+	cbv, _ := cb.NewVersion("1.0.0", makeVersionJSON("getver-cookbook", "1.0.0"))
+	_ = cbv
+	got, err := cb.GetVersion("1.0.0")
+	if err != nil {
+		t.Fatalf("GetVersion() failed: %s", err.Error())
+	}
+	if got.Version != "1.0.0" {
+		t.Errorf("expected 1.0.0, got %s", got.Version)
+	}
+}
+
+func TestCookbookLatestVersion(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "latestver-cookbook")
+	for _, ver := range []string{"1.0.0", "2.0.0"} {
+		cb.NewVersion(ver, makeVersionJSON("latestver-cookbook", ver))
+	}
+	latest := cb.LatestVersion()
+	if latest == nil || latest.Version != "2.0.0" {
+		t.Errorf("expected latest 2.0.0, got %v", latest)
+	}
+	latest, _ = cb.GetVersion("_latest")
+	if latest == nil || latest.Version != "2.0.0" {
+		t.Errorf("expected _latest 2.0.0, got %v", latest)
+	}
+}
+
+func TestCookbookConstrainedInfoHash(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "constrained-cookbook")
+	for _, ver := range []string{"1.0.0", "2.0.0"} {
+		cb.NewVersion(ver, makeVersionJSON("constrained-cookbook", ver))
+	}
+	info := cb.ConstrainedInfoHash("all", ">= 2.0.0")
+	versions := info["versions"].([]interface{})
+	if len(versions) != 1 {
+		t.Errorf("expected 1 version matching constraint, got %d", len(versions))
+	}
+}
+
+func TestCookbookCookbookRecipes(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	chksum := addRecipeFile(t, org, "default.rb")
+	cb, _ := New(org, "cbrecipes-cookbook")
+	json := makeVersionJSON("cbrecipes-cookbook", "1.0.0")
+	json["recipes"] = []interface{}{
+		map[string]interface{}{
+			"name":        "default.rb",
+			"path":        "recipes/default.rb",
+			"checksum":    chksum,
+			"specificity": "default",
+		},
+	}
+	cb.NewVersion("1.0.0", json)
+	rlist, err := CookbookRecipes(org)
+	if err != nil {
+		t.Fatalf("CookbookRecipes() failed: %s", err.Error())
+	}
+	if len(rlist) != 1 || rlist[0] != "cbrecipes-cookbook" {
+		t.Errorf("expected [cbrecipes-cookbook], got %v", rlist)
+	}
+}
+
+func TestCookbookUniverse(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "universe-cookbook")
+	cb.NewVersion("1.0.0", makeVersionJSON("universe-cookbook", "1.0.0"))
+	u := Universe(org)
+	if _, ok := u["universe-cookbook"]; !ok {
+		t.Error("expected universe-cookbook in universe")
+	}
+}
+
+func TestCookbookCookbookLatest(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "cblatest-cookbook")
+	cb.NewVersion("1.0.0", makeVersionJSON("cblatest-cookbook", "1.0.0"))
+	latest := CookbookLatest(org)
+	if _, ok := latest["cblatest-cookbook"]; !ok {
+		t.Error("expected cblatest-cookbook in latest")
+	}
+}
+
+func TestCookbookUpdateVersion(t *testing.T) {
+	org := setupCookbookTestOrg(t)
+	cb, _ := New(org, "update-cookbook")
+	cbv, _ := cb.NewVersion("1.0.0", makeVersionJSON("update-cookbook", "1.0.0"))
+	json := makeVersionJSON("update-cookbook", "1.0.0")
+	json["metadata"] = map[string]interface{}{
+		"version":          "1.0.0",
+		"name":             "update-cookbook",
+		"maintainer":       "updated",
+		"maintainer_email": "updated@example.com",
+		"description":      "updated cookbook",
+		"long_description": "",
+		"license":          "MIT",
+	}
+	if err := cbv.UpdateVersion(json, ""); err != nil {
+		t.Fatalf("UpdateVersion() failed: %s", err.Error())
+	}
+	if cbv.Metadata["maintainer"] != "updated" {
+		t.Errorf("expected maintainer updated, got %v", cbv.Metadata["maintainer"])
 	}
 }
