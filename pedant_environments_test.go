@@ -2496,3 +2496,347 @@ func TestEnvironmentsUpdateRenameToDefault(t *testing.T) {
 	}
 	pedant.AssertStatus(t, resp, 409)
 }
+
+// --- Phase 1 Chunk 29: environments read/delete/recipes/roles/single-cookbook specs ---
+
+func TestEnvironmentsReadDefaultExactBody(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	resp, err := client.GetOrg("/environments/_default")
+	if err != nil {
+		t.Fatalf("GET /environments/_default: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	pedant.AssertBodyExact(t, resp, map[string]interface{}{
+		"name":                "_default",
+		"description":         "The default Chef environment",
+		"cookbook_versions":   map[string]interface{}{},
+		"json_class":          "Chef::Environment",
+		"chef_type":           "environment",
+		"default_attributes":  map[string]interface{}{},
+		"override_attributes": map[string]interface{}{},
+	})
+}
+
+func TestEnvironmentsListMultipleExact(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	env1 := pedant.UniqueName("list_env1")
+	env2 := pedant.UniqueName("list_env2")
+	defer client.DeleteOrg("/environments/" + env1)
+	defer client.DeleteOrg("/environments/" + env2)
+
+	_, _ = client.PostOrg("/environments", pedant.NewEnvironment(env1))
+	_, _ = client.PostOrg("/environments", pedant.NewEnvironment(env2))
+
+	resp, err := client.GetOrg("/environments")
+	if err != nil {
+		t.Fatalf("GET /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	body := pedant.GetJSONBody(t, resp)
+	if body["_default"] != testServer.OrgURL("/environments/_default") {
+		t.Errorf("expected _default url, got %v", body["_default"])
+	}
+	if body[env1] != testServer.OrgURL("/environments/"+env1) {
+		t.Errorf("expected %s url, got %v", env1, body[env1])
+	}
+	if body[env2] != testServer.OrgURL("/environments/"+env2) {
+		t.Errorf("expected %s url, got %v", env2, body[env2])
+	}
+}
+
+func TestEnvironmentsDeleteDefaultExactError(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	resp, err := client.DeleteOrg("/environments/_default")
+	if err != nil {
+		t.Fatalf("DELETE /environments/_default: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 405)
+	body := pedant.GetJSONBody(t, resp)
+	msg, _ := body["error"].([]interface{})
+	if !containsIfaceString(msg, "The '_default' environment cannot be modified.") {
+		t.Errorf("expected default-modified error, got %v", body)
+	}
+}
+
+func TestEnvironmentsDeleteNonExistentExactError(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	resp, err := client.DeleteOrg("/environments/doesnotexistatall")
+	if err != nil {
+		t.Fatalf("DELETE /environments/doesnotexistatall: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 404)
+	body := pedant.GetJSONBody(t, resp)
+	msg, _ := body["error"].([]interface{})
+	if !containsIfaceString(msg, "Cannot load environment doesnotexistatall") {
+		t.Errorf("expected cannot-load error, got %v", body)
+	}
+}
+
+func TestEnvironmentsCookbooksExactBodyMultiple(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_cookbooks")
+	env := pedant.NewEnvironment(envName)
+	defer client.DeleteOrg("/environments/" + envName)
+
+	resp, err := client.PostOrg("/environments", env)
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	// Create multiple cookbook versions
+	cbName := pedant.UniqueName("envcb")
+	defer client.DeleteOrg("/cookbooks/" + cbName + "/1.0.0")
+	defer client.DeleteOrg("/cookbooks/" + cbName + "/2.0.0")
+
+	for _, ver := range []string{"1.0.0", "2.0.0"} {
+		cb := pedant.NewCookbook(cbName, ver)
+		resp, err := client.PutOrg("/cookbooks/"+cbName+"/"+ver, cb)
+		if err != nil {
+			t.Fatalf("POST cookbook: %v", err)
+		}
+		pedant.AssertStatus(t, resp, 201)
+	}
+
+	resp, err = client.GetOrg("/environments/" + envName + "/cookbooks?num_versions=all")
+	if err != nil {
+		t.Fatalf("GET /environments/%s/cookbooks: %v", envName, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	body := pedant.GetJSONBody(t, resp)
+	cb, ok := body[cbName].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected cookbook entry, got %v", body)
+	}
+	if cb["url"] != testServer.OrgURL("/cookbooks/"+cbName) {
+		t.Errorf("expected cookbook url, got %v", cb["url"])
+	}
+	versions, _ := cb["versions"].([]interface{})
+	if len(versions) != 2 {
+		t.Errorf("expected 2 versions, got %v", versions)
+	}
+}
+
+func TestEnvironmentsCookbooksWithConstraintsExact(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_constr")
+	env := pedant.NewEnvironment(envName)
+	defer client.DeleteOrg("/environments/" + envName)
+
+	resp, err := client.PostOrg("/environments", env)
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	cbName := pedant.UniqueName("envcb_constr")
+	defer client.DeleteOrg("/cookbooks/" + cbName + "/1.0.0")
+	defer client.DeleteOrg("/cookbooks/" + cbName + "/2.0.0")
+
+	for _, ver := range []string{"1.0.0", "2.0.0"} {
+		cb := pedant.NewCookbook(cbName, ver)
+		resp, err := client.PutOrg("/cookbooks/"+cbName+"/"+ver, cb)
+		if err != nil {
+			t.Fatalf("POST cookbook: %v", err)
+		}
+		pedant.AssertStatus(t, resp, 201)
+	}
+
+	// Apply constraint so only 1.0.0 is acceptable
+	update := pedant.NewEnvironment(envName, map[string]interface{}{
+		"cookbook_versions": map[string]string{cbName: "= 1.0.0"},
+	})
+	resp, err = client.PutOrg("/environments/"+envName, update)
+	if err != nil {
+		t.Fatalf("PUT /environments/%s: %v", envName, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+
+	resp, err = client.GetOrg("/environments/" + envName + "/cookbooks?num_versions=all")
+	if err != nil {
+		t.Fatalf("GET /environments/%s/cookbooks: %v", envName, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	body := pedant.GetJSONBody(t, resp)
+	cb, ok := body[cbName].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected cookbook entry, got %v", body)
+	}
+	versions, _ := cb["versions"].([]interface{})
+	if len(versions) != 1 {
+		t.Errorf("expected 1 constrained version, got %v", versions)
+	}
+}
+
+func TestEnvironmentsSingleCookbookExactBody(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_single_cb")
+	env := pedant.NewEnvironment(envName)
+	defer client.DeleteOrg("/environments/" + envName)
+
+	resp, err := client.PostOrg("/environments", env)
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	cbName := pedant.UniqueName("singlecb")
+	defer client.DeleteOrg("/cookbooks/" + cbName + "/1.0.0")
+	defer client.DeleteOrg("/cookbooks/" + cbName + "/2.0.0")
+
+	for _, ver := range []string{"1.0.0", "2.0.0"} {
+		cb := pedant.NewCookbook(cbName, ver)
+		resp, err := client.PutOrg("/cookbooks/"+cbName+"/"+ver, cb)
+		if err != nil {
+			t.Fatalf("POST cookbook: %v", err)
+		}
+		pedant.AssertStatus(t, resp, 201)
+	}
+
+	resp, err = client.GetOrg("/environments/" + envName + "/cookbooks/" + cbName + "?num_versions=all")
+	if err != nil {
+		t.Fatalf("GET /environments/%s/cookbooks/%s: %v", envName, cbName, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	body := pedant.GetJSONBody(t, resp)
+	cb, ok := body[cbName].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected cookbook entry, got %v", body)
+	}
+	versions, _ := cb["versions"].([]interface{})
+	if len(versions) != 2 {
+		t.Errorf("expected 2 versions, got %v", versions)
+	}
+}
+
+func TestEnvironmentsRecipesListWithCookbooks(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_recipes")
+	env := pedant.NewEnvironment(envName)
+	defer client.DeleteOrg("/environments/" + envName)
+
+	resp, err := client.PostOrg("/environments", env)
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	cbName := pedant.UniqueName("envcb_recipes")
+	defer client.DeleteOrg("/cookbooks/" + cbName + "/1.0.0")
+
+	recipeContent := "package 'apache2'\n"
+	recipeChecksum := pedant.MD5Checksum(recipeContent)
+	_, sandboxBody, err := client.CreateSandbox([]string{recipeChecksum})
+	if err != nil {
+		t.Fatalf("creating sandbox: %v", err)
+	}
+	url, err := pedant.SandboxUploadURL(sandboxBody, recipeChecksum, testServer.BaseURL)
+	if err != nil {
+		t.Fatalf("sandbox upload url: %v", err)
+	}
+	if err := pedant.UploadFile(url, recipeContent); err != nil {
+		t.Fatalf("uploading recipe: %v", err)
+	}
+
+	cb := pedant.NewCookbook(cbName, "1.0.0", map[string]interface{}{
+		"recipes": []map[string]interface{}{{
+			"name":        "webserver.rb",
+			"path":        "recipes/webserver.rb",
+			"checksum":    recipeChecksum,
+			"specificity": "default",
+		}},
+	})
+	resp, err = client.PutOrg("/cookbooks/"+cbName+"/1.0.0", cb)
+	if err != nil {
+		t.Fatalf("POST cookbook: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	resp, err = client.GetOrg("/environments/" + envName + "/recipes")
+	if err != nil {
+		t.Fatalf("GET /environments/%s/recipes: %v", envName, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	recipes := pedant.GetJSONArray(t, resp)
+	if !containsIfaceString(recipes, cbName+"::webserver") {
+		t.Errorf("expected %s::webserver in recipes, got %v", cbName, recipes)
+	}
+}
+
+func TestEnvironmentsRecipesWithConstraints(t *testing.T) {
+	client := testServer.NewClient(testServer.AdminUser)
+	envName := pedant.UniqueName("env_recipes_constr")
+	env := pedant.NewEnvironment(envName)
+	defer client.DeleteOrg("/environments/" + envName)
+
+	resp, err := client.PostOrg("/environments", env)
+	if err != nil {
+		t.Fatalf("POST /environments: %v", err)
+	}
+	pedant.AssertStatus(t, resp, 201)
+
+	cbName := pedant.UniqueName("envcb_recipes_constr")
+	defer client.DeleteOrg("/cookbooks/" + cbName + "/1.0.0")
+	defer client.DeleteOrg("/cookbooks/" + cbName + "/2.0.0")
+
+	recipeContent := "package 'apache2'\n"
+	recipeChecksum := pedant.MD5Checksum(recipeContent)
+	_, sandboxBody, err := client.CreateSandbox([]string{recipeChecksum})
+	if err != nil {
+		t.Fatalf("creating sandbox: %v", err)
+	}
+	url, err := pedant.SandboxUploadURL(sandboxBody, recipeChecksum, testServer.BaseURL)
+	if err != nil {
+		t.Fatalf("sandbox upload url: %v", err)
+	}
+	if err := pedant.UploadFile(url, recipeContent); err != nil {
+		t.Fatalf("uploading recipe: %v", err)
+	}
+
+	for _, spec := range []struct {
+		ver    string
+		recipe string
+	}{
+		{"1.0.0", "webserver"},
+		{"2.0.0", "database"},
+	} {
+		cb := pedant.NewCookbook(cbName, spec.ver, map[string]interface{}{
+			"recipes": []map[string]interface{}{{
+				"name":        spec.recipe + ".rb",
+				"path":        "recipes/" + spec.recipe + ".rb",
+				"checksum":    recipeChecksum,
+				"specificity": "default",
+			}},
+		})
+		resp, err := client.PutOrg("/cookbooks/"+cbName+"/"+spec.ver, cb)
+		if err != nil {
+			t.Fatalf("POST cookbook: %v", err)
+		}
+		pedant.AssertStatus(t, resp, 201)
+	}
+
+	// Constrain to 1.0.0
+	update := pedant.NewEnvironment(envName, map[string]interface{}{
+		"cookbook_versions": map[string]string{cbName: "= 1.0.0"},
+	})
+	resp, err = client.PutOrg("/environments/"+envName, update)
+	if err != nil {
+		t.Fatalf("PUT /environments/%s: %v", envName, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+
+	resp, err = client.GetOrg("/environments/" + envName + "/recipes")
+	if err != nil {
+		t.Fatalf("GET /environments/%s/recipes: %v", envName, err)
+	}
+	pedant.AssertStatus(t, resp, 200)
+	recipes := pedant.GetJSONArray(t, resp)
+	if containsIfaceString(recipes, cbName+"::database") {
+		t.Errorf("did not expect %s::database (2.0.0) in constrained recipes, got %v", cbName, recipes)
+	}
+	if !containsIfaceString(recipes, cbName+"::webserver") {
+		t.Errorf("expected %s::webserver in constrained recipes, got %v", cbName, recipes)
+	}
+}
+
+// containsIfaceString is defined in pedant_clients_test.go
