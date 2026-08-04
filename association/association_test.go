@@ -325,3 +325,181 @@ func TestDelOneUserOrgAssociation(t *testing.T) {
 		t.Error("Found org associations with user, but shouldn't have")
 	}
 }
+
+func TestGetAllOrgsAssociationReqs(t *testing.T) {
+	u, _ := user.New("user-assoc-reqs")
+	pass := "123456"
+	u.SetPasswd(pass)
+	u.Save()
+	for n := 0; n < 3; n++ {
+		name := fmt.Sprintf("org-assoc-req-%d", n)
+		o, _ := organization.New(name, fmt.Sprintf("%s org", name))
+		fakeacl.LoadFakeACL(o)
+		o.Save()
+		_, err := SetReq(u, o, pivotal)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+	reqs, err := GetAllOrgsAssociationReqs(u)
+	if err != nil {
+		t.Fatalf("GetAllOrgsAssociationReqs failed: %s", err.Error())
+	}
+	if len(reqs) != 3 {
+		t.Errorf("expected 3 association reqs, got %d", len(reqs))
+	}
+}
+
+func TestGetAllUsersAssociationReqs(t *testing.T) {
+	o, _ := organization.New("user-assoc-reqs-org", "users assoc req org")
+	fakeacl.LoadFakeACL(o)
+	o.Save()
+	pass := "123456"
+	for n := 0; n < 3; n++ {
+		name := fmt.Sprintf("user-assoc-req-%d", n)
+		u, _ := user.New(name)
+		u.SetPasswd(pass)
+		u.Save()
+		_, err := SetReq(u, o, pivotal)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+	reqs, err := GetAllUsersAssociationReqs(o)
+	if err != nil {
+		t.Fatalf("GetAllUsersAssociationReqs failed: %s", err.Error())
+	}
+	if len(reqs) != 3 {
+		t.Errorf("expected 3 association reqs, got %d", len(reqs))
+	}
+}
+
+func TestDelAllUserAssociations(t *testing.T) {
+	u, _ := user.New("user-cascade-assoc")
+	pass := "123456"
+	u.SetPasswd(pass)
+	u.Save()
+	for n := 0; n < 3; n++ {
+		name := fmt.Sprintf("org-cascade-assoc-%d", n)
+		o, _ := organization.New(name, fmt.Sprintf("%s org", name))
+		fakeacl.LoadFakeACL(o)
+		o.Save()
+		if err := group.MakeDefaultGroups(o); err != nil {
+			t.Error(err.Error())
+		}
+		r, err := SetReq(u, o, pivotal)
+		if err != nil {
+			t.Error(err.Error())
+		}
+		if err := r.Accept(); err != nil {
+			t.Error(err.Error())
+		}
+	}
+	if err := DelAllUserAssociations(u); err != nil {
+		t.Fatalf("DelAllUserAssociations failed: %s", err.Error())
+	}
+	orgs, err := OrgAssociations(u)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(orgs) != 0 {
+		t.Errorf("expected 0 org associations, got %d", len(orgs))
+	}
+}
+
+func TestDelAllOrgAssociations(t *testing.T) {
+	o, _ := organization.New("org-cascade-assoc", "org cascade assoc")
+	fakeacl.LoadFakeACL(o)
+	o.Save()
+	if err := group.MakeDefaultGroups(o); err != nil {
+		t.Error(err.Error())
+	}
+	pass := "123456"
+	for n := 0; n < 3; n++ {
+		name := fmt.Sprintf("user-cascade-assoc-%d", n)
+		u, _ := user.New(name)
+		u.SetPasswd(pass)
+		u.Save()
+		r, err := SetReq(u, o, pivotal)
+		if err != nil {
+			t.Error(err.Error())
+		}
+		if err := r.Accept(); err != nil {
+			t.Error(err.Error())
+		}
+	}
+	if err := DelAllOrgAssociations(o); err != nil {
+		t.Fatalf("DelAllOrgAssociations failed: %s", err.Error())
+	}
+	users, err := UserAssociations(o)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(users) != 0 {
+		t.Errorf("expected 0 user associations, got %d", len(users))
+	}
+}
+
+func TestAssociationReqReject(t *testing.T) {
+	u, _ := user.New("user-reject")
+	pass := "123456"
+	u.SetPasswd(pass)
+	u.Save()
+	o, _ := organization.New("org-reject", "reject org")
+	fakeacl.LoadFakeACL(o)
+	o.Save()
+	req, err := SetReq(u, o, pivotal)
+	if err != nil {
+		t.Fatalf("SetReq failed: %s", err.Error())
+	}
+	if err := req.Reject(); err != nil {
+		t.Fatalf("Reject failed: %s", err.Error())
+	}
+	if r, err := GetReq(u, o); err == nil {
+		t.Errorf("expected req to be deleted after reject, got %+v", r)
+	}
+}
+
+func TestAssociationReqCounts(t *testing.T) {
+	u, _ := user.New("user-counts")
+	pass := "123456"
+	u.SetPasswd(pass)
+	u.Save()
+	o, _ := organization.New("org-counts", "counts org")
+	fakeacl.LoadFakeACL(o)
+	o.Save()
+	for n := 0; n < 4; n++ {
+		name := fmt.Sprintf("user-count-%d", n)
+		uu, _ := user.New(name)
+		uu.SetPasswd(pass)
+		uu.Save()
+		_, err := SetReq(uu, o, pivotal)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+	for n := 0; n < 3; n++ {
+		name := fmt.Sprintf("org-count-%d", n)
+		ou, _ := organization.New(name, fmt.Sprintf("%s org", name))
+		fakeacl.LoadFakeACL(ou)
+		ou.Save()
+		_, err := SetReq(u, ou, pivotal)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+	orgCount, err := OrgsAssociationReqCount(u)
+	if err != nil {
+		t.Fatalf("OrgsAssociationReqCount failed: %s", err.Error())
+	}
+	if orgCount != 3 {
+		t.Errorf("expected 3 org reqs, got %d", orgCount)
+	}
+	userCount, err := UsersAssociationReqCount(o)
+	if err != nil {
+		t.Fatalf("UsersAssociationReqCount failed: %s", err.Error())
+	}
+	if userCount != 4 {
+		t.Errorf("expected 4 user reqs, got %d", userCount)
+	}
+}
