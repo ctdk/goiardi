@@ -17,9 +17,13 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/ctdk/goiardi/config"
 )
 
 type testObj struct {
@@ -366,5 +370,124 @@ func TestDeepMergeNested(t *testing.T) {
 func TestJoinStr(t *testing.T) {
 	if s := JoinStr("a", "b", "c"); s != "abc" {
 		t.Errorf("expected abc, got %s", s)
+	}
+}
+
+func TestValidateAsConstraint(t *testing.T) {
+	if ok, err := ValidateAsConstraint(">= 1.0.0"); !ok || err != nil {
+		t.Errorf("expected >= 1.0.0 to be valid, got ok=%v err=%v", ok, err)
+	}
+	if ok, err := ValidateAsConstraint("~ 2.0"); !ok || err != nil {
+		t.Errorf("expected ~ 2.0 to be valid, got ok=%v err=%v", ok, err)
+	}
+	if ok, err := ValidateAsConstraint("foo"); ok || err == nil {
+		t.Error("expected foo to be invalid")
+	}
+	if ok, err := ValidateAsConstraint(123); ok || err == nil {
+		t.Error("expected non-string to be invalid")
+	}
+}
+
+
+func TestCheckAdminPlusValidator(t *testing.T) {
+	if err := CheckAdminPlusValidator(map[string]interface{}{"admin": true, "validator": true}); err == nil {
+		t.Error("expected error when admin and validator are both true")
+	}
+	if err := CheckAdminPlusValidator(map[string]interface{}{"admin": true, "validator": false}); err != nil {
+		t.Errorf("expected no error: %s", err.Error())
+	}
+	if err := CheckAdminPlusValidator(map[string]interface{}{}); err != nil {
+		t.Errorf("expected no error: %s", err.Error())
+	}
+}
+
+func TestMakeAuthzID(t *testing.T) {
+	id := MakeAuthzID()
+	if len(id) != 32 {
+		t.Errorf("expected 32 char hex string, got %d chars", len(id))
+	}
+}
+
+func TestDelSliceElement(t *testing.T) {
+	in := []string{"a", "b", "c"}
+	out := DelSliceElement(1, in)
+	if len(out) != 2 || out[0] != "a" || out[1] != "c" {
+		t.Errorf("expected [a c], got %v", out)
+	}
+}
+
+func TestRemoveDupInt64s(t *testing.T) {
+	in := []int64{1, 2, 2, 3, 3, 3}
+	out := RemoveDupInt64s(in)
+	if len(out) != 3 {
+		t.Errorf("expected 3 unique items, got %d", len(out))
+	}
+}
+
+func TestStringPresentInSlice(t *testing.T) {
+	if !StringPresentInSlice("foo", []string{"foo", "bar"}) {
+		t.Error("expected foo to be present")
+	}
+	if StringPresentInSlice("baz", []string{"foo", "bar"}) {
+		t.Error("expected baz to be absent")
+	}
+}
+
+func TestBaseObjURL(t *testing.T) {
+	obj := &testObj{Name: "foo", TestURLType: "bar"}
+	url := BaseObjURL(obj)
+	expectedURL := "http://:0/bar/foo"
+	if url != expectedURL {
+		t.Errorf("expected %s, got %s", expectedURL, url)
+	}
+}
+
+func TestValidateAsVersionExtra(t *testing.T) {
+	if _, err := ValidateAsVersion("0.0"); err == nil {
+		t.Error("expected 0.0 to be invalid")
+	}
+	if _, err := ValidateAsVersion("1.2.3.4"); err == nil {
+		t.Error("expected 1.2.3.4 to be invalid")
+	}
+}
+
+func TestPgSearchKeys(t *testing.T) {
+	oldConvert := config.Config.ConvertSearch
+	defer func() { config.Config.ConvertSearch = oldConvert }()
+	config.Config.ConvertSearch = false
+	if k := PgSearchKey("foo::bar"); k != "foo_bar" {
+		t.Errorf("expected foo_bar, got %s", k)
+	}
+	if k := PgSearchQueryKey("foo*bar?"); k != "foo*bar?" {
+		t.Errorf("expected foo*bar?, got %s", k)
+	}
+	config.Config.ConvertSearch = true
+	if k := PgSearchKey("foo_bar"); k != "foo.bar" {
+		t.Errorf("expected foo.bar with ConvertSearch, got %s", k)
+	}
+}
+
+func TestJSONErrorReport(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/test", nil)
+	JSONErrorReport(rec, req, "boom", http.StatusBadRequest)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+	var body map[string][]string
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode failed: %s", err.Error())
+	}
+	if body["error"][0] != "boom" {
+		t.Errorf("expected boom, got %v", body["error"])
+	}
+}
+
+func TestTrimStringMax(t *testing.T) {
+	if s := TrimStringMax("hello", 10); s != "hello" {
+		t.Errorf("expected hello, got %s", s)
+	}
+	if s := TrimStringMax("hello world", 5); s != "hello" {
+		t.Errorf("expected hello, got %s", s)
 	}
 }
