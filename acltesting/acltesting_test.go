@@ -59,6 +59,7 @@ func init() {
 	gob.Register(new(group.Group))
 	gob.Register(new(role.Role))
 	gob.Register(make(map[string]interface{}))
+	gob.Register(make(map[string]*client.Key))
 	indexer.Initialize(config.Config, indexer.DefaultDummyOrg)
 	config.Config.UseAuth = true
 }
