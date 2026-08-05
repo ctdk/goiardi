@@ -687,7 +687,7 @@ func (sr *ShoveyRun) AddStreamOutput(output string, outputType string, seq int, 
 		err.SetStatus(http.StatusConflict)
 		return err
 	}
-	ds.Set("shovey_run_stream", streamKey, stream)
+	ds.Set(sr.org.DataKey("shovey_run_stream"), streamKey, stream)
 
 	return nil
 }
@@ -703,10 +703,10 @@ func (sr *ShoveyRun) GetStreamOutput(outputType string, seq int) ([]*ShoveyRunSt
 	for i := seq; ; i++ {
 		logger.Debugf("Getting %s", fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, i))
 		s, found := ds.Get(sr.org.DataKey("shovey_run_stream"), fmt.Sprintf("%s_%s_%s_%d", sr.ShoveyUUID, sr.NodeName, outputType, i))
-		s.(*ShoveyRunStream).org = sr.org
 		if !found {
 			break
 		}
+		s.(*ShoveyRunStream).org = sr.org
 		logger.Debugf("got a stream: %v", s)
 		streams = append(streams, s.(*ShoveyRunStream))
 	}
