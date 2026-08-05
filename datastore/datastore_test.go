@@ -35,6 +35,10 @@ func makeDsObj() *dsObj {
 	return &dsObj{Name: "baz", JSONClass: "Chef::DsObj", ChefType: "ds_obj"}
 }
 
+func init() {
+	gob.Register(map[string]interface{}{})
+}
+
 func TestNew(t *testing.T) {
 	if d := New(); d == nil {
 		t.Errorf("New() should have returned a data store object, but returned nil")
@@ -255,4 +259,125 @@ func TestLogInfo(t *testing.T) {
 
 func TestCleanup(t *testing.T) {
 	os.RemoveAll(dsTmpDir)
+}
+
+func TestReplaceNodeStatuses(t *testing.T) {
+	ds := New()
+	org := "replace-status-org"
+	if err := ds.SetNodeStatus("node1", org, "up"); err != nil {
+		t.Fatalf("setup status 1 failed: %s", err.Error())
+	}
+	if err := ds.SetNodeStatus("node1", org, "down"); err != nil {
+		t.Fatalf("setup status 2 failed: %s", err.Error())
+	}
+	if err := ds.ReplaceNodeStatuses("node1", org, []interface{}{"idle"}); err != nil {
+		t.Fatalf("ReplaceNodeStatuses failed: %s", err.Error())
+	}
+	latest, err := ds.LatestNodeStatus("node1", org)
+	if err != nil {
+		t.Fatalf("LatestNodeStatus failed: %s", err.Error())
+	}
+	if latest != "idle" {
+		t.Errorf("expected idle, got %v", latest)
+	}
+}
+
+func TestAllNodeStatusesMultiple(t *testing.T) {
+	ds := New()
+	org := "all-status-org"
+	for _, s := range []string{"up", "down", "idle"} {
+		if err := ds.SetNodeStatus("node2", org, s); err != nil {
+			t.Fatalf("setup failed: %s", err.Error())
+		}
+	}
+	all, err := ds.AllNodeStatuses("node2", org)
+	if err != nil {
+		t.Fatalf("AllNodeStatuses failed: %s", err.Error())
+	}
+	if len(all) != 3 {
+		t.Errorf("expected 3 statuses, got %d", len(all))
+	}
+}
+
+func TestPurgeLogInfoBefore(t *testing.T) {
+	ds := New()
+	org := "purge-log-org"
+	for _, ev := range []string{"event-1", "event-2", "event-3"} {
+		if err := ds.SetLogInfo(org, ev); err != nil {
+			t.Fatalf("setup failed: %s", err.Error())
+		}
+	}
+	// IDs are 1, 2, 3. Purging before id 2 keeps IDs > 2, so only id 3 remains.
+	purged, err := ds.PurgeLogInfoBefore(org, 2)
+	if err != nil {
+		t.Fatalf("PurgeLogInfoBefore failed: %s", err.Error())
+	}
+	if purged != 2 {
+		t.Errorf("expected 2 purged, got %d", purged)
+	}
+	list := ds.GetLogInfoList(org)
+	if len(list) != 1 {
+		t.Errorf("expected 1 remaining log info, got %d", len(list))
+	}
+}
+
+func TestAssociationReqLifecycle(t *testing.T) {
+	ds := New()
+	name := "assoc-req-user"
+	variant := "org"
+	ds.SetAssociationReq(name, variant, "org1", "req1")
+	ds.SetAssociationReq(name, variant, "org2", "req2")
+	reqs := ds.GetAssociationReqs(name, variant)
+	if len(reqs) != 2 {
+		t.Fatalf("expected 2 reqs, got %d", len(reqs))
+	}
+	ds.DelAssociationReq(name, variant, "org1")
+	reqs = ds.GetAssociationReqs(name, variant)
+	if len(reqs) != 1 {
+		t.Errorf("expected 1 req after delete, got %d", len(reqs))
+	}
+	ds.DelAllAssociationReqs(name, variant)
+	reqs = ds.GetAssociationReqs(name, variant)
+	if len(reqs) != 0 {
+		t.Errorf("expected 0 reqs after delete all, got %d", len(reqs))
+	}
+}
+
+func TestAssociationLifecycle(t *testing.T) {
+	ds := New()
+	name := "assoc-user"
+	variant := "org"
+	ds.SetAssociation(name, variant, "org1", "assoc1")
+	ds.SetAssociation(name, variant, "org2", "assoc2")
+	assocs := ds.GetAssociations(name, variant)
+	if len(assocs) != 2 {
+		t.Fatalf("expected 2 associations, got %d", len(assocs))
+	}
+	ds.DelAssociation(name, variant, "org1")
+	assocs = ds.GetAssociations(name, variant)
+	if len(assocs) != 1 {
+		t.Errorf("expected 1 association after delete, got %d", len(assocs))
+	}
+	ds.DelAllAssociations(name, variant)
+	assocs = ds.GetAssociations(name, variant)
+	if len(assocs) != 0 {
+		t.Errorf("expected 0 associations after delete all, got %d", len(assocs))
+	}
+}
+
+func TestChkNilArray(t *testing.T) {
+	type nilObj struct {
+		Items []string `json:"items"`
+	}
+	o := &nilObj{}
+	if o.Items != nil {
+		t.Fatal("expected Items to start nil")
+	}
+	ChkNilArray(o)
+	if o.Items == nil {
+		t.Error("expected Items to be initialized to empty slice")
+	}
+	if len(o.Items) != 0 {
+		t.Errorf("expected empty slice, got len %d", len(o.Items))
+	}
 }
