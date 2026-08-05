@@ -132,3 +132,21 @@ use-auth = true
 		t.Error("expected use-auth true from config")
 	}
 }
+
+func TestListenAddrEmptyIP(t *testing.T) {
+	resetConfig()
+	Config.Port = 4545
+	if addr := ListenAddr(); addr != ":4545" {
+		t.Errorf("expected :4545, got %s", addr)
+	}
+}
+
+func TestServerBaseURLWithSSLPort(t *testing.T) {
+	resetConfig()
+	Config.ProxyHostname = "chef.example.com"
+	Config.ProxyPort = 443
+	Config.UseSSL = true
+	if u := ServerBaseURL(); u != "https://chef.example.com" {
+		t.Errorf("expected https://chef.example.com, got %s", u)
+	}
+}
