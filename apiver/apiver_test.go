@@ -17,6 +17,7 @@
 package apiver
 
 import (
+	"net/http/httptest"
 	"testing"
 )
 
@@ -56,3 +57,44 @@ func TestMatchSupportedAPIVersionVinvalid(t *testing.T) {
 }
 
 // TODO: craft fake http request object and test GetReqAPIVersion
+
+func TestGetReqAPIVersionDefault(t *testing.T) {
+	r := httptest.NewRequest("GET", "/", nil)
+	ver, err := GetReqAPIVersion(r)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ver != 1 {
+		t.Errorf("expected default version 1, got %d", ver)
+	}
+}
+
+func TestGetReqAPIVersionV0(t *testing.T) {
+	r := httptest.NewRequest("GET", "/", nil)
+	r.Header.Set("X-Ops-Server-API-Version", "0")
+	ver, err := GetReqAPIVersion(r)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ver != 0 {
+		t.Errorf("expected 0, got %d", ver)
+	}
+}
+
+func TestGetReqAPIVersionInvalid(t *testing.T) {
+	r := httptest.NewRequest("GET", "/", nil)
+	r.Header.Set("X-Ops-Server-API-Version", "abc")
+	_, err := GetReqAPIVersion(r)
+	if err == nil {
+		t.Error("expected error for invalid API version")
+	}
+}
+
+func TestGetReqAPIVersionUnsupported(t *testing.T) {
+	r := httptest.NewRequest("GET", "/", nil)
+	r.Header.Set("X-Ops-Server-API-Version", "312")
+	_, err := GetReqAPIVersion(r)
+	if err == nil {
+		t.Error("expected error for unsupported API version")
+	}
+}

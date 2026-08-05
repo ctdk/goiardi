@@ -17,7 +17,10 @@
 package authentication
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -125,5 +128,80 @@ func TestAuthenticateHeader(t *testing.T) {
 
 	if err = AuthenticateHeader(pubKey, time.Duration(0), req); err != nil {
 		t.Errorf("header authentication failed: %s", err.Error())
+	}
+}
+
+func makeAuthRequest(method, path, body string) *http.Request {
+	r := httptest.NewRequest(method, "https://localhost"+path, strings.NewReader(body))
+	r.Header.Set("x-ops-timestamp", time.Now().UTC().Format(time.RFC3339))
+	r.Header.Set("x-ops-userid", "testClient")
+	return r
+}
+
+func TestAuthenticateHeaderMissingContentHash(t *testing.T) {
+	r := makeAuthRequest("GET", "/clients", "")
+	r.Header.Set("x-ops-sign", "version=1.0")
+	if err := AuthenticateHeader(pubKey, 15*time.Minute, r); err == nil {
+		t.Error("expected error for missing content hash")
+	}
+}
+
+func TestAuthenticateHeaderMissingTimestamp(t *testing.T) {
+	r := makeAuthRequest("GET", "/clients", "")
+	r.Header.Del("x-ops-timestamp")
+	r.Header.Set("X-OPS-CONTENT-HASH", hashStr(""))
+	r.Header.Set("x-ops-sign", "version=1.0")
+	if err := AuthenticateHeader(pubKey, 15*time.Minute, r); err == nil {
+		t.Error("expected error for missing timestamp")
+	}
+}
+
+func TestAuthenticateHeaderMissingSign(t *testing.T) {
+	r := makeAuthRequest("GET", "/clients", "")
+	r.Header.Set("X-OPS-CONTENT-HASH", hashStr(""))
+	if err := AuthenticateHeader(pubKey, 15*time.Minute, r); err == nil {
+		t.Error("expected error for missing X-Ops-Sign")
+	}
+}
+
+func TestAuthenticateHeaderBadVersion(t *testing.T) {
+	r := makeAuthRequest("GET", "/clients", "")
+	r.Header.Set("X-OPS-CONTENT-HASH", hashStr(""))
+	r.Header.Set("x-ops-sign", "version=5.0")
+	if err := AuthenticateHeader(pubKey, 15*time.Minute, r); err == nil {
+		t.Error("expected error for bad version")
+	}
+}
+
+func TestAuthenticateHeaderUnsupportedAlgorithm(t *testing.T) {
+	r := makeAuthRequest("GET", "/clients", "")
+	r.Header.Set("X-OPS-CONTENT-HASH", hashStr(""))
+	r.Header.Set("x-ops-sign", "version=1.0;algorithm=md5")
+	if err := AuthenticateHeader(pubKey, 15*time.Minute, r); err == nil {
+		t.Error("expected error for unsupported algorithm")
+	}
+}
+
+func TestAuthenticateHeaderContentHashMismatch(t *testing.T) {
+	r := makeAuthRequest("GET", "/clients", "the body")
+	r.Header.Set("X-OPS-CONTENT-HASH", hashStr("not the body"))
+	r.Header.Set("x-ops-sign", "version=1.0")
+	if err := AuthenticateHeader(pubKey, 15*time.Minute, r); err == nil {
+		t.Error("expected error for content hash mismatch")
+	}
+}
+
+func TestAssembleSignedHeaderMissing(t *testing.T) {
+	r := httptest.NewRequest("GET", "/", nil)
+	if _, err := assembleSignedHeader(r); err == nil {
+		t.Error("expected error when no auth headers are present")
+	}
+}
+
+func TestAssembleSignedHeaderMalformed(t *testing.T) {
+	r := httptest.NewRequest("GET", "/", nil)
+	r.Header.Set("X-Ops-Authorization-2", "fragment")
+	if _, err := assembleSignedHeader(r); err == nil {
+		t.Error("expected error for malformed auth headers")
 	}
 }
